@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChatControls } from '../components/ChatControls.js';
 import { ConnectionStatusBadge } from '../components/ConnectionStatusBadge.js';
+import { FeedbackModal } from '../components/FeedbackModal.js';
 import { LoadingScreen } from '../components/LoadingScreen.js';
 import { ReportModal } from '../components/ReportModal.js';
 import { SearchingAnimation } from '../components/SearchingAnimation.js';
@@ -16,11 +17,14 @@ import { cn } from '../utils/index.js';
 
 export function ChatPage() {
   const navigate = useNavigate();
-  const { session, endSession } = useSession();
+  const { session, endSession, startSession, isLoading } = useSession();
   const { showToast } = useToast();
   const [showReportModal, setShowReportModal] = useState(false);
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const [initializing, setInitializing] = useState(false);
   const chatStartedRef = useRef(false);
+  const pendingLeaveRef = useRef(false);
 
   const {
     chatState,
@@ -35,15 +39,34 @@ export function ChatPage() {
   } = useVideoChat(session?.sessionId ?? null, session?.sessionToken ?? null);
 
   useEffect(() => {
-    if (!session) {
-      navigate('/');
-      return;
-    }
+    if (session) return;
+
+    let cancelled = false;
+    setInitializing(true);
+
+    startSession()
+      .catch((error) => {
+        if (!cancelled) {
+          showToast('error', error instanceof Error ? error.message : 'Failed to start session');
+          navigate('/');
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setInitializing(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [session, startSession, showToast, navigate]);
+
+  useEffect(() => {
+    if (!session) return;
 
     if (chatStartedRef.current) return;
     chatStartedRef.current = true;
     startChat();
-  }, [session, navigate, startChat]);
+  }, [session, startChat]);
 
   useEffect(() => {
     if (!chatState.matchStartTime || chatState.status !== 'connected') {
@@ -59,7 +82,12 @@ export function ChatPage() {
   }, [chatState.matchStartTime, chatState.status]);
 
   const handleLeave = async () => {
+    pendingLeaveRef.current = true;
     stopChat();
+    setShowFeedbackModal(true);
+  };
+
+  const finishLeave = async () => {
     try {
       await endSession();
     } catch {
@@ -67,6 +95,27 @@ export function ChatPage() {
     }
     navigate('/');
     showToast('info', 'You left the chat');
+    pendingLeaveRef.current = false;
+  };
+
+  const handleFeedbackSubmit = async (rating: number, feedback: string) => {
+    if (session) {
+      try {
+        await apiService.submitFeedback(session.sessionId, rating, feedback || undefined);
+        showToast('success', 'Thanks for your feedback!');
+      } catch {
+        // Feedback is optional
+      }
+    }
+    setShowFeedbackModal(false);
+    await finishLeave();
+  };
+
+  const handleFeedbackClose = async () => {
+    setShowFeedbackModal(false);
+    if (pendingLeaveRef.current) {
+      await finishLeave();
+    }
   };
 
   const handleReport = async (reason: ReportReason, notes: string) => {
@@ -89,8 +138,8 @@ export function ChatPage() {
     }
   };
 
-  if (!session) {
-    return <LoadingScreen message="Initializing session..." />;
+  if (!session || initializing || isLoading) {
+    return <LoadingScreen message="Setting up your chat..." />;
   }
 
   const isSearching = chatState.status === 'waiting' || chatState.status === 'starting';
@@ -160,6 +209,12 @@ export function ChatPage() {
         isOpen={showReportModal}
         onClose={() => setShowReportModal(false)}
         onSubmit={handleReport}
+      />
+
+      <FeedbackModal
+        isOpen={showFeedbackModal}
+        onClose={handleFeedbackClose}
+        onSubmit={handleFeedbackSubmit}
       />
     </div>
   );

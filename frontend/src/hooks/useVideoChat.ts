@@ -1,15 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useToast } from '../contexts/ToastContext.js';
 import {
-  connectSocket,
-  disconnectSocket,
+  connectRealtime,
+  disconnectRealtime,
   joinQueue,
   leaveQueue,
   nextPartner,
+  notifyDisconnect,
   sendAnswer,
   sendIceCandidate,
   sendOffer,
-} from '../socket/index.js';
+} from '../services/realtime.js';
 import { webrtcManager } from '../webrtc/index.js';
 import type { ChatState, ConnectionStatus } from '../types/index.js';
 
@@ -32,7 +33,12 @@ export function useVideoChat(sessionId: string | null, sessionToken: string | nu
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
   const partnerSessionIdRef = useRef<string | null>(null);
-  const isInitiatorRef = useRef(false);
+  const sessionIdRef = useRef<string | null>(null);
+  const sessionTokenRef = useRef<string | null>(null);
+  const callbacksRef = useRef<ReturnType<typeof buildCallbacks> | null>(null);
+
+  sessionIdRef.current = sessionId;
+  sessionTokenRef.current = sessionToken;
 
   const updateChatState = useCallback((updates: Partial<ChatState>) => {
     setChatState((prev) => ({ ...prev, ...updates }));
@@ -61,8 +67,9 @@ export function useVideoChat(sessionId: string | null, sessionToken: string | nu
       },
       onIceCandidate: (candidate) => {
         const partnerId = partnerSessionIdRef.current;
-        if (partnerId) {
-          sendIceCandidate(partnerId, candidate);
+        const fromSessionId = sessionIdRef.current;
+        if (partnerId && fromSessionId) {
+          sendIceCandidate(fromSessionId, candidate);
         }
       },
     });
@@ -76,7 +83,6 @@ export function useVideoChat(sessionId: string | null, sessionToken: string | nu
       iceServers: { urls: string | string[] }[];
     }) => {
       partnerSessionIdRef.current = data.partnerSessionId;
-      isInitiatorRef.current = data.isInitiator;
 
       webrtcManager.setIceServers(data.iceServers);
       webrtcManager.createPeerConnection();
@@ -93,7 +99,9 @@ export function useVideoChat(sessionId: string | null, sessionToken: string | nu
       if (data.isInitiator) {
         try {
           const offer = await webrtcManager.createOffer();
-          sendOffer(data.partnerSessionId, offer);
+          if (sessionIdRef.current) {
+            sendOffer(sessionIdRef.current, offer);
+          }
         } catch (error) {
           showToast('error', 'Failed to create connection offer');
           console.error(error);
@@ -102,6 +110,60 @@ export function useVideoChat(sessionId: string | null, sessionToken: string | nu
     },
     [showToast, updateChatState]
   );
+
+  function buildCallbacks() {
+    return {
+      onWaiting: (data: { queuePosition: number; message: string }) => {
+        updateChatState({
+          status: 'waiting',
+          queuePosition: data.queuePosition,
+          connectionStatus: 'connecting',
+        });
+      },
+      onMatched: handleMatched,
+      onPartnerLeft: () => {
+        setRemoteStream(null);
+        webrtcManager.resetConnection();
+        updateChatState({
+          status: 'waiting',
+          connectionStatus: 'connecting',
+          partnerSessionId: null,
+          matchId: null,
+          matchStartTime: null,
+        });
+        showToast('info', 'Partner left. Finding someone new...');
+      },
+      onSearching: (data: { message: string }) => {
+        updateChatState({ status: 'waiting', connectionStatus: 'connecting' });
+        showToast('info', data.message);
+      },
+      onError: (data: { message: string }) => {
+        showToast('error', data.message);
+      },
+      onOffer: async (data: { fromSessionId: string; offer: RTCSessionDescriptionInit }) => {
+        try {
+          const answer = await webrtcManager.handleOffer(data.offer);
+          if (sessionIdRef.current) {
+            sendAnswer(sessionIdRef.current, answer);
+          }
+        } catch (error) {
+          showToast('error', 'Failed to handle connection offer');
+          console.error(error);
+        }
+      },
+      onAnswer: async (data: { answer: RTCSessionDescriptionInit }) => {
+        try {
+          await webrtcManager.handleAnswer(data.answer);
+        } catch (error) {
+          showToast('error', 'Failed to handle connection answer');
+          console.error(error);
+        }
+      },
+      onIceCandidate: async (data: { candidate: RTCIceCandidateInit }) => {
+        await webrtcManager.addIceCandidate(data.candidate);
+      },
+    };
+  }
 
   const startChat = useCallback(async () => {
     if (!sessionId || !sessionToken) {
@@ -116,81 +178,29 @@ export function useVideoChat(sessionId: string | null, sessionToken: string | nu
       setLocalStream(stream);
       await setupWebRTC();
 
-      connectSocket(sessionId, sessionToken, {
-        onWaiting: (data) => {
-          updateChatState({
-            status: 'waiting',
-            queuePosition: data.queuePosition,
-            connectionStatus: 'connecting',
-          });
-        },
-        onMatched: handleMatched,
-        onPartnerLeft: () => {
-          setRemoteStream(null);
-          webrtcManager.resetConnection();
-          updateChatState({
-            status: 'waiting',
-            connectionStatus: 'connecting',
-            partnerSessionId: null,
-            matchId: null,
-            matchStartTime: null,
-          });
-          showToast('info', 'Partner left. Finding someone new...');
-        },
-        onSearching: (data) => {
-          updateChatState({ status: 'waiting', connectionStatus: 'connecting' });
-          showToast('info', data.message);
-        },
-        onError: (data) => {
-          showToast('error', data.message);
-        },
-        onReconnect: (data) => {
-          showToast('success', data.message);
-          if (data.inMatch && data.partnerSessionId) {
-            partnerSessionIdRef.current = data.partnerSessionId;
-            updateChatState({
-              status: 'matched',
-              partnerSessionId: data.partnerSessionId,
-              matchId: data.matchId ?? null,
-            });
-          }
-        },
-        onOffer: async (data) => {
-          try {
-            const answer = await webrtcManager.handleOffer(data.offer);
-            sendAnswer(data.fromSessionId, answer);
-          } catch (error) {
-            showToast('error', 'Failed to handle connection offer');
-            console.error(error);
-          }
-        },
-        onAnswer: async (data) => {
-          try {
-            await webrtcManager.handleAnswer(data.answer);
-          } catch (error) {
-            showToast('error', 'Failed to handle connection answer');
-            console.error(error);
-          }
-        },
-        onIceCandidate: async (data) => {
-          await webrtcManager.addIceCandidate(data.candidate);
-        },
-      });
+      const callbacks = buildCallbacks();
+      callbacksRef.current = callbacks;
+      connectRealtime(sessionId, sessionToken, callbacks);
 
-      joinQueue();
+      await joinQueue(sessionId, sessionToken, callbacks);
     } catch (error) {
       const message =
         error instanceof DOMException && error.name === 'NotAllowedError'
           ? 'Camera and microphone permissions are required'
-          : 'Failed to start chat. Please check your camera and microphone.';
+          : error instanceof Error
+            ? error.message
+            : 'Failed to start chat. Please check your camera and microphone.';
       showToast('error', message);
       updateChatState({ status: 'idle', connectionStatus: 'disconnected' });
     }
   }, [sessionId, sessionToken, showToast, setupWebRTC, handleMatched, updateChatState]);
 
-  const stopChat = useCallback(() => {
-    leaveQueue();
-    disconnectSocket();
+  const stopChat = useCallback(async () => {
+    if (sessionIdRef.current && sessionTokenRef.current) {
+      await notifyDisconnect(sessionIdRef.current, sessionTokenRef.current, 'leave');
+    }
+    await leaveQueue(sessionIdRef.current ?? '', sessionTokenRef.current ?? '').catch(() => {});
+    disconnectRealtime();
     webrtcManager.cleanup();
     setLocalStream(null);
     setRemoteStream(null);
@@ -198,7 +208,9 @@ export function useVideoChat(sessionId: string | null, sessionToken: string | nu
     partnerSessionIdRef.current = null;
   }, []);
 
-  const handleNext = useCallback(() => {
+  const handleNext = useCallback(async () => {
+    if (!sessionIdRef.current || !sessionTokenRef.current || !callbacksRef.current) return;
+
     setRemoteStream(null);
     webrtcManager.resetConnection();
     webrtcManager.createPeerConnection();
@@ -209,7 +221,8 @@ export function useVideoChat(sessionId: string | null, sessionToken: string | nu
       matchId: null,
       matchStartTime: null,
     });
-    nextPartner();
+
+    await nextPartner(sessionIdRef.current, sessionTokenRef.current, callbacksRef.current);
   }, [updateChatState]);
 
   const toggleMute = useCallback(() => {
@@ -233,9 +246,18 @@ export function useVideoChat(sessionId: string | null, sessionToken: string | nu
   }, []);
 
   useEffect(() => {
+    const handleUnload = () => {
+      if (sessionIdRef.current && sessionTokenRef.current) {
+        notifyDisconnect(sessionIdRef.current, sessionTokenRef.current, 'disconnect');
+      }
+    };
+
+    window.addEventListener('beforeunload', handleUnload);
+
     return () => {
+      window.removeEventListener('beforeunload', handleUnload);
       webrtcManager.cleanup();
-      disconnectSocket();
+      disconnectRealtime();
     };
   }, []);
 

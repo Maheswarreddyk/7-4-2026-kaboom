@@ -1,4 +1,5 @@
 import { Outlet } from 'react-router-dom';
+import { Footer } from './Footer.js';
 import { Navbar } from './Navbar.js';
 import { ToastContainer } from './ToastContainer.js';
 
@@ -10,6 +11,7 @@ export function Layout() {
       <main className="flex-1 pt-16">
         <Outlet />
       </main>
+      <Footer />
     </div>
   );
 }

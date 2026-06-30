@@ -4,19 +4,24 @@
   "private": true,
   "description": "IndiaTV - Anonymous Random Video Chat Platform",
   "workspaces": [
-    "backend",
     "frontend"
   ],
   "scripts": {
-    "dev": "concurrently -n backend,frontend -c blue,green \"npm run dev -w indiatv-backend\" \"npm run dev -w indiatv-frontend\"",
-    "dev:backend": "npm run dev -w indiatv-backend",
+    "dev": "vercel dev",
     "dev:frontend": "npm run dev -w indiatv-frontend",
-    "build": "npm run build -w indiatv-backend && npm run build -w indiatv-frontend",
-    "start": "npm run start -w indiatv-backend",
-    "test:integration": "node scripts/integration-test.mjs"
+    "build": "npm run build -w indiatv-frontend",
+    "preview": "npm run preview -w indiatv-frontend",
+    "typecheck": "npm run typecheck -w indiatv-frontend"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.49.1",
+    "uuid": "^11.1.0"
   },
   "devDependencies": {
-    "concurrently": "^9.1.2"
+    "@types/uuid": "^10.0.0",
+    "@vercel/node": "^5.1.14",
+    "concurrently": "^9.1.2",
+    "vercel": "^41.6.0"
   },
   "engines": {
     "node": ">=18.0.0"

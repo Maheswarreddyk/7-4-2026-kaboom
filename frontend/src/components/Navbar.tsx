@@ -4,7 +4,8 @@ import { cn } from '../utils/index.js';
 const navLinks = [
   { to: '/', label: 'Home' },
   { to: '/about', label: 'About' },
-  { to: '/privacy', label: 'Privacy' },
+  { to: '/faq', label: 'FAQ' },
+  { to: '/contact', label: 'Contact' },
 ];
 
 export function Navbar() {
@@ -13,8 +14,8 @@ export function Navbar() {
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 glass border-b border-white/5">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
-          <Link to="/" className="flex items-center gap-2 group">
+        <div className="flex items-center justify-between h-16 gap-4">
+          <Link to="/" className="flex items-center gap-2 group shrink-0">
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-accent to-purple-600 flex items-center justify-center shadow-lg shadow-accent-glow group-hover:scale-105 transition-transform">
               <span className="text-white font-bold text-sm">IT</span>
             </div>
@@ -23,13 +24,13 @@ export function Navbar() {
             </span>
           </Link>
 
-          <div className="flex items-center gap-1 sm:gap-2">
+          <div className="flex items-center gap-1 overflow-x-auto">
             {navLinks.map((link) => (
               <Link
                 key={link.to}
                 to={link.to}
                 className={cn(
-                  'px-3 py-2 rounded-lg text-sm font-medium transition-colors',
+                  'px-2 sm:px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors whitespace-nowrap',
                   location.pathname === link.to
                     ? 'text-white bg-white/10'
                     : 'text-white/60 hover:text-white hover:bg-white/5'
@@ -38,6 +39,9 @@ export function Navbar() {
                 {link.label}
               </Link>
             ))}
+            <Link to="/chat" className="btn-primary text-xs sm:text-sm px-3 sm:px-4 py-2 ml-1 shrink-0">
+              Start Chat
+            </Link>
           </div>
         </div>
       </div>

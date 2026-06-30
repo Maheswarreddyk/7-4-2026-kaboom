@@ -1,18 +1,122 @@
 # IndiaTV
 
-**Anonymous Random Video Chat Platform**
+**Anonymous Random Video Chat — deploy anywhere in minutes**
 
-IndiaTV is a production-quality MVP for anonymous random video chat — no login, no signup, no authentication. Users click Start Chat, grant camera/microphone permissions, get matched with a random partner via WebRTC, and can Next, Report, Mute, or Leave at any time.
+IndiaTV is a production-ready full-stack startup app: anonymous video chat with no login, a polished marketing site, and one-click deployment to Vercel + Supabase Cloud. No Docker, no DevOps required.
+
+---
+
+## What's Included
+
+| Area | Features |
+|------|----------|
+| **Home** | Hero, live stats, feature cards, Start Chat CTA |
+| **Video Chat** | WebRTC video/audio, mute, camera off, next, report, feedback |
+| **About** | Product overview, how it works, community guidelines |
+| **FAQ** | Expandable accordion with 8 common questions |
+| **Privacy** | Full privacy policy |
+| **Terms** | Terms of service |
+| **Contact** | Contact form + email links |
+| **404** | Custom not-found page |
 
 ---
 
 ## Tech Stack
 
-| Layer | Technologies |
-|-------|-------------|
-| Frontend | React 19, Vite, TypeScript, TailwindCSS, React Router, Socket.io Client, WebRTC, Axios |
-| Backend | Node.js, Express, Socket.io, Supabase JS, UUID |
+| Layer | Technology |
+|-------|-----------|
+| Frontend | React 19, Vite, TypeScript, TailwindCSS, React Router |
+| API | Vercel Serverless Functions (Node.js) |
+| Realtime | Supabase Realtime Broadcast (matching + WebRTC signaling) |
 | Database | Supabase PostgreSQL |
+| Video | WebRTC peer-to-peer |
+
+---
+
+## Quick Start (Local)
+
+### 1. Prerequisites
+
+- **Node.js** 18+
+- **Supabase Cloud** project ([supabase.com](https://supabase.com)) — free tier works
+
+### 2. Install
+
+```bash
+git clone <your-repo>
+cd indiaTV
+npm install
+```
+
+### 3. Set Up Supabase Database
+
+1. Open [Supabase Dashboard](https://supabase.com/dashboard) → your project
+2. Go to **SQL Editor**
+3. Run these files in order:
+   - `supabase/migrations/001_initial_schema.sql`
+   - `supabase/migrations/002_realtime_indexes.sql`
+4. Go to **Settings → API** and copy your credentials
+
+### 4. Environment Variables
+
+Create `.env` in the project root (or copy from `.env.example`):
+
+```env
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+
+VITE_SUPABASE_URL=https://your-project.supabase.co
+VITE_SUPABASE_PUBLISHABLE_KEY=your-anon-key
+VITE_API_URL=
+```
+
+> **Important:** Never expose `SUPABASE_SERVICE_ROLE_KEY` in the frontend. It is only used by Vercel API routes.
+
+### 5. Run Locally
+
+```bash
+npm run dev
+```
+
+Opens at **http://localhost:3000** (Vercel dev serves both frontend + API).
+
+---
+
+## Deploy to Vercel (Production)
+
+### Step 1 — Push to GitHub
+
+```bash
+git add .
+git commit -m "Initial IndiaTV deploy"
+git push origin main
+```
+
+### Step 2 — Import in Vercel
+
+1. Go to [vercel.com/new](https://vercel.com/new)
+2. Import your GitHub repository
+3. Vercel auto-detects settings from `vercel.json`
+
+### Step 3 — Add Environment Variables
+
+In Vercel Dashboard → **Settings → Environment Variables**, add:
+
+| Variable | Value |
+|----------|-------|
+| `SUPABASE_URL` | Your Supabase project URL |
+| `SUPABASE_SERVICE_ROLE_KEY` | Service role key (backend only) |
+| `VITE_SUPABASE_URL` | Same Supabase URL |
+| `VITE_SUPABASE_PUBLISHABLE_KEY` | Anon/public key |
+| `VITE_API_URL` | Leave **empty** (uses same-origin `/api`) |
+
+### Step 4 — Deploy
+
+Click **Deploy**. Your app will be live at `https://your-project.vercel.app`.
+
+### Step 5 — Custom Domain (Optional)
+
+In Vercel → **Settings → Domains**, add your domain (e.g. `indiatv.app`). Vercel handles SSL automatically.
 
 ---
 
@@ -20,126 +124,22 @@ IndiaTV is a production-quality MVP for anonymous random video chat — no login
 
 ```
 indiaTV/
-├── frontend/          # React + Vite client
-├── backend/           # Express + Socket.io server
+├── api/                  # Vercel serverless API routes
+│   ├── health.ts
+│   ├── stats.ts
+│   ├── start-session.ts
+│   ├── match/            # Queue & matching endpoints
+│   └── lib/              # Shared server logic
+├── frontend/             # React + Vite SPA
+│   └── src/
+│       ├── pages/        # All app pages
+│       ├── components/   # UI components
+│       ├── services/     # API + Realtime clients
+│       └── hooks/        # Video chat hook
 ├── supabase/
-│   └── migrations/    # SQL schema migrations
-├── package.json       # Root scripts (dev, install)
-└── .env.example       # Environment variable template
-```
-
----
-
-## Prerequisites
-
-- **Node.js** 18 or higher
-- **npm** 9+
-- **Supabase** project ([supabase.com](https://supabase.com))
-
----
-
-## Installation
-
-```bash
-# Clone or navigate to the project
-cd indiaTV
-
-# Install all dependencies (root workspace installs backend + frontend)
-npm install
-```
-
----
-
-## Environment Variables
-
-### 1. Backend — create `backend/.env`
-
-```env
-SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
-PORT=5000
-FRONTEND_URL=http://localhost:5173
-```
-
-> **Important:** Use the **Service Role Key** only on the backend. Never expose it to the frontend.
-
-### 2. Frontend — create `frontend/.env`
-
-```env
-VITE_SUPABASE_URL=https://your-project.supabase.co
-VITE_SUPABASE_PUBLISHABLE_KEY=your-publishable-anon-key
-VITE_API_URL=http://localhost:5000
-VITE_SOCKET_URL=http://localhost:5000
-```
-
-Copy values from your Supabase project: **Settings → API**.
-
----
-
-## Database Setup (Supabase)
-
-### Option A — Local Supabase (recommended for development)
-
-Requires [Docker Desktop](https://docs.docker.com/desktop/) running.
-
-```bash
-# Start local Supabase (applies migrations automatically)
-npx supabase start
-
-# Copy credentials from output into backend/.env and frontend/.env
-# API URL → SUPABASE_URL / VITE_SUPABASE_URL
-# service_role key → SUPABASE_SERVICE_ROLE_KEY
-# anon key → VITE_SUPABASE_PUBLISHABLE_KEY
-
-# Reset database (re-apply migrations)
-npx supabase db reset
-```
-
-### Option B — Supabase Cloud
-
-1. Open [Supabase Dashboard](https://supabase.com/dashboard) → your project
-2. Go to **SQL Editor**
-3. Paste and run the contents of:
-
-```
-supabase/migrations/001_initial_schema.sql
-```
-
-4. Copy **Settings → API** credentials into your `.env` files.
-
----
-
-## Integration Tests
-
-Run the full API + Socket.io test suite:
-
-```bash
-npm run test:integration
-```
-
-Tests cover: health, stats, session lifecycle, reports, feedback, socket matching, and frontend proxy.
-
----
-
-## Running Locally
-
-```bash
-npm run dev
-```
-
-This starts both servers concurrently:
-
-| Service | URL |
-|---------|-----|
-| Frontend | http://localhost:5173 |
-| Backend API | http://localhost:5000 |
-| Health check | http://localhost:5000/api/health |
-
-### Individual services
-
-```bash
-npm run dev:backend   # Backend only (port 5000)
-npm run dev:frontend  # Frontend only (port 5173)
+│   └── migrations/       # Database schema
+├── vercel.json           # Vercel deployment config
+└── .env.example
 ```
 
 ---
@@ -148,91 +148,37 @@ npm run dev:frontend  # Frontend only (port 5173)
 
 | Method | Path | Description |
 |--------|------|-------------|
-| GET | `/api/health` | Server and database health |
-| GET | `/api/stats` | Active users, queue size, matches today |
+| GET | `/api/health` | Health check |
+| GET | `/api/stats` | Live platform stats |
 | POST | `/api/start-session` | Create anonymous session |
 | POST | `/api/end-session` | End session |
 | POST | `/api/report` | Submit abuse report |
-| POST | `/api/feedback` | Submit post-chat feedback |
+| POST | `/api/feedback` | Submit chat feedback |
+| POST | `/api/match/join` | Join matching queue |
+| POST | `/api/match/next` | Skip to next partner |
+| POST | `/api/match/leave` | Leave queue |
+| POST | `/api/match/disconnect` | Notify partner on disconnect |
 
 ---
 
-## Socket Events
+## How Video Chat Works
 
-### Client → Server
-
-| Event | Description |
-|-------|-------------|
-| `join_queue` | Enter matching queue |
-| `leave_queue` | Leave queue |
-| `next` | Skip current partner |
-| `offer` | WebRTC SDP offer |
-| `answer` | WebRTC SDP answer |
-| `ice_candidate` | ICE candidate exchange |
-| `disconnect` | Disconnect from chat |
-
-### Server → Client
-
-| Event | Description |
-|-------|-------------|
-| `waiting` | In queue, waiting for partner |
-| `matched` | Paired with partner (+ ICE servers) |
-| `partner_left` | Partner disconnected or skipped |
-| `searching` | Re-entering queue |
-| `error` | Error message |
-| `reconnect` | Session reconnected after refresh |
-
----
-
-## Features
-
-- Anonymous sessions (no auth)
-- Random video chat matching
-- WebRTC peer-to-peer video/audio
-- Mute microphone / disable camera
-- Next partner (skip)
-- Report abuse (stored in Supabase)
-- Connection timer and status
-- Dark glassmorphism UI
-- Responsive design
-- Rate limiting and security headers
-- Graceful shutdown
-- Stale queue/match cleanup
-
----
-
-## Deployment
-
-### Backend
-
-1. Build: `npm run build --prefix backend`
-2. Set environment variables on your host
-3. Start: `npm run start --prefix backend`
-
-Recommended hosts: Railway, Render, Fly.io, AWS EC2.
-
-### Frontend
-
-1. Build: `npm run build --prefix frontend`
-2. Deploy `frontend/dist` to Vercel, Netlify, or Cloudflare Pages
-3. Set `VITE_*` env vars at build time
-4. Update `FRONTEND_URL` in backend `.env` to your production frontend URL
-
-### Supabase
-
-- Run migrations on your production Supabase project
-- Keep Service Role Key server-side only
+1. User clicks **Start Chat** → anonymous session created via API
+2. Camera/mic permission granted → user joins matching queue
+3. Server pairs two waiting users → both notified via Supabase Realtime
+4. WebRTC offer/answer/ICE exchanged on a private match channel
+5. Peer-to-peer video/audio streams directly between browsers
+6. **Next**, **Report**, **Mute**, **Leave**, and **Feedback** all fully functional
 
 ---
 
 ## Production Checklist
 
-- [ ] Set `NODE_ENV=production`
-- [ ] Configure TURN servers for NAT traversal (`STUN_SERVERS` env var)
-- [ ] Enable HTTPS on frontend and backend
-- [ ] Update CORS `FRONTEND_URL` to production domain
-- [ ] Review Supabase RLS policies
-- [ ] Set up monitoring on `/api/health`
+- [ ] Run Supabase migrations on your cloud project
+- [ ] Set all environment variables in Vercel
+- [ ] Enable **Realtime** in Supabase Dashboard (enabled by default on cloud)
+- [ ] Add custom domain in Vercel (optional)
+- [ ] Test video chat with two browser tabs or devices
 
 ---
 

@@ -24,8 +24,8 @@ export function AboutPage() {
         <div className="glass-card space-y-4">
           <h2 className="text-xl font-semibold text-white">Technology</h2>
           <p>
-            IndiaTV uses WebRTC for peer-to-peer video and audio streaming, Socket.io for real-time
-            signaling and matching, and Supabase PostgreSQL for session management and moderation
+            IndiaTV uses WebRTC for peer-to-peer video and audio streaming, Supabase Realtime for
+            live matching and signaling, and Supabase PostgreSQL for session management and moderation
             data. All connections are encrypted end-to-end between peers.
           </p>
         </div>
