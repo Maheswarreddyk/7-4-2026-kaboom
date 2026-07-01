@@ -1,3 +1,5 @@
+import { config } from '../config/index.js';
+
 type LogLevel = 'info' | 'warn' | 'error' | 'debug';
 
 function formatMessage(level: LogLevel, message: string, meta?: Record<string, unknown>): string {
@@ -17,7 +19,7 @@ export const logger = {
     console.error(formatMessage('error', message, meta));
   },
   debug(message: string, meta?: Record<string, unknown>): void {
-    if (process.env.NODE_ENV !== 'production') {
+    if (!config.isProduction) {
       console.debug(formatMessage('debug', message, meta));
     }
   },
