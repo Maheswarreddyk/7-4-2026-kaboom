@@ -6,6 +6,7 @@ export default {
       colors: {
         surface: {
           DEFAULT: '#0a0a0f',
+          '2': '#101828',
           light: '#12121a',
           card: 'rgba(255, 255, 255, 0.05)',
         },
@@ -30,6 +31,7 @@ export default {
         'search-pulse': 'searchPulse 2s ease-in-out infinite',
         'slide-in': 'slideIn 0.3s ease-out',
         'scale-up': 'scaleUp 0.3s ease-out',
+        'spring-in': 'springIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards',
       },
       keyframes: {
         fadeIn: {
@@ -51,6 +53,11 @@ export default {
         scaleUp: {
           '0%': { transform: 'scale(0.8)', opacity: '0' },
           '100%': { transform: 'scale(1)', opacity: '1' },
+        },
+        springIn: {
+          '0%':   { opacity: '0', transform: 'scale(0.85) translateY(8px)' },
+          '60%':  { opacity: '1', transform: 'scale(1.03) translateY(-2px)' },
+          '100%': { transform: 'scale(1) translateY(0)' },
         },
       },
       backdropBlur: {

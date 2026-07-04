@@ -37,6 +37,7 @@ export function ChatPage() {
   // FaceTime draggable self-preview state
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
+  const [snapCorner, setSnapCorner] = useState<'br' | 'bl' | 'tr' | 'tl'>('br');
   const dragStart = useRef({ x: 0, y: 0 });
 
   // Onboarding Hint state
@@ -109,7 +110,21 @@ export function ChatPage() {
       });
     };
 
-    const handleMouseUp = () => setIsDragging(false);
+    const handleMouseUp = () => {
+      setIsDragging(false);
+      // Snap to nearest corner based on accumulated drag position
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+      const pipW = vw < 640 ? 130 : 220;
+      const pipH = vw < 640 ? 80 : 140;
+      // Compute absolute position from the br anchor + offset
+      const absX = vw - 24 - pipW + dragOffset.x;
+      const absY = vh - 100 - pipH + dragOffset.y;
+      const isLeft  = absX + pipW / 2 < vw / 2;
+      const isTop   = absY + pipH / 2 < vh / 2;
+      setSnapCorner(isTop ? (isLeft ? 'tl' : 'tr') : (isLeft ? 'bl' : 'br'));
+      setDragOffset({ x: 0, y: 0 });
+    };
 
     if (isDragging) {
       window.addEventListener('mousemove', handleMouseMove);
@@ -124,7 +139,7 @@ export function ChatPage() {
       window.removeEventListener('touchmove', handleTouchMove);
       window.removeEventListener('touchend', handleMouseUp);
     };
-  }, [isDragging]);
+  }, [isDragging, dragOffset]);
 
   // Session Initialization
   useEffect(() => {
@@ -304,113 +319,141 @@ export function ChatPage() {
   const isConnected = chatState.status === 'connected';
 
   return (
-    <div 
-      className="h-[100dvh] w-full flex bg-black relative overflow-hidden select-none"
+    /* Root: fills entire 100dvh viewport (set by layout-immersive on parent) */
+    <div
+      className="absolute inset-0 bg-black overflow-hidden select-none"
       onMouseMove={resetControlsTimeout}
       onTouchStart={resetControlsTimeout}
+      role="main"
+      aria-label="Video chat"
     >
-      {/* Immersive Video Screen */}
-      <div className="flex-1 flex flex-col relative">
-        <div className="absolute top-4 left-4 z-30 flex items-center gap-3">
-          <ConnectionStatusBadge status={chatState.connectionStatus} />
-          {isConnected && (
-            <span className="px-3 py-1 bg-black/40 backdrop-blur-md rounded-full border border-white/10 text-sm text-white/80 font-mono tracking-wider shadow-lg animate-pulse-slow">
-              {formatDuration(elapsedSeconds)}
-            </span>
-          )}
-        </div>
-
-        {/* Dynamic Island Contextual Hints */}
-        {activeHint && !hintDismissed && (
-          <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-30 w-11/12 max-w-sm">
-            <div className="flex items-center justify-between gap-3 px-5 py-3 rounded-full bg-white/10 backdrop-blur-xl border border-white/25 shadow-2xl animate-scale-up hover:bg-white/15 transition-colors cursor-pointer" onClick={handleDismissHint}>
-              <span className="text-sm font-medium text-white/90 leading-tight">{activeHint}</span>
-              <span className="text-xs text-white/40 hover:text-white/60">Dismiss</span>
-            </div>
-          </div>
-        )}
-
-        {/* FaceTime style background container */}
-        <div className="flex-1 relative flex items-center justify-center bg-zinc-950">
-          <VideoPlayer
-            stream={remoteStream}
-            className="w-full h-full object-cover absolute inset-0"
-            placeholder={isSearching ? 'Looking for a partner...' : 'Partner video will appear here'}
-          />
-
-          {isSearching && (
-            <div className="absolute inset-0 flex items-center justify-center bg-black/80 backdrop-blur-md z-10">
-              <SearchingAnimation queuePosition={chatState.queuePosition} />
-            </div>
-          )}
-
-          {/* FaceTime Floating Self-Preview */}
-          <div
-            className={cn(
-              "absolute aspect-video w-32 sm:w-48 rounded-2xl overflow-hidden border border-white/20 shadow-2xl z-20 bg-slate-900 cursor-grab active:cursor-grabbing transition-transform duration-200 select-none",
-              isDragging ? "scale-105" : ""
-            )}
-            style={{
-              bottom: '100px',
-              right: '24px',
-              transform: `translate(${dragOffset.x}px, ${dragOffset.y}px)`,
-              touchAction: 'none'
-            }}
-            onMouseDown={handleMouseDown}
-            onTouchStart={handleTouchStart}
-          >
-            <VideoPlayer
-              stream={localStream}
-              muted
-              mirrored
-              className="w-full h-full object-cover pointer-events-none"
-              label="You"
-            />
-          </div>
-        </div>
-
-        {/* Floating Controls Dock */}
-        <div 
-          className={cn(
-            "absolute bottom-6 left-1/2 transform -translate-x-1/2 z-30 transition-all duration-300",
-            controlsVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10 pointer-events-none"
-          )}
-        >
-          <ChatControls
-            isMuted={chatState.isMuted}
-            isCameraOff={chatState.isCameraOff}
-            isFullscreen={chatState.isFullscreen}
-            onToggleMute={toggleMute}
-            onToggleCamera={toggleCamera}
-            onNext={handleNext}
-            onReport={() => setShowReportModal(true)}
-            onLeave={handleLeave}
-            onToggleFullscreen={toggleFullscreen}
-            disabled={isSearching}
-            isChatOpen={chatState.isChatOpen}
-            onToggleChat={() => setChatOpen(!chatState.isChatOpen)}
-            liked={chatState.liked}
-            onLike={likePartner}
-            onOpenPreferences={() => setShowPreferenceModal(true)}
-            unreadCount={chatState.unreadCount}
-          />
-        </div>
+      {/* ── LAYER 1: Remote video — z-index: var(--z-video) ── */}
+      <div className="video-viewport">
+        <VideoPlayer
+          stream={remoteStream}
+          className="w-full h-full object-cover"
+          placeholder={isSearching ? 'Looking for a partner...' : 'Partner video will appear here'}
+        />
       </div>
 
-      {/* Slide-out Collapsible Chat sidebar */}
-      {chatState.isChatOpen && (
-        <TemporaryChat
-          isOpen={chatState.isChatOpen}
-          onClose={() => setChatOpen(false)}
-          messages={chatState.messages || []}
-          onSendMessage={sendChatMessage}
-          selfSessionId={session.sessionId}
-          partnerTyping={chatState.partnerTyping || false}
-          onTyping={setTypingStatus}
-        />
+      {/* ── LAYER 2: Gradient overlay ─────────────────────── */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          zIndex: 'var(--z-overlay)' as any,
+          background: 'linear-gradient(to bottom, rgba(0,0,0,0.35) 0%, transparent 30%, transparent 65%, rgba(0,0,0,0.6) 100%)',
+        }}
+      />
+
+      {/* ── SEARCHING OVERLAY ─────────────────────────────── */}
+      {isSearching && (
+        <div
+          className="absolute inset-0 flex items-center justify-center bg-black/70 backdrop-blur-md"
+          style={{ zIndex: 'calc(var(--z-overlay) + 1)' as any }}
+        >
+          <SearchingAnimation queuePosition={chatState.queuePosition} />
+        </div>
       )}
 
-      {/* Preferences Modal */}
+      {/* ── STATUS BAR (top-left, below header) ──────────── */}
+      <div
+        className="absolute left-4 flex items-center gap-3"
+        style={{
+          top: 'calc(var(--header-h) + 12px)',
+          zIndex: 'var(--z-controls)' as any,
+        }}
+      >
+        <ConnectionStatusBadge status={chatState.connectionStatus} />
+        {isConnected && (
+          <span className="px-3 py-1 bg-black/40 backdrop-blur-md rounded-full border border-white/10 text-sm text-white/80 font-mono tracking-wider shadow-lg">
+            {formatDuration(elapsedSeconds)}
+          </span>
+        )}
+      </div>
+
+      {/* ── COACH MARK (hint) — always below header ────────── */}
+      {activeHint && !hintDismissed && (
+        <div
+          className="coach-mark coach-mark--center cursor-pointer hover:bg-white/10 transition-colors"
+          onClick={handleDismissHint}
+          role="status"
+          aria-live="polite"
+        >
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-sm leading-snug">{activeHint}</span>
+            <button className="text-[11px] text-white/40 hover:text-white/70 shrink-0 transition-colors">
+              Dismiss
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── SELF-PREVIEW PiP (corner-snapping) ─────────────── */}
+      <div
+        className={cn('self-preview', isDragging && 'scale-105')}
+        style={{
+          transform: `translate(${dragOffset.x}px, ${dragOffset.y}px)`,
+          bottom: undefined,
+          right: undefined,
+          // Snap to computed corner position
+          ...(snapCorner === 'br' ? { bottom: '100px', right: '24px' } : {}),
+          ...(snapCorner === 'bl' ? { bottom: '100px', left: '24px'  } : {}),
+          ...(snapCorner === 'tr' ? { top: 'calc(var(--header-h) + 16px)', right: '24px' } : {}),
+          ...(snapCorner === 'tl' ? { top: 'calc(var(--header-h) + 16px)', left: '24px' } : {}),
+          zIndex: 'var(--z-controls)' as any,
+        }}
+        onMouseDown={handleMouseDown}
+        onTouchStart={handleTouchStart}
+      >
+        <VideoPlayer
+          stream={localStream}
+          muted
+          mirrored
+          className="w-full h-full object-cover pointer-events-none"
+          label="You"
+        />
+      </div>
+
+      {/* ── CONTROLS DOCK ─────────────────────────────────── */}
+      <div
+        className={cn('controls-dock', !controlsVisible && 'controls-dock--hidden')}
+      >
+        <ChatControls
+          isMuted={chatState.isMuted}
+          isCameraOff={chatState.isCameraOff}
+          isFullscreen={chatState.isFullscreen}
+          onToggleMute={toggleMute}
+          onToggleCamera={toggleCamera}
+          onNext={handleNext}
+          onReport={() => setShowReportModal(true)}
+          onLeave={handleLeave}
+          onToggleFullscreen={toggleFullscreen}
+          disabled={isSearching}
+          isChatOpen={chatState.isChatOpen}
+          onToggleChat={() => setChatOpen(!chatState.isChatOpen)}
+          liked={chatState.liked}
+          onLike={likePartner}
+          onOpenPreferences={() => setShowPreferenceModal(true)}
+          unreadCount={chatState.unreadCount}
+        />
+      </div>
+
+      {/* ── CHAT SIDEBAR ──────────────────────────────────── */}
+      {chatState.isChatOpen && (
+        <div style={{ zIndex: 'var(--z-popup)' as any, position: 'absolute', inset: 0 }}>
+          <TemporaryChat
+            isOpen={chatState.isChatOpen}
+            onClose={() => setChatOpen(false)}
+            messages={chatState.messages || []}
+            onSendMessage={sendChatMessage}
+            selfSessionId={session.sessionId}
+            partnerTyping={chatState.partnerTyping || false}
+            onTyping={setTypingStatus}
+          />
+        </div>
+      )}
+
+      {/* ── PREFERENCES MODAL ─────────────────────────────── */}
       <PreferenceModal
         isOpen={showPreferenceModal}
         onClose={() => setShowPreferenceModal(false)}
@@ -427,31 +470,28 @@ export function ChatPage() {
         }}
       />
 
-      {/* Celebration Heart Burst Overlay on Mutual Match */}
+      {/* ── MUTUAL MATCH CONFETTI ─────────────────────────── */}
       {chatState.mutualLike && (
-        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/80 backdrop-blur-2xl animate-fade-in" onClick={() => setChatOpen(true)}>
-          {/* Confetti celebration container */}
-          <div className="p-8 bg-slate-900 border border-white/10 rounded-3xl text-center shadow-2xl max-w-sm animate-scale-up glass relative overflow-hidden">
+        <div
+          className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 backdrop-blur-2xl animate-fade-in"
+          style={{ zIndex: 'var(--z-confetti)' as any }}
+          onClick={() => setChatOpen(true)}
+        >
+          <div className="p-8 bg-surface-2 border border-white/10 rounded-3xl text-center shadow-2xl max-w-sm animate-spring-in glass relative overflow-hidden">
             <span className="text-6xl animate-bounce block">🎉</span>
             <span className="text-4xl animate-pulse block mt-2">❤️</span>
             <h3 className="text-2xl font-bold text-white mt-4 bg-gradient-to-r from-accent to-pink-500 bg-clip-text text-transparent">Mutual Match!</h3>
-            <p className="text-sm text-white/70 mt-2">Both of you liked each other! Start chatting below.</p>
+            <p className="text-sm text-white/70 mt-2">Both of you liked each other! Start chatting.</p>
             <div className="flex gap-3 justify-center mt-6">
               <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setChatOpen(true);
-                }}
-                className="px-6 py-2.5 bg-gradient-to-r from-accent to-purple-600 text-white rounded-xl font-bold text-sm hover:scale-105 active:scale-95 transition-all shadow-lg shadow-accent/25"
+                onClick={(e) => { e.stopPropagation(); setChatOpen(true); }}
+                className="btn-primary text-sm px-6 py-2.5"
               >
                 Start Chatting
               </button>
               <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  likePartner().catch(() => {});
-                }}
-                className="px-4 py-2.5 bg-white/5 border border-white/10 hover:bg-white/10 text-white/80 rounded-xl text-sm transition-all"
+                onClick={(e) => { e.stopPropagation(); likePartner().catch(() => {}); }}
+                className="btn-secondary text-sm px-4 py-2.5"
               >
                 Dismiss
               </button>
@@ -460,13 +500,12 @@ export function ChatPage() {
         </div>
       )}
 
-      {/* Modals */}
+      {/* ── MODALS ────────────────────────────────────────── */}
       <ReportModal
         isOpen={showReportModal}
         onClose={() => setShowReportModal(false)}
         onSubmit={handleReport}
       />
-
       <FeedbackModal
         isOpen={showFeedbackModal}
         onClose={handleFeedbackClose}
@@ -475,3 +514,4 @@ export function ChatPage() {
     </div>
   );
 }
+

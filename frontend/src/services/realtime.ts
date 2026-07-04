@@ -43,11 +43,22 @@ async function apiPost<T>(path: string, body: Record<string, unknown>): Promise<
     body: JSON.stringify(body),
   });
 
-  const data = await response.json();
+  const contentType = response.headers.get('content-type') || '';
   if (!response.ok) {
-    throw new Error(data.error || 'Request failed');
+    let errorMsg = `HTTP ${response.status}: ${response.statusText}`;
+    if (contentType.includes('application/json')) {
+      try {
+        const errBody = await response.json();
+        errorMsg = errBody.error || errorMsg;
+      } catch {}
+    }
+    throw new Error(errorMsg);
   }
-  return data;
+
+  if (!contentType.includes('application/json')) {
+    return {} as T;
+  }
+  return response.json();
 }
 
 function cleanupMatchChannel() {
