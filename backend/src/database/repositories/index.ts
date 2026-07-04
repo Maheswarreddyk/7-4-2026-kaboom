@@ -158,12 +158,14 @@ export const queueRepository = {
 };
 
 export const matchRepository = {
-  async create(userA: string, userB: string): Promise<Match> {
+  async create(userA: string, userB: string, matchScore?: number, matchedReason?: string): Promise<Match> {
     const { data, error } = await getSupabase()
       .from('matches')
       .insert({
         user_a: userA,
         user_b: userB,
+        match_score: matchScore ?? null,
+        matched_reason: matchedReason ?? null,
       })
       .select()
       .single();

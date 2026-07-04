@@ -10,6 +10,12 @@ export interface RealtimeCallbacks {
     isInitiator: boolean;
     iceServers: IceServerConfig[];
   }) => void;
+  onStartNegotiation?: (data: {
+    matchId: string;
+    partnerSessionId: string;
+    isInitiator: boolean;
+    iceServers: IceServerConfig[];
+  }) => void;
   onPartnerLeft?: (data: { reason: string }) => void;
   onSearching?: (data: { message: string }) => void;
   onError?: (data: { message: string }) => void;
@@ -80,7 +86,7 @@ function subscribeToMatchChannel(matchId: string, callbacks: RealtimeCallbacks) 
 
 export function connectRealtime(
   sessionId: string,
-  _sessionToken: string,
+  sessionToken: string,
   callbacks: RealtimeCallbacks
 ): void {
   const supabase = getSupabaseClient();
@@ -102,6 +108,17 @@ export function connectRealtime(
       };
       subscribeToMatchChannel(data.matchId, callbacks);
       callbacks.onMatched?.(data);
+      void markReady(sessionId, sessionToken, data.matchId);
+    })
+    .on('broadcast', { event: 'start_negotiation' }, ({ payload }) => {
+      const data = payload as {
+        matchId: string;
+        partnerSessionId: string;
+        isInitiator: boolean;
+        iceServers: IceServerConfig[];
+      };
+      subscribeToMatchChannel(data.matchId, callbacks);
+      callbacks.onStartNegotiation?.(data);
     })
     .on('broadcast', { event: 'partner_left' }, ({ payload }) => {
       cleanupMatchChannel();
@@ -160,7 +177,12 @@ export async function joinQueue(sessionId: string, sessionToken: string, callbac
       isInitiator: data.isInitiator as boolean,
       iceServers: data.iceServers as IceServerConfig[],
     });
+    await markReady(sessionId, sessionToken, matchId);
   }
+}
+
+export async function markReady(sessionId: string, sessionToken: string, matchId: string) {
+  await apiPost('/match/ready', { sessionId, sessionToken, matchId });
 }
 
 export async function leaveQueue(sessionId: string, sessionToken: string) {
@@ -194,6 +216,7 @@ export async function nextPartner(sessionId: string, sessionToken: string, callb
       isInitiator: data.isInitiator as boolean,
       iceServers: data.iceServers as IceServerConfig[],
     });
+    await markReady(sessionId, sessionToken, matchId);
   }
 }
 

@@ -107,8 +107,8 @@ export function TemporaryChat({
           <div className="flex items-center gap-1 bg-white/5 text-white/50 rounded-2xl rounded-tl-none px-3 py-2 self-start text-xs max-w-[50%]">
             <span className="flex gap-0.5">
               <span className="w-1.5 h-1.5 rounded-full bg-white/50 animate-bounce" />
-              <span className="w-1.5 h-1.5 rounded-full bg-white/50 animate-bounce delay-75" />
-              <span className="w-1.5 h-1.5 rounded-full bg-white/50 animate-bounce delay-150" />
+              <span className="w-1.5 h-1.5 rounded-full bg-white/50 animate-bounce" style={{ animationDelay: '75ms' }} />
+              <span className="w-1.5 h-1.5 rounded-full bg-white/50 animate-bounce" style={{ animationDelay: '150ms' }} />
             </span>
             Typing...
           </div>

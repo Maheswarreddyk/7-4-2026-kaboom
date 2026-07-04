@@ -86,9 +86,6 @@ export function useVideoChat(sessionId: string | null, sessionToken: string | nu
     }) => {
       partnerSessionIdRef.current = data.partnerSessionId;
 
-      webrtcManager.setIceServers(data.iceServers);
-      webrtcManager.createPeerConnection();
-
       updateChatState({
         status: 'matched',
         connectionStatus: 'connecting',
@@ -102,6 +99,29 @@ export function useVideoChat(sessionId: string | null, sessionToken: string | nu
         messages: [],
         unreadCount: 0,
         partnerTyping: false,
+      });
+    },
+    [updateChatState]
+  );
+
+  const handleStartNegotiation = useCallback(
+    async (data: {
+      matchId: string;
+      partnerSessionId: string;
+      isInitiator: boolean;
+      iceServers: { urls: string | string[] }[];
+    }) => {
+      partnerSessionIdRef.current = data.partnerSessionId;
+
+      webrtcManager.setIceServers(data.iceServers);
+      webrtcManager.createPeerConnection();
+
+      updateChatState({
+        status: 'matched',
+        connectionStatus: 'connecting',
+        partnerSessionId: data.partnerSessionId,
+        matchId: data.matchId,
+        isInitiator: data.isInitiator,
       });
 
       if (data.isInitiator) {
@@ -129,6 +149,7 @@ export function useVideoChat(sessionId: string | null, sessionToken: string | nu
         });
       },
       onMatched: handleMatched,
+      onStartNegotiation: handleStartNegotiation,
       onPartnerLeft: () => {
         setRemoteStream(null);
         webrtcManager.resetConnection();
@@ -235,7 +256,7 @@ export function useVideoChat(sessionId: string | null, sessionToken: string | nu
       showToast('error', message);
       updateChatState({ status: 'idle', connectionStatus: 'disconnected' });
     }
-  }, [sessionId, sessionToken, showToast, setupWebRTC, handleMatched, updateChatState]);
+  }, [sessionId, sessionToken, showToast, setupWebRTC, handleMatched, handleStartNegotiation, updateChatState]);
 
   const stopChat = useCallback(async () => {
     if (sessionIdRef.current && sessionTokenRef.current) {

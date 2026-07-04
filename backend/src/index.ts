@@ -9,6 +9,7 @@ import { config } from './config/index.js';
 import { checkDatabaseConnection } from './database/client.js';
 import { globalErrorHandler, notFoundHandler } from './middleware/errorHandler.js';
 import routes from './routes/index.js';
+import matchRoutes from './routes/match.js';
 import { setupSocketHandlers } from './socket/index.js';
 import { cleanupService, statsService } from './services/index.js';
 import { matchingEngine } from './services/matchingEngine.js';
@@ -44,6 +45,7 @@ app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true }));
 
 app.use('/api', routes);
+app.use('/api/match', matchRoutes);
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const distPath = path.resolve(__dirname, '../../dist');

@@ -262,7 +262,7 @@ export function ChatPage() {
                 // hide modal after opening chat
                 likePartner().catch(() => {}); // Re-save liked status if needed
               }}
-              className="mt-6 px-6 py-2.5 bg-gradient-to-r from-accent to-purple-650 text-white rounded-xl font-bold text-sm hover:opacity-90 transition-all shadow-lg shadow-accent/25"
+              className="mt-6 px-6 py-2.5 bg-gradient-to-r from-accent to-purple-600 text-white rounded-xl font-bold text-sm hover:opacity-90 transition-all shadow-lg shadow-accent/25"
             >
               Start Chatting
             </button>

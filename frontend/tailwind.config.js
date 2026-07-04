@@ -16,6 +16,8 @@ export default {
         },
         danger: '#ef4444',
         success: '#22c55e',
+        red: { 550: '#ef4444' },
+        purple: { 650: '#7c3aed' },
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],
@@ -26,6 +28,8 @@ export default {
         'fade-in': 'fadeIn 0.5s ease-out',
         'slide-up': 'slideUp 0.5s ease-out',
         'search-pulse': 'searchPulse 2s ease-in-out infinite',
+        'slide-in': 'slideIn 0.3s ease-out',
+        'scale-up': 'scaleUp 0.3s ease-out',
       },
       keyframes: {
         fadeIn: {
@@ -39,6 +43,14 @@ export default {
         searchPulse: {
           '0%, 100%': { transform: 'scale(1)', opacity: '0.6' },
           '50%': { transform: 'scale(1.1)', opacity: '1' },
+        },
+        slideIn: {
+          '0%': { transform: 'translateX(100%)', opacity: '0' },
+          '100%': { transform: 'translateX(0)', opacity: '1' },
+        },
+        scaleUp: {
+          '0%': { transform: 'scale(0.8)', opacity: '0' },
+          '100%': { transform: 'scale(1)', opacity: '1' },
         },
       },
       backdropBlur: {

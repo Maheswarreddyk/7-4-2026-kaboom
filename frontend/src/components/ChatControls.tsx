@@ -91,7 +91,7 @@ export function ChatControls({
           disabled={disabled}
           className={cn(
             "control-btn transition-transform", 
-            liked ? "bg-red-550 border-red-500 text-red-500 scale-110" : "hover:text-red-400"
+            liked ? "bg-red-500 border-red-500 text-red-500 scale-110" : "hover:text-red-400"
           )}
           title="Like Partner"
         >
@@ -110,7 +110,7 @@ export function ChatControls({
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
           </svg>
           {unreadCount > 0 && (
-            <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-550 text-[10px] font-bold text-white animate-pulse">
+            <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white animate-pulse">
               {unreadCount}
             </span>
           )}
