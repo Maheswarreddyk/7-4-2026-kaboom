@@ -9,7 +9,6 @@ import { config } from './config/index.js';
 import { checkDatabaseConnection, getSupabase } from './database/client.js';
 import { globalErrorHandler, notFoundHandler } from './middleware/errorHandler.js';
 import routes from './routes/index.js';
-import matchRoutes from './routes/match.js';
 import { setupSocketHandlers } from './socket/index.js';
 import { cleanupService, statsService } from './services/index.js';
 import { matchingEngine } from './services/matchingEngine.js';
@@ -34,6 +33,25 @@ app.set('trust proxy', 1);
 
 app.use(helmet({
   crossOriginResourcePolicy: { policy: 'cross-origin' },
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      connectSrc: [
+        "'self'",
+        "https://dirocenpssdilkztizps.supabase.co",
+        "wss://dirocenpssdilkztizps.supabase.co",
+        "https://*.supabase.co",
+        "wss://*.supabase.co",
+        "https://*.onrender.com",
+        "wss://*.onrender.com"
+      ],
+      mediaSrc: ["'self'", "blob:", "mediastream:"],
+      imgSrc: ["'self'", "data:", "https://*.supabase.co"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com"],
+    }
+  }
 }));
 
 app.use(compression());
@@ -45,8 +63,18 @@ app.use(cookieParser());
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true }));
 
+// Robust request logging middleware
+app.use((req, res, next) => {
+  const timestamp = new Date().toISOString();
+  const sessionId = req.body?.sessionId || req.query?.sessionId || req.headers['x-session-id'] || 'N/A';
+  const matchId = req.body?.matchId || req.query?.matchId || 'N/A';
+  
+  console.log(`[Request] [${timestamp}] Method: ${req.method} | Path: ${req.path} | SessionId: ${sessionId} | MatchId: ${matchId}`);
+  
+  next();
+});
+
 app.use('/api', routes);
-app.use('/api/match', matchRoutes);
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const distPath = path.resolve(__dirname, '../../dist');

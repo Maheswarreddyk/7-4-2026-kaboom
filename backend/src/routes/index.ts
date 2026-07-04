@@ -13,10 +13,12 @@ import {
 } from '../middleware/rateLimiter.js';
 
 import { getSupabase } from '../database/client.js';
+import matchRoutes from './match.js';
 
 const router = Router();
 
 router.use(apiRateLimiter);
+router.use('/match', matchRoutes);
 
 router.get('/health', healthController.getHealth);
 router.get('/stats', statsController.getStats);
