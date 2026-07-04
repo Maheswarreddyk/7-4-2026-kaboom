@@ -7,14 +7,17 @@
 
 const BASE_URL = process.argv[2] || process.env.RENDER_EXTERNAL_URL || 'http://localhost:10000';
 
+const VERIFY_UUID = '00000000-0000-0000-0000-000000000000';
+const VERIFY_MATCH_UUID = '00000000-0000-0000-0000-000000000001';
+
 const ENDPOINTS = [
   { method: 'GET',  path: '/api/health' },
   { method: 'GET',  path: '/api/stats' },
   { method: 'POST', path: '/api/start-session',  body: { userAgent: 'verify-bot', language: 'en', timezone: 'UTC' } },
-  { method: 'POST', path: '/api/match/join',      body: { sessionId: 'verify-session', sessionToken: 'verify-token' } },
-  { method: 'POST', path: '/api/match/ready',     body: { sessionId: 'verify-session', sessionToken: 'verify-token', matchId: 'verify-match' } },
-  { method: 'POST', path: '/api/match/next',      body: { sessionId: 'verify-session', sessionToken: 'verify-token' } },
-  { method: 'POST', path: '/api/disconnect',      body: { sessionId: 'verify-session', sessionToken: 'verify-token', reason: 'leave' } },
+  { method: 'POST', path: '/api/match/join',      body: { sessionId: VERIFY_UUID, sessionToken: 'verify-token' } },
+  { method: 'POST', path: '/api/match/ready',     body: { sessionId: VERIFY_UUID, sessionToken: 'verify-token', matchId: VERIFY_MATCH_UUID } },
+  { method: 'POST', path: '/api/match/next',      body: { sessionId: VERIFY_UUID, sessionToken: 'verify-token' } },
+  { method: 'POST', path: '/api/match/disconnect', body: { sessionId: VERIFY_UUID, sessionToken: 'verify-token', reason: 'leave' } },
 ];
 
 async function verify() {
