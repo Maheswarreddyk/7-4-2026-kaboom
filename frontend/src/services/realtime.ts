@@ -72,10 +72,6 @@ function cleanupMatchChannel() {
 
 function subscribeToMatchChannel(matchId: string, callbacks: RealtimeCallbacks) {
   const supabase = getSupabaseClient();
-  if (!supabase) {
-    callbacks.onError?.({ message: 'Realtime not configured. Check Supabase settings.' });
-    return;
-  }
 
   cleanupMatchChannel();
   currentMatchId = matchId;
@@ -109,10 +105,6 @@ export function connectRealtime(
   callbacks: RealtimeCallbacks
 ): void {
   const supabase = getSupabaseClient();
-  if (!supabase) {
-    callbacks.onError?.({ message: 'Supabase not configured. Add VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY.' });
-    return;
-  }
 
   disconnectRealtime();
 
