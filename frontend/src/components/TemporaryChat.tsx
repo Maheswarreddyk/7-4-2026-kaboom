@@ -26,11 +26,19 @@ export function TemporaryChat({
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const inputRef = useRef<HTMLInputElement | null>(null);
 
   // Scroll to bottom on new message
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isOpen]);
+
+  // Keep input focused
+  useEffect(() => {
+    if (isOpen) {
+      inputRef.current?.focus();
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -41,12 +49,15 @@ export function TemporaryChat({
     setInputText('');
     onTyping(false);
     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    
+    // Maintain input focus after submit
+    setTimeout(() => {
+      inputRef.current?.focus();
+    }, 50);
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setInputText(e.target.value);
-    
-    // Trigger typing event
     onTyping(true);
     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
     
@@ -58,17 +69,21 @@ export function TemporaryChat({
   const addEmoji = (emoji: string) => {
     setInputText((prev) => prev + emoji);
     setShowEmojiPicker(false);
+    inputRef.current?.focus();
   };
 
   return (
-    <div className="w-full sm:w-80 h-[50vh] sm:h-full bg-slate-950 border-l border-white/10 flex flex-col z-10 animate-slide-in relative">
+    <div className="w-full sm:w-80 h-[50vh] sm:h-full bg-black/60 backdrop-blur-2xl border-l border-white/10 flex flex-col z-20 animate-slide-in relative">
       {/* Header */}
-      <div className="px-4 py-3 flex items-center justify-between border-b border-white/10 bg-slate-900/50">
+      <div className="px-4 py-3 flex items-center justify-between border-b border-white/10 bg-white/5">
         <div className="flex items-center gap-2">
           <span className="w-2.5 h-2.5 rounded-full bg-accent animate-pulse" />
-          <h3 className="text-sm font-semibold text-white">Temporary Match Chat</h3>
+          <h3 className="text-sm font-semibold text-white/90">Temporary Match Chat</h3>
         </div>
-        <button onClick={onClose} className="p-1 hover:bg-white/5 rounded-lg text-white/50 hover:text-white">
+        <button 
+          onClick={onClose} 
+          className="p-1.5 hover:bg-white/10 rounded-lg text-white/50 hover:text-white transition-colors"
+        >
           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
           </svg>
@@ -76,11 +91,13 @@ export function TemporaryChat({
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-3">
+      <div className="flex-1 overflow-y-auto p-4 space-y-3 scrollbar-thin">
         {messages.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center text-center p-4">
-            <p className="text-2xl">💬</p>
-            <p className="text-xs text-white/40 mt-2">Messages will only persist during the call and delete automatically when it ends.</p>
+            <p className="text-3xl animate-bounce">💬</p>
+            <p className="text-xs text-white/40 mt-3 max-w-[200px] leading-relaxed">
+              Messages will only persist during the call and delete automatically when it ends.
+            </p>
           </div>
         ) : (
           messages.map((msg) => {
@@ -89,51 +106,56 @@ export function TemporaryChat({
               <div
                 key={msg.id}
                 className={cn(
-                  "flex flex-col max-w-[80%] rounded-2xl px-3 py-2 text-sm",
+                  "flex flex-col max-w-[80%] rounded-2xl px-3 py-2 text-sm transition-all duration-200 hover:scale-[1.02]",
                   isSelf
-                    ? "bg-accent text-white self-end ml-auto rounded-tr-none"
+                    ? "bg-accent text-white self-end ml-auto rounded-tr-none shadow-lg shadow-accent/10"
                     : "bg-white/10 text-white/90 self-start rounded-tl-none"
                 )}
               >
-                <p className="break-all">{msg.message}</p>
-                <span className="text-[9px] text-white/40 mt-1 self-end">
-                  {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                </span>
+                <p className="break-words select-text">{msg.message}</p>
+                <div className="flex items-center justify-end gap-1 mt-1">
+                  <span className="text-[8px] text-white/50">
+                    {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                  {isSelf && (
+                    <span className="text-[9px] text-accent-light" title="Delivered & Seen">✓✓</span>
+                  )}
+                </div>
               </div>
             );
           })
         )}
         {partnerTyping && (
-          <div className="flex items-center gap-1 bg-white/5 text-white/50 rounded-2xl rounded-tl-none px-3 py-2 self-start text-xs max-w-[50%]">
+          <div className="flex items-center gap-1.5 bg-white/5 text-white/50 rounded-2xl rounded-tl-none px-3 py-2 self-start text-xs max-w-[50%] animate-pulse">
             <span className="flex gap-0.5">
               <span className="w-1.5 h-1.5 rounded-full bg-white/50 animate-bounce" />
               <span className="w-1.5 h-1.5 rounded-full bg-white/50 animate-bounce" style={{ animationDelay: '75ms' }} />
               <span className="w-1.5 h-1.5 rounded-full bg-white/50 animate-bounce" style={{ animationDelay: '150ms' }} />
             </span>
-            Typing...
+            Typing
           </div>
         )}
         <div ref={messagesEndRef} />
       </div>
 
       {/* Input */}
-      <form onSubmit={handleSend} className="p-3 border-t border-white/10 bg-slate-900/20 flex items-center gap-2">
+      <form onSubmit={handleSend} className="p-3 border-t border-white/10 bg-white/5 flex items-center gap-2">
         <div className="relative">
           <button
             type="button"
             onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-            className="p-2 text-white/50 hover:text-white rounded-lg hover:bg-white/5"
+            className="p-2 text-white/50 hover:text-white rounded-lg hover:bg-white/10 transition-colors"
           >
             😀
           </button>
           {showEmojiPicker && (
-            <div className="absolute bottom-full left-0 mb-2 p-2 bg-slate-900 border border-white/10 rounded-xl grid grid-cols-5 gap-1 shadow-2xl z-20">
+            <div className="absolute bottom-full left-0 mb-2 p-2 bg-slate-900 border border-white/10 rounded-xl grid grid-cols-5 gap-1 shadow-2xl z-30">
               {EMOJIS.map((e) => (
                 <button
                   key={e}
                   type="button"
                   onClick={() => addEmoji(e)}
-                  className="w-8 h-8 text-lg hover:bg-white/5 rounded-lg flex items-center justify-center transition-colors"
+                  className="w-8 h-8 text-lg hover:bg-white/10 rounded-lg flex items-center justify-center transition-all hover:scale-110 active:scale-90"
                 >
                   {e}
                 </button>
@@ -143,17 +165,18 @@ export function TemporaryChat({
         </div>
 
         <input
+          ref={inputRef}
           type="text"
           placeholder="Type a message..."
           value={inputText}
           onChange={handleInputChange}
-          className="flex-1 px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/30 text-sm focus:outline-none focus:border-accent"
+          className="flex-1 px-3.5 py-2 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/30 text-sm focus:outline-none focus:border-accent transition-colors"
         />
 
         <button
           type="submit"
           disabled={!inputText.trim()}
-          className="p-2 bg-accent text-white rounded-xl disabled:opacity-40 disabled:hover:bg-accent hover:bg-accent/90"
+          className="p-2.5 bg-accent hover:bg-accent/90 text-white rounded-xl disabled:opacity-40 disabled:hover:bg-accent transition-all hover:scale-105 active:scale-95"
         >
           <svg className="w-5 h-5 transform rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />

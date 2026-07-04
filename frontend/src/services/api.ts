@@ -60,6 +60,15 @@ export const apiService = {
     await api.post('/end-session', { sessionId });
   },
 
+  async restoreSession(sessionId: string, sessionToken: string): Promise<SessionData> {
+    const { data } = await api.post('/restore-session', { sessionId, sessionToken });
+    return {
+      sessionId: data.data.sessionId,
+      sessionToken: data.data.sessionToken,
+      createdAt: data.data.createdAt,
+    };
+  },
+
   async submitReport(
     reporterSessionId: string,
     reportedSessionId: string,

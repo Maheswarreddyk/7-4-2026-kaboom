@@ -42,6 +42,25 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     return () => clearInterval(interval);
   }, [refreshStats]);
 
+  useEffect(() => {
+    const storedId = localStorage.getItem(STORAGE_KEYS.SESSION_ID);
+    const storedToken = localStorage.getItem(STORAGE_KEYS.SESSION_TOKEN);
+    if (storedId && storedToken) {
+      setIsLoading(true);
+      apiService.restoreSession(storedId, storedToken)
+        .then((data) => {
+          setSession(data);
+        })
+        .catch(() => {
+          localStorage.removeItem(STORAGE_KEYS.SESSION_ID);
+          localStorage.removeItem(STORAGE_KEYS.SESSION_TOKEN);
+        })
+        .finally(() => {
+          setIsLoading(false);
+        });
+    }
+  }, []);
+
   const startSession = useCallback(async (): Promise<SessionData> => {
     setIsLoading(true);
     try {

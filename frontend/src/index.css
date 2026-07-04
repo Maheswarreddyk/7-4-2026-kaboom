@@ -70,3 +70,22 @@
     @apply bg-danger/20 border-danger/40 text-danger hover:bg-danger/30;
   }
 }
+
+@keyframes heartBurst {
+  0% { transform: scale(0.3); opacity: 0; }
+  50% { opacity: 0.9; }
+  100% { transform: scale(1.8); opacity: 0; }
+}
+
+@keyframes heartPop {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.3); }
+}
+
+.animate-heart-burst {
+  animation: heartBurst 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+.animate-heart-pop {
+  animation: heartPop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}

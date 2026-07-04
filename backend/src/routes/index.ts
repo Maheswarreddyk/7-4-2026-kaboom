@@ -25,6 +25,7 @@ router.get('/stats', statsController.getStats);
 
 router.post('/start-session', sessionRateLimiter, sessionController.startSession);
 router.post('/end-session', sessionController.endSession);
+router.post('/restore-session', sessionController.restoreSession);
 router.post('/report', reportRateLimiter, reportController.submitReport);
 router.post('/feedback', feedbackController.submitFeedback);
 

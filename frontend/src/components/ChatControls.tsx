@@ -31,18 +31,18 @@ export function ChatControls({
   onToggleFullscreen,
   disabled = false,
   isChatOpen = false,
-  onToggleChat,
   liked = false,
   onLike,
   onOpenPreferences,
   unreadCount = 0,
+  onToggleChat,
 }: ChatControlsProps) {
   return (
-    <div className="flex items-center justify-center gap-3 sm:gap-4 flex-wrap">
+    <div className="flex items-center justify-center gap-3 sm:gap-4 py-2 px-6 rounded-full bg-black/40 backdrop-blur-xl border border-white/10 shadow-2xl">
       {onOpenPreferences && (
         <button
           onClick={onOpenPreferences}
-          className="control-btn border-accent/20 hover:bg-white/5"
+          className="w-12 h-12 rounded-full flex items-center justify-center text-lg bg-white/5 border border-white/10 text-white/80 hover:text-white transition-all duration-200 hover:scale-110 active:scale-90 hover:bg-white/15"
           title="Preferences"
         >
           ⚙️
@@ -52,7 +52,12 @@ export function ChatControls({
       <button
         onClick={onToggleMute}
         disabled={disabled}
-        className={cn('control-btn', isMuted && 'control-btn-active')}
+        className={cn(
+          'w-12 h-12 rounded-full flex items-center justify-center transition-all duration-200 hover:scale-110 active:scale-90',
+          isMuted 
+            ? 'bg-red-500/20 border border-red-500/40 text-red-400 hover:bg-red-500/30' 
+            : 'bg-white/5 border border-white/10 text-white/80 hover:text-white hover:bg-white/15'
+        )}
         title={isMuted ? 'Unmute' : 'Mute'}
       >
         {isMuted ? (
@@ -70,7 +75,12 @@ export function ChatControls({
       <button
         onClick={onToggleCamera}
         disabled={disabled}
-        className={cn('control-btn', isCameraOff && 'control-btn-active')}
+        className={cn(
+          'w-12 h-12 rounded-full flex items-center justify-center transition-all duration-200 hover:scale-110 active:scale-90',
+          isCameraOff 
+            ? 'bg-red-500/20 border border-red-500/40 text-red-400 hover:bg-red-500/30' 
+            : 'bg-white/5 border border-white/10 text-white/80 hover:text-white hover:bg-white/15'
+        )}
         title={isCameraOff ? 'Enable Camera' : 'Disable Camera'}
       >
         {isCameraOff ? (
@@ -90,8 +100,10 @@ export function ChatControls({
           onClick={onLike}
           disabled={disabled}
           className={cn(
-            "control-btn transition-transform", 
-            liked ? "bg-red-500 border-red-500 text-red-500 scale-110" : "hover:text-red-400"
+            "w-12 h-12 rounded-full flex items-center justify-center transition-all duration-200 hover:scale-120 active:scale-90 shadow-lg", 
+            liked 
+              ? "bg-gradient-to-r from-red-500 to-pink-500 border border-red-400 text-white animate-heart-pop" 
+              : "bg-white/5 border border-white/10 text-white/80 hover:text-red-400 hover:bg-white/15"
           )}
           title="Like Partner"
         >
@@ -103,14 +115,19 @@ export function ChatControls({
         <button
           onClick={onToggleChat}
           disabled={disabled}
-          className={cn('control-btn relative', isChatOpen && 'control-btn-active')}
+          className={cn(
+            'w-12 h-12 rounded-full flex items-center justify-center relative transition-all duration-200 hover:scale-110 active:scale-90',
+            isChatOpen 
+              ? 'bg-accent border border-accent/50 text-white' 
+              : 'bg-white/5 border border-white/10 text-white/80 hover:text-white hover:bg-white/15'
+          )}
           title="Toggle Chat"
         >
           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
           </svg>
           {unreadCount > 0 && (
-            <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white animate-pulse">
+            <span className="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white border border-black animate-pulse">
               {unreadCount}
             </span>
           )}
@@ -120,16 +137,21 @@ export function ChatControls({
       <button
         onClick={onNext}
         disabled={disabled}
-        className="control-btn bg-accent/20 border-accent/40 hover:bg-accent/30 animate-pulse"
+        className="w-14 h-14 rounded-full flex items-center justify-center bg-gradient-to-r from-accent to-purple-600 border border-accent/40 text-white shadow-lg transition-all duration-200 hover:scale-115 active:scale-85 hover:shadow-accent/40"
         title="Next"
       >
-        <svg className="w-5 h-5 text-accent-light" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" />
+        <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 5l7 7-7 7M5 5l7 7-7 7" />
         </svg>
       </button>
 
-      <button onClick={onReport} disabled={disabled} className="control-btn" title="Report">
-        <svg className="w-5 h-5 text-yellow-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <button 
+        onClick={onReport} 
+        disabled={disabled} 
+        className="w-12 h-12 rounded-full flex items-center justify-center bg-white/5 border border-white/10 text-yellow-400 hover:bg-white/15 transition-all duration-200 hover:scale-110 active:scale-90" 
+        title="Report"
+      >
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
         </svg>
       </button>
@@ -137,7 +159,12 @@ export function ChatControls({
       <button
         onClick={onToggleFullscreen}
         disabled={disabled}
-        className={cn('control-btn hidden sm:flex', isFullscreen && 'control-btn-active')}
+        className={cn(
+          'w-12 h-12 rounded-full flex items-center justify-center transition-all duration-200 hover:scale-110 active:scale-90 hidden sm:flex',
+          isFullscreen 
+            ? 'bg-accent border border-accent/50 text-white' 
+            : 'bg-white/5 border border-white/10 text-white/80 hover:text-white hover:bg-white/15'
+        )}
         title="Fullscreen"
       >
         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -147,7 +174,7 @@ export function ChatControls({
 
       <button
         onClick={onLeave}
-        className="control-btn control-btn-danger"
+        className="w-12 h-12 rounded-full flex items-center justify-center bg-red-500/20 border border-red-500/40 text-red-500 hover:bg-red-500/30 transition-all duration-200 hover:scale-110 active:scale-90"
         title="Leave Chat"
       >
         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">

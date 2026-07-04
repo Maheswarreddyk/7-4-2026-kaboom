@@ -43,6 +43,21 @@ export const sessionService = {
   async getSession(sessionId: string): Promise<VisitorSession | null> {
     return sessionRepository.findById(sessionId);
   },
+
+  async restoreSession(sessionId: string, sessionToken: string): Promise<VisitorSession | null> {
+    const session = await sessionRepository.findById(sessionId);
+    if (!session || session.session_token !== sessionToken || session.status === 'ended') {
+      return null;
+    }
+    const { getSupabase } = await import('../database/client.js');
+    await getSupabase()
+      .from('visitor_sessions')
+      .update({ last_activity: new Date().toISOString() })
+      .eq('id', sessionId);
+
+    await connectionLogRepository.log(sessionId, 'reconnect');
+    return session;
+  },
 };
 
 export const statsService = {

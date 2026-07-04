@@ -70,6 +70,28 @@ export const sessionController = {
 
     res.json({ success: true, message: 'Session ended' });
   }),
+
+  restoreSession: asyncHandler(async (req: Request, res: Response) => {
+    const { sessionId, sessionToken } = req.body ?? {};
+
+    if (!sessionId || !sessionToken) {
+      throw new AppError(400, 'sessionId and sessionToken are required');
+    }
+
+    const session = await sessionService.restoreSession(sessionId, sessionToken);
+    if (!session) {
+      throw new AppError(401, 'Invalid or expired session');
+    }
+
+    res.json({
+      success: true,
+      data: {
+        sessionId: session.id,
+        sessionToken: session.session_token,
+        createdAt: session.created_at,
+      },
+    });
+  }),
 };
 
 export const reportController = {
