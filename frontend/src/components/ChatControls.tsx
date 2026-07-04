@@ -1,3 +1,4 @@
+import React from 'react';
 import { cn } from '../utils/index.js';
 
 interface ChatControlsProps {
@@ -37,11 +38,21 @@ export function ChatControls({
   unreadCount = 0,
   onToggleChat,
 }: ChatControlsProps) {
+
+  // Universal gesture/touch helper to prevent double trigger and eliminate 300ms mobile delay
+  const handlePress = (callback?: () => void) => (e: React.PointerEvent<HTMLButtonElement>) => {
+    if (disabled && callback !== onLeave) return;
+    if (e.pointerType === 'mouse' && e.button !== 0) return; // Left click only for mouse
+    e.preventDefault();
+    e.stopPropagation();
+    callback?.();
+  };
+
   return (
-    <div className="flex items-center justify-center gap-3 sm:gap-4 py-2 px-6 rounded-full bg-black/40 backdrop-blur-xl border border-white/10 shadow-2xl">
+    <div className="flex items-center justify-center gap-3 sm:gap-4 py-2 px-6 rounded-full bg-black/40 backdrop-blur-xl border border-white/10 shadow-2xl pointer-events-auto">
       {onOpenPreferences && (
         <button
-          onClick={onOpenPreferences}
+          onPointerDown={handlePress(onOpenPreferences)}
           className="w-12 h-12 rounded-full flex items-center justify-center text-lg bg-white/5 border border-white/10 text-white/80 hover:text-white transition-all duration-200 hover:scale-110 active:scale-90 hover:bg-white/15"
           title="Preferences"
         >
@@ -50,7 +61,7 @@ export function ChatControls({
       )}
 
       <button
-        onClick={onToggleMute}
+        onPointerDown={handlePress(onToggleMute)}
         disabled={disabled}
         className={cn(
           'w-12 h-12 rounded-full flex items-center justify-center transition-all duration-200 hover:scale-110 active:scale-90',
@@ -73,7 +84,7 @@ export function ChatControls({
       </button>
 
       <button
-        onClick={onToggleCamera}
+        onPointerDown={handlePress(onToggleCamera)}
         disabled={disabled}
         className={cn(
           'w-12 h-12 rounded-full flex items-center justify-center transition-all duration-200 hover:scale-110 active:scale-90',
@@ -97,7 +108,7 @@ export function ChatControls({
 
       {onLike && (
         <button
-          onClick={onLike}
+          onPointerDown={handlePress(onLike)}
           disabled={disabled}
           className={cn(
             "w-12 h-12 rounded-full flex items-center justify-center transition-all duration-200 hover:scale-120 active:scale-90 shadow-lg", 
@@ -113,7 +124,7 @@ export function ChatControls({
 
       {onToggleChat && (
         <button
-          onClick={onToggleChat}
+          onPointerDown={handlePress(onToggleChat)}
           disabled={disabled}
           className={cn(
             'w-12 h-12 rounded-full flex items-center justify-center relative transition-all duration-200 hover:scale-110 active:scale-90',
@@ -135,7 +146,7 @@ export function ChatControls({
       )}
 
       <button
-        onClick={onNext}
+        onPointerDown={handlePress(onNext)}
         disabled={disabled}
         className="w-14 h-14 rounded-full flex items-center justify-center bg-gradient-to-r from-accent to-purple-600 border border-accent/40 text-white shadow-lg transition-all duration-200 hover:scale-115 active:scale-85 hover:shadow-accent/40"
         title="Next"
@@ -146,7 +157,7 @@ export function ChatControls({
       </button>
 
       <button 
-        onClick={onReport} 
+        onPointerDown={handlePress(onReport)} 
         disabled={disabled} 
         className="w-12 h-12 rounded-full flex items-center justify-center bg-white/5 border border-white/10 text-yellow-400 hover:bg-white/15 transition-all duration-200 hover:scale-110 active:scale-90" 
         title="Report"
@@ -157,7 +168,7 @@ export function ChatControls({
       </button>
 
       <button
-        onClick={onToggleFullscreen}
+        onPointerDown={handlePress(onToggleFullscreen)}
         disabled={disabled}
         className={cn(
           'w-12 h-12 rounded-full flex items-center justify-center transition-all duration-200 hover:scale-110 active:scale-90 hidden sm:flex',
@@ -173,7 +184,7 @@ export function ChatControls({
       </button>
 
       <button
-        onClick={onLeave}
+        onPointerDown={handlePress(onLeave)}
         className="w-12 h-12 rounded-full flex items-center justify-center bg-red-500/20 border border-red-500/40 text-red-500 hover:bg-red-500/30 transition-all duration-200 hover:scale-110 active:scale-90"
         title="Leave Chat"
       >

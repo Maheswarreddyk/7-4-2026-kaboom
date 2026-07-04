@@ -43,6 +43,20 @@ export function ChatPage() {
   // Onboarding Hint state
   const [activeHint, setActiveHint] = useState<string | null>(null);
   const [hintDismissed, setHintDismissed] = useState(false);
+  const [showMutualMatchPopup, setShowMutualMatchPopup] = useState(false);
+  const [hearts, setHearts] = useState<Array<{ id: number; left: number; delay: number }>>([]);
+
+  const triggerHeartBurst = useCallback(() => {
+    const newHearts = Array.from({ length: 8 }).map((_, i) => ({
+      id: Math.random() + i,
+      left: Math.random() * 80 + 10,
+      delay: Math.random() * 0.4
+    }));
+    setHearts(prev => [...prev, ...newHearts]);
+    setTimeout(() => {
+      setHearts(prev => prev.filter(h => !newHearts.some(nh => nh.id === h.id)));
+    }, 3000);
+  }, []);
 
   const {
     chatState,
@@ -61,6 +75,11 @@ export function ChatPage() {
     setChatOpen,
   } = useVideoChat(session?.sessionId ?? null, session?.sessionToken ?? null);
 
+  const handleLike = useCallback(async () => {
+    triggerHeartBurst();
+    await likePartner();
+  }, [triggerHeartBurst, likePartner]);
+
   // Autohide controls logic
   const resetControlsTimeout = useCallback(() => {
     setControlsVisible(true);
@@ -70,7 +89,7 @@ export function ChatPage() {
       if (chatState.status === 'connected' && !showPreferenceModal) {
         setControlsVisible(false);
       }
-    }, 3500);
+    }, 2500);
   }, [chatState.status, showPreferenceModal]);
 
   useEffect(() => {
@@ -79,6 +98,26 @@ export function ChatPage() {
       if (hideTimeoutRef.current) clearTimeout(hideTimeoutRef.current);
     };
   }, [resetControlsTimeout]);
+
+  // Mutual Match Auto-Dismiss Logic
+  useEffect(() => {
+    if (chatState.mutualLike) {
+      setShowMutualMatchPopup(true);
+      const timer = setTimeout(() => {
+        setShowMutualMatchPopup(false);
+      }, 6000);
+      return () => clearTimeout(timer);
+    } else {
+      setShowMutualMatchPopup(false);
+    }
+  }, [chatState.mutualLike]);
+
+  // Trigger Heart Burst on Likes
+  useEffect(() => {
+    if (chatState.partnerLiked || chatState.mutualLike) {
+      triggerHeartBurst();
+    }
+  }, [chatState.partnerLiked, chatState.mutualLike, triggerHeartBurst]);
 
   // Draggable handlers
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -328,7 +367,12 @@ export function ChatPage() {
       aria-label="Video chat"
     >
       {/* ── LAYER 1: Remote video — z-index: var(--z-video) ── */}
-      <div className="video-viewport">
+      <div 
+        className={cn(
+          "video-viewport transition-all duration-[750ms] ease-[cubic-bezier(0.16,1,0.3,1)]",
+          isConnected ? "opacity-100 scale-100 translate-x-0" : "opacity-0 scale-95 -translate-x-10"
+        )}
+      >
         <VideoPlayer
           stream={remoteStream}
           className="w-full h-full object-cover"
@@ -432,26 +476,22 @@ export function ChatPage() {
           isChatOpen={chatState.isChatOpen}
           onToggleChat={() => setChatOpen(!chatState.isChatOpen)}
           liked={chatState.liked}
-          onLike={likePartner}
+          onLike={handleLike}
           onOpenPreferences={() => setShowPreferenceModal(true)}
           unreadCount={chatState.unreadCount}
         />
       </div>
 
-      {/* ── CHAT SIDEBAR ──────────────────────────────────── */}
-      {chatState.isChatOpen && (
-        <div style={{ zIndex: 'var(--z-popup)' as any, position: 'absolute', inset: 0 }}>
-          <TemporaryChat
-            isOpen={chatState.isChatOpen}
-            onClose={() => setChatOpen(false)}
-            messages={chatState.messages || []}
-            onSendMessage={sendChatMessage}
-            selfSessionId={session.sessionId}
-            partnerTyping={chatState.partnerTyping || false}
-            onTyping={setTypingStatus}
-          />
-        </div>
-      )}
+      {/* ── FLOATING CHAT OVERLAY ─────────────────────────── */}
+      <TemporaryChat
+        isOpen={chatState.isChatOpen || false}
+        onClose={() => setChatOpen(false)}
+        messages={chatState.messages || []}
+        onSendMessage={sendChatMessage}
+        selfSessionId={session.sessionId}
+        partnerTyping={chatState.partnerTyping || false}
+        onTyping={setTypingStatus}
+      />
 
       {/* ── PREFERENCES MODAL ─────────────────────────────── */}
       <PreferenceModal
@@ -470,12 +510,11 @@ export function ChatPage() {
         }}
       />
 
-      {/* ── MUTUAL MATCH CONFETTI ─────────────────────────── */}
-      {chatState.mutualLike && (
+      {/* ── MUTUAL MATCH OVERLAY ──────────────────────────── */}
+      {showMutualMatchPopup && (
         <div
           className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 backdrop-blur-2xl animate-fade-in"
           style={{ zIndex: 'var(--z-confetti)' as any }}
-          onClick={() => setChatOpen(true)}
         >
           <div className="p-8 bg-surface-2 border border-white/10 rounded-3xl text-center shadow-2xl max-w-sm animate-spring-in glass relative overflow-hidden">
             <span className="text-6xl animate-bounce block">🎉</span>
@@ -484,13 +523,20 @@ export function ChatPage() {
             <p className="text-sm text-white/70 mt-2">Both of you liked each other! Start chatting.</p>
             <div className="flex gap-3 justify-center mt-6">
               <button
-                onClick={(e) => { e.stopPropagation(); setChatOpen(true); }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowMutualMatchPopup(false);
+                  setChatOpen(true);
+                }}
                 className="btn-primary text-sm px-6 py-2.5"
               >
                 Start Chatting
               </button>
               <button
-                onClick={(e) => { e.stopPropagation(); likePartner().catch(() => {}); }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowMutualMatchPopup(false);
+                }}
                 className="btn-secondary text-sm px-4 py-2.5"
               >
                 Dismiss
@@ -499,6 +545,20 @@ export function ChatPage() {
           </div>
         </div>
       )}
+
+      {/* ── FLOATING HEARTS EMITTER ───────────────────────── */}
+      {hearts.map((h) => (
+        <span
+          key={h.id}
+          className="floating-heart"
+          style={{
+            left: `${h.left}%`,
+            animationDelay: `${h.delay}s`
+          }}
+        >
+          ❤️
+        </span>
+      ))}
 
       {/* ── MODALS ────────────────────────────────────────── */}
       <ReportModal

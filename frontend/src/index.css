@@ -436,3 +436,40 @@
     }
   }
 }
+
+/* Floating Hearts Emitter Styles */
+@keyframes floatUp {
+  0% {
+    transform: translateY(100vh) scale(0.6) rotate(0deg);
+    opacity: 0;
+  }
+  15% {
+    opacity: 0.85;
+  }
+  85% {
+    opacity: 0.85;
+  }
+  100% {
+    transform: translateY(-20vh) scale(1.6) rotate(35deg);
+    opacity: 0;
+  }
+}
+
+.floating-heart {
+  position: fixed;
+  bottom: -40px;
+  font-size: 2.2rem;
+  animation: floatUp 2.8s ease-in-out forwards;
+  pointer-events: none;
+  z-index: 100;
+  filter: drop-shadow(0 4px 10px rgba(244, 63, 94, 0.4));
+}
+
+/* Hide scrollbar utility */
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}

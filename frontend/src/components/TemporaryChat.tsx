@@ -11,7 +11,7 @@ interface TemporaryChatProps {
   onTyping: (typing: boolean) => void;
 }
 
-const EMOJIS = ['👋', '😊', '😂', '🔥', '❤️', '😱', '👍', '🙏', '🎉', '💩'];
+const EMOJIS = ['👋', '😊', '😂', '🔥', '❤️', '👍', '🎉', '🙏'];
 
 export function TemporaryChat({
   isOpen,
@@ -24,23 +24,29 @@ export function TemporaryChat({
 }: TemporaryChatProps) {
   const [inputText, setInputText] = useState('');
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [pinnedIds, setPinnedIds] = useState<Set<string>>(new Set());
+  const [now, setNow] = useState(Date.now());
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
-  // Scroll to bottom on new message
+  // Update time reference every 500ms for accurate message decay transitions
+  useEffect(() => {
+    const interval = setInterval(() => setNow(Date.now()), 500);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Auto-scroll to bottom of the message container when a new message arrives
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, isOpen]);
+  }, [messages]);
 
-  // Keep input focused
+  // Focus input when input bar opens
   useEffect(() => {
     if (isOpen) {
       inputRef.current?.focus();
     }
   }, [isOpen]);
-
-  if (!isOpen) return null;
 
   const handleSend = (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,7 +56,6 @@ export function TemporaryChat({
     onTyping(false);
     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
     
-    // Maintain input focus after submit
     setTimeout(() => {
       inputRef.current?.focus();
     }, 50);
@@ -72,117 +77,143 @@ export function TemporaryChat({
     inputRef.current?.focus();
   };
 
-  return (
-    <div className="w-full sm:w-80 h-[50vh] sm:h-full bg-black/60 backdrop-blur-2xl border-l border-white/10 flex flex-col z-20 animate-slide-in relative">
-      {/* Header */}
-      <div className="px-4 py-3 flex items-center justify-between border-b border-white/10 bg-white/5">
-        <div className="flex items-center gap-2">
-          <span className="w-2.5 h-2.5 rounded-full bg-accent animate-pulse" />
-          <h3 className="text-sm font-semibold text-white/90">Temporary Match Chat</h3>
-        </div>
-        <button 
-          onClick={onClose} 
-          className="p-1.5 hover:bg-white/10 rounded-lg text-white/50 hover:text-white transition-colors"
-        >
-          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
-      </div>
+  const togglePin = (id: string) => {
+    setPinnedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
 
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-3 scrollbar-thin">
-        {messages.length === 0 ? (
-          <div className="h-full flex flex-col items-center justify-center text-center p-4">
-            <p className="text-3xl animate-bounce">💬</p>
-            <p className="text-xs text-white/40 mt-3 max-w-[200px] leading-relaxed">
-              Messages will only persist during the call and delete automatically when it ends.
-            </p>
-          </div>
-        ) : (
-          messages.map((msg) => {
+  // Only render container if there are messages or the input/typing bar is active
+  const hasMessagesToShow = messages.some(msg => pinnedIds.has(msg.id) || (now - msg.createdAt < 20000));
+  if (!hasMessagesToShow && !isOpen && !partnerTyping) return null;
+
+  return (
+    <div 
+      className="absolute bottom-28 left-4 max-w-[280px] sm:max-w-[320px] flex flex-col gap-2 z-20 pointer-events-none select-none transition-all duration-300"
+      style={{
+        bottom: isOpen ? 'calc(env(safe-area-inset-bottom) + 96px)' : 'calc(env(safe-area-inset-bottom) + 88px)'
+      }}
+    >
+      {/* ── FLOATING MESSAGE BUBBLES ── */}
+      <div className="flex flex-col justify-end overflow-hidden max-h-[220px] sm:max-h-[300px] pointer-events-none">
+        <div className="flex flex-col justify-end gap-1.5 overflow-y-auto scrollbar-none pr-2">
+          {messages.map((msg) => {
             const isSelf = msg.senderSessionId === selfSessionId;
+            const isPinned = pinnedIds.has(msg.id);
+            const age = now - msg.createdAt;
+            const isExpired = age > 20000;
+            const isVisible = isPinned || !isExpired;
+
             return (
               <div
                 key={msg.id}
+                onClick={() => togglePin(msg.id)}
                 className={cn(
-                  "flex flex-col max-w-[80%] rounded-2xl px-3 py-2 text-sm transition-all duration-200 hover:scale-[1.02]",
-                  isSelf
-                    ? "bg-accent text-white self-end ml-auto rounded-tr-none shadow-lg shadow-accent/10"
-                    : "bg-white/10 text-white/90 self-start rounded-tl-none"
+                  "flex flex-col gap-0.5 text-white/95 rounded-2xl rounded-tl-none max-w-[90%] pointer-events-auto cursor-pointer shadow-lg select-text",
+                  isSelf 
+                    ? "bg-indigo-600/35 backdrop-blur-md border border-indigo-500/25 self-start"
+                    : "bg-zinc-900/35 backdrop-blur-md border border-white/10 self-start",
+                  isVisible 
+                    ? "opacity-100 max-h-[140px] scale-100 translate-y-0 py-2 px-3.5 transition-all duration-500 ease-out" 
+                    : "opacity-0 max-h-0 scale-90 -translate-y-4 overflow-hidden py-0 px-3.5 pointer-events-none transition-all duration-700 ease-in-out"
                 )}
               >
-                <p className="break-words select-text">{msg.message}</p>
-                <div className="flex items-center justify-end gap-1 mt-1">
-                  <span className="text-[8px] text-white/50">
-                    {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                <div className="flex items-center gap-1.5 justify-between">
+                  <span className="text-[10px] text-white/50 font-medium">
+                    {isSelf ? 'You' : 'Partner'}
                   </span>
-                  {isSelf && (
-                    <span className="text-[9px] text-accent-light" title="Delivered & Seen">✓✓</span>
-                  )}
+                  {isPinned && <span className="text-[10px]">📌</span>}
                 </div>
+                <p className="text-[13px] leading-relaxed break-words font-medium tracking-wide drop-shadow-md">
+                  {msg.message}
+                </p>
               </div>
             );
-          })
-        )}
-        {partnerTyping && (
-          <div className="flex items-center gap-1.5 bg-white/5 text-white/50 rounded-2xl rounded-tl-none px-3 py-2 self-start text-xs max-w-[50%] animate-pulse">
-            <span className="flex gap-0.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-white/50 animate-bounce" />
-              <span className="w-1.5 h-1.5 rounded-full bg-white/50 animate-bounce" style={{ animationDelay: '75ms' }} />
-              <span className="w-1.5 h-1.5 rounded-full bg-white/50 animate-bounce" style={{ animationDelay: '150ms' }} />
-            </span>
-            Typing
-          </div>
-        )}
-        <div ref={messagesEndRef} />
+          })}
+          <div ref={messagesEndRef} />
+        </div>
       </div>
 
-      {/* Input */}
-      <form onSubmit={handleSend} className="p-3 border-t border-white/10 bg-white/5 flex items-center gap-2">
-        <div className="relative">
+      {/* ── TYPING STATUS BUBBLE ── */}
+      {partnerTyping && (
+        <div className="flex items-center gap-1.5 bg-zinc-950/40 backdrop-blur-md border border-white/10 text-white/60 rounded-full px-3 py-1.5 self-start text-xs pointer-events-auto animate-pulse">
+          <span className="flex gap-0.5 mt-0.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-white/60 animate-bounce" />
+            <span className="w-1.5 h-1.5 rounded-full bg-white/60 animate-bounce" style={{ animationDelay: '75ms' }} />
+            <span className="w-1.5 h-1.5 rounded-full bg-white/60 animate-bounce" style={{ animationDelay: '150ms' }} />
+          </span>
+          <span className="text-[11px] font-medium tracking-wide">Typing</span>
+        </div>
+      )}
+
+      {/* ── FLOATING INPUT BAR ── */}
+      {isOpen && (
+        <form 
+          onSubmit={handleSend} 
+          className="flex items-center gap-2 p-1.5 bg-zinc-950/75 backdrop-blur-xl border border-white/10 rounded-2xl pointer-events-auto animate-spring-in shadow-2xl"
+        >
+          {/* Emoji Trigger */}
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+              className="w-8 h-8 flex items-center justify-center text-sm rounded-xl hover:bg-white/10 transition-colors"
+            >
+              😀
+            </button>
+            {showEmojiPicker && (
+              <div className="absolute bottom-full left-0 mb-2 p-1.5 bg-zinc-950 border border-white/10 rounded-2xl grid grid-cols-4 gap-1 shadow-2xl z-30">
+                {EMOJIS.map((e) => (
+                  <button
+                    key={e}
+                    type="button"
+                    onClick={() => addEmoji(e)}
+                    className="w-8 h-8 text-base hover:bg-white/10 rounded-xl flex items-center justify-center transition-transform hover:scale-115 active:scale-90"
+                  >
+                    {e}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Input field */}
+          <input
+            ref={inputRef}
+            type="text"
+            placeholder="Type a message..."
+            value={inputText}
+            onChange={handleInputChange}
+            className="flex-1 min-w-0 bg-transparent border-0 text-white placeholder-white/30 text-[13px] font-medium focus:ring-0 focus:outline-none py-1.5"
+          />
+
+          {/* Close button */}
           <button
             type="button"
-            onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-            className="p-2 text-white/50 hover:text-white rounded-lg hover:bg-white/10 transition-colors"
+            onClick={onClose}
+            className="w-8 h-8 flex items-center justify-center text-white/40 hover:text-white/70 rounded-xl transition-colors"
           >
-            😀
+            ✕
           </button>
-          {showEmojiPicker && (
-            <div className="absolute bottom-full left-0 mb-2 p-2 bg-slate-900 border border-white/10 rounded-xl grid grid-cols-5 gap-1 shadow-2xl z-30">
-              {EMOJIS.map((e) => (
-                <button
-                  key={e}
-                  type="button"
-                  onClick={() => addEmoji(e)}
-                  className="w-8 h-8 text-lg hover:bg-white/10 rounded-lg flex items-center justify-center transition-all hover:scale-110 active:scale-90"
-                >
-                  {e}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
 
-        <input
-          ref={inputRef}
-          type="text"
-          placeholder="Type a message..."
-          value={inputText}
-          onChange={handleInputChange}
-          className="flex-1 px-3.5 py-2 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/30 text-sm focus:outline-none focus:border-accent transition-colors"
-        />
-
-        <button
-          type="submit"
-          disabled={!inputText.trim()}
-          className="p-2.5 bg-accent hover:bg-accent/90 text-white rounded-xl disabled:opacity-40 disabled:hover:bg-accent transition-all hover:scale-105 active:scale-95"
-        >
-          <svg className="w-5 h-5 transform rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-          </svg>
-        </button>
-      </form>
+          {/* Send Button */}
+          <button
+            type="submit"
+            disabled={!inputText.trim()}
+            className="w-8 h-8 flex items-center justify-center bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl disabled:opacity-30 disabled:hover:bg-indigo-600 transition-all active:scale-95"
+          >
+            <svg className="w-4 h-4 transform rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+            </svg>
+          </button>
+        </form>
+      )}
     </div>
   );
 }

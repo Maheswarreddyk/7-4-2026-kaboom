@@ -42,6 +42,40 @@ export function useVideoChat(sessionId: string | null, sessionToken: string | nu
   const callbacksRef = useRef<ReturnType<typeof buildCallbacks> | null>(null);
   const offerRetryTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const answerRetryTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const skipInProgressRef = useRef(false);
+
+  const playConnectChime = useCallback(() => {
+    try {
+      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioContextClass) return;
+      const ctx = new AudioContextClass();
+      
+      const now = ctx.currentTime;
+      const playTone = (freq: number, start: number, duration: number) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, start);
+        
+        gain.gain.setValueAtTime(0, start);
+        gain.gain.linearRampToValueAtTime(0.15, start + 0.05);
+        gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+        
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        
+        osc.start(start);
+        osc.stop(start + duration);
+      };
+      
+      playTone(523.25, now, 0.6); // C5
+      playTone(659.25, now + 0.1, 0.6); // E5
+      playTone(783.99, now + 0.2, 0.8); // G5
+    } catch (e) {
+      console.warn('Audio context chime failed to play:', e);
+    }
+  }, []);
 
   const signalingStateRef = useRef<
     | 'NEW'
@@ -107,6 +141,7 @@ export function useVideoChat(sessionId: string | null, sessionToken: string | nu
       onRemoteStream: (stream) => {
         setRemoteStream(stream);
         updateChatState({ connectionStatus: 'connected', status: 'connected' });
+        playConnectChime();
       },
       onConnectionStateChange: (state) => {
         const statusMap: Record<RTCPeerConnectionState, ConnectionStatus> = {
@@ -118,6 +153,10 @@ export function useVideoChat(sessionId: string | null, sessionToken: string | nu
           closed: 'disconnected',
         };
         updateChatState({ connectionStatus: statusMap[state] });
+
+        if (state === 'connected') {
+          playConnectChime();
+        }
 
         if (state === 'failed') {
           showToast('error', 'Connection failed. Retrying connection...');
@@ -134,7 +173,7 @@ export function useVideoChat(sessionId: string | null, sessionToken: string | nu
         }
       },
     });
-  }, [showToast, updateChatState, handleIceRestart]);
+  }, [showToast, updateChatState, handleIceRestart, playConnectChime]);
 
   const handleMatched = useCallback(
     async (data: {
@@ -143,6 +182,12 @@ export function useVideoChat(sessionId: string | null, sessionToken: string | nu
       isInitiator: boolean;
       iceServers: { urls: string | string[] }[];
     }) => {
+      if (skipInProgressRef.current) return;
+      if (webrtcManager.getConnectionState() === 'connected') {
+        console.log('[Signaling] Already connected. Ignoring duplicate matched event.');
+        return;
+      }
+
       partnerSessionIdRef.current = data.partnerSessionId;
       setSignalingState('MATCHED');
 
@@ -184,6 +229,12 @@ export function useVideoChat(sessionId: string | null, sessionToken: string | nu
       isInitiator: boolean;
       iceServers: { urls: string | string[] }[];
     }) => {
+      if (skipInProgressRef.current) return;
+      if (webrtcManager.getConnectionState() === 'connected') {
+        console.log('[Signaling] Already connected. Ignoring duplicate startNegotiation event.');
+        return;
+      }
+
       partnerSessionIdRef.current = data.partnerSessionId;
 
       clearSignalingRetryTimers();
@@ -227,15 +278,31 @@ export function useVideoChat(sessionId: string | null, sessionToken: string | nu
   function buildCallbacks() {
     return {
       onWaiting: (data: { queuePosition: number; message: string }) => {
+        if (skipInProgressRef.current) return;
         updateChatState({
           status: 'waiting',
           queuePosition: data.queuePosition,
           connectionStatus: 'connecting',
         });
       },
-      onMatched: handleMatched,
-      onStartNegotiation: handleStartNegotiation,
+      onMatched: (data: any) => {
+        if (skipInProgressRef.current) return;
+        if (webrtcManager.getConnectionState() === 'connected') {
+          console.log('[Signaling] Already connected. Ignoring duplicate matched event.');
+          return;
+        }
+        handleMatched(data);
+      },
+      onStartNegotiation: (data: any) => {
+        if (skipInProgressRef.current) return;
+        if (webrtcManager.getConnectionState() === 'connected') {
+          console.log('[Signaling] Already connected. Ignoring duplicate startNegotiation event.');
+          return;
+        }
+        handleStartNegotiation(data);
+      },
       onPartnerLeft: () => {
+        if (skipInProgressRef.current) return;
         clearSignalingRetryTimers();
         setRemoteStream(null);
         webrtcManager.resetConnection();
@@ -255,21 +322,26 @@ export function useVideoChat(sessionId: string | null, sessionToken: string | nu
         showToast('info', 'Partner left. Finding someone new...');
       },
       onSearching: (data: { message: string }) => {
+        if (skipInProgressRef.current) return;
         updateChatState({ status: 'waiting', connectionStatus: 'connecting' });
         showToast('info', data.message);
       },
       onError: (data: { message: string }) => {
+        if (skipInProgressRef.current) return;
         showToast('error', data.message);
       },
       onPartnerLiked: () => {
+        if (skipInProgressRef.current) return;
         updateChatState({ partnerLiked: true });
         showToast('success', 'Your partner liked you! ❤️');
       },
       onMutualLike: () => {
+        if (skipInProgressRef.current) return;
         updateChatState({ mutualLike: true });
         showToast('success', "It's a Match! ❤️");
       },
       onNewMessage: (data: { matchId: string; senderSessionId: string; message: string; createdAt: string }) => {
+        if (skipInProgressRef.current) return;
         setChatState((prev) => {
           const newMessages = prev.messages ? [...prev.messages] : [];
           newMessages.push({
@@ -287,9 +359,13 @@ export function useVideoChat(sessionId: string | null, sessionToken: string | nu
         });
       },
       onPartnerTyping: (data: { typing: boolean }) => {
+        if (skipInProgressRef.current) return;
         updateChatState({ partnerTyping: data.typing });
       },
       onOffer: async (data: { fromSessionId: string; offer: RTCSessionDescriptionInit }) => {
+        if (skipInProgressRef.current) return;
+        if (webrtcManager.getConnectionState() === 'connected') return;
+
         if (sessionIdRef.current) {
           sendOfferAck(sessionIdRef.current);
         }
@@ -334,6 +410,7 @@ export function useVideoChat(sessionId: string | null, sessionToken: string | nu
         }
       },
       onOfferAck: () => {
+        if (skipInProgressRef.current) return;
         console.log('[Signaling] Offer ACK received, clearing retry timer.');
         if (offerRetryTimerRef.current) {
           clearInterval(offerRetryTimerRef.current);
@@ -344,6 +421,9 @@ export function useVideoChat(sessionId: string | null, sessionToken: string | nu
         }
       },
       onAnswer: async (data: { answer: RTCSessionDescriptionInit }) => {
+        if (skipInProgressRef.current) return;
+        if (webrtcManager.getConnectionState() === 'connected') return;
+
         if (sessionIdRef.current) {
           sendAnswerAck(sessionIdRef.current);
         }
@@ -364,6 +444,7 @@ export function useVideoChat(sessionId: string | null, sessionToken: string | nu
         }
       },
       onAnswerAck: () => {
+        if (skipInProgressRef.current) return;
         console.log('[Signaling] Answer ACK received, clearing retry timer.');
         if (answerRetryTimerRef.current) {
           clearInterval(answerRetryTimerRef.current);
@@ -372,6 +453,8 @@ export function useVideoChat(sessionId: string | null, sessionToken: string | nu
         setSignalingState('CONNECTED');
       },
       onIceCandidate: async (data: { candidate: RTCIceCandidateInit }) => {
+        if (skipInProgressRef.current) return;
+        if (webrtcManager.getConnectionState() === 'connected') return;
         await webrtcManager.addIceCandidate(data.candidate);
       },
     };
@@ -424,22 +507,36 @@ export function useVideoChat(sessionId: string | null, sessionToken: string | nu
 
   const handleNext = useCallback(async () => {
     if (!sessionIdRef.current || !sessionTokenRef.current || !callbacksRef.current) return;
+    if (skipInProgressRef.current) return;
 
+    skipInProgressRef.current = true;
     clearSignalingRetryTimers();
     setSignalingState('NEW');
     setRemoteStream(null);
     webrtcManager.resetConnection();
-    webrtcManager.createPeerConnection();
     updateChatState({
       status: 'waiting',
       connectionStatus: 'connecting',
       partnerSessionId: null,
       matchId: null,
       matchStartTime: null,
+      liked: false,
+      partnerLiked: false,
+      mutualLike: false,
+      messages: [],
+      unreadCount: 0,
+      partnerTyping: false,
     });
 
-    await nextPartner(sessionIdRef.current, sessionTokenRef.current, callbacksRef.current);
-  }, [updateChatState, clearSignalingRetryTimers, setSignalingState]);
+    try {
+      await nextPartner(sessionIdRef.current, sessionTokenRef.current, callbacksRef.current);
+    } catch (error) {
+      console.error('Error switching to next partner:', error);
+      showToast('error', 'Failed to find a new partner. Retrying...');
+    } finally {
+      skipInProgressRef.current = false;
+    }
+  }, [updateChatState, clearSignalingRetryTimers, setSignalingState, showToast]);
 
   const toggleMute = useCallback(() => {
     setChatState((prev) => {
@@ -462,11 +559,19 @@ export function useVideoChat(sessionId: string | null, sessionToken: string | nu
   }, []);
 
   useEffect(() => {
-    if (chatState.status !== 'waiting' || !sessionId || !sessionToken || !callbacksRef.current) {
+    if (
+      chatState.status !== 'waiting' ||
+      skipInProgressRef.current ||
+      webrtcManager.getConnectionState() === 'connected' ||
+      !sessionId ||
+      !sessionToken ||
+      !callbacksRef.current
+    ) {
       return;
     }
 
     const interval = setInterval(async () => {
+      if (skipInProgressRef.current || webrtcManager.getConnectionState() === 'connected') return;
       try {
         await joinQueue(sessionId, sessionToken, callbacksRef.current!);
       } catch (error) {
@@ -516,6 +621,9 @@ export function useVideoChat(sessionId: string | null, sessionToken: string | nu
 
   const likePartner = useCallback(async () => {
     if (!sessionId || !sessionToken || !chatState.matchId) return;
+    try {
+      navigator.vibrate?.(15);
+    } catch {}
     try {
       const result = await apiService.submitLike(sessionId, sessionToken, chatState.matchId);
       setChatState((prev) => ({ ...prev, liked: true, mutualLike: result.mutual }));
