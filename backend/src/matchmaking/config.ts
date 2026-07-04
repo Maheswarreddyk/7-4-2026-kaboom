@@ -1,18 +1,17 @@
-/** Configurable matchmaking weights and adaptive relaxation thresholds (seconds). */
 export const MATCH_WEIGHTS = {
-  mutualPreference: 50,
-  languagePerMatch: 20,
-  languageMax: 40,
-  city: 40,
-  district: 35,
-  state: 30,
-  country: 20,
-  interestPerMatch: 5,
-  interestMax: 40,
-  waitingPerSecond: 1,
-  waitingMax: 60,
-  recentPartnerPenalty: 100,
-} as const;
+  mutualPreference: Number(process.env.WEIGHT_MUTUAL_PREFERENCE || 50),
+  languagePerMatch: Number(process.env.WEIGHT_LANGUAGE_PER_MATCH || 20),
+  languageMax: Number(process.env.WEIGHT_LANGUAGE_MAX || 40),
+  city: Number(process.env.WEIGHT_CITY || 40),
+  district: Number(process.env.WEIGHT_DISTRICT || 35),
+  state: Number(process.env.WEIGHT_STATE || 30),
+  country: Number(process.env.WEIGHT_COUNTRY || 20),
+  interestPerMatch: Number(process.env.WEIGHT_INTEREST_PER_MATCH || 5),
+  interestMax: Number(process.env.WEIGHT_INTEREST_MAX || 40),
+  waitingPerSecond: Number(process.env.WEIGHT_WAITING_PER_SECOND || 1),
+  waitingMax: Number(process.env.WEIGHT_WAITING_MAX || 60),
+  recentPartnerPenalty: Number(process.env.WEIGHT_RECENT_PARTNER_PENALTY || 100),
+};
 
 export const RELAXATION_THRESHOLDS = {
   strict: 15,

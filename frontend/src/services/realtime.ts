@@ -20,7 +20,9 @@ export interface RealtimeCallbacks {
   onSearching?: (data: { message: string }) => void;
   onError?: (data: { message: string }) => void;
   onOffer?: (data: { fromSessionId: string; offer: RTCSessionDescriptionInit }) => void;
+  onOfferAck?: (data: { fromSessionId: string }) => void;
   onAnswer?: (data: { fromSessionId: string; answer: RTCSessionDescriptionInit }) => void;
+  onAnswerAck?: (data: { fromSessionId: string }) => void;
   onIceCandidate?: (data: { fromSessionId: string; candidate: RTCIceCandidateInit }) => void;
   onPartnerLiked?: (data: { matchId: string }) => void;
   onMutualLike?: (data: { matchId: string; partnerSessionId: string }) => void;
@@ -72,8 +74,14 @@ function subscribeToMatchChannel(matchId: string, callbacks: RealtimeCallbacks) 
     .on('broadcast', { event: 'offer' }, ({ payload }) => {
       callbacks.onOffer?.(payload as { fromSessionId: string; offer: RTCSessionDescriptionInit });
     })
+    .on('broadcast', { event: 'offer_ack' }, ({ payload }) => {
+      callbacks.onOfferAck?.(payload as { fromSessionId: string });
+    })
     .on('broadcast', { event: 'answer' }, ({ payload }) => {
       callbacks.onAnswer?.(payload as { fromSessionId: string; answer: RTCSessionDescriptionInit });
+    })
+    .on('broadcast', { event: 'answer_ack' }, ({ payload }) => {
+      callbacks.onAnswerAck?.(payload as { fromSessionId: string });
     })
     .on('broadcast', { event: 'ice_candidate' }, ({ payload }) => {
       callbacks.onIceCandidate?.(payload as { fromSessionId: string; candidate: RTCIceCandidateInit });
@@ -249,6 +257,22 @@ export function sendIceCandidate(fromSessionId: string, candidate: RTCIceCandida
     type: 'broadcast',
     event: 'ice_candidate',
     payload: { fromSessionId, candidate },
+  });
+}
+
+export function sendOfferAck(fromSessionId: string): void {
+  matchChannel?.send({
+    type: 'broadcast',
+    event: 'offer_ack',
+    payload: { fromSessionId },
+  });
+}
+
+export function sendAnswerAck(fromSessionId: string): void {
+  matchChannel?.send({
+    type: 'broadcast',
+    event: 'answer_ack',
+    payload: { fromSessionId },
   });
 }
 

@@ -6,13 +6,14 @@ import compression from 'compression';
 import cookieParser from 'cookie-parser';
 import { Server as SocketServer } from 'socket.io';
 import { config } from './config/index.js';
-import { checkDatabaseConnection } from './database/client.js';
+import { checkDatabaseConnection, getSupabase } from './database/client.js';
 import { globalErrorHandler, notFoundHandler } from './middleware/errorHandler.js';
 import routes from './routes/index.js';
 import matchRoutes from './routes/match.js';
 import { setupSocketHandlers } from './socket/index.js';
 import { cleanupService, statsService } from './services/index.js';
 import { matchingEngine } from './services/matchingEngine.js';
+import { runGlobalMatchCycle } from './matchmaking/matchingEngine.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -100,6 +101,54 @@ async function startServer(): Promise<void> {
       console.error('[Cleanup] Failed:', error);
     }
   }, config.cleanupIntervalMs);
+
+  if (dbConnected) {
+    const supabaseClient = getSupabase();
+    console.log('[Realtime Matchmaker] Initializing database listeners...');
+
+    // Trigger initial pass on startup to match any pre-existing waiting users
+    void runGlobalMatchCycle(supabaseClient).catch((error) => {
+      console.error('[Realtime Matchmaker] Initial match run failed:', error);
+    });
+
+    supabaseClient
+      .channel('public:waiting_queue_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'waiting_queue',
+        },
+        async (payload) => {
+          console.log(`[Realtime Matchmaker] Detected change in waiting_queue: ${payload.eventType}`);
+          try {
+            await runGlobalMatchCycle(supabaseClient);
+          } catch (error) {
+            console.error('[Realtime Matchmaker] Global match cycle failed:', error);
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'reservations',
+        },
+        async (payload) => {
+          console.log(`[Realtime Matchmaker] Detected change in reservations: ${payload.eventType}`);
+          try {
+            await runGlobalMatchCycle(supabaseClient);
+          } catch (error) {
+            console.error('[Realtime Matchmaker] Global match cycle failed:', error);
+          }
+        }
+      )
+      .subscribe((status) => {
+        console.log('[Realtime Matchmaker] Postgres changes subscription status:', status);
+      });
+  }
 }
 
 function gracefulShutdown(signal: string): void {

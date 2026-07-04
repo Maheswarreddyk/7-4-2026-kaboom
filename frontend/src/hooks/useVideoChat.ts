@@ -12,6 +12,8 @@ import {
   sendIceCandidate,
   sendOffer,
   sendTyping,
+  sendOfferAck,
+  sendAnswerAck,
 } from '../services/realtime.js';
 import { webrtcManager } from '../webrtc/index.js';
 import type { ChatState, ConnectionStatus } from '../types/index.js';
@@ -38,12 +40,45 @@ export function useVideoChat(sessionId: string | null, sessionToken: string | nu
   const sessionIdRef = useRef<string | null>(null);
   const sessionTokenRef = useRef<string | null>(null);
   const callbacksRef = useRef<ReturnType<typeof buildCallbacks> | null>(null);
+  const offerRetryTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const answerRetryTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   sessionIdRef.current = sessionId;
   sessionTokenRef.current = sessionToken;
 
+  const clearSignalingRetryTimers = useCallback(() => {
+    if (offerRetryTimerRef.current) {
+      clearInterval(offerRetryTimerRef.current);
+      offerRetryTimerRef.current = null;
+    }
+    if (answerRetryTimerRef.current) {
+      clearInterval(answerRetryTimerRef.current);
+      answerRetryTimerRef.current = null;
+    }
+  }, []);
+
   const updateChatState = useCallback((updates: Partial<ChatState>) => {
     setChatState((prev) => ({ ...prev, ...updates }));
+  }, []);
+
+  const handleIceRestart = useCallback(async () => {
+    try {
+      console.log('[WebRTC] Initiating ICE restart...');
+      const offer = await webrtcManager.createOffer({ iceRestart: true });
+      if (sessionIdRef.current) {
+        sendOffer(sessionIdRef.current, offer);
+
+        if (offerRetryTimerRef.current) clearInterval(offerRetryTimerRef.current);
+        offerRetryTimerRef.current = setInterval(() => {
+          console.log('[Signaling] ICE restart Offer ACK not received, retrying...');
+          if (sessionIdRef.current) {
+            sendOffer(sessionIdRef.current, offer);
+          }
+        }, 2000);
+      }
+    } catch (err) {
+      console.error('[WebRTC] ICE restart failed:', err);
+    }
   }, []);
 
   const setupWebRTC = useCallback(async () => {
@@ -64,7 +99,10 @@ export function useVideoChat(sessionId: string | null, sessionToken: string | nu
         updateChatState({ connectionStatus: statusMap[state] });
 
         if (state === 'failed') {
-          showToast('error', 'Connection failed. Trying again...');
+          showToast('error', 'Connection failed. Retrying connection...');
+          if (sessionIdRef.current && partnerSessionIdRef.current) {
+            void handleIceRestart();
+          }
         }
       },
       onIceCandidate: (candidate) => {
@@ -75,7 +113,7 @@ export function useVideoChat(sessionId: string | null, sessionToken: string | nu
         }
       },
     });
-  }, [showToast, updateChatState]);
+  }, [showToast, updateChatState, handleIceRestart]);
 
   const handleMatched = useCallback(
     async (data: {
@@ -113,6 +151,7 @@ export function useVideoChat(sessionId: string | null, sessionToken: string | nu
     }) => {
       partnerSessionIdRef.current = data.partnerSessionId;
 
+      clearSignalingRetryTimers();
       webrtcManager.setIceServers(data.iceServers);
       webrtcManager.createPeerConnection();
 
@@ -129,6 +168,14 @@ export function useVideoChat(sessionId: string | null, sessionToken: string | nu
           const offer = await webrtcManager.createOffer();
           if (sessionIdRef.current) {
             sendOffer(sessionIdRef.current, offer);
+
+            if (offerRetryTimerRef.current) clearInterval(offerRetryTimerRef.current);
+            offerRetryTimerRef.current = setInterval(() => {
+              console.log('[Signaling] Offer ACK not received, retrying offer...');
+              if (sessionIdRef.current) {
+                sendOffer(sessionIdRef.current, offer);
+              }
+            }, 2000);
           }
         } catch (error) {
           showToast('error', 'Failed to create connection offer');
@@ -136,7 +183,7 @@ export function useVideoChat(sessionId: string | null, sessionToken: string | nu
         }
       }
     },
-    [showToast, updateChatState]
+    [showToast, updateChatState, clearSignalingRetryTimers]
   );
 
   function buildCallbacks() {
@@ -151,6 +198,7 @@ export function useVideoChat(sessionId: string | null, sessionToken: string | nu
       onMatched: handleMatched,
       onStartNegotiation: handleStartNegotiation,
       onPartnerLeft: () => {
+        clearSignalingRetryTimers();
         setRemoteStream(null);
         webrtcManager.resetConnection();
         updateChatState({
@@ -205,21 +253,52 @@ export function useVideoChat(sessionId: string | null, sessionToken: string | nu
       },
       onOffer: async (data: { fromSessionId: string; offer: RTCSessionDescriptionInit }) => {
         try {
+          if (sessionIdRef.current) {
+            sendOfferAck(sessionIdRef.current);
+          }
+
           const answer = await webrtcManager.handleOffer(data.offer);
+
           if (sessionIdRef.current) {
             sendAnswer(sessionIdRef.current, answer);
+
+            if (answerRetryTimerRef.current) clearInterval(answerRetryTimerRef.current);
+            answerRetryTimerRef.current = setInterval(() => {
+              console.log('[Signaling] Answer ACK not received, retrying answer...');
+              if (sessionIdRef.current) {
+                sendAnswer(sessionIdRef.current, answer);
+              }
+            }, 2000);
           }
         } catch (error) {
           showToast('error', 'Failed to handle connection offer');
           console.error(error);
         }
       },
+      onOfferAck: () => {
+        console.log('[Signaling] Offer ACK received, clearing retry timer.');
+        if (offerRetryTimerRef.current) {
+          clearInterval(offerRetryTimerRef.current);
+          offerRetryTimerRef.current = null;
+        }
+      },
       onAnswer: async (data: { answer: RTCSessionDescriptionInit }) => {
         try {
+          if (sessionIdRef.current) {
+            sendAnswerAck(sessionIdRef.current);
+          }
+
           await webrtcManager.handleAnswer(data.answer);
         } catch (error) {
           showToast('error', 'Failed to handle connection answer');
           console.error(error);
+        }
+      },
+      onAnswerAck: () => {
+        console.log('[Signaling] Answer ACK received, clearing retry timer.');
+        if (answerRetryTimerRef.current) {
+          clearInterval(answerRetryTimerRef.current);
+          answerRetryTimerRef.current = null;
         }
       },
       onIceCandidate: async (data: { candidate: RTCIceCandidateInit }) => {
@@ -259,6 +338,7 @@ export function useVideoChat(sessionId: string | null, sessionToken: string | nu
   }, [sessionId, sessionToken, showToast, setupWebRTC, handleMatched, handleStartNegotiation, updateChatState]);
 
   const stopChat = useCallback(async () => {
+    clearSignalingRetryTimers();
     if (sessionIdRef.current && sessionTokenRef.current) {
       await notifyDisconnect(sessionIdRef.current, sessionTokenRef.current, 'leave');
     }
@@ -269,11 +349,12 @@ export function useVideoChat(sessionId: string | null, sessionToken: string | nu
     setRemoteStream(null);
     setChatState(initialChatState);
     partnerSessionIdRef.current = null;
-  }, []);
+  }, [clearSignalingRetryTimers]);
 
   const handleNext = useCallback(async () => {
     if (!sessionIdRef.current || !sessionTokenRef.current || !callbacksRef.current) return;
 
+    clearSignalingRetryTimers();
     setRemoteStream(null);
     webrtcManager.resetConnection();
     webrtcManager.createPeerConnection();
@@ -286,7 +367,7 @@ export function useVideoChat(sessionId: string | null, sessionToken: string | nu
     });
 
     await nextPartner(sessionIdRef.current, sessionTokenRef.current, callbacksRef.current);
-  }, [updateChatState]);
+  }, [updateChatState, clearSignalingRetryTimers]);
 
   const toggleMute = useCallback(() => {
     setChatState((prev) => {
@@ -335,6 +416,7 @@ export function useVideoChat(sessionId: string | null, sessionToken: string | nu
 
     return () => {
       window.removeEventListener('beforeunload', handleUnload);
+      clearSignalingRetryTimers();
       webrtcManager.cleanup();
       disconnectRealtime();
     };

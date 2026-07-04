@@ -65,6 +65,11 @@ export async function joinQueueEntry(
       (Date.now() - new Date(queueEnteredAt).getTime()) / 1000
     );
 
+    await supabase
+      .from('waiting_queue')
+      .update({ search_started: now })
+      .eq('id', existing.id);
+
     logEngine({
       engine: 'QueueEngine',
       sessionId,
@@ -235,6 +240,11 @@ export async function expireStaleReservations(supabase: SupabaseClient): Promise
         .update({ status: 'waiting' })
         .in('session_id', [r.initiator_session_id, r.partner_session_id])
         .eq('status', 'matched');
+
+      await supabase
+        .from('visitor_sessions')
+        .update({ status: 'waiting' })
+        .in('id', [r.initiator_session_id, r.partner_session_id]);
     }
     return expired.length;
   } catch {

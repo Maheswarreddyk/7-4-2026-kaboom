@@ -97,12 +97,13 @@ export class WebRTCManager {
     return this.peerConnection;
   }
 
-  async createOffer(): Promise<RTCSessionDescriptionInit> {
+  async createOffer(options?: RTCOfferOptions): Promise<RTCSessionDescriptionInit> {
     if (!this.peerConnection) this.createPeerConnection();
 
     const offer = await this.peerConnection!.createOffer({
       offerToReceiveAudio: true,
       offerToReceiveVideo: true,
+      ...options,
     });
 
     await this.peerConnection!.setLocalDescription(offer);
