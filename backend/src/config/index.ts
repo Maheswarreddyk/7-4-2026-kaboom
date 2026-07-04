@@ -11,7 +11,7 @@ function optionalEnv(key: string, defaultValue: string): string {
 
 // TEMPORARY MVP DEFAULTS - Fallback credentials for fast local development
 const DEFAULT_SUPABASE_URL = "https://dirocenpssdilkztizps.supabase.co";
-const DEFAULT_SUPABASE_SERVICE_ROLE_KEY = "YOUR_SUPABASE_SERVICE_ROLE_KEY";
+const DEFAULT_SUPABASE_SERVICE_ROLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRpcm9jZW5wc3NkaWxrenRpenBzIiwicm9sZSIsImlhdCI6MTc4Mjc1NjUzNSwiZXhwIjoyMDk4MzMyNTM1fQ.aBefMcx8RACTKBTOTuqweuDRT7X284Unfv4xbEFa5NE";
 
 export const config = {
   port: parseInt(optionalEnv('PORT', '5000'), 10),

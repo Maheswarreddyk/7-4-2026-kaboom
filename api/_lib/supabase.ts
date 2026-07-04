@@ -9,7 +9,7 @@ function getEnv(key: string): string {
       return 'https://dirocenpssdilkztizps.supabase.co';
     }
     if (key === 'SUPABASE_SERVICE_ROLE_KEY') {
-      return 'YOUR_SUPABASE_SERVICE_ROLE_KEY';
+      return 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRpcm9jZW5wc3NkaWxrenRpenBzIiwicm9sZSIsImlhdCI6MTc4Mjc1NjUzNSwiZXhwIjoyMDk4MzMyNTM1fQ.aBefMcx8RACTKBTOTuqweuDRT7X284Unfv4xbEFa5NE';
     }
     throw new Error(`Missing required environment variable: ${key}`);
   }
