@@ -16,8 +16,8 @@ const DEFAULT_SUPABASE_SERVICE_ROLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.
 export const config = {
   port: parseInt(optionalEnv('PORT', '5000'), 10),
   frontendUrl: optionalEnv('FRONTEND_URL', 'http://localhost:5173'),
-  supabaseUrl: optionalEnv('SUPABASE_URL', DEFAULT_SUPABASE_URL),
-  supabaseServiceRoleKey: optionalEnv('SUPABASE_SERVICE_ROLE_KEY', DEFAULT_SUPABASE_SERVICE_ROLE_KEY),
+  supabaseUrl: DEFAULT_SUPABASE_URL,
+  supabaseServiceRoleKey: DEFAULT_SUPABASE_SERVICE_ROLE_KEY,
   nodeEnv: optionalEnv('NODE_ENV', 'development'),
   isProduction: optionalEnv('NODE_ENV', 'development') === 'production',
   stunServers: optionalEnv(
