@@ -11,7 +11,7 @@ services:
       - key: PORT
         value: 10000
       - key: FRONTEND_URL
-        value: https://indiatv-j905.onrender.com
+        value: https://indiatv-pnyg.onrender.com
       - key: SUPABASE_URL
         value: https://dirocenpssdilkztizps.supabase.co
       - key: SUPABASE_SERVICE_ROLE_KEY

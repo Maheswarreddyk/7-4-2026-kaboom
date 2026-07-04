@@ -20,9 +20,25 @@ import { fileURLToPath } from 'url';
 const app = express();
 const server = http.createServer(app);
 
+const isOriginAllowed = (origin: string | undefined): boolean => {
+  if (!origin) return true;
+  if (config.allowedOrigins.includes(origin) || config.allowedOrigins.includes('*')) return true;
+  if (/^https?:\/\/localhost(:\d+)?$/.test(origin)) return true;
+  if (/^https?:\/\/127\.0\.0\.1(:\d+)?$/.test(origin)) return true;
+  if (/^https:\/\/.*\.onrender\.com$/.test(origin)) return true;
+  return false;
+};
+
 const io = new SocketServer(server, {
   cors: {
-    origin: config.frontendUrl,
+    origin: (origin, callback) => {
+      if (isOriginAllowed(origin)) {
+        callback(null, true);
+      } else {
+        console.warn(`[Socket.io CORS Blocked] Origin: ${origin}`);
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
     methods: ['GET', 'POST'],
     credentials: true,
   },
@@ -57,7 +73,14 @@ app.use(helmet({
 
 app.use(compression());
 app.use(cors({
-  origin: config.frontendUrl,
+  origin: (origin, callback) => {
+    if (isOriginAllowed(origin)) {
+      callback(null, origin);
+    } else {
+      console.warn(`[Express CORS Blocked] Origin: ${origin}`);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
 }));
 app.use(cookieParser());

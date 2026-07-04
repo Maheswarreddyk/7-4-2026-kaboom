@@ -16,6 +16,13 @@ const SUPABASE_SERVICE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzd
 export const config = {
   port:                   parseInt(optionalEnv('PORT', '5000'), 10),
   frontendUrl:            optionalEnv('FRONTEND_URL', 'http://localhost:5173'),
+  allowedOrigins: optionalEnv(
+    'ALLOWED_ORIGINS',
+    'http://localhost:5173,http://localhost:5000,http://localhost:10000,https://indiatv-pnyg.onrender.com,https://indiatv-j905.onrender.com'
+  )
+    .split(',')
+    .map((o) => o.trim())
+    .filter(Boolean),
   supabaseUrl:            optionalEnv('SUPABASE_URL', SUPABASE_URL),
   supabaseServiceRoleKey: optionalEnv('SUPABASE_SERVICE_ROLE_KEY', SUPABASE_SERVICE_KEY),
   nodeEnv:                optionalEnv('NODE_ENV', 'development'),
