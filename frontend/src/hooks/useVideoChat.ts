@@ -43,6 +43,27 @@ export function useVideoChat(sessionId: string | null, sessionToken: string | nu
   const offerRetryTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const answerRetryTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  const signalingStateRef = useRef<
+    | 'NEW'
+    | 'MATCHED'
+    | 'READY'
+    | 'LOCAL_OFFER_CREATED'
+    | 'LOCAL_OFFER_SENT'
+    | 'REMOTE_OFFER_RECEIVED'
+    | 'LOCAL_ANSWER_CREATED'
+    | 'LOCAL_ANSWER_SENT'
+    | 'REMOTE_ANSWER_RECEIVED'
+    | 'NEGOTIATING'
+    | 'CONNECTED'
+    | 'DISCONNECTED'
+    | 'ENDED'
+  >('NEW');
+
+  const setSignalingState = useCallback((state: typeof signalingStateRef.current) => {
+    console.log(`[SignalingState] ${signalingStateRef.current} -> ${state}`);
+    signalingStateRef.current = state;
+  }, []);
+
   sessionIdRef.current = sessionId;
   sessionTokenRef.current = sessionToken;
 
@@ -123,6 +144,20 @@ export function useVideoChat(sessionId: string | null, sessionToken: string | nu
       iceServers: { urls: string | string[] }[];
     }) => {
       partnerSessionIdRef.current = data.partnerSessionId;
+      setSignalingState('MATCHED');
+
+      let existingMessages: any[] = [];
+      try {
+        const msgs = await apiService.getChatMessages(data.matchId);
+        existingMessages = msgs.map((m: any) => ({
+          id: m.id,
+          senderSessionId: m.sender_session,
+          message: m.message,
+          createdAt: new Date(m.created_at).getTime(),
+        }));
+      } catch (err) {
+        console.warn('Failed to restore chat messages:', err);
+      }
 
       updateChatState({
         status: 'matched',
@@ -134,12 +169,12 @@ export function useVideoChat(sessionId: string | null, sessionToken: string | nu
         liked: false,
         partnerLiked: false,
         mutualLike: false,
-        messages: [],
+        messages: existingMessages,
         unreadCount: 0,
         partnerTyping: false,
       });
     },
-    [updateChatState]
+    [updateChatState, setSignalingState]
   );
 
   const handleStartNegotiation = useCallback(
@@ -154,6 +189,7 @@ export function useVideoChat(sessionId: string | null, sessionToken: string | nu
       clearSignalingRetryTimers();
       webrtcManager.setIceServers(data.iceServers);
       webrtcManager.createPeerConnection();
+      setSignalingState('READY');
 
       updateChatState({
         status: 'matched',
@@ -165,9 +201,11 @@ export function useVideoChat(sessionId: string | null, sessionToken: string | nu
 
       if (data.isInitiator) {
         try {
+          setSignalingState('LOCAL_OFFER_CREATED');
           const offer = await webrtcManager.createOffer();
           if (sessionIdRef.current) {
             sendOffer(sessionIdRef.current, offer);
+            setSignalingState('LOCAL_OFFER_SENT');
 
             if (offerRetryTimerRef.current) clearInterval(offerRetryTimerRef.current);
             offerRetryTimerRef.current = setInterval(() => {
@@ -183,7 +221,7 @@ export function useVideoChat(sessionId: string | null, sessionToken: string | nu
         }
       }
     },
-    [showToast, updateChatState, clearSignalingRetryTimers]
+    [showToast, updateChatState, clearSignalingRetryTimers, setSignalingState]
   );
 
   function buildCallbacks() {
@@ -252,15 +290,35 @@ export function useVideoChat(sessionId: string | null, sessionToken: string | nu
         updateChatState({ partnerTyping: data.typing });
       },
       onOffer: async (data: { fromSessionId: string; offer: RTCSessionDescriptionInit }) => {
-        try {
-          if (sessionIdRef.current) {
-            sendOfferAck(sessionIdRef.current);
-          }
+        if (sessionIdRef.current) {
+          sendOfferAck(sessionIdRef.current);
+        }
 
+        const state = signalingStateRef.current;
+        const isCollision = state === 'LOCAL_OFFER_CREATED' || state === 'LOCAL_OFFER_SENT';
+        const isPolite = !chatState.isInitiator;
+
+        if (isCollision) {
+          if (!isPolite) {
+            console.log('[Signaling] Offer collision. Impolite peer ignores remote offer.');
+            return;
+          }
+          console.log('[Signaling] Offer collision. Polite peer accepts remote offer.');
+        }
+
+        if (state === 'CONNECTED' || state === 'LOCAL_ANSWER_SENT' || state === 'REMOTE_ANSWER_RECEIVED') {
+          console.log('[Signaling] Already active or answer sent. Ignoring duplicate offer.');
+          return;
+        }
+
+        try {
+          setSignalingState('REMOTE_OFFER_RECEIVED');
           const answer = await webrtcManager.handleOffer(data.offer);
+          setSignalingState('LOCAL_ANSWER_CREATED');
 
           if (sessionIdRef.current) {
             sendAnswer(sessionIdRef.current, answer);
+            setSignalingState('LOCAL_ANSWER_SENT');
 
             if (answerRetryTimerRef.current) clearInterval(answerRetryTimerRef.current);
             answerRetryTimerRef.current = setInterval(() => {
@@ -281,14 +339,25 @@ export function useVideoChat(sessionId: string | null, sessionToken: string | nu
           clearInterval(offerRetryTimerRef.current);
           offerRetryTimerRef.current = null;
         }
+        if (signalingStateRef.current === 'LOCAL_OFFER_SENT') {
+          setSignalingState('NEGOTIATING');
+        }
       },
       onAnswer: async (data: { answer: RTCSessionDescriptionInit }) => {
-        try {
-          if (sessionIdRef.current) {
-            sendAnswerAck(sessionIdRef.current);
-          }
+        if (sessionIdRef.current) {
+          sendAnswerAck(sessionIdRef.current);
+        }
 
+        const state = signalingStateRef.current;
+        if (state === 'CONNECTED' || state === 'REMOTE_ANSWER_RECEIVED') {
+          console.log('[Signaling] Already stable or answer accepted. Ignoring duplicate answer.');
+          return;
+        }
+
+        try {
+          setSignalingState('REMOTE_ANSWER_RECEIVED');
           await webrtcManager.handleAnswer(data.answer);
+          setSignalingState('CONNECTED');
         } catch (error) {
           showToast('error', 'Failed to handle connection answer');
           console.error(error);
@@ -300,6 +369,7 @@ export function useVideoChat(sessionId: string | null, sessionToken: string | nu
           clearInterval(answerRetryTimerRef.current);
           answerRetryTimerRef.current = null;
         }
+        setSignalingState('CONNECTED');
       },
       onIceCandidate: async (data: { candidate: RTCIceCandidateInit }) => {
         await webrtcManager.addIceCandidate(data.candidate);
@@ -339,6 +409,7 @@ export function useVideoChat(sessionId: string | null, sessionToken: string | nu
 
   const stopChat = useCallback(async () => {
     clearSignalingRetryTimers();
+    setSignalingState('ENDED');
     if (sessionIdRef.current && sessionTokenRef.current) {
       await notifyDisconnect(sessionIdRef.current, sessionTokenRef.current, 'leave');
     }
@@ -349,12 +420,13 @@ export function useVideoChat(sessionId: string | null, sessionToken: string | nu
     setRemoteStream(null);
     setChatState(initialChatState);
     partnerSessionIdRef.current = null;
-  }, [clearSignalingRetryTimers]);
+  }, [clearSignalingRetryTimers, setSignalingState]);
 
   const handleNext = useCallback(async () => {
     if (!sessionIdRef.current || !sessionTokenRef.current || !callbacksRef.current) return;
 
     clearSignalingRetryTimers();
+    setSignalingState('NEW');
     setRemoteStream(null);
     webrtcManager.resetConnection();
     webrtcManager.createPeerConnection();
@@ -367,7 +439,7 @@ export function useVideoChat(sessionId: string | null, sessionToken: string | nu
     });
 
     await nextPartner(sessionIdRef.current, sessionTokenRef.current, callbacksRef.current);
-  }, [updateChatState, clearSignalingRetryTimers]);
+  }, [updateChatState, clearSignalingRetryTimers, setSignalingState]);
 
   const toggleMute = useCallback(() => {
     setChatState((prev) => {

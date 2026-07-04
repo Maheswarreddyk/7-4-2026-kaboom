@@ -19,6 +19,7 @@ export class WebRTCManager {
   private remoteStream: MediaStream | null = null;
   private callbacks: WebRTCCallbacks = {};
   private iceServers: IceServerConfig[] = DEFAULT_ICE_SERVERS;
+  private queuedCandidates: RTCIceCandidateInit[] = [];
 
   setCallbacks(callbacks: WebRTCCallbacks): void {
     this.callbacks = callbacks;
@@ -114,6 +115,8 @@ export class WebRTCManager {
     if (!this.peerConnection) this.createPeerConnection();
 
     await this.peerConnection!.setRemoteDescription(new RTCSessionDescription(offer));
+    await this.flushIceCandidates();
+
     const answer = await this.peerConnection!.createAnswer();
     await this.peerConnection!.setLocalDescription(answer);
     return answer;
@@ -122,15 +125,34 @@ export class WebRTCManager {
   async handleAnswer(answer: RTCSessionDescriptionInit): Promise<void> {
     if (!this.peerConnection) return;
     await this.peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
+    await this.flushIceCandidates();
   }
 
   async addIceCandidate(candidate: RTCIceCandidateInit): Promise<void> {
     if (!this.peerConnection) return;
+    if (!this.peerConnection.remoteDescription) {
+      console.log('[WebRTC] Remote description is null. Queueing ICE candidate.');
+      this.queuedCandidates.push(candidate);
+      return;
+    }
     try {
       await this.peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
     } catch (error) {
       console.warn('[WebRTC] Failed to add ICE candidate:', error);
     }
+  }
+
+  private async flushIceCandidates(): Promise<void> {
+    if (!this.peerConnection) return;
+    console.log(`[WebRTC] Flushing ${this.queuedCandidates.length} queued ICE candidates.`);
+    for (const candidate of this.queuedCandidates) {
+      try {
+        await this.peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+      } catch (error) {
+        console.warn('[WebRTC] Failed to add flushed ICE candidate:', error);
+      }
+    }
+    this.queuedCandidates = [];
   }
 
   toggleMute(muted: boolean): void {
@@ -154,6 +176,7 @@ export class WebRTCManager {
   }
 
   private cleanupPeerConnection(): void {
+    this.queuedCandidates = [];
     if (this.peerConnection) {
       this.peerConnection.ontrack = null;
       this.peerConnection.onicecandidate = null;

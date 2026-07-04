@@ -65,12 +65,21 @@ router.post('/ready', async (req, res, next) => {
   try {
     const { sessionId, sessionToken, matchId } = req.body;
     if (!sessionId || !sessionToken || !matchId) {
-      return res.status(400).json({ error: 'sessionId, sessionToken, and matchId are required' });
+      return res.status(400).json({ success: false, error: 'sessionId, sessionToken, and matchId are required' });
     }
     const result = await markMatchReady(sessionId, sessionToken, matchId);
     res.json({ success: true, data: result });
   } catch (err) {
-    next(err);
+    console.error('[API /ready endpoint error]', err);
+    res.status(422).json({
+      success: false,
+      error: err instanceof Error ? err.message : 'Failed to mark match ready',
+      details: {
+        sessionId: req.body?.sessionId,
+        matchId: req.body?.matchId,
+        ts: new Date().toISOString()
+      }
+    });
   }
 });
 

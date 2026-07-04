@@ -137,6 +137,11 @@ export const apiService = {
     return data.data;
   },
 
+  async getChatMessages(matchId: string): Promise<any[]> {
+    const { data } = await api.get(`/chat/${matchId}`);
+    return data.data || [];
+  },
+
   async getAnalytics(adminToken: string): Promise<any> {
     const { data } = await api.get('/analytics', {
       headers: { Authorization: `Bearer ${adminToken}` },

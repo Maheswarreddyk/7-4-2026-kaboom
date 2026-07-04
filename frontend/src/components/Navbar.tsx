@@ -8,12 +8,21 @@ const navLinks = [
   { to: '/contact', label: 'Contact' },
 ];
 
-export function Navbar() {
+interface NavbarProps {
+  isTransparent?: boolean;
+}
+
+export function Navbar({ isTransparent = false }: NavbarProps) {
   const location = useLocation();
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 glass border-b border-white/5">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <nav className={cn(
+      "fixed top-0 left-0 right-0 z-50 transition-all duration-300",
+      isTransparent 
+        ? "bg-transparent border-none shadow-none pointer-events-none" 
+        : "glass border-b border-white/5"
+    )}>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pointer-events-auto">
         <div className="flex items-center justify-between h-16 gap-4">
           <Link to="/" className="flex items-center gap-2 group shrink-0">
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-accent to-purple-600 flex items-center justify-center shadow-lg shadow-accent-glow group-hover:scale-105 transition-transform">

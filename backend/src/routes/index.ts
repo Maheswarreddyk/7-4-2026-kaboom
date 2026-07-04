@@ -138,6 +138,20 @@ router.post('/chat', async (req, res, next) => {
   }
 });
 
+router.get('/chat/:matchId', async (req, res, next) => {
+  try {
+    const { matchId } = req.params;
+    const { data } = await getSupabase()
+      .from('temporary_messages')
+      .select('*')
+      .eq('match_id', matchId)
+      .order('created_at', { ascending: true });
+    res.json({ success: true, data });
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.get('/analytics', async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;

@@ -305,7 +305,7 @@ export function ChatPage() {
 
   return (
     <div 
-      className="min-h-[calc(100vh-4rem)] flex bg-black relative overflow-hidden select-none"
+      className="h-[100dvh] w-full flex bg-black relative overflow-hidden select-none"
       onMouseMove={resetControlsTimeout}
       onTouchStart={resetControlsTimeout}
     >
