@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import http from 'http';
 import express from 'express';
 import cors from 'cors';
@@ -26,6 +27,7 @@ const isOriginAllowed = (origin: string | undefined): boolean => {
   if (/^https?:\/\/localhost(:\d+)?$/.test(origin)) return true;
   if (/^https?:\/\/127\.0\.0\.1(:\d+)?$/.test(origin)) return true;
   if (/^https:\/\/.*\.onrender\.com$/.test(origin)) return true;
+  if (/^https?:\/\/(.*\.)?kaboom-tv\.com$/.test(origin)) return true;
   return false;
 };
 
