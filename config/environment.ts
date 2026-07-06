@@ -13,15 +13,15 @@ const getViteEnv = (key: string): string | undefined => {
 export const environment = {
   appName: isBackend ? (process.env.APP_NAME || 'Kaboom TV') : (getViteEnv('VITE_APP_NAME') || 'Kaboom TV'),
   appUrl: isBackend ? (process.env.APP_URL || 'https://kaboom-tv.com') : (getViteEnv('VITE_APP_URL') || 'https://kaboom-tv.com'),
-  apiUrl: isBackend ? (process.env.API_URL || 'https://api.kaboom-tv.com') : (getViteEnv('VITE_API_URL') || 'https://api.kaboom-tv.com'),
-  wsUrl: isBackend ? (process.env.WS_URL || 'https://api.kaboom-tv.com') : (getViteEnv('VITE_WS_URL') || 'https://api.kaboom-tv.com'),
+  apiUrl: isBackend ? (process.env.API_URL || 'https://indiatv-j905.onrender.com') : (getViteEnv('VITE_API_URL') || 'https://indiatv-j905.onrender.com'),
+  wsUrl: isBackend ? (process.env.WS_URL || 'https://indiatv-j905.onrender.com') : (getViteEnv('VITE_WS_URL') || 'https://indiatv-j905.onrender.com'),
   signalingProvider: isBackend ? (process.env.SIGNALING_PROVIDER || 'supabase') : (getViteEnv('VITE_SIGNALING_PROVIDER') || 'supabase'),
   nodeEnv: isBackend ? (process.env.NODE_ENV || 'production') : (getViteEnv('VITE_NODE_ENV') || 'production'),
   
   supabase: {
-    url: isBackend ? (process.env.SUPABASE_URL || 'https://dirocenpssdilkztizps.supabase.co') : (getViteEnv('VITE_SUPABASE_URL') || 'https://dirocenpssdilkztizps.supabase.co'),
-    anonKey: isBackend ? (process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRpcm9jZW5wc3NkaWxrenRpenBzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI3NTY1MzUsImV4cCI6MjA5ODMzMjUzNX0.P1NX8cfS4rTafIINUONBrWH3wI4DaUYrQJJUCJXvU9Y') : (getViteEnv('VITE_SUPABASE_ANON_KEY') || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRpcm9jZW5wc3NkaWxrenRpenBzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI3NTY1MzUsImV4cCI6MjA5ODMzMjUzNX0.P1NX8cfS4rTafIINUONBrWH3wI4DaUYrQJJUCJXvU9Y'),
-    serviceRoleKey: isBackend ? (process.env.SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRpcm9jZW5wc3NkaWxrenRpenBzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4Mjc1NjUzNSwiZXhwIjoyMDk4MzMyNTM1fQ.aBefMcx8RACTKBTOTuqweuDRT7X284Unfv4xbEFa5NE') : '',
+    url: 'https://dirocenpssdilkztizps.supabase.co',
+    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRpcm9jZW5wc3NkaWxrenRpenBzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI3NTY1MzUsImV4cCI6MjA5ODMzMjUzNX0.P1NX8cfS4rTafIINUONBrWH3wI4DaUYrQJJUCJXvU9Y',
+    serviceRoleKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRpcm9jZW5wc3NkaWxrenRpenBzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4Mjc1NjUzNSwiZXhwIjoyMDk4MzMyNTM1fQ.aBefMcx8RACTKBTOTuqweuDRT7X284Unfv4xbEFa5NE',
   },
   
   backend: {
@@ -31,7 +31,7 @@ export const environment = {
     sessionTimeout: isBackend ? parseInt(process.env.SESSION_TIMEOUT || '1800', 10) : 1800,
     queueTimeout: isBackend ? parseInt(process.env.QUEUE_TIMEOUT || '300', 10) : 300,
     matchTimeout: isBackend ? parseInt(process.env.MATCH_TIMEOUT || '1800', 10) : 1800,
-    allowedOrigins: (isBackend ? (process.env.ALLOWED_ORIGINS || 'http://localhost:5173,http://localhost:5000,http://localhost:10000,https://indiatv-pnyg.onrender.com,https://indiatv-j905.onrender.com,https://kaboom-tv.com,https://api.kaboom-tv.com') : '')
+    allowedOrigins: (isBackend ? (process.env.ALLOWED_ORIGINS || 'http://localhost:5173,http://localhost:5000,http://localhost:10000,https://indiatv-pnyg.onrender.com,https://indiatv-j905.onrender.com,https://kaboom-tv.com,https://api.kaboom-tv.com,https://seven-4-2026-kaboom.onrender.com') : '')
       .split(',')
       .map((o) => o.trim())
       .filter(Boolean),
