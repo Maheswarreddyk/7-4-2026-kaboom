@@ -13,8 +13,8 @@ const getViteEnv = (key: string): string | undefined => {
 export const environment = {
   appName: isBackend ? (process.env.APP_NAME || 'Kaboom TV') : (getViteEnv('VITE_APP_NAME') || 'Kaboom TV'),
   appUrl: isBackend ? (process.env.APP_URL || 'https://kaboom-tv.com') : (getViteEnv('VITE_APP_URL') || 'https://kaboom-tv.com'),
-  apiUrl: isBackend ? (process.env.API_URL || 'https://indiatv-j905.onrender.com') : (getViteEnv('VITE_API_URL') || 'https://indiatv-j905.onrender.com'),
-  wsUrl: isBackend ? (process.env.WS_URL || 'https://indiatv-j905.onrender.com') : (getViteEnv('VITE_WS_URL') || 'https://indiatv-j905.onrender.com'),
+  apiUrl: isBackend ? (process.env.API_URL || 'https://indiatv-j905.onrender.com') : (getViteEnv('VITE_API_URL') || (typeof window !== 'undefined' ? window.location.origin : 'https://indiatv-j905.onrender.com')),
+  wsUrl: isBackend ? (process.env.WS_URL || 'https://indiatv-j905.onrender.com') : (getViteEnv('VITE_WS_URL') || (typeof window !== 'undefined' ? window.location.origin : 'https://indiatv-j905.onrender.com')),
   signalingProvider: isBackend ? (process.env.SIGNALING_PROVIDER || 'supabase') : (getViteEnv('VITE_SIGNALING_PROVIDER') || 'supabase'),
   nodeEnv: isBackend ? (process.env.NODE_ENV || 'production') : (getViteEnv('VITE_NODE_ENV') || 'production'),
   
