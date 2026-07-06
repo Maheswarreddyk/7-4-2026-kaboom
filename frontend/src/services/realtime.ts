@@ -1,6 +1,7 @@
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { getSupabaseClient } from './supabase.js';
 import type { IceServerConfig } from '../types/index.js';
+import { environment } from 'config';
 
 export interface RealtimeCallbacks {
   onWaiting?: (data: { queuePosition: number; message: string }) => void;
@@ -34,7 +35,7 @@ let sessionChannel: RealtimeChannel | null = null;
 let matchChannel: RealtimeChannel | null = null;
 let currentMatchId: string | null = null;
 
-const API_BASE = import.meta.env.VITE_API_URL || '';
+const API_BASE = environment.apiUrl;
 
 async function apiPost<T>(path: string, body: Record<string, unknown>): Promise<T> {
   const response = await fetch(`${API_BASE}/api${path}`, {

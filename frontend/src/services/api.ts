@@ -1,8 +1,9 @@
 import axios from 'axios';
+import { environment } from 'config';
 import type { ReportReason, SessionData, StatsData } from '../types/index.js';
 import { getBrowserInfo, retry } from '../utils/index.js';
 
-const API_URL = import.meta.env.VITE_API_URL || '';
+const API_URL = environment.apiUrl;
 
 const api = axios.create({
   baseURL: `${API_URL}/api`,
@@ -13,8 +14,7 @@ const api = axios.create({
 });
 
 api.interceptors.request.use((config) => {
-  // Log full URL in dev to catch misconfigured base URLs
-  if (import.meta.env.DEV) {
+  if (environment.nodeEnv === 'development') {
     console.log(`[API] ${config.method?.toUpperCase()} ${config.baseURL}${config.url}`);
   }
   return config;

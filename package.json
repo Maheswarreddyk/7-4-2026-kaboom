@@ -4,7 +4,9 @@
   "private": true,
   "description": "IndiaTV - Anonymous Random Video Chat Platform",
   "workspaces": [
-    "frontend"
+    "frontend",
+    "backend",
+    "config"
   ],
   "scripts": {
     "dev": "vercel dev",

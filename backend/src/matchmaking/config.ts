@@ -1,16 +1,18 @@
+import { environment } from 'config';
+
 export const MATCH_WEIGHTS = {
-  mutualPreference: Number(process.env.WEIGHT_MUTUAL_PREFERENCE || 50),
-  languagePerMatch: Number(process.env.WEIGHT_LANGUAGE_PER_MATCH || 20),
-  languageMax: Number(process.env.WEIGHT_LANGUAGE_MAX || 40),
-  city: Number(process.env.WEIGHT_CITY || 40),
-  district: Number(process.env.WEIGHT_DISTRICT || 35),
-  state: Number(process.env.WEIGHT_STATE || 30),
-  country: Number(process.env.WEIGHT_COUNTRY || 20),
-  interestPerMatch: Number(process.env.WEIGHT_INTEREST_PER_MATCH || 5),
-  interestMax: Number(process.env.WEIGHT_INTEREST_MAX || 40),
-  waitingPerSecond: Number(process.env.WEIGHT_WAITING_PER_SECOND || 1),
-  waitingMax: Number(process.env.WEIGHT_WAITING_MAX || 60),
-  recentPartnerPenalty: Number(process.env.WEIGHT_RECENT_PARTNER_PENALTY || 100),
+  mutualPreference:     environment.matchmaking.weights.mutualPreference,
+  languagePerMatch:     environment.matchmaking.weights.languagePerMatch,
+  languageMax:          environment.matchmaking.weights.languageMax,
+  city:                 environment.matchmaking.weights.city,
+  district:             environment.matchmaking.weights.district,
+  state:                environment.matchmaking.weights.state,
+  country:              environment.matchmaking.weights.country,
+  interestPerMatch:     environment.matchmaking.weights.interestPerMatch,
+  interestMax:          environment.matchmaking.weights.interestMax,
+  waitingPerSecond:     environment.matchmaking.weights.waitingPerSecond,
+  waitingMax:           environment.matchmaking.weights.waitingMax,
+  recentPartnerPenalty: environment.matchmaking.weights.recentPartnerPenalty,
 };
 
 export const RELAXATION_THRESHOLDS = {
