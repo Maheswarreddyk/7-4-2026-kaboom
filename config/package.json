@@ -3,6 +3,10 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "main": "./environment.ts",
-  "types": "./environment.ts"
+  "main": "./dist/environment.js",
+  "types": "./dist/environment.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit"
+  }
 }
