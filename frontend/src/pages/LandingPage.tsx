@@ -4,7 +4,39 @@ import { useSession } from '../contexts/SessionContext.js';
 import { useToast } from '../contexts/ToastContext.js';
 import { LoadingScreen } from '../components/LoadingScreen.js';
 
-// Smooth GPU-accelerated rolling digit counter (dark grey text for high contrast light theme)
+// Mascot SVG Component - "Kaboomey" (stylized speech bubble comet)
+function KaboomeyMascot({ className = "w-full h-full" }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+      {/* Comet Tail */}
+      <path d="M72 45 C 88 28, 92 12, 92 8 C 76 10, 60 20, 48 24" stroke="url(#mascotTailGrad)" strokeWidth="6" strokeLinecap="round" opacity="0.8" />
+      {/* Speech Bubble Body */}
+      <rect x="12" y="16" width="56" height="46" rx="23" fill="url(#mascotBubbleGrad)" stroke="#F5A623" strokeWidth="2.5" />
+      <path d="M30 61 L 18 70 L 22 58" fill="url(#mascotBubbleGrad)" stroke="#F5A623" strokeWidth="2.5" strokeLinejoin="round" />
+      {/* Face details */}
+      <path d="M26 36 Q 30 31 34 36" stroke="#1E2022" strokeWidth="3" strokeLinecap="round" />
+      <path d="M46 36 Q 50 31 54 36" stroke="#1E2022" strokeWidth="3" strokeLinecap="round" />
+      {/* Blushing cheeks */}
+      <circle cx="23" cy="42" r="3.5" fill="#FF5B35" opacity="0.6" />
+      <circle cx="57" cy="42" r="3.5" fill="#FF5B35" opacity="0.6" />
+      {/* Cheerful wide-open mouth */}
+      <path d="M37 43 Q 40 48 43 43" stroke="#1E2022" strokeWidth="2.5" strokeLinecap="round" />
+      
+      <defs>
+        <linearGradient id="mascotBubbleGrad" x1="12" y1="16" x2="68" y2="62" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stopColor="#FFFFFF" />
+          <stop offset="100%" stopColor="#FFF4DB" />
+        </linearGradient>
+        <linearGradient id="mascotTailGrad" x1="48" y1="24" x2="92" y2="8" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stopColor="#F5A623" />
+          <stop offset="100%" stopColor="transparent" stopOpacity="0" />
+        </linearGradient>
+      </defs>
+    </svg>
+  );
+}
+
+// Smooth GPU-accelerated rolling digit counter
 function RollingCounter({ value }: { value: number }) {
   const [displayValue, setDisplayValue] = useState(value);
 
@@ -110,14 +142,12 @@ function CinematicGlobe() {
       ctx.clearRect(0, 0, width, height);
       angleY += 0.0012;
 
-      // Draw faint amber grid rings
       ctx.strokeStyle = 'rgba(245, 166, 35, 0.06)';
       ctx.lineWidth = 1;
       ctx.beginPath();
       ctx.arc(width / 2, height / 2, radius, 0, Math.PI * 2);
       ctx.stroke();
 
-      // Draw points (warm copper/gold hues)
       points.forEach((p) => {
         const proj = project(p.x, p.y, p.z);
         if (proj.visible) {
@@ -128,7 +158,6 @@ function CinematicGlobe() {
         }
       });
 
-      // Update & Draw Connection Arcs
       arcs.forEach((arc) => {
         if (!arc.active) {
           if (Math.random() < 0.006) {
@@ -195,30 +224,28 @@ function CinematicGlobe() {
   return <canvas ref={canvasRef} className="absolute inset-0 w-full h-full pointer-events-none z-0" />;
 }
 
-// ── FLOATING SILHOUETTE AVATARS (Premium glass bubble style) ──
+// ── FLOATING MASCOT COMET BUBBLES ──
 function FloatingAvatar({ index }: { index: number }) {
   const positions = [
-    { top: '16%', left: '7%', size: 'w-16 h-16 sm:w-20 sm:h-20', delay: '0s' },
-    { top: '24%', right: '9%', size: 'w-18 h-18 sm:w-22 sm:h-22', delay: '1.4s' },
-    { bottom: '26%', left: '10%', size: 'w-22 h-22 sm:w-26 sm:h-26', delay: '0.7s' },
-    { bottom: '16%', right: '12%', size: 'w-14 h-14 sm:w-18 sm:h-18', delay: '2.1s' },
+    { top: '16%', left: '7%', size: 'w-20 h-20 sm:w-24 sm:h-24', delay: '0s' },
+    { top: '24%', right: '9%', size: 'w-22 h-22 sm:w-26 sm:h-26', delay: '1.4s' },
+    { bottom: '26%', left: '10%', size: 'w-24 h-24 sm:w-28 sm:h-28', delay: '0.7s' },
+    { bottom: '16%', right: '12%', size: 'w-18 h-18 sm:w-22 sm:h-22', delay: '2.1s' },
   ];
 
   const pos = positions[index % positions.length];
 
   return (
     <div
-      className={`absolute hidden md:flex items-center justify-center rounded-full border border-white bg-white/45 backdrop-blur-md pointer-events-none select-none animate-float shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_12px_40px_rgba(245,166,35,0.12)] transition-shadow duration-500`}
+      className={`absolute hidden md:flex items-center justify-center rounded-2xl border border-white bg-white/45 backdrop-blur-md pointer-events-none select-none animate-float shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_12px_40px_rgba(245,166,35,0.12)] transition-shadow duration-500`}
       style={{
         ...pos,
         animationDelay: pos.delay,
         zIndex: 5,
       }}
     >
-      <div className="w-[88%] h-[88%] rounded-full bg-stone-100/70 flex items-center justify-center border border-amber-500/10 overflow-hidden relative shadow-inner">
-        <svg className="w-1/2 h-1/2 text-stone-400" fill="currentColor" viewBox="0 0 24 24">
-          <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
-        </svg>
+      <div className="w-[88%] h-[88%] rounded-2xl bg-stone-100/30 flex items-center justify-center border border-amber-500/10 overflow-hidden relative shadow-inner animate-mascot-wave">
+        <KaboomeyMascot className="w-[85%] h-[85%]" />
         <span className="absolute bottom-1 right-1 w-3 h-3 rounded-full bg-emerald-500/90 border-2 border-white shadow animate-pulse" />
       </div>
     </div>
@@ -255,7 +282,6 @@ function LiveActivityRibbon() {
 
   return (
     <div className="w-full border-y border-white bg-white/35 backdrop-blur-md py-4.5 overflow-hidden relative z-10 select-none shadow-[0_4px_24px_rgba(0,0,0,0.01)]">
-      {/* Soft gradient covers */}
       <div className="absolute top-0 bottom-0 left-0 w-24 bg-gradient-to-r from-[#FAF9F7] to-transparent z-20 pointer-events-none" />
       <div className="absolute top-0 bottom-0 right-0 w-24 bg-gradient-to-l from-[#FAF9F7] to-transparent z-20 pointer-events-none" />
 
@@ -300,10 +326,8 @@ function InteractiveDemo() {
 
   return (
     <div className="glass-card max-w-sm w-full p-6 flex flex-col gap-5 relative overflow-hidden text-left scale-95 sm:scale-100 shadow-[0_20px_50px_rgba(0,0,0,0.03)] border-white/60 bg-white/40">
-      {/* Absolute Glow */}
       <div className="absolute top-0 right-0 w-28 h-28 rounded-full bg-amber-500/5 blur-2xl pointer-events-none" />
 
-      {/* Header */}
       <div className="flex items-center justify-between border-b border-stone-200/50 pb-3">
         <div className="flex items-center gap-2">
           <div className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse" />
@@ -312,7 +336,6 @@ function InteractiveDemo() {
         <span className="text-[10px] font-mono text-stone-400">P2P ENCRYPTED</span>
       </div>
 
-      {/* Display Panel */}
       <div className="h-44 rounded-2xl bg-stone-100/50 border border-white relative flex items-center justify-center overflow-hidden shadow-inner">
         {demoState === 'idle' && (
           <div className="text-center animate-fade-in flex flex-col items-center gap-3">
@@ -376,7 +399,6 @@ function InteractiveDemo() {
         )}
       </div>
 
-      {/* Control Buttons */}
       <div className="flex gap-2">
         <div className="flex-1 h-9 rounded-xl border border-stone-200/40 bg-white/40 flex items-center justify-center gap-1.5 text-[10px] font-bold text-stone-500 shadow-sm">
           <span>🎤 Mic On</span>
@@ -392,7 +414,19 @@ function InteractiveDemo() {
   );
 }
 
+// ── PLAYFUL HELPER MESSAGES UNDER BUTTON ──
 const ROTATING_WORDS = ['WORLD', 'STRANGER', 'FRIEND', 'CONNECTION', 'STORY', 'CONVERSATION'];
+
+const PLAYFUL_MESSAGES = [
+  "🌍 Meet someone new",
+  "🎉 Start your next story",
+  "✨ Your next best friend is one click away",
+  "👋 Say hello to the world",
+  "❤️ Every conversation starts with a click",
+  "🚀 Ready to match?",
+];
+
+const FLOATING_EMOJIS_POOL = ['❤️', '🔥', '✨', '🎉', '👋', '🌎', '💫', '💥', '😂', '👍'];
 
 export function LandingPage() {
   const navigate = useNavigate();
@@ -411,7 +445,30 @@ export function LandingPage() {
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const containerRef = useRef<HTMLDivElement | null>(null);
 
+  // V6 Emoji Personality State (continuous slow upward floats)
+  const [floatingEmojis, setFloatingEmojis] = useState<Array<{ id: number; emoji: string; left: number; delay: number }>>([]);
+  // Click burst particles
+  const [clickParticles, setClickParticles] = useState<Array<{ id: number; emoji?: string; x: number; y: number; scale: number; active: boolean }>>([]);
+  const [isExploded, setIsExploded] = useState(false);
+
+  // Playful message under button rotation
+  const [helperIdx, setHelperIdx] = useState(0);
+  const [helperFadeState, setHelperFadeState] = useState<'in' | 'out'>('in');
+
+  // Dynamic Story notifications state
+  const [storyNotification, setStoryNotification] = useState<{ text: string; side: 'left' | 'right' } | null>(null);
+
+  // Dynamic story pools
+  const STORY_NOTIFS = [
+    { text: "Someone connected in Osaka 🇯🇵", side: 'left' as const },
+    { text: "New P2P match established ✨", side: 'right' as const },
+    { text: "Strangers are waving hello 👋", side: 'left' as const },
+    { text: "Mutual match made in Paris ❤️", side: 'right' as const },
+    { text: "Someone liked a partner stream 🔥", side: 'left' as const },
+  ];
+
   useEffect(() => {
+    // Rotation for Header Word Morph
     const rotationInterval = setInterval(() => {
       setWordFadeState('out');
       setTimeout(() => {
@@ -420,6 +477,38 @@ export function LandingPage() {
       }, 400);
     }, 4000);
 
+    // Playful helper message updates
+    const helperInterval = setInterval(() => {
+      setHelperFadeState('out');
+      setTimeout(() => {
+        setHelperIdx((prev) => (prev + 1) % PLAYFUL_MESSAGES.length);
+        setHelperFadeState('in');
+      }, 300);
+    }, 3800);
+
+    // Continuous floating emojis (Emoji Personality)
+    const emojiInterval = setInterval(() => {
+      const id = Math.random();
+      const newEmoji = {
+        id,
+        emoji: FLOATING_EMOJIS_POOL[Math.floor(Math.random() * FLOATING_EMOJIS_POOL.length)],
+        left: 20 + Math.random() * 60,
+        delay: 0,
+      };
+      setFloatingEmojis((prev) => [...prev, newEmoji]);
+      setTimeout(() => {
+        setFloatingEmojis((prev) => prev.filter((item) => item.id !== id));
+      }, 3500);
+    }, 1800);
+
+    // Dynamic Story bubble notifications
+    const storyInterval = setInterval(() => {
+      const item = STORY_NOTIFS[Math.floor(Math.random() * STORY_NOTIFS.length)];
+      setStoryNotification(item);
+      setTimeout(() => setStoryNotification(null), 3500);
+    }, 7000);
+
+    // Metrics updates
     const countInterval = setInterval(() => {
       setOnlineCount((prev) => {
         const delta = Math.floor(Math.random() * 15) - 7;
@@ -437,6 +526,9 @@ export function LandingPage() {
 
     return () => {
       clearInterval(rotationInterval);
+      clearInterval(helperInterval);
+      clearInterval(emojiInterval);
+      clearInterval(storyInterval);
       clearInterval(countInterval);
     };
   }, []);
@@ -446,7 +538,7 @@ export function LandingPage() {
     const rect = containerRef.current.getBoundingClientRect();
     const x = (e.clientX - rect.left) / rect.width - 0.5;
     const y = (e.clientY - rect.top) / rect.height - 0.5;
-    setTilt({ x: x * 6, y: y * -6 }); // 2-3° rotation response as requested
+    setTilt({ x: x * 6, y: y * -6 });
     setMousePos({ x: e.clientX, y: e.clientY });
   };
 
@@ -454,14 +546,47 @@ export function LandingPage() {
     setTilt({ x: 0, y: 0 });
   };
 
+  const triggerClickExplosion = () => {
+    // Generate particle positions
+    const particles = Array.from({ length: 32 }).map((_, i) => {
+      const angle = Math.random() * Math.PI * 2;
+      const distance = 50 + Math.random() * 110;
+      const isEmoji = Math.random() > 0.6;
+      return {
+        id: Math.random() + i,
+        emoji: isEmoji ? FLOATING_EMOJIS_POOL[Math.floor(Math.random() * FLOATING_EMOJIS_POOL.length)] : undefined,
+        x: Math.cos(angle) * distance,
+        y: Math.sin(angle) * distance,
+        scale: 0.5 + Math.random() * 0.8,
+        active: false,
+      };
+    });
+
+    setClickParticles(particles);
+    setIsExploded(true);
+
+    // Trigger transform update in next frame
+    setTimeout(() => {
+      setClickParticles((prev) => prev.map((p) => ({ ...p, active: true })));
+    }, 20);
+
+    setTimeout(() => {
+      setClickParticles([]);
+      setIsExploded(false);
+    }, 1500);
+  };
+
   const handleStartChat = async () => {
+    // Satisfying game click animation sequence
+    triggerClickExplosion();
+    await new Promise((resolve) => setTimeout(resolve, 800));
+
     setStarting(true);
     try {
       await startSession();
       navigate('/chat');
     } catch (error) {
       showToast('error', error instanceof Error ? error.message : 'Failed to start session');
-    } finally {
       setStarting(false);
     }
   };
@@ -473,7 +598,7 @@ export function LandingPage() {
   return (
     <div className="min-h-screen bg-[#FAF9F7] flex flex-col justify-between overflow-x-hidden selection:bg-amber-500/20 select-none relative text-stone-800">
       
-      {/* ── STYLE TAG FOR V5 PREMIUM LIGHT MOTION/EFFECTS ── */}
+      {/* ── STYLE TAG FOR V6 CORE MASCOT & GAME CONTROLS KEYFRAMES ── */}
       <style>{`
         @keyframes float {
           0%, 100% { transform: translateY(0px) rotate(0deg); }
@@ -505,18 +630,22 @@ export function LandingPage() {
         .animate-ticker {
           animation: ticker 28s linear infinite;
         }
+        
+        /* Game button shine reflection */
         .btn-shine::before {
           content: '';
           position: absolute;
           top: 0; left: -150%;
           width: 50%; height: 100%;
-          background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.18), transparent);
+          background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.25), transparent);
           transform: skewX(-20deg);
-          transition: 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+          transition: 0.85s cubic-bezier(0.16, 1, 0.3, 1);
         }
         .btn-shine:hover::before {
           left: 200%;
         }
+
+        /* Slow breathing background auroras */
         @keyframes auroraBreath {
           0%, 100% { transform: translate(-30%, -20%) scale(1); opacity: 0.4; }
           50% { transform: translate(-25%, -25%) scale(1.1); opacity: 0.65; }
@@ -524,6 +653,8 @@ export function LandingPage() {
         .animate-aurora {
           animation: auroraBreath 22s cubic-bezier(0.45, 0, 0.55, 1) infinite;
         }
+
+        /* Glassmorphism system card designs */
         .glass-card {
           background: rgba(255, 255, 255, 0.5);
           backdrop-filter: blur(24px) saturate(110%);
@@ -540,19 +671,59 @@ export function LandingPage() {
             0 20px 48px -8px rgba(0, 0, 0, 0.05),
             0 0 24px 0 rgba(245, 166, 35, 0.08);
         }
+
+        /* Upward emoji floats */
+        @keyframes emojiFloatUp {
+          0% { transform: translateY(60px) scale(0.6); opacity: 0; }
+          20% { opacity: 0.9; }
+          85% { opacity: 0.9; }
+          100% { transform: translateY(-160px) scale(1.4); opacity: 0; }
+        }
+        .animate-emoji-float {
+          animation: emojiFloatUp 3.2s cubic-bezier(0.1, 0.8, 0.3, 1) forwards;
+        }
+
+        /* Comet mascot waves */
+        @keyframes mascotWave {
+          0%, 100% { transform: rotate(0deg) translateY(0); }
+          50% { transform: rotate(6deg) translateY(-2px); }
+        }
+        .animate-mascot-wave {
+          animation: mascotWave 5.5s ease-in-out infinite;
+        }
+
+        /* Game Button Orbit Ring */
+        @keyframes orbit {
+          0% { transform: rotate(0deg) translateX(110px) rotate(0deg); }
+          100% { transform: rotate(360deg) translateX(110px) rotate(-360deg); }
+        }
+        .animate-orbit-dot-1 {
+          animation: orbit 9s linear infinite;
+        }
+        .animate-orbit-dot-2 {
+          animation: orbit 9s linear infinite;
+          animation-delay: -4.5s;
+        }
+
+        /* Custom bubble notification entrance */
+        @keyframes bubblePop {
+          0% { transform: scale(0.8) translateY(12px); opacity: 0; }
+          80% { transform: scale(1.04) translateY(-1px); opacity: 1; }
+          100% { transform: scale(1) translateY(0); opacity: 1; }
+        }
+        .animate-bubble-pop {
+          animation: bubblePop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
       `}</style>
 
-      {/* Layered Background: Slow Breathing Auroras */}
+      {/* Layered Background: Breathing Auroras & Grids */}
       <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">
-        {/* Soft floating champagne & soft coral light blobs */}
-        <div className="absolute w-[60vw] h-[60vw] max-w-[650px] rounded-full bg-gradient-to-tr from-amber-200/25 to-orange-200/20 blur-[130px] left-1/4 top-10 animate-aurora" />
-        <div className="absolute w-[50vw] h-[50vw] max-w-[550px] rounded-full bg-gradient-to-br from-peach-200/15 to-orange-300/15 blur-[110px] right-1/4 bottom-10 animate-aurora" style={{ animationDelay: '-6s' }} />
-        
-        {/* Soft grid pattern matching Nothing OS light style */}
+        <div className="absolute w-[65vw] h-[65vw] max-w-[700px] rounded-full bg-gradient-to-tr from-amber-200/25 to-orange-200/20 blur-[130px] left-1/4 top-10 animate-aurora" />
+        <div className="absolute w-[55vw] h-[55vw] max-w-[600px] rounded-full bg-gradient-to-br from-peach-200/15 to-orange-300/15 blur-[110px] right-1/4 bottom-10 animate-aurora" style={{ animationDelay: '-6s' }} />
         <div className="absolute inset-0 opacity-[0.012] bg-[linear-gradient(to_right,#000_1px,transparent_1px),linear-gradient(to_bottom,#000_1px,transparent_1px)] bg-[size:32px_32px]" />
       </div>
 
-      {/* Mouse cursor interactive glow */}
+      {/* Spotlight cursor tracking */}
       <div
         className="absolute w-[450px] h-[450px] rounded-full bg-amber-400/5 blur-[120px] pointer-events-none transition-all duration-300 ease-out z-0 hidden md:block"
         style={{
@@ -561,28 +732,28 @@ export function LandingPage() {
         }}
       />
 
-      {/* ── HERO BANNER SECTION ── */}
+      {/* ── HERO BANNER SECTION (THE BUTTON IS THE CENTER) ── */}
       <section
         ref={containerRef}
         onMouseMove={handleMouseMove}
         onMouseLeave={handleMouseLeave}
         className="min-h-screen flex flex-col justify-between items-center px-6 pt-24 pb-16 relative w-full z-10"
       >
-        {/* Glowing Background Globe Visualization (Light lines) */}
-        <div className="absolute inset-0 flex items-center justify-center z-0 overflow-hidden pointer-events-none opacity-85">
+        {/* Rotating Globe backdrop */}
+        <div className="absolute inset-0 flex items-center justify-center z-0 overflow-hidden pointer-events-none opacity-80">
           <div className="w-[85vw] h-[85vw] max-w-[650px] max-h-[650px] relative rounded-full">
-            <div className="absolute inset-0 rounded-full bg-radial-gradient from-amber-400/[0.04] via-transparent to-transparent blur-3xl" />
+            <div className="absolute inset-0 rounded-full bg-radial-gradient from-amber-400/[0.03] via-transparent to-transparent blur-3xl" />
             <CinematicGlobe />
           </div>
         </div>
 
-        {/* Floating Silhouette Avatars */}
+        {/* Floating Mascots */}
         <FloatingAvatar index={0} />
         <FloatingAvatar index={1} />
         <FloatingAvatar index={2} />
         <FloatingAvatar index={3} />
 
-        {/* Hero Content */}
+        {/* Hero Content Grid - Organized around the CTA Button */}
         <div
           className="flex-1 flex flex-col items-center justify-center text-center relative z-10 transition-transform duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] max-w-4xl w-full"
           style={{
@@ -595,13 +766,13 @@ export function LandingPage() {
             Zero Login · Peer-to-Peer · Ephemeral
           </div>
 
-          {/* Cinematic Large Typography with Staggered Word Reveal */}
-          <h1 className="text-4xl sm:text-6xl md:text-8xl font-black tracking-tight leading-[0.9] text-stone-900 mb-8 max-w-3xl">
+          {/* Heading - Shifted Upwards slightly to allow the button to command the center */}
+          <h1 className="text-3xl sm:text-5xl md:text-7xl font-black tracking-tight leading-[0.95] text-stone-900 mb-14 max-w-3xl">
             {['YOUR', 'NEXT', 'CONVERSATION', 'STARTS'].map((word, i) => (
               <span
                 key={word}
                 className="reveal-letter"
-                style={{ animationDelay: `${i * 0.12}s`, marginRight: '0.15em' }}
+                style={{ animationDelay: `${i * 0.1}s`, marginRight: '0.12em' }}
               >
                 {word}
               </span>
@@ -611,9 +782,8 @@ export function LandingPage() {
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600">
                 WITH A{' '}
               </span>
-              {/* Dynamic Morphing Word Container */}
               <span
-                className={`inline-block min-w-[200px] text-stone-900 transition-all duration-300 font-extrabold tracking-tight ${
+                className={`inline-block min-w-[180px] text-stone-900 transition-all duration-300 font-extrabold tracking-tight ${
                   wordFadeState === 'in' ? 'opacity-100 translate-y-0 filter blur-0' : 'opacity-0 translate-y-2 filter blur-[4px]'
                 }`}
               >
@@ -622,30 +792,92 @@ export function LandingPage() {
             </span>
           </h1>
 
-          <p className="text-stone-500 text-sm sm:text-base max-w-md leading-relaxed tracking-wide mb-10 font-bold animate-fade-in" style={{ animationDelay: '0.6s' }}>
-            Meet real people instantly. No account bounds, no waiting loops. Connect P2P in one click.
-          </p>
+          {/* ── THE IRRESISTIBLE GAME-STYLE CTA BUTTON ── */}
+          <div className="relative my-10 z-20 flex items-center justify-center">
+            
+            {/* Orbiting particles */}
+            <div className="absolute w-[220px] h-[220px] rounded-full border border-amber-500/10 pointer-events-none z-0 hidden sm:block">
+              <div className="absolute w-2 h-2 rounded-full bg-amber-500/60 shadow-lg animate-orbit-dot-1" />
+              <div className="absolute w-1.5 h-1.5 rounded-full bg-orange-500/60 shadow-lg animate-orbit-dot-2" />
+            </div>
 
-          {/* Glowing CTA Button */}
-          <div className="relative group animate-fade-in" style={{ animationDelay: '0.7s' }}>
-            {/* Soft gold backing glow */}
-            <div className="absolute -inset-0.5 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 opacity-30 blur-md group-hover:opacity-60 transition-opacity duration-300 pointer-events-none" />
+            {/* Dynamic Story Speech Notification Bubble (Left) */}
+            {storyNotification && storyNotification.side === 'left' && (
+              <div className="absolute left-[-220px] top-[-10px] hidden lg:block max-w-[190px] bg-white border border-stone-200/80 rounded-2xl rounded-br-none p-3 shadow-xl text-left animate-bubble-pop z-30">
+                <p className="text-[10px] font-bold text-stone-600 leading-snug">{storyNotification.text}</p>
+                <div className="absolute right-[-6px] bottom-3 w-3 h-3 bg-white border-r border-b border-stone-200/80 transform rotate-[-45deg]" />
+              </div>
+            )}
+
+            {/* Dynamic Story Speech Notification Bubble (Right) */}
+            {storyNotification && storyNotification.side === 'right' && (
+              <div className="absolute right-[-220px] top-[-10px] hidden lg:block max-w-[190px] bg-white border border-stone-200/80 rounded-2xl rounded-bl-none p-3 shadow-xl text-left animate-bubble-pop z-30">
+                <p className="text-[10px] font-bold text-stone-600 leading-snug">{storyNotification.text}</p>
+                <div className="absolute left-[-6px] bottom-3 w-3 h-3 bg-white border-l border-t border-stone-200/80 transform rotate-[-45deg]" />
+              </div>
+            )}
+
+            {/* Continuous Upward Floating Reactions */}
+            {floatingEmojis.map((item) => (
+              <span
+                key={item.id}
+                className="absolute text-2xl pointer-events-none animate-emoji-float z-10"
+                style={{
+                  left: `${item.left - 50}%`,
+                }}
+              >
+                {item.emoji}
+              </span>
+            ))}
+
+            {/* Click Explosion particles */}
+            {clickParticles.map((p) => (
+              <span
+                key={p.id}
+                className="absolute text-xl pointer-events-none z-30 font-bold"
+                style={{
+                  transform: p.active ? `translate(${p.x}px, ${p.y}px) scale(${p.scale})` : 'translate(0px, 0px) scale(0.5)',
+                  opacity: p.active ? 0 : 1,
+                  transition: 'transform 1.2s cubic-bezier(0.1, 0.8, 0.25, 1), opacity 1.2s ease-out',
+                  color: p.emoji ? undefined : '#F5A623',
+                }}
+              >
+                {p.emoji || '✦'}
+              </span>
+            ))}
+
+            {/* Glowing gold backing panel */}
+            <div className="absolute -inset-1 rounded-3xl bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 opacity-40 blur-md group-hover:opacity-75 transition-opacity duration-300 pointer-events-none" />
+            
+            {/* The main button container */}
             <button
               onClick={handleStartChat}
               disabled={isLoading}
-              className="relative btn-shine text-sm sm:text-base px-11 py-4.5 bg-stone-900 text-stone-100 hover:bg-stone-800 font-black rounded-full hover:scale-[1.03] active:scale-[0.97] transition-all duration-300 flex items-center gap-3 overflow-hidden shadow-lg shadow-amber-500/10 border border-stone-800"
+              className={`relative btn-shine w-56 h-20 bg-stone-900 hover:bg-stone-800 text-stone-100 font-extrabold text-lg rounded-3xl shadow-[0_16px_40px_rgba(245,166,35,0.22)] border border-stone-800 flex flex-col items-center justify-center gap-1 overflow-hidden transition-all duration-300 hover:scale-105 active:scale-95 group active:shadow-[0_4px_12px_rgba(245,166,35,0.15)] ${isExploded ? 'scale-90 shadow-inner border-amber-500/30' : ''}`}
+              style={{ zIndex: 10 }}
             >
-              <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
-              <span>Start Connection</span>
-              <svg className="w-4 h-4 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-              </svg>
+              <div className="flex items-center gap-2.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-ping shrink-0" />
+                <span className="tracking-wide text-white uppercase text-sm font-black">Start Match</span>
+              </div>
+              <span className="text-[9px] font-bold tracking-[0.2em] text-amber-400/80 uppercase">One Click Connection</span>
             </button>
+          </div>
+
+          {/* Playful CTA helper message sliding transition */}
+          <div className="h-6 overflow-hidden mt-6 mb-10 flex items-center justify-center">
+            <span
+              className={`text-stone-500 text-xs font-bold transition-all duration-300 block ${
+                helperFadeState === 'in' ? 'opacity-100 translate-y-0 filter blur-0' : 'opacity-0 -translate-y-2 filter blur-[2px]'
+              }`}
+            >
+              {PLAYFUL_MESSAGES[helperIdx]}
+            </span>
           </div>
         </div>
 
         {/* Floating Mini counters */}
-        <div className="w-full max-w-xl grid grid-cols-3 gap-4 relative z-10 px-4 mt-8 animate-fade-in" style={{ animationDelay: '0.8s' }}>
+        <div className="w-full max-w-xl grid grid-cols-3 gap-4 relative z-10 px-4 mt-4 animate-fade-in" style={{ animationDelay: '0.6s' }}>
           {[
             { label: 'ONLINE NOW', value: onlineCount },
             { label: 'IN QUEUE', value: waitingCount },
@@ -668,11 +900,9 @@ export function LandingPage() {
 
       {/* ── INTERACTIVE FAKE DEMO & PHILOSOPHY SECTIONS ── */}
       <section className="relative w-full py-28 px-6 bg-[#FDFDFB] border-t border-stone-200/50 z-10 flex flex-col items-center">
-        {/* Background ambient light leak */}
-        <div className="absolute w-[450px] h-[450px] rounded-full bg-amber-400/5 blur-[120px] pointer-events-none -translate-x-1/2 left-1/2 top-1/4 animate-pulse" />
+        <div className="absolute w-[450px] h-[450px] rounded-full bg-amber-400/5 blur-[120px] pointer-events-none -translate-x-1/2 left-1/2 top-1/4" />
 
         <div className="max-w-6xl w-full grid md:grid-cols-2 gap-16 items-center">
-          {/* Text/Philosophy */}
           <div className="flex flex-col items-start text-left max-w-lg">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-stone-200 bg-white text-[9px] font-bold tracking-[0.2em] text-amber-600 uppercase mb-5 shadow-sm">
               ✦ Live Simulator
@@ -686,7 +916,6 @@ export function LandingPage() {
               We built Kaboom to strip away the friction of modern web communication. No signup gates, no configuration details. Just pure connections, routed P2P.
             </p>
 
-            {/* Horizontal Story Steps */}
             <div className="flex flex-col gap-5 w-full">
               {[
                 { step: '1', title: 'Start session instantly', desc: 'Secure connection variables initialize in memory without databases.' },
@@ -706,7 +935,6 @@ export function LandingPage() {
             </div>
           </div>
 
-          {/* Simulator Component */}
           <div className="flex justify-center relative">
             <div className="absolute inset-0 bg-radial-gradient from-amber-500/10 via-transparent to-transparent blur-3xl pointer-events-none" />
             <InteractiveDemo />
