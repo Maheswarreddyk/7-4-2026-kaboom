@@ -57,7 +57,7 @@ export class WebRTCManager {
   }
 
   createPeerConnection(): RTCPeerConnection {
-    this.cleanupPeerConnection();
+    this.cleanupPeerConnection(true); // Keep early candidates for this match session
 
     this.peerConnection = new RTCPeerConnection({
       iceServers: this.iceServers,
@@ -129,9 +129,8 @@ export class WebRTCManager {
   }
 
   async addIceCandidate(candidate: RTCIceCandidateInit): Promise<void> {
-    if (!this.peerConnection) return;
-    if (!this.peerConnection.remoteDescription) {
-      console.log('[WebRTC] Remote description is null. Queueing ICE candidate.');
+    if (!this.peerConnection || !this.peerConnection.remoteDescription) {
+      console.log('[WebRTC] Peer connection or remote description is null. Queueing ICE candidate.');
       this.queuedCandidates.push(candidate);
       return;
     }
@@ -172,11 +171,13 @@ export class WebRTCManager {
   }
 
   resetConnection(): void {
-    this.cleanupPeerConnection();
+    this.cleanupPeerConnection(false); // Clean candidates on hard reset
   }
 
-  private cleanupPeerConnection(): void {
-    this.queuedCandidates = [];
+  private cleanupPeerConnection(keepCandidates = false): void {
+    if (!keepCandidates) {
+      this.queuedCandidates = [];
+    }
     if (this.peerConnection) {
       this.peerConnection.ontrack = null;
       this.peerConnection.onicecandidate = null;

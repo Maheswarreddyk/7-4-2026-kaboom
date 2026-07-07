@@ -14,6 +14,7 @@ import {
   sendTyping,
   sendOfferAck,
   sendAnswerAck,
+  sendReaction,
 } from '../services/realtime.js';
 import { webrtcManager } from '../webrtc/index.js';
 import type { ChatState, ConnectionStatus } from '../types/index.js';
@@ -31,7 +32,11 @@ const initialChatState: ChatState = {
   queuePosition: 0,
 };
 
-export function useVideoChat(sessionId: string | null, sessionToken: string | null) {
+export function useVideoChat(
+  sessionId: string | null,
+  sessionToken: string | null,
+  onReaction?: (emoji: string) => void
+) {
   const { showToast } = useToast();
   const [chatState, setChatState] = useState<ChatState>(initialChatState);
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
@@ -284,6 +289,10 @@ export function useVideoChat(sessionId: string | null, sessionToken: string | nu
           queuePosition: data.queuePosition,
           connectionStatus: 'connecting',
         });
+      },
+      onReaction: (data: { emoji: string }) => {
+        if (skipInProgressRef.current) return;
+        onReaction?.(data.emoji);
       },
       onMatched: (data: any) => {
         if (skipInProgressRef.current) return;
@@ -681,5 +690,6 @@ export function useVideoChat(sessionId: string | null, sessionToken: string | nu
     sendChatMessage,
     setTypingStatus,
     setChatOpen,
+    sendReaction,
   };
 }

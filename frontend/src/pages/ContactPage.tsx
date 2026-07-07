@@ -34,14 +34,14 @@ export function ContactPage() {
       <div className="grid sm:grid-cols-2 gap-6 mb-10">
         <div className="glass-card">
           <h3 className="font-semibold text-white mb-2">General Inquiries</h3>
-          <a href="mailto:hello@indiatv.app" className="text-accent-light hover:underline text-sm">
-            hello@indiatv.app
+          <a href="mailto:contact@kaboom-tv.com" className="text-accent-light hover:underline text-sm">
+            contact@kaboom-tv.com
           </a>
         </div>
         <div className="glass-card">
           <h3 className="font-semibold text-white mb-2">Privacy &amp; Legal</h3>
-          <a href="mailto:privacy@indiatv.app" className="text-accent-light hover:underline text-sm">
-            privacy@indiatv.app
+          <a href="mailto:collaborate@kaboom-tv.com" className="text-accent-light hover:underline text-sm">
+            collaborate@kaboom-tv.com
           </a>
         </div>
       </div>

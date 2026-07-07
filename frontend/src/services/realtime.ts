@@ -29,6 +29,7 @@ export interface RealtimeCallbacks {
   onMutualLike?: (data: { matchId: string; partnerSessionId: string }) => void;
   onNewMessage?: (data: { matchId: string; senderSessionId: string; message: string; createdAt: string }) => void;
   onPartnerTyping?: (data: { typing: boolean }) => void;
+  onReaction?: (data: { emoji: string }) => void;
 }
 
 let sessionChannel: RealtimeChannel | null = null;
@@ -71,33 +72,62 @@ function cleanupMatchChannel() {
   currentMatchId = null;
 }
 
-function subscribeToMatchChannel(matchId: string, callbacks: RealtimeCallbacks) {
+function subscribeToMatchChannel(matchId: string, callbacks: RealtimeCallbacks): Promise<void> {
   const supabase = getSupabaseClient();
 
   cleanupMatchChannel();
   currentMatchId = matchId;
 
-  matchChannel = supabase
-    .channel(`match:${matchId}`, { config: { broadcast: { self: false } } })
-    .on('broadcast', { event: 'offer' }, ({ payload }) => {
-      callbacks.onOffer?.(payload as { fromSessionId: string; offer: RTCSessionDescriptionInit });
-    })
-    .on('broadcast', { event: 'offer_ack' }, ({ payload }) => {
-      callbacks.onOfferAck?.(payload as { fromSessionId: string });
-    })
-    .on('broadcast', { event: 'answer' }, ({ payload }) => {
-      callbacks.onAnswer?.(payload as { fromSessionId: string; answer: RTCSessionDescriptionInit });
-    })
-    .on('broadcast', { event: 'answer_ack' }, ({ payload }) => {
-      callbacks.onAnswerAck?.(payload as { fromSessionId: string });
-    })
-    .on('broadcast', { event: 'ice_candidate' }, ({ payload }) => {
-      callbacks.onIceCandidate?.(payload as { fromSessionId: string; candidate: RTCIceCandidateInit });
-    })
-    .on('broadcast', { event: 'typing' }, ({ payload }) => {
-      callbacks.onPartnerTyping?.(payload as { typing: boolean });
-    })
-    .subscribe();
+  return new Promise<void>((resolve) => {
+    if (!supabase) {
+      resolve();
+      return;
+    }
+
+    matchChannel = supabase
+      .channel(`match:${matchId}`, { config: { broadcast: { self: false } } })
+      .on('broadcast', { event: 'offer' }, ({ payload }) => {
+        callbacks.onOffer?.(payload as { fromSessionId: string; offer: RTCSessionDescriptionInit });
+      })
+      .on('broadcast', { event: 'offer_ack' }, ({ payload }) => {
+        callbacks.onOfferAck?.(payload as { fromSessionId: string });
+      })
+      .on('broadcast', { event: 'answer' }, ({ payload }) => {
+        callbacks.onAnswer?.(payload as { fromSessionId: string; answer: RTCSessionDescriptionInit });
+      })
+      .on('broadcast', { event: 'answer_ack' }, ({ payload }) => {
+        callbacks.onAnswerAck?.(payload as { fromSessionId: string });
+      })
+      .on('broadcast', { event: 'ice_candidate' }, ({ payload }) => {
+        callbacks.onIceCandidate?.(payload as { fromSessionId: string; candidate: RTCIceCandidateInit });
+      })
+      .on('broadcast', { event: 'typing' }, ({ payload }) => {
+        callbacks.onPartnerTyping?.(payload as { typing: boolean });
+      })
+      .on('broadcast', { event: 'reaction' }, ({ payload }) => {
+        callbacks.onReaction?.(payload as { emoji: string });
+      });
+
+    matchChannel.subscribe((status) => {
+      if (status === 'SUBSCRIBED') {
+        console.log(`[Realtime] Subscribed to match channel: ${matchId}`);
+        resolve();
+      }
+    });
+
+    // Timeout fallback after 1.5 seconds in case of slow connection
+    setTimeout(() => {
+      resolve();
+    }, 1500);
+  });
+}
+
+export function sendReaction(emoji: string) {
+  matchChannel?.send({
+    type: 'broadcast',
+    event: 'reaction',
+    payload: { emoji },
+  });
 }
 
 export function connectRealtime(
@@ -118,9 +148,11 @@ export function connectRealtime(
         isInitiator: boolean;
         iceServers: IceServerConfig[];
       };
-      subscribeToMatchChannel(data.matchId, callbacks);
-      callbacks.onMatched?.(data);
-      void markReady(sessionId, sessionToken, data.matchId);
+      void (async () => {
+        await subscribeToMatchChannel(data.matchId, callbacks);
+        callbacks.onMatched?.(data);
+        await markReady(sessionId, sessionToken, data.matchId);
+      })();
     })
     .on('broadcast', { event: 'start_negotiation' }, ({ payload }) => {
       const data = payload as {
@@ -129,8 +161,10 @@ export function connectRealtime(
         isInitiator: boolean;
         iceServers: IceServerConfig[];
       };
-      subscribeToMatchChannel(data.matchId, callbacks);
-      callbacks.onStartNegotiation?.(data);
+      void (async () => {
+        await subscribeToMatchChannel(data.matchId, callbacks);
+        callbacks.onStartNegotiation?.(data);
+      })();
     })
     .on('broadcast', { event: 'partner_left' }, ({ payload }) => {
       cleanupMatchChannel();
@@ -182,7 +216,7 @@ export async function joinQueue(sessionId: string, sessionToken: string, callbac
 
   if (data.status === 'matched') {
     const matchId = data.matchId as string;
-    subscribeToMatchChannel(matchId, callbacks);
+    await subscribeToMatchChannel(matchId, callbacks);
     callbacks.onMatched?.({
       matchId,
       partnerSessionId: data.partnerSessionId as string,
@@ -221,7 +255,7 @@ export async function nextPartner(sessionId: string, sessionToken: string, callb
 
   if (data.status === 'matched') {
     const matchId = data.matchId as string;
-    subscribeToMatchChannel(matchId, callbacks);
+    await subscribeToMatchChannel(matchId, callbacks);
     callbacks.onMatched?.({
       matchId,
       partnerSessionId: data.partnerSessionId as string,

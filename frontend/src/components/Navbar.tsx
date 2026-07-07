@@ -31,11 +31,11 @@ export function Navbar({ isTransparent = false }: NavbarProps) {
 
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2 group shrink-0">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-accent to-purple-600 flex items-center justify-center shadow-lg shadow-accent-glow group-hover:scale-105 transition-transform duration-200">
-              <span className="text-white font-bold text-sm select-none">IT</span>
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center shadow-lg shadow-amber-500/10 group-hover:scale-105 transition-transform duration-200">
+              <span className="text-white font-extrabold text-sm select-none">K</span>
             </div>
-            <span className="text-xl font-bold bg-gradient-to-r from-white to-white/70 bg-clip-text text-transparent">
-              IndiaTV
+            <span className="text-xl font-bold bg-gradient-to-r from-white to-white/70 bg-clip-text text-transparent tracking-tight">
+              Kaboom
             </span>
           </Link>
 

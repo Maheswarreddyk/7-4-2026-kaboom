@@ -9,7 +9,7 @@ export function PrivacyPage() {
         <section className="glass-card space-y-3">
           <h2 className="text-xl font-semibold text-white">Anonymous by Design</h2>
           <p>
-            IndiaTV does not require registration, email addresses, phone numbers, or any form of
+            Kaboom TV does not require registration, email addresses, phone numbers, or any form of
             authentication. We do not collect names, passwords, or personally identifiable
             information during normal use.
           </p>
@@ -30,7 +30,7 @@ export function PrivacyPage() {
           <h2 className="text-xl font-semibold text-white">Video & Audio</h2>
           <p>
             Video and audio streams are transmitted directly between users via WebRTC
-            peer-to-peer connections. IndiaTV servers do not record, store, or monitor your
+            peer-to-peer connections. Kaboom TV servers do not record, store, or monitor your
             video or audio content.
           </p>
         </section>
@@ -63,7 +63,7 @@ export function PrivacyPage() {
         <section className="glass-card space-y-3">
           <h2 className="text-xl font-semibold text-white">Contact</h2>
           <p>
-            For privacy-related inquiries, please contact us at privacy@indiatv.app.
+            For privacy-related inquiries, please contact us at collaborate@kaboom-tv.com.
           </p>
         </section>
       </div>

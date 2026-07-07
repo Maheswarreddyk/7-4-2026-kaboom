@@ -36,7 +36,7 @@ export function FeedbackModal({ isOpen, onClose, onSubmit }: FeedbackModalProps)
       <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={handleSkip} />
       <div className="relative glass-card max-w-md w-full animate-fade-in">
         <h2 className="text-xl font-semibold text-white mb-2">How was your chat?</h2>
-        <p className="text-sm text-white/50 mb-6">Your feedback helps us improve IndiaTV.</p>
+        <p className="text-sm text-white/50 mb-6">Your feedback helps us improve Kaboom.</p>
 
         <div className="flex justify-center gap-2 mb-6">
           {[1, 2, 3, 4, 5].map((star) => (

@@ -21,10 +21,10 @@ export function Footer() {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-8">
           <div>
             <div className="flex items-center gap-2 mb-4">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-accent to-purple-600 flex items-center justify-center">
-                <span className="text-white font-bold text-sm">IT</span>
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center shadow-lg shadow-amber-500/10">
+                <span className="text-white font-extrabold text-sm">K</span>
               </div>
-              <span className="text-lg font-bold text-white">IndiaTV</span>
+              <span className="text-lg font-bold text-white tracking-tight">Kaboom</span>
             </div>
             <p className="text-sm text-white/50 leading-relaxed">
               Anonymous random video chat. No login required. Connect with people worldwide instantly.
@@ -60,7 +60,7 @@ export function Footer() {
 
         <div className="mt-10 pt-6 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-xs text-white/40">
-            &copy; {new Date().getFullYear()} IndiaTV. All rights reserved.
+            &copy; {new Date().getFullYear()} Kaboom. All rights reserved.
           </p>
           <p className="text-xs text-white/40">
             Users must be 18+ to use this service.

@@ -1,13 +1,13 @@
 export function AboutPage() {
   return (
     <div className="max-w-3xl mx-auto px-4 py-12 animate-fade-in">
-      <h1 className="text-3xl sm:text-4xl font-bold text-white mb-6">About IndiaTV</h1>
+      <h1 className="text-3xl sm:text-4xl font-bold text-white mb-6">About Kaboom</h1>
 
       <div className="space-y-6 text-white/70 leading-relaxed">
         <p>
-          IndiaTV is an anonymous random video chat platform that connects people from around the
+          Kaboom is an anonymous random video chat platform that connects people from around the
           world in real time. Inspired by the simplicity of classic random chat services, we built
-          IndiaTV with a focus on privacy, speed, and ease of use.
+          Kaboom with a focus on privacy, speed, and ease of use.
         </p>
 
         <div className="glass-card space-y-4">
@@ -24,7 +24,7 @@ export function AboutPage() {
         <div className="glass-card space-y-4">
           <h2 className="text-xl font-semibold text-white">Technology</h2>
           <p>
-            IndiaTV uses WebRTC for peer-to-peer video and audio streaming, Supabase Realtime for
+            Kaboom uses WebRTC for peer-to-peer video and audio streaming, Supabase Realtime for
             live matching and signaling, and Supabase PostgreSQL for session management and moderation
             data. All connections are encrypted end-to-end between peers.
           </p>
