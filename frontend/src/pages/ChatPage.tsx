@@ -102,7 +102,7 @@ export function ChatPage() {
     if (hideTimeoutRef.current) clearTimeout(hideTimeoutRef.current);
     hideTimeoutRef.current = setTimeout(() => {
       // Keep controls visible if searching or preferences open
-      if (chatState.status === 'connected' && !showPreferenceModal) {
+      if (chatState.status === 'CONNECTED' && !showPreferenceModal) {
         setControlsVisible(false);
       }
     }, 2500);
@@ -290,7 +290,7 @@ export function ChatPage() {
 
   // Active match counter
   useEffect(() => {
-    if (!chatState.matchStartTime || chatState.status !== 'connected') {
+    if (!chatState.matchStartTime || chatState.status !== 'CONNECTED') {
       setElapsedSeconds(0);
       return;
     }
@@ -332,7 +332,7 @@ export function ChatPage() {
 
   // Hint Engine Updates
   useEffect(() => {
-    if (!session || chatState.status !== 'connected') {
+    if (!session || chatState.status !== 'CONNECTED') {
       setActiveHint(null);
       return;
     }
@@ -481,8 +481,11 @@ export function ChatPage() {
     );
   }
 
-  const isSearching = chatState.status === 'waiting' || chatState.status === 'starting';
-  const isConnected = chatState.status === 'connected';
+  const isSearching = [
+    'REQUESTING_MEDIA', 'MEDIA_READY', 'CONNECTING_REALTIME', 
+    'SEARCHING', 'REQUEUEING', 'PARTNER_LEFT', 'MATCH_FOUND', 'READY', 'NEGOTIATING', 'ICE_CONNECTING'
+  ].includes(chatState.status);
+  const isConnected = chatState.status === 'CONNECTED';
 
   return (
     /* Root: fills entire 100dvh viewport (set by layout-immersive on parent) */

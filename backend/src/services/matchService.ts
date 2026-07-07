@@ -1,9 +1,32 @@
 import { getSupabase, handleSupabaseError } from '../database/client.js';
 import { getIceServers } from '../config/index.js';
 import { broadcastToSession } from './broadcast.js';
-import { leaveQueueEntry, markUserReady, runMatchCycle } from '../matchmaking/matchingEngine.js';
+import { leaveQueueEntry, joinQueueEntry, markUserReady, runMatchCycle, runGlobalMatchCycle } from '../matchmaking/matchingEngine.js';
 
 export type MatchEndReason = 'next' | 'leave' | 'disconnect' | 'report';
+
+// ============================================================
+// Global Cycle Mutex
+// Prevents concurrent runGlobalMatchCycle() execution from:
+//   - REST /match/join endpoint
+//   - MatchScheduler background loop
+// This is instance-local (single Render instance). Acceptable for now.
+// Phase 3 TODO: move to DB-level advisory lock for multi-instance scaling.
+// ============================================================
+let globalCycleRunning = false;
+
+export async function safeRunGlobalMatchCycle(): Promise<void> {
+  if (globalCycleRunning) {
+    console.log('[MatchService] Global cycle already running — skipping concurrent trigger');
+    return;
+  }
+  globalCycleRunning = true;
+  try {
+    await runGlobalMatchCycle(getSupabase());
+  } finally {
+    globalCycleRunning = false;
+  }
+}
 
 export async function validateSession(sessionId: string, sessionToken?: string) {
   const { data, error } = await getSupabase()
@@ -77,18 +100,32 @@ export async function leaveQueue(sessionId: string, sessionToken: string) {
   await leaveQueueEntry(getSupabase(), sessionId);
 }
 
-async function requeuePartner(partnerId: string) {
+/**
+ * Re-queue a partner after their previous partner left.
+ * Phase 2 fix: Uses joinQueueEntry + safeRunGlobalMatchCycle directly instead of
+ * calling joinQueue() (which calls runMatchCycle which re-runs runGlobalMatchCycle recursively).
+ * The global cycle mutex prevents scheduling conflicts.
+ */
+async function requeuePartner(partnerId: string): Promise<void> {
   const partner = await validateSession(partnerId);
-  if (!partner) return;
+  if (!partner) {
+    console.log(`[MatchService] requeuePartner: session ${partnerId} not found or ended`);
+    return;
+  }
 
+  // Notify partner they are being re-matched
   await broadcastToSession(partnerId, 'searching', {
     message: 'Finding someone new...',
-  });
+  }).catch(() => {/* best-effort */});
 
+  // Add to queue idempotently — let the scheduler pick them up on next cycle
   try {
-    await joinQueue(partnerId, partner.session_token);
-  } catch {
-    // Partner re-queue is best-effort
+    await joinQueueEntry(getSupabase(), partnerId);
+    console.log(`[MatchService] requeuePartner: ${partnerId} re-entered queue`);
+    // Trigger one immediate match cycle to serve them without waiting 1.5s
+    void safeRunGlobalMatchCycle();
+  } catch (err) {
+    console.warn(`[MatchService] requeuePartner: failed to re-queue ${partnerId}:`, err instanceof Error ? err.message : err);
   }
 }
 

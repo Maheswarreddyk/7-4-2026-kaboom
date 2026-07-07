@@ -1,4 +1,17 @@
-export type SessionStatus = 'idle' | 'starting' | 'waiting' | 'matched' | 'connected' | 'ended';
+export type SessionStatus =
+  | 'IDLE'
+  | 'REQUESTING_MEDIA'
+  | 'MEDIA_READY'
+  | 'CONNECTING_REALTIME'
+  | 'SEARCHING'
+  | 'MATCH_FOUND'
+  | 'READY'
+  | 'NEGOTIATING'
+  | 'ICE_CONNECTING'
+  | 'CONNECTED'
+  | 'PARTNER_LEFT'
+  | 'REQUEUEING'
+  | 'ENDED';
 export type ConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'failed' | 'reconnecting';
 export type ReportReason = 'spam' | 'nudity' | 'abuse' | 'harassment' | 'other';
 

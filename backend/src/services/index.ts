@@ -115,9 +115,49 @@ export const cleanupService = {
     const queueCutoff = new Date(Date.now() - queueStaleMs).toISOString();
     const matchCutoff = new Date(Date.now() - matchStaleMs).toISOString();
 
-    await Promise.all([
+    // Phase 2: Also clean up waiting_queue entries where the session heartbeat is dead.
+    // HEARTBEAT_STALE_MS is 45s — these are sessions that stopped polling (mobile background).
+    // We use 60s here to give a wider margin than the matchmaker's 45s filter.
+    const heartbeatCutoff = new Date(Date.now() - 60_000).toISOString();
+
+    const [queueExpired, matchExpired] = await Promise.all([
       queueRepository.expireStale(queueCutoff),
       matchRepository.expireStale(matchCutoff),
     ]);
+
+    // Expire waiting_queue entries whose session heartbeat is dead
+    try {
+      const supabase = (await import('../database/client.js')).getSupabase();
+
+      // Find sessions that are marked 'waiting' but have no recent activity
+      const { data: staleSessionIds } = await supabase
+        .from('visitor_sessions')
+        .select('id')
+        .in('status', ['waiting', 'matched'])
+        .lt('last_activity', heartbeatCutoff);
+
+      if (staleSessionIds && staleSessionIds.length > 0) {
+        const ids = staleSessionIds.map((s: { id: string }) => s.id);
+        console.log(`[Cleanup] Expiring ${ids.length} stale heartbeat queue entries`);
+
+        await supabase
+          .from('waiting_queue')
+          .update({ status: 'expired' })
+          .in('session_id', ids)
+          .eq('status', 'waiting');
+
+        await supabase
+          .from('visitor_sessions')
+          .update({ status: 'active', queue_entered_at: null })
+          .in('id', ids);
+      }
+    } catch (err) {
+      console.error('[Cleanup] Heartbeat stale cleanup failed:', err instanceof Error ? err.message : err);
+    }
+
+    if (queueExpired > 0 || matchExpired > 0) {
+      console.log(`[Cleanup] Expired ${queueExpired} queue entries, ${matchExpired} matches`);
+    }
   },
 };
+
