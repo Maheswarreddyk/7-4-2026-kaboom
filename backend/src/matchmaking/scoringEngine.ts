@@ -2,6 +2,7 @@ import {
   getMinScoreThreshold,
   getRelaxationPhase,
   MATCH_WEIGHTS,
+  REMATE_COOLDOWN_MS,
   type RelaxationPhase,
 } from './config.js';
 
@@ -112,14 +113,33 @@ export function calculateCompatibility(
   partner: SessionProfile,
   waitingSeconds: number,
   recentPartners: Set<string>,
-  reportedIds: Set<string>
+  reportedIds: Set<string>,
+  endedMatchesMap?: Map<string, string>
 ): ScoreResult | null {
   if (partner.status === 'ended') return null;
   if (reportedIds.has(partner.id)) return null;
-  if (partner.id === self.last_partner) return null;
 
   const phase = getRelaxationPhase(waitingSeconds);
   const threshold = getMinScoreThreshold(phase);
+
+  // Check rematch cooldown logic
+  const isPreviousPartner = partner.id === self.last_partner;
+  if (isPreviousPartner) {
+    // Only allow previous partner if relaxation has progressed to allow_previous or random phase
+    if (phase !== 'allow_previous' && phase !== 'random') {
+      return null;
+    }
+    
+    // Check if the 15-second cooldown since the last match ended has elapsed
+    const lastEndedAt = endedMatchesMap?.get(partner.id);
+    if (lastEndedAt) {
+      const elapsedMs = Date.now() - new Date(lastEndedAt).getTime();
+      if (elapsedMs < REMATE_COOLDOWN_MS) {
+        console.log(`[Scoring] Rematch blocked by cooldown: ${self.id} and ${partner.id} (${Math.round(elapsedMs / 1000)}s elapsed, min=${REMATE_COOLDOWN_MS / 1000}s)`);
+        return null;
+      }
+    }
+  }
 
   const parts = [
     scoreMutualPreference(self, partner),

@@ -1,7 +1,7 @@
 import { getSupabase, handleSupabaseError } from '../database/client.js';
 import { getIceServers } from '../config/index.js';
 import { broadcastToSession } from './broadcast.js';
-import { leaveQueueEntry, joinQueueEntry, markUserReady, runMatchCycle, runGlobalMatchCycle } from '../matchmaking/matchingEngine.js';
+import { leaveQueueEntry, joinQueueEntry, markUserReady, runMatchCycle, runGlobalMatchCycle, invalidateMatchmakerCache, transitionSessionStatus } from '../matchmaking/matchingEngine.js';
 
 export type MatchEndReason = 'next' | 'leave' | 'disconnect' | 'report';
 
@@ -87,7 +87,11 @@ export async function endActiveMatch(sessionId: string, reason: MatchEndReason) 
 }
 
 export async function joinQueue(sessionId: string, sessionToken: string) {
-  return runMatchCycle(getSupabase(), sessionId, sessionToken);
+  invalidateMatchmakerCache();
+  const result = await runMatchCycle(getSupabase(), sessionId, sessionToken);
+  // Trigger one immediate match cycle on join (V4.1 Requirement 8)
+  void safeRunGlobalMatchCycle();
+  return result;
 }
 
 export async function markMatchReady(sessionId: string, sessionToken: string, matchId: string) {
@@ -98,13 +102,12 @@ export async function leaveQueue(sessionId: string, sessionToken: string) {
   const session = await validateSession(sessionId, sessionToken);
   if (!session) throw new Error('Invalid session');
   await leaveQueueEntry(getSupabase(), sessionId);
+  invalidateMatchmakerCache();
+  await transitionSessionStatus(getSupabase(), sessionId, 'READY', 'User manually left queue');
 }
 
 /**
  * Re-queue a partner after their previous partner left.
- * Phase 2 fix: Uses joinQueueEntry + safeRunGlobalMatchCycle directly instead of
- * calling joinQueue() (which calls runMatchCycle which re-runs runGlobalMatchCycle recursively).
- * The global cycle mutex prevents scheduling conflicts.
  */
 async function requeuePartner(partnerId: string): Promise<void> {
   const partner = await validateSession(partnerId);
@@ -113,16 +116,17 @@ async function requeuePartner(partnerId: string): Promise<void> {
     return;
   }
 
-  // Notify partner they are being re-matched
+  // Notify partner they are searching
   await broadcastToSession(partnerId, 'searching', {
     message: 'Finding someone new...',
   }).catch(() => {/* best-effort */});
 
-  // Add to queue idempotently — let the scheduler pick them up on next cycle
   try {
+    invalidateMatchmakerCache();
+    await transitionSessionStatus(getSupabase(), partnerId, 'REQUEUEING', 'Requeueing partner');
     await joinQueueEntry(getSupabase(), partnerId);
     console.log(`[MatchService] requeuePartner: ${partnerId} re-entered queue`);
-    // Trigger one immediate match cycle to serve them without waiting 1.5s
+    // Trigger immediate match cycle to pair them instantly
     void safeRunGlobalMatchCycle();
   } catch (err) {
     console.warn(`[MatchService] requeuePartner: failed to re-queue ${partnerId}:`, err instanceof Error ? err.message : err);
@@ -133,13 +137,25 @@ export async function nextPartner(sessionId: string, sessionToken: string) {
   const session = await validateSession(sessionId, sessionToken);
   if (!session) throw new Error('Invalid session');
 
+  console.log(`[Next] Next clicked for session ${sessionId}`);
+  invalidateMatchmakerCache();
+
+  // Transition clicker state to REQUEUEING (V4.1 Requirement 8)
+  await transitionSessionStatus(getSupabase(), sessionId, 'REQUEUEING', 'User clicked Next');
+
   const ended = await endActiveMatch(sessionId, 'next');
 
+  // Perform cleanups in order (V4.1 Requirement 8)
   if (ended?.match?.id) {
+    // Delete temporary messages
     await getSupabase().from('temporary_messages').delete().eq('match_id', ended.match.id);
+    // Delete reservation
+    await getSupabase().from('reservations').delete().eq('match_id', ended.match.id);
   }
 
   if (ended?.partnerId) {
+    // Notify partner they are being requeued
+    await transitionSessionStatus(getSupabase(), ended.partnerId, 'REQUEUEING', 'Partner clicked Next');
     await broadcastToSession(ended.partnerId, 'partner_left', { reason: 'next' });
     await requeuePartner(ended.partnerId);
   }
@@ -155,13 +171,24 @@ export async function notifyPartnerLeft(sessionId: string, sessionToken: string,
   const session = await validateSession(sessionId, sessionToken);
   if (!session) throw new Error('Invalid session');
 
+  console.log(`[Disconnect/Leave] Session ${sessionId} left, reason=${reason}`);
+  invalidateMatchmakerCache();
+
+  // Transition leaving session status to READY or ENDED (V4.1 Requirement 8)
+  await transitionSessionStatus(getSupabase(), sessionId, reason === 'leave' ? 'READY' : 'ENDED', 'User disconnected/left call');
+
   const ended = await endActiveMatch(sessionId, reason);
 
   if (ended?.match?.id) {
+    // Delete temporary messages
     await getSupabase().from('temporary_messages').delete().eq('match_id', ended.match.id);
+    // Delete reservation
+    await getSupabase().from('reservations').delete().eq('match_id', ended.match.id);
   }
 
   if (ended?.partnerId) {
+    // Transition partner state to REQUEUEING
+    await transitionSessionStatus(getSupabase(), ended.partnerId, 'REQUEUEING', 'Partner left call');
     await broadcastToSession(ended.partnerId, 'partner_left', { reason });
     await requeuePartner(ended.partnerId);
   }

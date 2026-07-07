@@ -9,7 +9,13 @@ import { environment } from 'config';
 export const HEARTBEAT_STALE_MS = 45_000; // 45s — was 12s (too tight for mobile)
 
 /** How long a reservation lock is held before expiring (ms) */
-export const RESERVATION_TIMEOUT_MS = 8_000; // 8s — was 5s (allows for slow mobile connections)
+export const RESERVATION_TIMEOUT_MS = 20_000; // 20s signaling timeout as per V4.1 requirement
+
+/** How long the WebRTC connection has to establish before returning users to queue (ms) */
+export const WEBRTC_CONNECTION_TIMEOUT_MS = 15_000; // 15s connection timeout as per V4.1 requirement
+
+/** Cooldown before allowing rematch with previous partner (ms) */
+export const REMATE_COOLDOWN_MS = 15_000; // 15s rematch cooldown
 
 /** How long the initiator retries sending an offer before giving up (ms) */
 export const OFFER_TIMEOUT_MS = 30_000;
@@ -53,11 +59,12 @@ export const MATCH_WEIGHTS = {
 // ============================================================
 
 export const RELAXATION_THRESHOLDS = {
-  strict: 15,
-  relaxInterests: 30,
-  relaxLanguage: 60,
-  relaxLocation: 120,
-  random: 120,
+  strict: 5,
+  relaxInterests: 10,
+  relaxLanguage: 15,
+  relaxLocation: 20,
+  allowPrevious: 25,
+  random: 25,
 } as const;
 
 export type RelaxationPhase =
@@ -65,6 +72,7 @@ export type RelaxationPhase =
   | 'relax_interests'
   | 'relax_language'
   | 'relax_location'
+  | 'allow_previous'
   | 'random';
 
 export function getRelaxationPhase(waitingSeconds: number): RelaxationPhase {
@@ -72,6 +80,7 @@ export function getRelaxationPhase(waitingSeconds: number): RelaxationPhase {
   if (waitingSeconds <= RELAXATION_THRESHOLDS.relaxInterests) return 'relax_interests';
   if (waitingSeconds <= RELAXATION_THRESHOLDS.relaxLanguage) return 'relax_language';
   if (waitingSeconds <= RELAXATION_THRESHOLDS.relaxLocation) return 'relax_location';
+  if (waitingSeconds <= RELAXATION_THRESHOLDS.allowPrevious) return 'allow_previous';
   return 'random';
 }
 
@@ -81,6 +90,7 @@ export function getMinScoreThreshold(phase: RelaxationPhase): number {
     case 'relax_interests': return 110;
     case 'relax_language':  return 80;
     case 'relax_location':  return 50;
+    case 'allow_previous':  return 30;
     case 'random':          return Number.NEGATIVE_INFINITY;
   }
 }

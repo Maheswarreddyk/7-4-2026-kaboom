@@ -19,6 +19,7 @@ export interface SessionData {
   sessionId: string;
   sessionToken: string;
   createdAt: string;
+  status?: string;
 }
 
 export interface StatsData {

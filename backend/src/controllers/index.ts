@@ -50,6 +50,7 @@ export const sessionController = {
         sessionId: session.id,
         sessionToken: session.session_token,
         createdAt: session.created_at,
+        status: session.status,
       },
     });
   }),
@@ -89,6 +90,7 @@ export const sessionController = {
         sessionId: session.id,
         sessionToken: session.session_token,
         createdAt: session.created_at,
+        status: session.status,
       },
     });
   }),

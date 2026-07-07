@@ -430,9 +430,20 @@ const FLOATING_EMOJIS_POOL = ['❤️', '🔥', '✨', '🎉', '👋', '🌎', '
 
 export function LandingPage() {
   const navigate = useNavigate();
-  const { isLoading, startSession } = useSession();
+  const { session, isLoading, startSession } = useSession();
   const { showToast } = useToast();
   const [starting, setStarting] = useState(false);
+
+  // V4.1 Auto-Restoration Redirect (Requirement 6 & 17)
+  useEffect(() => {
+    if (!isLoading && session) {
+      const activeStates = ['SEARCHING', 'RESERVED', 'MATCHED', 'SIGNALING', 'CONNECTED', 'REQUEUEING', 'waiting', 'matched'];
+      if (session.status && activeStates.includes(session.status)) {
+        console.log(`[Auto-Restore] Active session status detected: ${session.status}. Redirecting to /chat...`);
+        navigate('/chat');
+      }
+    }
+  }, [session, isLoading, navigate]);
 
   const [onlineCount, setOnlineCount] = useState(1842);
   const [waitingCount, setWaitingCount] = useState(86);

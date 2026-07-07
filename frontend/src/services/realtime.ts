@@ -202,7 +202,13 @@ export function connectRealtime(
     .on('broadcast', { event: 'partner_typing' }, ({ payload }) => {
       callbacks.onPartnerTyping?.(payload as { typing: boolean });
     })
-    .subscribe();
+    .subscribe((status) => {
+      console.log(`[Realtime] Session channel status: ${status}`);
+      if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+        console.warn(`[Realtime] Session channel error: ${status}`);
+        callbacks.onError?.({ message: 'Signaling connection lost. Reconnecting...' });
+      }
+    });
 }
 
 export function disconnectRealtime(): void {

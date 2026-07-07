@@ -114,10 +114,9 @@ export const cleanupService = {
   async runCleanup(queueStaleMs: number, matchStaleMs: number): Promise<void> {
     const queueCutoff = new Date(Date.now() - queueStaleMs).toISOString();
     const matchCutoff = new Date(Date.now() - matchStaleMs).toISOString();
+    const now = new Date().toISOString();
 
-    // Phase 2: Also clean up waiting_queue entries where the session heartbeat is dead.
-    // HEARTBEAT_STALE_MS is 45s — these are sessions that stopped polling (mobile background).
-    // We use 60s here to give a wider margin than the matchmaker's 45s filter.
+    // Stale heartbeat cutoff: 60s
     const heartbeatCutoff = new Date(Date.now() - 60_000).toISOString();
 
     const [queueExpired, matchExpired] = await Promise.all([
@@ -125,15 +124,15 @@ export const cleanupService = {
       matchRepository.expireStale(matchCutoff),
     ]);
 
-    // Expire waiting_queue entries whose session heartbeat is dead
     try {
       const supabase = (await import('../database/client.js')).getSupabase();
+      const { invalidateMatchmakerCache, transitionSessionStatus } = await import('../matchmaking/matchingEngine.js');
 
-      // Find sessions that are marked 'waiting' but have no recent activity
+      // 1. Expire stale heartbeat queue entries (V4.1 Requirement 12)
       const { data: staleSessionIds } = await supabase
         .from('visitor_sessions')
         .select('id')
-        .in('status', ['waiting', 'matched'])
+        .in('status', ['SEARCHING', 'RESERVED', 'waiting', 'matched'])
         .lt('last_activity', heartbeatCutoff);
 
       if (staleSessionIds && staleSessionIds.length > 0) {
@@ -146,13 +145,83 @@ export const cleanupService = {
           .in('session_id', ids)
           .eq('status', 'waiting');
 
-        await supabase
-          .from('visitor_sessions')
-          .update({ status: 'active', queue_entered_at: null })
-          .in('id', ids);
+        for (const id of ids) {
+          await transitionSessionStatus(supabase, id, 'READY', 'Heartbeat cleanup');
+        }
+        invalidateMatchmakerCache();
       }
+
+      // 2. Clean up expired reservations (V4.1 Requirement 3 & 12)
+      const { data: expiredResvs } = await supabase
+        .from('reservations')
+        .update({ status: 'rolled_back' })
+        .eq('status', 'pending')
+        .lt('expires_at', now)
+        .select('user_a, user_b');
+
+      if (expiredResvs && expiredResvs.length > 0) {
+        console.log(`[Cleanup] Rolled back ${expiredResvs.length} expired reservations`);
+        for (const resv of expiredResvs) {
+          for (const uid of [resv.user_a, resv.user_b]) {
+            if (uid) {
+              await transitionSessionStatus(supabase, uid, 'SEARCHING', 'Reservation expiration recovery');
+            }
+          }
+        }
+        invalidateMatchmakerCache();
+      }
+
+      // 3. Clean up expired temporary messages (V4.1 Requirement 12)
+      const { error: msgErr } = await supabase
+        .from('temporary_messages')
+        .delete()
+        .lt('expires_at', now);
+
+      if (msgErr) {
+        console.error('[Cleanup] Failed to clean up temporary messages:', msgErr.message);
+      }
+
+      // 4. Clean up orphaned matches (ended_at is null but users are not connected or are stale)
+      const { data: activeMatches } = await supabase
+        .from('matches')
+        .select('id, user_a, user_b, started_at')
+        .is('ended_at', null);
+
+      if (activeMatches && activeMatches.length > 0) {
+        for (const m of activeMatches) {
+          const [resA, resB] = await Promise.all([
+            supabase.from('visitor_sessions').select('status, last_activity').eq('id', m.user_a).maybeSingle(),
+            supabase.from('visitor_sessions').select('status, last_activity').eq('id', m.user_b).maybeSingle(),
+          ]);
+
+          const staleA = !resA.data || !resA.data.last_activity || resA.data.last_activity < heartbeatCutoff;
+          const staleB = !resB.data || !resB.data.last_activity || resB.data.last_activity < heartbeatCutoff;
+
+          if (staleA || staleB) {
+            console.log(`[Cleanup] Cleaning up orphaned match ${m.id}`);
+            const duration = Math.floor((Date.now() - new Date(m.started_at).getTime()) / 1000);
+            await supabase
+              .from('matches')
+              .update({
+                ended_at: now,
+                duration_seconds: duration,
+                ended_reason: 'disconnect',
+              })
+              .eq('id', m.id);
+
+            if (!staleA && m.user_a) {
+              await transitionSessionStatus(supabase, m.user_a, 'SEARCHING', 'Cleanup partner disconnected');
+            }
+            if (!staleB && m.user_b) {
+              await transitionSessionStatus(supabase, m.user_b, 'SEARCHING', 'Cleanup partner disconnected');
+            }
+            invalidateMatchmakerCache();
+          }
+        }
+      }
+
     } catch (err) {
-      console.error('[Cleanup] Heartbeat stale cleanup failed:', err instanceof Error ? err.message : err);
+      console.error('[Cleanup] Advanced database cleanup failed:', err instanceof Error ? err.message : err);
     }
 
     if (queueExpired > 0 || matchExpired > 0) {

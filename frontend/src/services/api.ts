@@ -63,6 +63,7 @@ export const apiService = {
       sessionId: data.data.sessionId,
       sessionToken: data.data.sessionToken,
       createdAt: data.data.createdAt,
+      status: data.data.status,
     };
   },
 
@@ -76,6 +77,7 @@ export const apiService = {
       sessionId: data.data.sessionId,
       sessionToken: data.data.sessionToken,
       createdAt: data.data.createdAt,
+      status: data.data.status,
     };
   },
 

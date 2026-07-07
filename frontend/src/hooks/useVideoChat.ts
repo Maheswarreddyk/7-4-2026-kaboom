@@ -91,16 +91,41 @@ export function useVideoChat(
   }, []);
 
   const signalingStateRef = useRef<SessionStatus>('IDLE');
+  const triggerAutoRejoinRef = useRef<() => Promise<void>>(async () => {});
+  const webrtcTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const clearWebRTCTimeout = useCallback(() => {
+    if (webrtcTimeoutRef.current) {
+      clearTimeout(webrtcTimeoutRef.current);
+      webrtcTimeoutRef.current = null;
+    }
+  }, []);
+
+  const startWebRTCTimeout = useCallback(() => {
+    clearWebRTCTimeout();
+    webrtcTimeoutRef.current = setTimeout(() => {
+      const state = signalingStateRef.current;
+      if (state !== 'CONNECTED' && state !== 'IDLE' && state !== 'ENDED') {
+        console.warn(`[WebRTC Timeout] Connection did not establish within 15s (current status: ${state}). Re-entering queue...`);
+        showToast('warning', 'Connection timed out. Finding someone else...');
+        void triggerAutoRejoinRef.current();
+      }
+    }, 15000); // 15s timeout (V4.1 Requirement 14)
+  }, [showToast, clearWebRTCTimeout]);
 
   const setSignalingState = useCallback((state: SessionStatus) => {
-    // Validate state transition to prevent illegal transitions
     const current = signalingStateRef.current;
     if (current === state) return;
 
     console.log(`[FSM Transition] ${current} -> ${state}`);
     signalingStateRef.current = state;
     setChatState((prev) => ({ ...prev, status: state }));
-  }, []);
+
+    // Auto-clear timeout on stable or ended states
+    if (state === 'CONNECTED' || state === 'IDLE' || state === 'ENDED') {
+      clearWebRTCTimeout();
+    }
+  }, [clearWebRTCTimeout]);
 
   sessionIdRef.current = sessionId;
   sessionTokenRef.current = sessionToken;
@@ -196,6 +221,7 @@ export function useVideoChat(
       partnerSessionIdRef.current = data.partnerSessionId;
       isInitiatorRef.current = data.isInitiator;
       setSignalingState('MATCH_FOUND');
+      startWebRTCTimeout(); // V4.1 Requirement 14
 
       let existingMessages: any[] = [];
       try {
@@ -224,7 +250,7 @@ export function useVideoChat(
         partnerTyping: false,
       });
     },
-    [updateChatState, setSignalingState]
+    [updateChatState, setSignalingState, startWebRTCTimeout]
   );
 
   const handleStartNegotiation = useCallback(
@@ -247,6 +273,7 @@ export function useVideoChat(
       webrtcManager.setIceServers(data.iceServers);
       webrtcManager.createPeerConnection();
       setSignalingState('READY');
+      startWebRTCTimeout(); // V4.1 Requirement 14
 
       updateChatState({
         connectionStatus: 'connecting',
@@ -276,7 +303,7 @@ export function useVideoChat(
         }
       }
     },
-    [showToast, updateChatState, clearSignalingRetryTimers, setSignalingState]
+    [showToast, updateChatState, clearSignalingRetryTimers, setSignalingState, startWebRTCTimeout]
   );
 
   const triggerAutoRejoin = useCallback(async () => {
@@ -319,7 +346,9 @@ export function useVideoChat(
     } finally {
       skipInProgressRef.current = false;
     }
-  }, [clearSignalingRetryTimers, updateChatState, setSignalingState]);
+  }, [clearSignalingRetryTimers, updateChatState]);
+
+  triggerAutoRejoinRef.current = triggerAutoRejoin;
 
   function buildCallbacks() {
     return {
@@ -369,6 +398,13 @@ export function useVideoChat(
       onError: (data: { message: string }) => {
         if (skipInProgressRef.current) return;
         showToast('error', data.message);
+
+        if (data.message.includes('lost') || data.message.includes('Reconnecting')) {
+          console.log('[Websocket Reconnect] Connection lost. Attempting automatic reconnection...');
+          setTimeout(() => {
+            void startChat();
+          }, 3000);
+        }
       },
       onPartnerLiked: () => {
         if (skipInProgressRef.current) return;

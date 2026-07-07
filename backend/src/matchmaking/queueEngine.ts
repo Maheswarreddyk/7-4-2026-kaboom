@@ -42,13 +42,13 @@ export async function joinQueueEntry(
     queueEnteredAt = now;
   }
 
-  // Update heartbeat + ensure status is 'waiting'
+  // Update heartbeat + ensure status is 'SEARCHING' (V4.1 Requirement 1)
   await supabase
     .from('visitor_sessions')
     .update({
       queue_entered_at: queueEnteredAt,
       last_activity: now,
-      status: 'waiting',
+      status: 'SEARCHING',
     })
     .eq('id', sessionId);
 
@@ -147,7 +147,7 @@ export async function leaveQueueEntry(supabase: SupabaseClient, sessionId: strin
 
   await supabase
     .from('visitor_sessions')
-    .update({ status: 'active', queue_entered_at: null })
+    .update({ status: 'READY', queue_entered_at: null })
     .eq('id', sessionId);
 
   await logToDb(supabase, sessionId, 'queue_leave', {});

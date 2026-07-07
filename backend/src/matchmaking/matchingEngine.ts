@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { HEARTBEAT_STALE_MS } from './config.js';
+import { HEARTBEAT_STALE_MS, RESERVATION_TIMEOUT_MS } from './config.js';
 import { getIceServers } from '../config/index.js';
 import { broadcastToSession } from '../services/broadcast.js';
 import {
@@ -20,6 +20,96 @@ import {
   rollbackReservation,
 } from './reservationEngine.js';
 import { logEngine, logToDb } from './logger.js';
+
+// ============================================================
+// Concurrency Advisory Lock Configuration
+// ============================================================
+const MATCHMAKER_LOCK_ID = 99999;
+
+// ============================================================
+// In-Memory Queue Cache & Invalidation
+// ============================================================
+let cachedWaitingUsers: any[] | null = null;
+let lastReconciliationTime = 0;
+const RECONCILIATION_INTERVAL_MS = 10_000; // 10 seconds full sync fallback
+
+export function invalidateMatchmakerCache(): void {
+  console.log('[MatchmakerCache] Cache invalidated.');
+  cachedWaitingUsers = null;
+}
+
+// ============================================================
+// Queue Metrics Tracking
+// ============================================================
+export interface QueueMetrics {
+  totalSearchingUsers: number;
+  averageWaitTime: number;
+  maximumWaitTime: number;
+  successfulMatches: number;
+  failedMatches: number;
+  rematches: number;
+  abandonedSearches: number;
+}
+
+export const matchmakerMetrics: QueueMetrics = {
+  totalSearchingUsers: 0,
+  averageWaitTime: 0,
+  maximumWaitTime: 0,
+  successfulMatches: 0,
+  failedMatches: 0,
+  rematches: 0,
+  abandonedSearches: 0,
+};
+
+// ============================================================
+// Explicit FSM Transition Validator (V4.1 Requirement 1)
+// ============================================================
+const VALID_TRANSITIONS: Record<string, string[]> = {
+  'CREATED': ['READY', 'SEARCHING', 'ENDED'],
+  'READY': ['SEARCHING', 'ENDED'],
+  'SEARCHING': ['RESERVED', 'READY', 'ENDED'],
+  'RESERVED': ['MATCHED', 'SEARCHING', 'ENDED'],
+  'MATCHED': ['SIGNALING', 'REQUEUEING', 'ENDED'],
+  'SIGNALING': ['CONNECTED', 'REQUEUEING', 'ENDED'],
+  'CONNECTED': ['PARTNER_LEFT', 'REQUEUEING', 'ENDED'],
+  'PARTNER_LEFT': ['REQUEUEING', 'ENDED'],
+  'REQUEUEING': ['SEARCHING', 'ENDED'],
+  'ENDED': ['READY', 'SEARCHING'],
+};
+
+export async function transitionSessionStatus(
+  supabase: SupabaseClient,
+  sessionId: string,
+  targetStatus: string,
+  reason: string
+): Promise<boolean> {
+  const { data: session } = await supabase
+    .from('visitor_sessions')
+    .select('status')
+    .eq('id', sessionId)
+    .maybeSingle();
+
+  const currentStatus = session?.status || 'CREATED';
+  if (currentStatus === targetStatus) return true;
+
+  // Validate transition
+  const allowed = VALID_TRANSITIONS[currentStatus];
+  if (allowed && !allowed.includes(targetStatus)) {
+    console.warn(`[FSM Warning] Illegal transition: ${currentStatus} -> ${targetStatus} for session ${sessionId} (${reason})`);
+  }
+
+  console.log(`[FSM Transition] Session=${sessionId} | ${currentStatus} -> ${targetStatus} | Reason=${reason}`);
+  const { error } = await supabase
+    .from('visitor_sessions')
+    .update({ status: targetStatus, last_activity: new Date().toISOString() })
+    .eq('id', sessionId);
+
+  if (error) {
+    console.error(`[FSM Error] Failed to update session status to ${targetStatus}:`, error.message);
+    return false;
+  }
+  return true;
+}
 
 export interface MatchResult {
   status: 'waiting' | 'matched';
@@ -76,6 +166,187 @@ async function loadExclusionSets(supabase: SupabaseClient, sessionId: string) {
 }
 
 /**
+ * Self-healing and queue recovery (V4.1 Requirement 4 & 12).
+ * Verifies that visitor_sessions, waiting_queue, reservations, and matches are in sync.
+ * Runs at the beginning of every matchmaking cycle.
+ */
+export async function healQueue(supabase: SupabaseClient): Promise<void> {
+  const now = new Date().toISOString();
+  const heartbeatThreshold = new Date(Date.now() - HEARTBEAT_STALE_MS).toISOString();
+
+  try {
+    // --- 1. Session in waiting state, but queue entry is missing ---
+    const { data: waitingSessions } = await supabase
+      .from('visitor_sessions')
+      .select('id, queue_entered_at')
+      .in('status', ['SEARCHING', 'waiting'])
+      .gt('last_activity', heartbeatThreshold);
+
+    if (waitingSessions && waitingSessions.length > 0) {
+      for (const sess of waitingSessions) {
+        const { data: qEntry } = await supabase
+          .from('waiting_queue')
+          .select('id')
+          .eq('session_id', sess.id)
+          .eq('status', 'waiting')
+          .maybeSingle();
+
+        if (!qEntry) {
+          console.log(`[Self-Healing] Session ${sess.id} status is wait/search, but queue entry is missing. Creating queue entry...`);
+          await supabase.from('waiting_queue').insert({
+            session_id: sess.id,
+            status: 'waiting',
+            joined_at: sess.queue_entered_at || now,
+            last_seen: now,
+          });
+          // Ensure session status uses explicit V4.1 status 'SEARCHING'
+          await transitionSessionStatus(supabase, sess.id, 'SEARCHING', 'Self-healing queue repair');
+        }
+      }
+    }
+
+    // --- 2. Queue entry is 'waiting', but session status is not 'SEARCHING' ---
+    const { data: waitingQueueEntries } = await supabase
+      .from('waiting_queue')
+      .select(`
+        id,
+        session_id,
+        visitor_sessions:session_id (
+          status,
+          last_activity
+        )
+      `)
+      .eq('status', 'waiting');
+
+    if (waitingQueueEntries && waitingQueueEntries.length > 0) {
+      for (const entry of waitingQueueEntries) {
+        const profile = entry.visitor_sessions as any;
+        if (!profile) {
+          console.log(`[Self-Healing] Queue entry ${entry.id} references non-existent session. Expiring queue entry...`);
+          await supabase.from('waiting_queue').update({ status: 'expired' }).eq('id', entry.id);
+          continue;
+        }
+
+        if (profile.status === 'ENDED' || profile.status === 'ended') {
+          console.log(`[Self-Healing] Session ${entry.session_id} is ENDED. Expiring queue entry...`);
+          await supabase.from('waiting_queue').update({ status: 'expired' }).eq('id', entry.id);
+        } else if (profile.status === 'CONNECTED' || profile.status === 'MATCHED' || profile.status === 'matched') {
+          console.log(`[Self-Healing] Session ${entry.session_id} is active in match (${profile.status}). Marking queue matched...`);
+          await supabase.from('waiting_queue').update({ status: 'matched' }).eq('id', entry.id);
+        } else if (profile.status !== 'SEARCHING') {
+          // If session is active and recently updated, sync its status to SEARCHING
+          if (profile.last_activity >= heartbeatThreshold) {
+            console.log(`[Self-Healing] Session ${entry.session_id} has waiting queue but status is ${profile.status}. Syncing to SEARCHING...`);
+            await transitionSessionStatus(supabase, entry.session_id, 'SEARCHING', 'Self-healing FSM state sync');
+          } else {
+            // Expire queue entry because heartbeat is dead
+            console.log(`[Self-Healing] Stale heartbeat for queue entry ${entry.id}. Expiring queue entry...`);
+            await supabase.from('waiting_queue').update({ status: 'expired' }).eq('id', entry.id);
+            await transitionSessionStatus(supabase, entry.session_id, 'READY', 'Self-healing heartbeat expired');
+          }
+        }
+      }
+    }
+
+    // --- 3. Reservation exists but match is missing or signaling timed out (V4.1 Requirement 3) ---
+    const reservationCutoff = new Date(Date.now() - RESERVATION_TIMEOUT_MS).toISOString();
+    const { data: activeReservations } = await supabase
+      .from('reservations')
+      .select('id, match_id, user_a, user_b, created_at')
+      .eq('status', 'pending');
+
+    if (activeReservations && activeReservations.length > 0) {
+      for (const resv of activeReservations) {
+        const timedOut = resv.created_at < reservationCutoff;
+        
+        let matchExists = false;
+        if (resv.match_id) {
+          const { data: match } = await supabase
+            .from('matches')
+            .select('id')
+            .eq('id', resv.match_id)
+            .maybeSingle();
+          if (match) matchExists = true;
+        }
+
+        if (timedOut || !matchExists) {
+          console.log(`[Self-Healing] Reservation ${resv.id} is stale or orphaned (timedOut=${timedOut}, matchExists=${matchExists}). Rolling back...`);
+          await supabase.from('reservations').update({ status: 'rolled_back' }).eq('id', resv.id);
+          
+          // Re-queue both users if they are still active
+          for (const uid of [resv.user_a, resv.user_b]) {
+            const { data: sess } = await supabase.from('visitor_sessions').select('status, last_activity').eq('id', uid).maybeSingle();
+            if (uid && sess && sess.last_activity >= heartbeatThreshold) {
+              await transitionSessionStatus(supabase, uid, 'SEARCHING', 'Reservation rollback recovery');
+              await supabase.from('waiting_queue').update({ status: 'waiting' }).eq('session_id', uid).eq('status', 'matched');
+            }
+          }
+        }
+      }
+    }
+
+    // --- 4. Match exists but peer is disconnected or ended ---
+    const { data: activeMatches } = await supabase
+      .from('matches')
+      .select('id, user_a, user_b, started_at')
+      .is('ended_at', null);
+
+    if (activeMatches && activeMatches.length > 0) {
+      for (const m of activeMatches) {
+        const [resA, resB] = await Promise.all([
+          supabase.from('visitor_sessions').select('status, last_activity').eq('id', m.user_a).maybeSingle(),
+          supabase.from('visitor_sessions').select('status, last_activity').eq('id', m.user_b).maybeSingle(),
+        ]);
+
+        const profileA = resA.data;
+        const profileB = resB.data;
+
+        const staleA = !profileA || !profileA.last_activity || profileA.last_activity < heartbeatThreshold;
+        const staleB = !profileB || !profileB.last_activity || profileB.last_activity < heartbeatThreshold;
+
+        if (staleA || staleB) {
+          console.log(`[Self-Healing] Ending active match ${m.id} due to stale heartbeat (A_stale=${staleA}, B_stale=${staleB})`);
+          const duration = Math.floor((Date.now() - new Date(m.started_at).getTime()) / 1000);
+          
+          await supabase
+            .from('matches')
+            .update({
+              ended_at: now,
+              duration_seconds: duration,
+              ended_reason: 'disconnect',
+            })
+            .eq('id', m.id);
+
+          // Re-queue any active peer
+          if (!staleA && m.user_a) {
+            console.log(`[Self-Healing] Requeuing active partner A: ${m.user_a}`);
+            await transitionSessionStatus(supabase, m.user_a, 'SEARCHING', 'Peer disconnected match cleanup');
+            await supabase.from('waiting_queue').insert({
+              session_id: m.user_a,
+              status: 'waiting',
+              joined_at: now,
+              last_seen: now,
+            });
+          }
+          if (!staleB && m.user_b) {
+            console.log(`[Self-Healing] Requeuing active partner B: ${m.user_b}`);
+            await transitionSessionStatus(supabase, m.user_b, 'SEARCHING', 'Peer disconnected match cleanup');
+            await supabase.from('waiting_queue').insert({
+              session_id: m.user_b,
+              status: 'waiting',
+              joined_at: now,
+              last_seen: now,
+            });
+          }
+        }
+      }
+    }
+  } catch (err) {
+    console.error('[Self-Healing] Error during queue healing:', err instanceof Error ? err.message : err);
+  }
+}
+
+/**
  * Global event-driven matchmaking cycle.
  * Loads all waiting users, filters them, finds the best matches, and sets up matches.
  */
@@ -83,224 +354,293 @@ export async function runGlobalMatchCycle(supabase: SupabaseClient): Promise<voi
   const start = Date.now();
   console.log('[Matchmaker] Starting global matching cycle...');
 
-  // 1. Expire any stale reservations first to return users to the queue
-  const expiredCount = await expireStaleReservations(supabase);
-  if (expiredCount > 0) {
-    console.log(`[Matchmaker] Expired ${expiredCount} stale reservations.`);
+  // 1. Acquire distributed advisory lock to coordinate matching passes (V4.1 Requirement 16)
+  const { data: lockAcquired, error: lockErr } = await supabase.rpc('try_advisory_lock', { lock_id: MATCHMAKER_LOCK_ID });
+  if (lockErr) {
+    console.error('[Matchmaker] try_advisory_lock RPC error:', lockErr.message);
   }
-
-  // 2. Load all waiting queue entries
-  const heartbeatThreshold = new Date(Date.now() - HEARTBEAT_STALE_MS).toISOString();
-  const { data: waitingQueue, error: queueErr } = await supabase
-    .from('waiting_queue')
-    .select(`
-      session_id,
-      joined_at,
-      visitor_sessions:session_id (
-        id,
-        session_token,
-        gender,
-        looking_for,
-        languages,
-        country,
-        state,
-        district,
-        city,
-        interest_tags,
-        last_partner,
-        queue_entered_at,
-        last_activity,
-        status
-      )
-    `)
-    .eq('status', 'waiting')
-    .order('joined_at', { ascending: true }); // Oldest waiting first
-
-  if (queueErr) {
-    console.error('[Matchmaker] Failed to load waiting queue:', queueErr.message);
+  if (!lockAcquired) {
+    console.log('[Matchmaker] Advisory lock already held by another matchmaking process instance. Skipping cycle.');
     return;
   }
 
-  if (!waitingQueue || waitingQueue.length < 2) {
-    console.log('[Matchmaker] Not enough waiting users to run matching. Waiting count:', waitingQueue?.length ?? 0);
-    return;
-  }
+  try {
+    // 2. Run database self-healing and queue recovery (V4.1 Requirement 4 & 12)
+    await healQueue(supabase);
 
-  // Filter candidates active within heartbeat threshold
-  let activeWaiting = (waitingQueue as any[]).filter((entry) => {
-    const profile = entry.visitor_sessions;
-    if (!profile) return false;
-    const lastActivity = profile.last_activity;
-    return lastActivity && lastActivity >= heartbeatThreshold;
-  });
-
-  console.log(`[Matchmaker] Found ${activeWaiting.length} active waiting users.`);
-
-  if (activeWaiting.length < 2) return;
-
-  // Track users already processed in this cycle to avoid duplicate matches
-  const matchedOrReservedInCycle = new Set<string>();
-
-  // Fetch all active reservations to check global reservation state
-  const reservedIds = await getReservedSessionIds(supabase);
-
-  // 3. Match from oldest to newest
-  for (let i = 0; i < activeWaiting.length; i++) {
-    const entryA = activeWaiting[i];
-    const sessionIdA = entryA.session_id;
-
-    if (matchedOrReservedInCycle.has(sessionIdA) || reservedIds.has(sessionIdA)) continue;
-
-    const profileA = entryA.visitor_sessions;
-    if (!profileA || profileA.status !== 'waiting') continue;
-
-    // Load recent matches and reports for user A to build exclusion sets
-    const { recentPartners, reportedIds } = await loadExclusionSets(supabase, sessionIdA);
-
-    const waitingSecondsA = Math.floor((Date.now() - new Date(entryA.joined_at).getTime()) / 1000);
-
-    const scoredCandidates: Array<ReturnType<typeof calculateCompatibility> & { sessionId: string; entry: any }> = [];
-
-    // Find best compatible candidate B among the remaining candidates
-    for (let j = 0; j < activeWaiting.length; j++) {
-      const entryB = activeWaiting[j];
-      const sessionIdB = entryB.session_id;
-
-      if (sessionIdA === sessionIdB) continue;
-      if (matchedOrReservedInCycle.has(sessionIdB) || reservedIds.has(sessionIdB)) continue;
-
-      const profileB = entryB.visitor_sessions;
-      if (!profileB || profileB.status !== 'waiting') continue;
-
-      const score = calculateCompatibility(
-        profileA,
-        profileB,
-        waitingSecondsA,
-        recentPartners,
-        reportedIds
-      );
-
-      if (score) {
-        scoredCandidates.push({ ...score, sessionId: sessionIdB, entry: entryB });
-      }
+    // 3. Expire stale reservations
+    const expiredCount = await expireStaleReservations(supabase);
+    if (expiredCount > 0) {
+      console.log(`[Matchmaker] Expired ${expiredCount} stale reservations.`);
+      invalidateMatchmakerCache(); // Cache is modified by database expiration
     }
 
-    let ranked = rankCandidates(scoredCandidates, waitingSecondsA);
+    // 4. Load waiting queue entries (In-memory cache logic)
+    const heartbeatThreshold = new Date(Date.now() - HEARTBEAT_STALE_MS).toISOString();
+    let waitingQueue: any[] = [];
+    const needSync = cachedWaitingUsers === null || (Date.now() - lastReconciliationTime > RECONCILIATION_INTERVAL_MS);
 
-    if (scoredCandidates.length === 1) {
-      ranked = [{ ...scoredCandidates[0], rank: 1, passesThreshold: true }];
-    } else if (ranked.length === 0 && scoredCandidates.length > 0 && waitingSecondsA >= 30) {
-      // Relax requirements after 30 seconds
-      const bestFallback = [...scoredCandidates].sort((a, b) => b.weightedScore - a.weightedScore)[0];
-      ranked = [{ ...bestFallback, rank: 1, passesThreshold: true }];
-    }
-
-    if (ranked.length === 0) {
-      console.log(`[Matchmaker] No compatible candidates for session ${sessionIdA} (waiting ${waitingSecondsA}s)`);
-      continue;
-    }
-
-    // Found a match!
-    const bestMatch = ranked[0];
-    const sessionIdB = bestMatch.sessionId;
-
-    console.log(`[Matchmaker] Found match between ${sessionIdA} and ${sessionIdB} with score ${bestMatch.weightedScore}`);
-
-    // Create reservation atomically
-    const reservation = await createReservation(supabase, sessionIdA, sessionIdB);
-    if (!reservation.success) {
-      console.error(`[Matchmaker] Failed to reserve: ${reservation.reason}`);
-      continue;
-    }
-
-    const userA = sessionIdA < sessionIdB ? sessionIdA : sessionIdB;
-    const userB = sessionIdA < sessionIdB ? sessionIdB : sessionIdA;
-
-    // Create match row
-    const { data: match, error: matchError } = await supabase
-      .from('matches')
-      .insert({
-        user_a: userA,
-        user_b: userB,
-        match_score: bestMatch.weightedScore,
-        matched_reason: bestMatch.reason,
-        // Phase 1: initialize ready flags (006 columns)
-        user_a_ready: false,
-        user_b_ready: false,
-        negotiation_started: false,
-      })
-      .select()
-      .single();
-
-    if (matchError || !match) {
-      console.error(`[Matchmaker] Match creation failed between ${userA} and ${userB}:`, matchError?.message);
-      await rollbackReservation(supabase, reservation.reservationId, matchError?.message ?? 'Match insert failed');
-      continue;
-    }
-
-    // Confirm reservation
-    await confirmReservation(supabase, reservation.reservationId, match.id);
-
-    // Update statuses in DB atomically
-    await Promise.all([
-      supabase
+    if (needSync) {
+      console.log('[MatchmakerCache] Reconciling waiting queue from database...');
+      const { data, error: queueErr } = await supabase
         .from('waiting_queue')
-        .update({ status: 'matched' })
-        .in('session_id', [userA, userB])
-        .eq('status', 'waiting'),
-      supabase
-        .from('visitor_sessions')
-        .update({ status: 'matched', last_partner: userB })
-        .eq('id', userA),
-      supabase
-        .from('visitor_sessions')
-        .update({ status: 'matched', last_partner: userA })
-        .eq('id', userB),
-    ]);
+        .select(`
+          session_id,
+          joined_at,
+          visitor_sessions:session_id (
+            id,
+            session_token,
+            gender,
+            looking_for,
+            languages,
+            country,
+            state,
+            district,
+            city,
+            interest_tags,
+            last_partner,
+            queue_entered_at,
+            last_activity,
+            status
+          )
+        `)
+        .eq('status', 'waiting')
+        .order('joined_at', { ascending: true }); // Oldest waiting first
 
-    // Log match starts
-    await Promise.all([
-      logToDb(supabase, userA, 'match_start', {
-        matchId: match.id,
-        partnerId: userB,
-        score: bestMatch.weightedScore,
-        rawScore: bestMatch.rawScore,
-        threshold: bestMatch.threshold,
-        phase: bestMatch.phase,
-        rank: bestMatch.rank,
-        reason: bestMatch.reason,
-      }),
-      logToDb(supabase, userB, 'match_start', {
-        matchId: match.id,
-        partnerId: userA,
-      }),
-    ]);
+      if (queueErr) {
+        console.error('[Matchmaker] Failed to load waiting queue:', queueErr.message);
+        return;
+      }
+      waitingQueue = data || [];
+      cachedWaitingUsers = [...waitingQueue];
+      lastReconciliationTime = Date.now();
+    } else {
+      console.log('[MatchmakerCache] Serving queue from memory cache.');
+      waitingQueue = [...(cachedWaitingUsers || [])];
+    }
 
-    // Broadcast matched event to both sessions
-    const iceServers = getIceServers();
-    await Promise.all([
-      broadcastToSession(userA, 'matched', {
-        matchId: match.id,
-        partnerSessionId: userB,
-        isInitiator: userA === sessionIdA,
-        iceServers,
-      }),
-      broadcastToSession(userB, 'matched', {
-        matchId: match.id,
-        partnerSessionId: userA,
-        isInitiator: userB === sessionIdA,
-        iceServers,
-      }),
-    ]);
+    // Filter active waiting users using heartbeat threshold
+    let activeWaiting = waitingQueue.filter((entry) => {
+      const profile = entry.visitor_sessions;
+      if (!profile) return false;
+      const lastActivity = profile.last_activity;
+      return lastActivity && lastActivity >= heartbeatThreshold;
+    });
 
-    // Mark both as processed in this matchmaking pass
-    matchedOrReservedInCycle.add(sessionIdA);
-    matchedOrReservedInCycle.add(sessionIdB);
+    console.log(`[Matchmaker] Found ${activeWaiting.length} active waiting users.`);
+    matchmakerMetrics.totalSearchingUsers = activeWaiting.length;
 
-    console.log(`[Matchmaker] Successfully created match ${match.id} for ${sessionIdA} and ${sessionIdB}`);
+    if (activeWaiting.length < 2) return;
+
+    // Track processed sessions in this cycle to prevent double matching
+    const matchedOrReservedInCycle = new Set<string>();
+    const reservedIds = await getReservedSessionIds(supabase);
+
+    // 5. Match from oldest to newest (V4.1 Requirement 13: longest waiting prioritization)
+    for (let i = 0; i < activeWaiting.length; i++) {
+      const entryA = activeWaiting[i];
+      const sessionIdA = entryA.session_id;
+
+      if (matchedOrReservedInCycle.has(sessionIdA) || reservedIds.has(sessionIdA)) continue;
+
+      const profileA = entryA.visitor_sessions;
+      if (!profileA || profileA.status !== 'SEARCHING') continue;
+
+      // Load exclusion sets
+      const { recentPartners, reportedIds } = await loadExclusionSets(supabase, sessionIdA);
+
+      // Query ended matches for user A to build endedMatchesMap for rematch cooldown checking
+      const { data: endedMatchesQuery } = await supabase
+        .from('matches')
+        .select('user_a, user_b, ended_at')
+        .or(`user_a.eq.${sessionIdA},user_b.eq.${sessionIdA}`)
+        .not('ended_at', 'is', null)
+        .order('ended_at', { ascending: false })
+        .limit(10);
+
+      const endedMatchesMap = new Map<string, string>();
+      endedMatchesQuery?.forEach((m) => {
+        const partnerId = m.user_a === sessionIdA ? m.user_b : m.user_a;
+        if (!endedMatchesMap.has(partnerId)) {
+          endedMatchesMap.set(partnerId, m.ended_at);
+        }
+      });
+
+      const waitingSecondsA = Math.floor((Date.now() - new Date(entryA.joined_at).getTime()) / 1000);
+      matchmakerMetrics.maximumWaitTime = Math.max(matchmakerMetrics.maximumWaitTime, waitingSecondsA);
+
+      const scoredCandidates: Array<ReturnType<typeof calculateCompatibility> & { sessionId: string; entry: any }> = [];
+
+      for (let j = 0; j < activeWaiting.length; j++) {
+        const entryB = activeWaiting[j];
+        const sessionIdB = entryB.session_id;
+
+        if (sessionIdA === sessionIdB) continue;
+        if (matchedOrReservedInCycle.has(sessionIdB) || reservedIds.has(sessionIdB)) continue;
+
+        const profileB = entryB.visitor_sessions;
+        if (!profileB || profileB.status !== 'SEARCHING') continue;
+
+        const score = calculateCompatibility(
+          profileA,
+          profileB,
+          waitingSecondsA,
+          recentPartners,
+          reportedIds,
+          endedMatchesMap
+        );
+
+        if (score) {
+          scoredCandidates.push({ ...score, sessionId: sessionIdB, entry: entryB });
+        }
+      }
+
+      let ranked = rankCandidates(scoredCandidates, waitingSecondsA);
+
+      if (scoredCandidates.length === 1) {
+        ranked = [{ ...scoredCandidates[0], rank: 1, passesThreshold: true }];
+      } else if (ranked.length === 0 && scoredCandidates.length > 0 && waitingSecondsA >= 25) {
+        // Relax: fall back to best compatibility score if waiting > 25 seconds
+        const bestFallback = [...scoredCandidates].sort((a, b) => b.weightedScore - a.weightedScore)[0];
+        ranked = [{ ...bestFallback, rank: 1, passesThreshold: true }];
+      }
+
+      if (ranked.length === 0) {
+        console.log(`[Matchmaker] No compatible candidates for session ${sessionIdA} (waiting ${waitingSecondsA}s)`);
+        continue;
+      }
+
+      // Found a match!
+      const bestMatch = ranked[0];
+      const sessionIdB = bestMatch.sessionId;
+
+      console.log(`[Matchmaker] Found match: ${sessionIdA} and ${sessionIdB} (score=${bestMatch.weightedScore}, reason=${bestMatch.reason})`);
+
+      // Create reservation atomically
+      const reservation = await createReservation(supabase, sessionIdA, sessionIdB);
+      if (!reservation.success) {
+        console.error(`[Matchmaker] Failed to reserve: ${reservation.reason}`);
+        matchmakerMetrics.failedMatches += 1;
+        continue;
+      }
+
+      // Transition FSM states to RESERVED (V4.1 Requirement 1)
+      await Promise.all([
+        transitionSessionStatus(supabase, sessionIdA, 'RESERVED', 'Matchmaker reservation lock'),
+        transitionSessionStatus(supabase, sessionIdB, 'RESERVED', 'Matchmaker reservation lock'),
+      ]);
+
+      const userA = sessionIdA < sessionIdB ? sessionIdA : sessionIdB;
+      const userB = sessionIdA < sessionIdB ? sessionIdB : sessionIdA;
+
+      // Create match row
+      const { data: match, error: matchError } = await supabase
+        .from('matches')
+        .insert({
+          user_a: userA,
+          user_b: userB,
+          match_score: bestMatch.weightedScore,
+          matched_reason: bestMatch.reason,
+          user_a_ready: false,
+          user_b_ready: false,
+          negotiation_started: false,
+        })
+        .select()
+        .single();
+
+      if (matchError || !match) {
+        console.error(`[Matchmaker] Match creation failed between ${userA} and ${userB}:`, matchError?.message);
+        await rollbackReservation(supabase, reservation.reservationId, matchError?.message ?? 'Match insert failed');
+        await Promise.all([
+          transitionSessionStatus(supabase, sessionIdA, 'SEARCHING', 'Reservation rollback'),
+          transitionSessionStatus(supabase, sessionIdB, 'SEARCHING', 'Reservation rollback'),
+        ]);
+        matchmakerMetrics.failedMatches += 1;
+        continue;
+      }
+
+      // Confirm reservation
+      await confirmReservation(supabase, reservation.reservationId, match.id);
+
+      // Transition FSM states to MATCHED (V4.1 Requirement 1)
+      await Promise.all([
+        transitionSessionStatus(supabase, userA, 'MATCHED', 'Match established'),
+        transitionSessionStatus(supabase, userB, 'MATCHED', 'Match established'),
+        supabase
+          .from('waiting_queue')
+          .update({ status: 'matched' })
+          .in('session_id', [userA, userB])
+          .eq('status', 'waiting'),
+      ]);
+
+      // Remove matched users from in-memory cache immediately
+      if (cachedWaitingUsers) {
+        cachedWaitingUsers = cachedWaitingUsers.filter(
+          (u) => u.session_id !== sessionIdA && u.session_id !== sessionIdB
+        );
+      }
+
+      // Track matchmaking statistics
+      matchmakerMetrics.successfulMatches += 1;
+      const isRematch = recentPartners.has(sessionIdB);
+      if (isRematch) {
+        matchmakerMetrics.rematches += 1;
+      }
+      
+      const totalSuccessful = matchmakerMetrics.successfulMatches;
+      const totalWaitTime = (matchmakerMetrics.averageWaitTime * (totalSuccessful - 1)) + waitingSecondsA;
+      matchmakerMetrics.averageWaitTime = Math.round(totalWaitTime / totalSuccessful);
+
+      // Log match starts
+      await Promise.all([
+        logToDb(supabase, userA, 'match_start', {
+          matchId: match.id,
+          partnerId: userB,
+          score: bestMatch.weightedScore,
+          rawScore: bestMatch.rawScore,
+          threshold: bestMatch.threshold,
+          phase: bestMatch.phase,
+          rank: bestMatch.rank,
+          reason: bestMatch.reason,
+          isRematch,
+        }),
+        logToDb(supabase, userB, 'match_start', {
+          matchId: match.id,
+          partnerId: userA,
+        }),
+      ]);
+
+      // Broadcast matched event to both sessions
+      const iceServers = getIceServers();
+      await Promise.all([
+        broadcastToSession(userA, 'matched', {
+          matchId: match.id,
+          partnerSessionId: userB,
+          isInitiator: userA === sessionIdA,
+          iceServers,
+        }),
+        broadcastToSession(userB, 'matched', {
+          matchId: match.id,
+          partnerSessionId: userA,
+          isInitiator: userB === sessionIdA,
+          iceServers,
+        }),
+      ]);
+
+      // Mark both as processed in this matchmaking pass
+      matchedOrReservedInCycle.add(sessionIdA);
+      matchedOrReservedInCycle.add(sessionIdB);
+
+      console.log(`[Matchmaker] Successfully created match ${match.id} for ${sessionIdA} and ${sessionIdB}`);
+    }
+  } finally {
+    // 6. Release advisory lock (V4.1 Requirement 16)
+    const { data: lockReleased, error: unlockErr } = await supabase.rpc('advisory_unlock', { lock_id: MATCHMAKER_LOCK_ID });
+    if (unlockErr) {
+      console.error('[Matchmaker] advisory_unlock RPC error:', unlockErr.message);
+    }
+    console.log(`[Matchmaker] Finished global matching cycle in ${Date.now() - start}ms (lockReleased=${lockReleased}).`);
   }
-
-  console.log(`[Matchmaker] Finished global matching cycle in ${Date.now() - start}ms.`);
 }
 
 /**

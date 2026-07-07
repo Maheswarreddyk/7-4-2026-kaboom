@@ -14,6 +14,7 @@ import {
 
 import { getSupabase } from '../database/client.js';
 import matchRoutes from './match.js';
+import { matchmakerMetrics } from '../matchmaking/matchingEngine.js';
 
 const router = Router();
 
@@ -191,7 +192,16 @@ router.get('/analytics', async (req, res, next) => {
         totalReports: reportsCount.count ?? 0,
         topInterests: Object.entries(interestsFreq).sort((a, b) => b[1] - a[1]).slice(0, 5),
         topLocations: Object.entries(locationsFreq).sort((a, b) => b[1] - a[1]).slice(0, 5),
-        topLanguages: Object.entries(languagesFreq).sort((a, b) => b[1] - a[1]).slice(0, 5)
+        topLanguages: Object.entries(languagesFreq).sort((a, b) => b[1] - a[1]).slice(0, 5),
+        matchmaker: {
+          totalSearchingUsers: matchmakerMetrics.totalSearchingUsers,
+          averageWaitTime: matchmakerMetrics.averageWaitTime,
+          maximumWaitTime: matchmakerMetrics.maximumWaitTime,
+          successfulMatches: matchmakerMetrics.successfulMatches,
+          failedMatches: matchmakerMetrics.failedMatches,
+          rematches: matchmakerMetrics.rematches,
+          abandonedSearches: matchmakerMetrics.abandonedSearches,
+        }
       }
     });
   } catch (err) {
