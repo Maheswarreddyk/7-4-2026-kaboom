@@ -84,6 +84,13 @@ function subscribeToMatchChannel(matchId: string, callbacks: RealtimeCallbacks):
       return;
     }
 
+    // Phase 1 fix: Track whether we subscribed successfully so the timeout
+    // fallback never fires after a real subscription (prevents premature resolution).
+    let subscribed = false;
+    // Phase 1 fix: 5000ms timeout — was 1500ms. Mobile cellular can take 2–4s to subscribe.
+    // Firing too early caused offers to be sent before the answerer had a channel to receive them.
+    const SUBSCRIBE_TIMEOUT_MS = 5_000;
+
     matchChannel = supabase
       .channel(`match:${matchId}`, { config: { broadcast: { self: false } } })
       .on('broadcast', { event: 'offer' }, ({ payload }) => {
@@ -110,15 +117,25 @@ function subscribeToMatchChannel(matchId: string, callbacks: RealtimeCallbacks):
 
     matchChannel.subscribe((status) => {
       if (status === 'SUBSCRIBED') {
+        subscribed = true;
         console.log(`[Realtime] Subscribed to match channel: ${matchId}`);
+        resolve();
+      }
+      if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+        console.warn(`[Realtime] Match channel ${matchId} status: ${status} — resolving with fallback`);
         resolve();
       }
     });
 
-    // Timeout fallback after 1.5 seconds in case of slow connection
+    // Fallback: if channel hasn't confirmed subscription within SUBSCRIBE_TIMEOUT_MS,
+    // resolve anyway so markReady() can proceed. The channel will still receive events
+    // once it eventually subscribes — we just don't block on it.
     setTimeout(() => {
-      resolve();
-    }, 1500);
+      if (!subscribed) {
+        console.warn(`[Realtime] Match channel ${matchId} subscribe timeout after ${SUBSCRIBE_TIMEOUT_MS}ms — proceeding`);
+        resolve();
+      }
+    }, SUBSCRIBE_TIMEOUT_MS);
   });
 }
 

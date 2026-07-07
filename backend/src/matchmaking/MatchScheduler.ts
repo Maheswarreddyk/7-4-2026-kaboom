@@ -1,6 +1,7 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 import { runGlobalMatchCycle } from './matchingEngine.js';
 import { getSupabase } from '../database/client.js';
+import { SCHEDULER_INTERVAL_MS } from './config.js';
 
 let running = false;
 let isCycleActive = false;
@@ -10,7 +11,7 @@ export const MatchScheduler = {
   start() {
     if (running) return;
     running = true;
-    console.log('[MatchScheduler] Continuous matching scheduler started.');
+    console.log(`[MatchScheduler] Continuous matching scheduler started (interval=${SCHEDULER_INTERVAL_MS}ms).`);
     void this.loop();
   },
 
@@ -31,12 +32,11 @@ export const MatchScheduler = {
         const supabase = getSupabase();
         await runGlobalMatchCycle(supabase);
       } catch (error) {
-        console.error('[MatchScheduler] Error in matching cycle:', error);
+        console.error('[MatchScheduler] Error in matching cycle:', error instanceof Error ? error.message : error);
       } finally {
         isCycleActive = false;
       }
     }
-    // Sleep for 1500ms before repeating
-    schedulerTimeout = setTimeout(() => this.loop(), 1500);
+    schedulerTimeout = setTimeout(() => this.loop(), SCHEDULER_INTERVAL_MS);
   }
 };

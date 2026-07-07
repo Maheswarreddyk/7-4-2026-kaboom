@@ -8,6 +8,11 @@ export interface ReservationResult {
   reason: string;
 }
 
+/**
+ * Creates an atomic reservation lock for a pair of sessions before inserting a match row.
+ * Writes both (user_a/user_b) and (initiator_session_id/partner_session_id) to be compatible
+ * with both the 005 and 006 migrations.
+ */
 export async function createReservation(
   supabase: SupabaseClient,
   initiatorSessionId: string,
@@ -20,6 +25,10 @@ export async function createReservation(
     const { data, error } = await supabase
       .from('reservations')
       .insert({
+        // 005 column names (user's actual DB)
+        user_a: initiatorSessionId,
+        user_b: partnerSessionId,
+        // 006 alias column names (code compatibility layer)
         initiator_session_id: initiatorSessionId,
         partner_session_id: partnerSessionId,
         status: 'pending',
@@ -29,9 +38,16 @@ export async function createReservation(
       .single();
 
     if (error) {
-    if (error.message.includes('schema cache') || error.code === '42P01') {
-      return { reservationId: '', success: true, reason: 'Reservations table not migrated' };
-    }
+      // If table doesn't exist yet (pre-005 deployment), proceed without reservation
+      if (error.message.includes('schema cache') || error.code === '42P01') {
+        console.warn('[ReservationEngine] Reservations table not yet migrated — proceeding without lock.');
+        return { reservationId: '', success: true, reason: 'Reservations table not migrated' };
+      }
+      // Unique constraint violation = one of these sessions is already reserved
+      if (error.code === '23505') {
+        console.warn(`[ReservationEngine] Reservation conflict for ${initiatorSessionId} or ${partnerSessionId}`);
+        return { reservationId: '', success: false, reason: 'Session already reserved' };
+      }
       logEngine({
         engine: 'ReservationEngine',
         sessionId: initiatorSessionId,
@@ -48,9 +64,11 @@ export async function createReservation(
       expiresAt,
     });
 
+    console.log(`[ReservationEngine] Reserved pair ${initiatorSessionId} <-> ${partnerSessionId} (expires ${expiresAt})`);
     return { reservationId: data.id, success: true, reason: 'Reserved' };
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Reservation unavailable';
+    console.warn(`[ReservationEngine] Non-fatal reservation error: ${message}`);
     return { reservationId: '', success: true, reason: `Skipped reservation: ${message}` };
   }
 }
@@ -68,7 +86,7 @@ export async function confirmReservation(
       .eq('id', reservationId);
     await logToDb(supabase, null, 'reservation_confirmed', { reservationId, matchId });
   } catch {
-    // reservations table optional until migration 005 applied
+    // reservations table optional until migration applied
   }
 }
 

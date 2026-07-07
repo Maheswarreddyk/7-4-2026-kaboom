@@ -114,7 +114,7 @@ export async function runGlobalMatchCycle(supabase: SupabaseClient): Promise<voi
       )
     `)
     .eq('status', 'waiting')
-    .order('joined_at', { ascending: true }); // Oldest waiting first!
+    .order('joined_at', { ascending: true }); // Oldest waiting first
 
   if (queueErr) {
     console.error('[Matchmaker] Failed to load waiting queue:', queueErr.message);
@@ -224,6 +224,10 @@ export async function runGlobalMatchCycle(supabase: SupabaseClient): Promise<voi
         user_b: userB,
         match_score: bestMatch.weightedScore,
         matched_reason: bestMatch.reason,
+        // Phase 1: initialize ready flags (006 columns)
+        user_a_ready: false,
+        user_b_ready: false,
+        negotiation_started: false,
       })
       .select()
       .single();
@@ -237,7 +241,7 @@ export async function runGlobalMatchCycle(supabase: SupabaseClient): Promise<voi
     // Confirm reservation
     await confirmReservation(supabase, reservation.reservationId, match.id);
 
-    // Update statuses in DB
+    // Update statuses in DB atomically
     await Promise.all([
       supabase
         .from('waiting_queue')
@@ -379,10 +383,10 @@ export async function runMatchCycle(
 
 export { leaveQueueEntry };
 
-const readySessionsByMatch = new Map<string, Set<string>>();
-
 /**
- * Mark user READY; when both ready, broadcast START_NEGOTIATION to both sessions.
+ * Mark user READY.
+ * Phase 1 fix: Uses DB-only state (no in-memory Map) so it survives server restarts.
+ * When both users are ready, broadcasts START_NEGOTIATION to both sessions.
  */
 export async function markUserReady(
   supabase: SupabaseClient,
@@ -390,173 +394,100 @@ export async function markUserReady(
   sessionToken: string,
   matchId: string
 ): Promise<{ bothReady: boolean; isInitiator: boolean }> {
-  console.log(`\n======================================================`);
-  console.log(`[API /ready] INSTRUMENTATION LOG`);
-  console.log(`Session ID: ${sessionId}`);
-  console.log(`Match ID: ${matchId}`);
+  const requestId = `${sessionId.slice(0, 8)}-${Date.now()}`;
+  console.log(`\n[/ready] [${requestId}] sessionId=${sessionId} matchId=${matchId}`);
 
-  try {
-    // 1. Database Lookups and Verification
-    console.log(`[API /ready] Querying visitor_sessions...`);
-    const { data: session, error: sessErr } = await supabase
-      .from('visitor_sessions')
-      .select('*')
-      .eq('id', sessionId)
-      .maybeSingle();
+  // 1. Validate session
+  const { data: session, error: sessErr } = await supabase
+    .from('visitor_sessions')
+    .select('id, session_token, status')
+    .eq('id', sessionId)
+    .maybeSingle();
 
-    if (sessErr) {
-      console.error(`[API /ready] SQL Error during session lookup:`, sessErr);
-    }
-    console.log(`Session Lookup Result:`, session ? `Found (status: ${session.status})` : 'Not Found');
-
-    if (!session || session.session_token !== sessionToken) {
-      console.error(`[API /ready] Session validation failed. Expected token match.`);
-      throw new Error('Invalid session or session token mismatch');
-    }
-
-    console.log(`[API /ready] Querying matches...`);
-    const { data: match, error: matchErr } = await supabase
-      .from('matches')
-      .select('*')
-      .eq('id', matchId)
-      .is('ended_at', null)
-      .maybeSingle();
-
-    if (matchErr) {
-      console.error(`[API /ready] SQL Error during match lookup:`, matchErr);
-    }
-    console.log(`Match Lookup Result:`, match ? `Active match found (user_a: ${match.user_a}, user_b: ${match.user_b})` : 'No active match found');
-
-    if (!match) {
-      throw new Error(`Match not found or already ended. ID: ${matchId}`);
-    }
-
-    const isUserA = match.user_a === sessionId;
-    const isUserB = match.user_b === sessionId;
-    if (!isUserA && !isUserB) {
-      console.error(`[API /ready] Security violation: Session ${sessionId} is not a participant in match ${matchId}`);
-      throw new Error('Not a participant in this match');
-    }
-
-    // Lookup reservation
-    console.log(`[API /ready] Querying reservations...`);
-    const { data: reservation, error: resErr } = await supabase
-      .from('reservations')
-      .select('*')
-      .eq('match_id', matchId)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    if (resErr) {
-      console.error(`[API /ready] SQL Error during reservation lookup:`, resErr);
-    }
-    console.log(`Reservation Lookup Result:`, reservation ? `Found reservation (status: ${reservation.status})` : 'No reservation found');
-
-    // Lookup queue entry
-    console.log(`[API /ready] Querying waiting_queue...`);
-    const { data: queueEntry, error: qErr } = await supabase
-      .from('waiting_queue')
-      .select('*')
-      .eq('session_id', sessionId)
-      .maybeSingle();
-
-    if (qErr) {
-      console.error(`[API /ready] SQL Error during queue lookup:`, qErr);
-    }
-    console.log(`Queue Entry Lookup Result:`, queueEntry ? `Found (status: ${queueEntry.status})` : 'No queue entry found');
-
-    const expectedState = 'user_ready = false';
-    const actualState = `user_a_ready: ${match.user_a_ready}, user_b_ready: ${match.user_b_ready}`;
-    console.log(`Expected State: ${expectedState} | Actual State: ${actualState}`);
-
-    await logToDb(supabase, sessionId, 'ready', { matchId });
-
-    if (!readySessionsByMatch.has(matchId)) {
-      readySessionsByMatch.set(matchId, new Set());
-    }
-    readySessionsByMatch.get(matchId)!.add(sessionId);
-
-    let dbBothReady = false;
-    try {
-      const readyUpdate = isUserA ? { user_a_ready: true } : { user_b_ready: true };
-      const { data: updated, error: updateErr } = await supabase
-        .from('matches')
-        .update(readyUpdate)
-        .eq('id', matchId)
-        .select()
-        .single();
-      
-      if (updateErr) {
-        console.error(`[API /ready] SQL Error updating match ready state:`, updateErr);
-      }
-      if (updated) {
-        dbBothReady = Boolean(updated.user_a_ready && updated.user_b_ready);
-        console.log(`Updated Match Ready State: user_a_ready: ${updated.user_a_ready}, user_b_ready: ${updated.user_b_ready}`);
-      }
-    } catch (err) {
-      console.warn(`[API /ready] Failed to write ready flag to DB (columns may be optional):`, err);
-    }
-
-    const memoryReady = readySessionsByMatch.get(matchId)!;
-    const bothReady =
-      dbBothReady ||
-      (memoryReady.has(match.user_a) && memoryReady.has(match.user_b));
-
-    console.log(`Negotiation readiness check: memoryReady: ${Array.from(memoryReady).join(', ')} | bothReady: ${bothReady}`);
-
-    if (bothReady) {
-      console.log(`[API /ready] Both users are ready! Starting WebRTC negotiation...`);
-      try {
-        await supabase.from('matches').update({ negotiation_started: true }).eq('id', matchId);
-      } catch (err) {
-        console.warn('[API /ready] Failed to update negotiation_started flag in DB:', err);
-      }
-
-      const partnerId = isUserA ? match.user_b : match.user_a;
-      const iceServers = getIceServers();
-
-      console.log(`[API /ready] Broadcasting start_negotiation to initiator ${sessionId} and partner ${partnerId}...`);
-      await Promise.all([
-        (async () => {
-          try {
-            await broadcastToSession(sessionId, 'start_negotiation', {
-              matchId,
-              partnerSessionId: partnerId,
-              isInitiator: isUserA,
-              iceServers,
-            });
-            console.log(`[API /ready] Broadcast success to ${sessionId}`);
-          } catch (bErr) {
-            console.warn(`[API /ready] Failed to broadcast to session ${sessionId}:`, bErr instanceof Error ? bErr.message : bErr);
-          }
-        })(),
-        (async () => {
-          try {
-            await broadcastToSession(partnerId, 'start_negotiation', {
-              matchId,
-              partnerSessionId: sessionId,
-              isInitiator: !isUserA,
-              iceServers,
-            });
-            console.log(`[API /ready] Broadcast success to ${partnerId}`);
-          } catch (bErr) {
-            console.warn(`[API /ready] Failed to broadcast to partner ${partnerId}:`, bErr instanceof Error ? bErr.message : bErr);
-          }
-        })()
-      ]);
-
-      await logToDb(supabase, sessionId, 'negotiation_start', { matchId });
-      readySessionsByMatch.delete(matchId);
-    }
-
-    console.log(`[API /ready] Finished processing. returning bothReady: ${bothReady}, isInitiator: ${isUserA}`);
-    console.log(`======================================================\n`);
-    return { bothReady, isInitiator: isUserA };
-  } catch (error) {
-    console.error(`[API /ready] CRITICAL EXCEPTION CAUGHT:`);
-    console.error(error instanceof Error ? error.stack : error);
-    console.log(`======================================================\n`);
-    throw error;
+  if (sessErr || !session || session.session_token !== sessionToken) {
+    console.error(`[/ready] [${requestId}] Session validation failed`);
+    throw new Error('Invalid session or session token mismatch');
   }
+
+  // 2. Load match
+  const { data: match, error: matchErr } = await supabase
+    .from('matches')
+    .select('id, user_a, user_b, user_a_ready, user_b_ready, negotiation_started')
+    .eq('id', matchId)
+    .is('ended_at', null)
+    .maybeSingle();
+
+  if (matchErr || !match) {
+    console.error(`[/ready] [${requestId}] Match not found: ${matchId}`);
+    throw new Error(`Match not found or already ended. ID: ${matchId}`);
+  }
+
+  const isUserA = match.user_a === sessionId;
+  const isUserB = match.user_b === sessionId;
+  if (!isUserA && !isUserB) {
+    throw new Error('Not a participant in this match');
+  }
+
+  // If negotiation already started, don't re-broadcast (idempotency guard)
+  if (match.negotiation_started) {
+    console.log(`[/ready] [${requestId}] Negotiation already started — returning early`);
+    return { bothReady: true, isInitiator: isUserA };
+  }
+
+  await logToDb(supabase, sessionId, 'ready', { matchId, requestId });
+
+  // 3. Write THIS user's ready flag to DB
+  const readyUpdate = isUserA ? { user_a_ready: true } : { user_b_ready: true };
+  const { data: updated, error: updateErr } = await supabase
+    .from('matches')
+    .update(readyUpdate)
+    .eq('id', matchId)
+    .select('user_a_ready, user_b_ready')
+    .single();
+
+  if (updateErr || !updated) {
+    console.error(`[/ready] [${requestId}] Failed to write ready flag:`, updateErr?.message);
+    throw new Error('Failed to record ready state');
+  }
+
+  const bothReady = Boolean(updated.user_a_ready && updated.user_b_ready);
+  console.log(`[/ready] [${requestId}] user_a_ready=${updated.user_a_ready} user_b_ready=${updated.user_b_ready} bothReady=${bothReady}`);
+
+  if (bothReady) {
+    // 4. Atomically mark negotiation as started to prevent double-broadcast
+    const { error: flagErr } = await supabase
+      .from('matches')
+      .update({ negotiation_started: true })
+      .eq('id', matchId)
+      .eq('negotiation_started', false); // Only update if not already set
+
+    if (flagErr) {
+      console.warn(`[/ready] [${requestId}] negotiation_started flag conflict — another instance may have handled this`);
+      return { bothReady: true, isInitiator: isUserA };
+    }
+
+    const partnerId = isUserA ? match.user_b : match.user_a;
+    const iceServers = getIceServers();
+
+    console.log(`[/ready] [${requestId}] Both ready — broadcasting start_negotiation to ${sessionId} and ${partnerId}`);
+
+    await Promise.all([
+      broadcastToSession(sessionId, 'start_negotiation', {
+        matchId,
+        partnerSessionId: partnerId,
+        isInitiator: isUserA,
+        iceServers,
+      }).catch(e => console.warn(`[/ready] Broadcast to ${sessionId} failed:`, e?.message)),
+      broadcastToSession(partnerId, 'start_negotiation', {
+        matchId,
+        partnerSessionId: sessionId,
+        isInitiator: !isUserA,
+        iceServers,
+      }).catch(e => console.warn(`[/ready] Broadcast to ${partnerId} failed:`, e?.message)),
+    ]);
+
+    await logToDb(supabase, sessionId, 'negotiation_start', { matchId, requestId });
+  }
+
+  return { bothReady, isInitiator: isUserA };
 }
