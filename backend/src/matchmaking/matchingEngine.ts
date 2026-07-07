@@ -381,7 +381,7 @@ export async function runMatchCycle(
   };
 }
 
-export { leaveQueueEntry };
+export { leaveQueueEntry, joinQueueEntry };
 
 /**
  * Mark user READY.
