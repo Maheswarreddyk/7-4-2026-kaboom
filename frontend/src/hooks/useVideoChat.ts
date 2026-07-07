@@ -50,6 +50,10 @@ export function useVideoChat(
   const answerRetryTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const skipInProgressRef = useRef(false);
   
+  // Phase 3: Refs for WebRTC signaling message deduplication
+  const lastProcessedOfferSdpRef = useRef<string | null>(null);
+  const lastProcessedAnswerSdpRef = useRef<string | null>(null);
+  
   // Phase 2: Ref to prevent stale closures in callbacks (specifically onOffer collision logic)
   const isInitiatorRef = useRef<boolean>(false);
 
@@ -287,6 +291,8 @@ export function useVideoChat(
     clearSignalingRetryTimers();
     setRemoteStream(null);
     webrtcManager.resetConnection();
+    lastProcessedOfferSdpRef.current = null;
+    lastProcessedAnswerSdpRef.current = null;
 
     updateChatState({
       partnerSessionId: null,
@@ -398,10 +404,16 @@ export function useVideoChat(
       },
       onOffer: async (data: { fromSessionId: string; offer: RTCSessionDescriptionInit }) => {
         if (skipInProgressRef.current) return;
-        if (webrtcManager.getConnectionState() === 'connected') return;
 
+        // Phase 3 fix: Always send ACK first so the remote peer stops retrying the offer,
+        // even if we are already connected!
         if (sessionIdRef.current) {
           sendOfferAck(sessionIdRef.current);
+        }
+
+        if (webrtcManager.getConnectionState() === 'connected') {
+          console.log('[Signaling] Already connected. Sent offer ACK and ignored duplicate offer.');
+          return;
         }
 
         const state = signalingStateRef.current;
@@ -420,6 +432,13 @@ export function useVideoChat(
           console.log('[Signaling] Already stable. Ignoring duplicate offer.');
           return;
         }
+
+        // Phase 3: Deduplicate identical SDPs to prevent setRemoteDescription issues
+        if (lastProcessedOfferSdpRef.current === data.offer.sdp) {
+          console.log('[Signaling] Already processed this offer SDP. Skipping handleOffer.');
+          return;
+        }
+        lastProcessedOfferSdpRef.current = data.offer.sdp || null;
 
         try {
           setSignalingState('NEGOTIATING');
@@ -451,10 +470,16 @@ export function useVideoChat(
       },
       onAnswer: async (data: { answer: RTCSessionDescriptionInit }) => {
         if (skipInProgressRef.current) return;
-        if (webrtcManager.getConnectionState() === 'connected') return;
 
+        // Phase 3 fix: Always send ACK first so the remote peer stops retrying the answer,
+        // even if we are already connected!
         if (sessionIdRef.current) {
           sendAnswerAck(sessionIdRef.current);
+        }
+
+        if (webrtcManager.getConnectionState() === 'connected') {
+          console.log('[Signaling] Already connected. Sent answer ACK and ignored duplicate answer.');
+          return;
         }
 
         const state = signalingStateRef.current;
@@ -462,6 +487,13 @@ export function useVideoChat(
           console.log('[Signaling] Already stable. Ignoring duplicate answer.');
           return;
         }
+
+        // Phase 3: Deduplicate identical SDPs to prevent setRemoteDescription issues
+        if (lastProcessedAnswerSdpRef.current === data.answer.sdp) {
+          console.log('[Signaling] Already processed this answer SDP. Skipping handleAnswer.');
+          return;
+        }
+        lastProcessedAnswerSdpRef.current = data.answer.sdp || null;
 
         try {
           await webrtcManager.handleAnswer(data.answer);
@@ -531,6 +563,8 @@ export function useVideoChat(
     webrtcManager.cleanup();
     setLocalStream(null);
     setRemoteStream(null);
+    lastProcessedOfferSdpRef.current = null;
+    lastProcessedAnswerSdpRef.current = null;
     setChatState(initialChatState);
     partnerSessionIdRef.current = null;
   }, [clearSignalingRetryTimers, setSignalingState]);
@@ -546,6 +580,8 @@ export function useVideoChat(
     clearSignalingRetryTimers();
     setRemoteStream(null);
     webrtcManager.resetConnection();
+    lastProcessedOfferSdpRef.current = null;
+    lastProcessedAnswerSdpRef.current = null;
     updateChatState({
       partnerSessionId: null,
       matchId: null,

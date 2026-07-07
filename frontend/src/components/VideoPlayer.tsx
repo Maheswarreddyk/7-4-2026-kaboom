@@ -21,8 +21,25 @@ export function VideoPlayer({
   const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
-    if (videoRef.current && stream) {
-      videoRef.current.srcObject = stream;
+    const video = videoRef.current;
+    if (video && stream) {
+      video.srcObject = stream;
+      
+      // Phase 3 fix: Explicitly call play() to trigger stream presentation.
+      // If Safari iOS blocks audio autoplay on remote stream, register a one-time click/touchstart 
+      // gesture fallback to resume playback on first user touch.
+      video.play().catch((error) => {
+        console.warn('[VideoPlayer] Autoplay was prevented by browser security policy:', error);
+        
+        const forcePlay = () => {
+          video.play().catch((err) => console.error('[VideoPlayer] Retry play failed:', err));
+          document.removeEventListener('click', forcePlay);
+          document.removeEventListener('touchstart', forcePlay);
+        };
+        
+        document.addEventListener('click', forcePlay);
+        document.addEventListener('touchstart', forcePlay);
+      });
     }
   }, [stream]);
 
