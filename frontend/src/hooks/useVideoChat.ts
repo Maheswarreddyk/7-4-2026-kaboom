@@ -623,7 +623,27 @@ export function useVideoChat(
   }, []);
 
   const toggleFullscreen = useCallback(() => {
-    setChatState((prev) => ({ ...prev, isFullscreen: !prev.isFullscreen }));
+    setChatState((prev) => {
+      const nextFullscreen = !prev.isFullscreen;
+      try {
+        if (nextFullscreen) {
+          if (document.documentElement.requestFullscreen) {
+            void document.documentElement.requestFullscreen();
+          } else if ((document.documentElement as any).webkitRequestFullscreen) {
+            void (document.documentElement as any).webkitRequestFullscreen();
+          }
+        } else {
+          if (document.exitFullscreen) {
+            void document.exitFullscreen();
+          } else if ((document as any).webkitExitFullscreen) {
+            void (document as any).webkitExitFullscreen();
+          }
+        }
+      } catch (err) {
+        console.warn('Fullscreen toggle failed:', err);
+      }
+      return { ...prev, isFullscreen: nextFullscreen };
+    });
   }, []);
 
   // Queue Polling Heartbeat: Runs ONLY when searching/waiting
@@ -717,6 +737,26 @@ export function useVideoChat(
       clearSignalingRetryTimers();
       webrtcManager.cleanup();
       disconnectRealtime();
+    };
+  }, []);
+
+  // Synchronize internal full-screen state with native browser events (e.g. Esc key)
+  useEffect(() => {
+    const syncFullscreen = () => {
+      const isNativeFull = !!(
+        document.fullscreenElement ||
+        (document as any).webkitFullscreenElement
+      );
+      setChatState((prev) => {
+        if (prev.isFullscreen === isNativeFull) return prev;
+        return { ...prev, isFullscreen: isNativeFull };
+      });
+    };
+    document.addEventListener('fullscreenchange', syncFullscreen);
+    document.addEventListener('webkitfullscreenchange', syncFullscreen);
+    return () => {
+      document.removeEventListener('fullscreenchange', syncFullscreen);
+      document.removeEventListener('webkitfullscreenchange', syncFullscreen);
     };
   }, []);
 
