@@ -16,5 +16,5 @@ export const config = {
 };
 
 export function getIceServers() {
-  return config.stunServers.map((url) => ({ urls: url }));
+  return config.stunServers.map((url: string) => ({ urls: url }));
 }

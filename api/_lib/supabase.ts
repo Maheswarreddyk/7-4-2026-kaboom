@@ -4,17 +4,24 @@ let supabase: SupabaseClient | null = null;
 
 function getEnv(key: string): string {
   if (key === 'SUPABASE_URL') {
-    return 'https://dirocenpssdilkztizps.supabase.co';
+    return process.env.SUPABASE_URL || 'https://dirocenpssdilkztizps.supabase.co';
   }
   if (key === 'SUPABASE_SERVICE_ROLE_KEY') {
-    return 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRpcm9jZW5wc3NkaWxrenRpenBzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4Mjc1NjUzNSwiZXhwIjoyMDk4MzMyNTM1fQ.aBefMcx8RACTKBTOTuqweuDRT7X284Unfv4xbEFa5NE';
+    return process.env.SUPABASE_SERVICE_ROLE_KEY || '';
   }
   return process.env[key] || '';
 }
 
 export function getSupabase(): SupabaseClient {
   if (!supabase) {
-    supabase = createClient(getEnv('SUPABASE_URL'), getEnv('SUPABASE_SERVICE_ROLE_KEY'), {
+    const url = getEnv('SUPABASE_URL');
+    const serviceRoleKey = getEnv('SUPABASE_SERVICE_ROLE_KEY');
+    
+    if (!serviceRoleKey && process.env.NODE_ENV === 'production') {
+      console.error('[Error] SUPABASE_SERVICE_ROLE_KEY is not defined in production environment variables.');
+    }
+    
+    supabase = createClient(url, serviceRoleKey, {
       auth: { autoRefreshToken: false, persistSession: false },
     });
   }

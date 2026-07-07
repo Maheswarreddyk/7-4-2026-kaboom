@@ -24,10 +24,19 @@ const server = http.createServer(app);
 const isOriginAllowed = (origin: string | undefined): boolean => {
   if (!origin) return true;
   if (config.allowedOrigins.includes(origin) || config.allowedOrigins.includes('*')) return true;
-  if (/^https?:\/\/localhost(:\d+)?$/.test(origin)) return true;
-  if (/^https?:\/\/127\.0\.0\.1(:\d+)?$/.test(origin)) return true;
-  if (/^https:\/\/.*\.onrender\.com$/.test(origin)) return true;
+  
+  // Allow localhost only in non-production environments
+  if (config.nodeEnv !== 'production') {
+    if (/^https?:\/\/localhost(:\d+)?$/.test(origin)) return true;
+    if (/^https?:\/\/127\.0\.0\.1(:\d+)?$/.test(origin)) return true;
+  }
+  
+  // Allow custom domain and its subdomains
   if (/^https?:\/\/(.*\.)?kaboom-tv\.com$/.test(origin)) return true;
+  
+  // Allow our specific Render service URL
+  if (origin === 'https://seven-4-2026-kaboom-1a.onrender.com') return true;
+  
   return false;
 };
 
@@ -57,15 +66,17 @@ app.use(helmet({
       defaultSrc: ["'self'"],
       connectSrc: [
         "'self'",
-        "https://dirocenpssdilkztizps.supabase.co",
-        "wss://dirocenpssdilkztizps.supabase.co",
+        config.supabaseUrl,
+        config.supabaseUrl.replace('https://', 'wss://'),
         "https://*.supabase.co",
         "wss://*.supabase.co",
-        "https://*.onrender.com",
-        "wss://*.onrender.com"
+        "https://*.kaboom-tv.com",
+        "wss://*.kaboom-tv.com",
+        "https://seven-4-2026-kaboom-1a.onrender.com",
+        "wss://seven-4-2026-kaboom-1a.onrender.com"
       ],
       mediaSrc: ["'self'", "blob:", "mediastream:"],
-      imgSrc: ["'self'", "data:", "https://*.supabase.co"],
+      imgSrc: ["'self'", "data:", config.supabaseUrl, "https://*.supabase.co"],
       scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
