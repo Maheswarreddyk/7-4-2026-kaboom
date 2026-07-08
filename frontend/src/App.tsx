@@ -1,4 +1,4 @@
-import { BrowserRouter, Route, Routes } from 'react-router-dom';
+import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import { Layout } from './components/Layout.js';
 import { SessionProvider } from './contexts/SessionContext.js';
 import { ToastProvider } from './contexts/ToastContext.js';
@@ -14,29 +14,32 @@ import { ContentHubPage } from './pages/ContentHubPage.js';
 import { TagPage } from './pages/TagPage.js';
 import { DynamicSeoPage } from './pages/DynamicSeoPage.js';
 
+const router = createBrowserRouter([
+  {
+    element: <Layout />,
+    children: [
+      { path: "/", element: <LandingPage /> },
+      { path: "/chat", element: <ChatPage /> },
+      { path: "/about", element: <AboutPage /> },
+      { path: "/faq", element: <FaqPage /> },
+      { path: "/privacy", element: <PrivacyPage /> },
+      { path: "/terms", element: <TermsPage /> },
+      { path: "/contact", element: <ContactPage /> },
+      { path: "/topics", element: <ContentHubPage /> },
+      { path: "/topics/:category", element: <ContentHubPage /> },
+      { path: "/tag/:tagName", element: <TagPage /> },
+      { path: "/:seoSlug", element: <DynamicSeoPage /> },
+      { path: "*", element: <NotFoundPage /> },
+    ],
+  },
+]);
+
 export default function App() {
   return (
-    <BrowserRouter>
-      <ToastProvider>
-        <SessionProvider>
-          <Routes>
-            <Route element={<Layout />}>
-              <Route path="/" element={<LandingPage />} />
-              <Route path="/chat" element={<ChatPage />} />
-              <Route path="/about" element={<AboutPage />} />
-              <Route path="/faq" element={<FaqPage />} />
-              <Route path="/privacy" element={<PrivacyPage />} />
-              <Route path="/terms" element={<TermsPage />} />
-              <Route path="/contact" element={<ContactPage />} />
-              <Route path="/topics" element={<ContentHubPage />} />
-              <Route path="/topics/:category" element={<ContentHubPage />} />
-              <Route path="/tag/:tagName" element={<TagPage />} />
-              <Route path="/:seoSlug" element={<DynamicSeoPage />} />
-              <Route path="*" element={<NotFoundPage />} />
-            </Route>
-          </Routes>
-        </SessionProvider>
-      </ToastProvider>
-    </BrowserRouter>
+    <ToastProvider>
+      <SessionProvider>
+        <RouterProvider router={router} />
+      </SessionProvider>
+    </ToastProvider>
   );
 }
