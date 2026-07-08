@@ -2,11 +2,13 @@ import { useEffect } from 'react';
 import { SEO_GLOBAL, SEO_PAGES, PageSeoConfig } from '../config/seo.js';
 
 interface MetaManagerProps {
-  page: 'home' | 'about' | 'faq' | 'privacy' | 'terms' | 'contact' | 'chat';
+  page: string;
+  customConfig?: PageSeoConfig;
+  customSchema?: any;
 }
 
-export function MetaManager({ page }: MetaManagerProps) {
-  const config = SEO_PAGES[page] || SEO_PAGES.home;
+export function MetaManager({ page, customConfig, customSchema }: MetaManagerProps) {
+  const config = customConfig || SEO_PAGES[page] || SEO_PAGES.home;
 
   useEffect(() => {
     // 1. Dynamic Title
@@ -36,7 +38,7 @@ export function MetaManager({ page }: MetaManagerProps) {
 
     // 2. Meta Description & Keywords
     setMetaTag('name', 'description', config.description);
-    setMetaTag('name', 'keywords', config.keywords.join(', '));
+    setMetaTag('name', 'keywords', (config.keywords || []).join(', '));
     setMetaTag('name', 'theme-color', SEO_GLOBAL.themeColor);
 
     // Robots indexing rules
@@ -67,7 +69,6 @@ export function MetaManager({ page }: MetaManagerProps) {
     setLinkTag('canonical', config.canonical);
 
     // 6. JSON-LD Structured Data Injection
-    // Remove existing JSON-LD script if any
     const existingScript = document.getElementById('kaboom-jsonld');
     if (existingScript) {
       existingScript.remove();
@@ -77,7 +78,7 @@ export function MetaManager({ page }: MetaManagerProps) {
     script.id = 'kaboom-jsonld';
     script.type = 'application/ld+json';
 
-    const structuredData = getStructuredDataForPage(page, config);
+    const structuredData = customSchema || getStructuredDataForPage(page, config);
     script.innerHTML = JSON.stringify(structuredData);
     document.head.appendChild(script);
 
@@ -88,7 +89,7 @@ export function MetaManager({ page }: MetaManagerProps) {
         scriptToRemove.remove();
       }
     };
-  }, [page, config]);
+  }, [page, config, customSchema]);
 
   return null;
 }

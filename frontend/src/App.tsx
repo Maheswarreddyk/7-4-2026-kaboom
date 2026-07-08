@@ -10,6 +10,9 @@ import { LandingPage } from './pages/LandingPage.js';
 import { NotFoundPage } from './pages/NotFoundPage.js';
 import { PrivacyPage } from './pages/PrivacyPage.js';
 import { TermsPage } from './pages/TermsPage.js';
+import { ContentHubPage } from './pages/ContentHubPage.js';
+import { TagPage } from './pages/TagPage.js';
+import { DynamicSeoPage } from './pages/DynamicSeoPage.js';
 
 export default function App() {
   return (
@@ -25,6 +28,10 @@ export default function App() {
               <Route path="/privacy" element={<PrivacyPage />} />
               <Route path="/terms" element={<TermsPage />} />
               <Route path="/contact" element={<ContactPage />} />
+              <Route path="/topics" element={<ContentHubPage />} />
+              <Route path="/topics/:category" element={<ContentHubPage />} />
+              <Route path="/tag/:tagName" element={<TagPage />} />
+              <Route path="/:seoSlug" element={<DynamicSeoPage />} />
               <Route path="*" element={<NotFoundPage />} />
             </Route>
           </Routes>
