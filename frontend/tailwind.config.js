@@ -11,9 +11,9 @@ export default {
           card: 'rgba(255, 255, 255, 0.05)',
         },
         accent: {
-          DEFAULT: '#6366f1',
-          light: '#818cf8',
-          glow: 'rgba(99, 102, 241, 0.4)',
+          DEFAULT: 'var(--accent)',
+          light: 'var(--accent-light)',
+          glow: 'var(--accent-glow)',
         },
         danger: '#ef4444',
         success: '#22c55e',

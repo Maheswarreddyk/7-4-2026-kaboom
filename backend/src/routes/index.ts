@@ -15,6 +15,7 @@ import {
 import { getSupabase } from '../database/client.js';
 import matchRoutes from './match.js';
 import { matchmakerMetrics } from '../matchmaking/matchingEngine.js';
+import { broadcastToSession } from '../services/broadcast.js';
 
 const router = Router();
 
@@ -133,6 +134,26 @@ router.post('/chat', async (req, res, next) => {
       })
       .select()
       .single();
+
+    // Broadcast the new message event to the partner in the match
+    const { data: match } = await getSupabase()
+      .from('matches')
+      .select('user_a, user_b')
+      .eq('id', matchId)
+      .single();
+
+    if (match) {
+      const partnerId = match.user_a === sessionId ? match.user_b : match.user_a;
+      broadcastToSession(partnerId, 'new_message', {
+        matchId,
+        senderSessionId: sessionId,
+        message,
+        createdAt: data.created_at
+      }).catch((err) => {
+        console.warn(`[Chat Broadcast] Failed to send new_message to ${partnerId}:`, err.message);
+      });
+    }
+
     res.status(201).json({ success: true, data });
   } catch (err) {
     next(err);

@@ -24,8 +24,9 @@
   --z-confetti:  200;
 
   /* Theme Palette (Porsche / Nothing Phone / Arc inspired) */
-  --accent:       #F5A623; /* Warm Amber */
-  --accent-light: #FFB900; /* Electric Gold */
+  --accent:       #F5A623; /* Warm Amber default */
+  --accent-light: #FFB900; /* Electric Gold default */
+  --accent-glow:  rgba(245, 166, 35, 0.4);
   --accent-sunset:#FF5B35; /* Soft Sunset Orange */
   --accent-lg:    rgba(245, 166, 35, 0.12);
   --surface:      #050505; /* Matte Black */
@@ -215,12 +216,12 @@
   /* Desktop vs Mobile sizes */
   .self-preview {
     width: 220px;
-    height: 140px;
+    height: 160px;
   }
   @media (max-width: 640px) {
     .self-preview {
-      width: 130px;
-      height: 85px;
+      width: 30vw;
+      height: calc(30vw * 0.73);
       border-radius: 14px;
     }
   }
@@ -515,4 +516,33 @@
 .scrollbar-none {
   -ms-overflow-style: none;
   scrollbar-width: none;
+}
+
+/* =====================================================
+   THEME OVERRIDES (Ember, Aurora, Emerald, Midnight)
+   ===================================================== */
+.theme-ember {
+  --accent:       #F5A623;
+  --accent-light: #FFB900;
+  --accent-glow:  rgba(245, 166, 35, 0.4);
+}
+.theme-aurora {
+  --accent:       #8B5CF6;
+  --accent-light: #A78BFA;
+  --accent-glow:  rgba(139, 92, 246, 0.4);
+}
+.theme-emerald {
+  --accent:       #10B981;
+  --accent-light: #34D399;
+  --accent-glow:  rgba(16, 185, 129, 0.4);
+}
+.theme-midnight {
+  --accent:       #71717A;
+  --accent-light: #A1A1AA;
+  --accent-glow:  rgba(113, 113, 122, 0.4);
+}
+
+/* Spring transitions */
+.controls-dock, .self-preview, .video-viewport {
+  transition: all 350ms cubic-bezier(0.34, 1.56, 0.64, 1);
 }

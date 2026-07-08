@@ -15,7 +15,7 @@ const LANGUAGES = [
 ];
 
 export function PreferenceModal({ isOpen, onClose, onSave, currentPreferences = {} }: PreferenceModalProps) {
-  const [activeTab, setActiveTab] = useState<'location' | 'interests'>('location');
+  const [activeTab, setActiveTab] = useState<'location' | 'interests' | 'appSettings'>('location');
   const [gender, setGender] = useState<string>(currentPreferences.gender || 'Prefer not to say');
   const [lookingFor, setLookingFor] = useState<string[]>(currentPreferences.looking_for || ['Anyone']);
   
@@ -28,6 +28,14 @@ export function PreferenceModal({ isOpen, onClose, onSave, currentPreferences = 
   // Interests & Languages
   const [interestTags, setInterestTags] = useState<string[]>(currentPreferences.interest_tags || []);
   const [languages, setLanguages] = useState<string[]>(currentPreferences.languages || ['English']);
+
+  // V5.1 App preferences
+  const [showTips, setShowTips] = useState(() => {
+    return localStorage.getItem('kaboom_show_tips') !== 'false';
+  });
+  const [theme, setTheme] = useState(() => {
+    return localStorage.getItem('kaboom_theme') || 'ember';
+  });
 
   // Autocomplete state
   const [locationQuery, setLocationQuery] = useState('');
@@ -135,9 +143,15 @@ export function PreferenceModal({ isOpen, onClose, onSave, currentPreferences = 
     setCity('');
     setInterestTags([]);
     setLanguages(['English']);
+    setShowTips(true);
+    setTheme('ember');
   };
 
   const handleSave = () => {
+    localStorage.setItem('kaboom_show_tips', showTips ? 'true' : 'false');
+    localStorage.setItem('kaboom_theme', theme);
+    document.documentElement.className = `theme-${theme}`;
+
     onSave({
       gender,
       looking_for: lookingFor,
@@ -235,6 +249,17 @@ export function PreferenceModal({ isOpen, onClose, onSave, currentPreferences = 
                 )}
               >
                 ✨ Interests & Languages
+              </button>
+              <button
+                onClick={() => setActiveTab('appSettings')}
+                className={cn(
+                  "flex-1 pb-3 text-sm font-semibold border-b-2 transition-all",
+                  activeTab === 'appSettings' 
+                    ? "border-accent text-accent-light" 
+                    : "border-transparent text-white/50 hover:text-white"
+                )}
+              >
+                ⚙️ Settings
               </button>
             </div>
 
@@ -349,6 +374,61 @@ export function PreferenceModal({ isOpen, onClose, onSave, currentPreferences = 
                         )}
                       >
                         {lang}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'appSettings' && (
+              <div className="space-y-6">
+                {/* Onboarding Tips Toggle */}
+                <div className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/10">
+                  <div>
+                    <h4 className="text-sm font-bold text-white">Smart Feature Coach</h4>
+                    <p className="text-xs text-white/50 mt-1">Show helpful interaction tips and shortcuts during video chats.</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowTips(!showTips)}
+                    className={cn(
+                      "w-12 h-6 rounded-full p-0.5 transition-colors duration-200 focus:outline-none",
+                      showTips ? "bg-amber-500" : "bg-white/20"
+                    )}
+                  >
+                    <div
+                      className={cn(
+                        "w-5 h-5 rounded-full bg-white shadow-md transform transition-transform duration-200",
+                        showTips ? "translate-x-6" : "translate-x-0"
+                      )}
+                    />
+                  </button>
+                </div>
+
+                {/* Theme Selection */}
+                <div>
+                  <label className="block text-xs font-semibold text-white/50 uppercase tracking-wider mb-3">App Color Theme</label>
+                  <div className="grid grid-cols-2 gap-3">
+                    {[
+                      { id: 'ember', name: 'Ember Orange', color: 'bg-amber-500' },
+                      { id: 'aurora', name: 'Aurora Sunset', color: 'bg-purple-500' },
+                      { id: 'emerald', name: 'Emerald Mint', color: 'bg-emerald-500' },
+                      { id: 'midnight', name: 'Midnight Dark', color: 'bg-zinc-500' }
+                    ].map((th) => (
+                      <button
+                        key={th.id}
+                        type="button"
+                        onClick={() => setTheme(th.id)}
+                        className={cn(
+                          "p-4 rounded-2xl border flex items-center gap-3 transition-all duration-300 hover:bg-white/[0.04]",
+                          theme === th.id
+                            ? "border-amber-400 bg-white/5 text-white"
+                            : "border-white/5 bg-white/[0.02] text-white/70"
+                        )}
+                      >
+                        <span className={cn("w-3.5 h-3.5 rounded-full shadow-inner", th.color)} />
+                        <span className="text-xs font-bold">{th.name}</span>
                       </button>
                     ))}
                   </div>

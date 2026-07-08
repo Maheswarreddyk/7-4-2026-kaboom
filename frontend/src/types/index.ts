@@ -74,6 +74,7 @@ export interface ChatState {
   unreadCount?: number;
   isChatOpen?: boolean;
   partnerTyping?: boolean;
+  connectionQuality?: 'excellent' | 'good' | 'poor' | null;
 }
 
 export const REPORT_REASONS: { value: ReportReason; label: string }[] = [

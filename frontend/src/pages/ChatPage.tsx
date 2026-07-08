@@ -17,6 +17,7 @@ import type { ReportReason } from '../types/index.js';
 import { formatDuration } from '../utils/index.js';
 import { cn } from '../utils/index.js';
 import { hintEngine } from '../services/HintEngine.js';
+import { TutorialOverlay } from '../components/TutorialOverlay.js';
 
 export function ChatPage() {
   const navigate = useNavigate();
@@ -32,6 +33,16 @@ export function ChatPage() {
   const pendingLeaveRef = useRef(false);
   const hintHideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // V5.1 Tutorial / theme setup
+  const [showTutorial, setShowTutorial] = useState(() => {
+    return localStorage.getItem('kaboom_tutorial_dismissed') !== 'true';
+  });
+
+  useEffect(() => {
+    const activeTheme = localStorage.getItem('kaboom_theme') || 'ember';
+    document.documentElement.className = `theme-${activeTheme}`;
+  }, []);
+
   // FaceTime autohide controls state
   const [controlsVisible, setControlsVisible] = useState(true);
   const hideTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -39,7 +50,9 @@ export function ChatPage() {
   // FaceTime draggable self-preview state
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
-  const [snapCorner, setSnapCorner] = useState<'br' | 'bl' | 'tr' | 'tl'>('br');
+  const [snapCorner, setSnapCorner] = useState<'br' | 'bl' | 'tr' | 'tl'>(() => {
+    return (localStorage.getItem('kaboom_pip_corner') as any) || 'tl';
+  });
   const dragStart = useRef({ x: 0, y: 0 });
 
   // Onboarding Hint state
@@ -95,6 +108,37 @@ export function ChatPage() {
     triggerReaction(emoji);
     sendReaction(emoji);
   }, [triggerReaction, sendReaction]);
+
+  // V5.1 Root Touch Gestures: Swipe Left to Next, Swipe Down to Leave
+  const touchStartX = useRef<number | null>(null);
+  const touchStartY = useRef<number | null>(null);
+
+  const handleTouchStartRoot = (e: React.TouchEvent) => {
+    resetControlsTimeout();
+    const touch = e.touches[0];
+    touchStartX.current = touch.clientX;
+    touchStartY.current = touch.clientY;
+  };
+
+  const handleTouchEndRoot = (e: React.TouchEvent) => {
+    if (touchStartX.current === null || touchStartY.current === null) return;
+    const touch = e.changedTouches[0];
+    const diffX = touch.clientX - touchStartX.current;
+    const diffY = touch.clientY - touchStartY.current;
+
+    if (Math.abs(diffX) > Math.abs(diffY)) {
+      if (diffX < -90) {
+        handleNext();
+      }
+    } else {
+      if (diffY > 90) {
+        handleLeave();
+      }
+    }
+
+    touchStartX.current = null;
+    touchStartY.current = null;
+  };
 
   // Autohide controls logic
   const resetControlsTimeout = useCallback(() => {
@@ -196,15 +240,17 @@ export function ChatPage() {
       
       const vw = window.innerWidth;
       const vh = window.innerHeight;
-      const pipW = (vw < 640 ? 130 : 220) * pipScale;
-      const pipH = (vw < 640 ? 80 : 140) * pipScale;
+      const pipW = (vw < 640 ? vw * 0.3 : 220) * pipScale;
+      const pipH = (vw < 640 ? vw * 0.3 * 0.73 : 160) * pipScale;
       
       const absX = vw - 24 - pipW + dragOffset.x;
       const absY = vh - 100 - pipH + dragOffset.y;
       const isLeft  = absX + pipW / 2 < vw / 2;
       const isTop   = absY + pipH / 2 < vh / 2;
       
-      setSnapCorner(isTop ? (isLeft ? 'tl' : 'tr') : (isLeft ? 'bl' : 'br'));
+      const finalCorner = isTop ? (isLeft ? 'tl' : 'tr') : (isLeft ? 'bl' : 'br');
+      setSnapCorner(finalCorner);
+      localStorage.setItem('kaboom_pip_corner', finalCorner);
       setDragOffset({ x: 0, y: 0 });
     };
 
@@ -350,6 +396,9 @@ export function ChatPage() {
         partnerLiked: chatState.partnerLiked || false,
       };
 
+      const showTips = localStorage.getItem('kaboom_show_tips') !== 'false';
+      if (!showTips) return;
+
       const hint = hintEngine.getHint(hintState);
       if (hint) {
         setActiveHint(hint);
@@ -363,7 +412,7 @@ export function ChatPage() {
     };
 
     const initialTimer = setTimeout(showHint, 10000);
-    const interval = setInterval(showHint, 180000);
+    const interval = setInterval(showHint, 30000);
 
     return () => {
       clearTimeout(initialTimer);
@@ -492,7 +541,8 @@ export function ChatPage() {
     <div
       className="absolute inset-0 bg-black overflow-hidden select-none"
       onMouseMove={resetControlsTimeout}
-      onTouchStart={resetControlsTimeout}
+      onTouchStart={handleTouchStartRoot}
+      onTouchEnd={handleTouchEndRoot}
       role="main"
       aria-label="Video chat"
     >
@@ -502,7 +552,7 @@ export function ChatPage() {
           "video-viewport transition-all duration-[750ms] ease-[cubic-bezier(0.16,1,0.3,1)]",
           isConnected ? "opacity-100 scale-100 translate-x-0" : "opacity-0 scale-95 -translate-x-10"
         )}
-        onDoubleClick={handleDoubleTapSwap}
+        onDoubleClick={handleLike}
       >
         <VideoPlayer
           stream={isPlacementsSwapped ? localStream : remoteStream}
@@ -547,6 +597,30 @@ export function ChatPage() {
           </span>
         )}
       </div>
+
+      {/* ── CONNECTION HEALTH WIDGET (top-right) ─────────── */}
+      {isConnected && chatState.connectionQuality && (
+        <div
+          className="absolute right-4 flex items-center gap-1.5 px-3 py-1.5 rounded-full border bg-black/45 backdrop-blur-md text-[10px] font-extrabold uppercase tracking-wider"
+          style={{
+            top: 'calc(var(--header-h) + 12px)',
+            zIndex: 'var(--z-controls)' as any,
+            borderColor: 
+              chatState.connectionQuality === 'excellent' ? 'rgba(16,185,129,0.2)' :
+              chatState.connectionQuality === 'good' ? 'rgba(245,158,11,0.2)' : 'rgba(239,68,68,0.2)',
+            color:
+              chatState.connectionQuality === 'excellent' ? '#10b981' :
+              chatState.connectionQuality === 'good' ? '#f59e0b' : '#ef4444'
+          }}
+        >
+          <span className={cn(
+            "w-1.5 h-1.5 rounded-full",
+            chatState.connectionQuality === 'excellent' ? "bg-emerald-500 animate-pulse" :
+            chatState.connectionQuality === 'good' ? "bg-amber-500 animate-pulse" : "bg-red-500 animate-ping"
+          )} />
+          <span>Net: {chatState.connectionQuality}</span>
+        </div>
+      )}
 
       {/* ── COACH MARK (hint) — always below header ────────── */}
       {activeHint && !hintDismissed && (
@@ -722,6 +796,11 @@ export function ChatPage() {
         onClose={handleFeedbackClose}
         onSubmit={handleFeedbackSubmit}
       />
+
+      {/* ── ONBOARDING TUTORIAL WIZARD ───────────────────── */}
+      {showTutorial && (
+        <TutorialOverlay onClose={() => setShowTutorial(false)} />
+      )}
     </div>
   );
 }

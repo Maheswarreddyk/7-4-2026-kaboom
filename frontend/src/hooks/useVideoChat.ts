@@ -15,6 +15,7 @@ import {
   sendOfferAck,
   sendAnswerAck,
   sendReaction,
+  sendSeenStatus,
 } from '../services/realtime.js';
 import { webrtcManager } from '../webrtc/index.js';
 import type { ChatState, ConnectionStatus, SessionStatus } from '../types/index.js';
@@ -31,6 +32,7 @@ const initialChatState: ChatState = {
   isFullscreen: false,
   matchStartTime: null,
   queuePosition: 0,
+  connectionQuality: null,
 };
 
 export function useVideoChat(
@@ -438,6 +440,19 @@ export function useVideoChat(
         if (skipInProgressRef.current) return;
         updateChatState({ partnerTyping: data.typing });
       },
+      onMessageSeen: (data: { matchId: string; senderId: string }) => {
+        if (skipInProgressRef.current) return;
+        if (data.senderId === sessionIdRef.current) {
+          setChatState((prev) => {
+            const updated = prev.messages
+              ? prev.messages.map((m) =>
+                  m.senderSessionId === sessionIdRef.current ? { ...m, status: 'seen' as const } : m
+                )
+              : [];
+            return { ...prev, messages: updated };
+          });
+        }
+      },
       onOffer: async (data: { fromSessionId: string; offer: RTCSessionDescriptionInit }) => {
         if (skipInProgressRef.current) return;
 
@@ -682,6 +697,47 @@ export function useVideoChat(
     });
   }, []);
 
+  // Periodically query WebRTC stats for RTT and connection quality badge (V5.1 Requirement 12 & 16)
+  useEffect(() => {
+    if (chatState.status !== 'CONNECTED') {
+      updateChatState({ connectionQuality: null });
+      return;
+    }
+
+    const interval = setInterval(async () => {
+      const getStatsPromise = webrtcManager.getStats();
+      if (!getStatsPromise) return;
+
+      try {
+        const stats = await getStatsPromise;
+        let rtt = 0;
+        let packetsLost = 0;
+
+        stats.forEach((report) => {
+          if (report.type === 'remote-inbound-rtp' && report.roundTripTime) {
+            rtt = report.roundTripTime * 1000;
+          }
+          if (report.type === 'inbound-rtp' && report.packetsLost) {
+            packetsLost = report.packetsLost;
+          }
+        });
+
+        let quality: 'excellent' | 'good' | 'poor' = 'excellent';
+        if (rtt > 250 || packetsLost > 20) {
+          quality = 'poor';
+        } else if (rtt > 100 || packetsLost > 5) {
+          quality = 'good';
+        }
+
+        updateChatState({ connectionQuality: quality });
+      } catch (err) {
+        console.warn('[WebRTC Stats] Failed to query stats:', err);
+      }
+    }, 4000);
+
+    return () => clearInterval(interval);
+  }, [chatState.status, updateChatState]);
+
   // Queue Polling Heartbeat: Runs ONLY when searching/waiting
   useEffect(() => {
     if (
@@ -834,20 +890,47 @@ export function useVideoChat(
 
   const sendChatMessage = useCallback(async (message: string) => {
     if (!sessionId || !sessionToken || !chatState.matchId) return;
+
+    const tempId = Math.random().toString();
+    const optimisticMessage = {
+      id: tempId,
+      senderSessionId: sessionId,
+      message,
+      createdAt: Date.now(),
+      status: 'sending' as const,
+    };
+
+    // Optimistic insert
+    setChatState((prev) => {
+      const newMessages = prev.messages ? [...prev.messages] : [];
+      newMessages.push(optimisticMessage);
+      return { ...prev, messages: newMessages };
+    });
+
     try {
       const msg = await apiService.submitChatMessage(sessionId, sessionToken, chatState.matchId, message);
       setChatState((prev) => {
-        const newMessages = prev.messages ? [...prev.messages] : [];
-        newMessages.push({
-          id: Math.random().toString(),
-          senderSessionId: sessionId,
-          message,
-          createdAt: new Date(msg.created_at).getTime(),
-        });
-        return { ...prev, messages: newMessages };
+        const updated = prev.messages
+          ? prev.messages.map((m) => {
+              if (m.id === tempId) {
+                return {
+                  ...m,
+                  id: msg.id || m.id,
+                  createdAt: new Date(msg.created_at).getTime(),
+                  status: 'delivered' as const,
+                };
+              }
+              return m;
+            })
+          : [];
+        return { ...prev, messages: updated };
       });
     } catch (error) {
       showToast('error', 'Failed to send message');
+      setChatState((prev) => {
+        const updated = prev.messages ? prev.messages.filter((m) => m.id !== tempId) : [];
+        return { ...prev, messages: updated };
+      });
     }
   }, [sessionId, sessionToken, chatState.matchId, showToast]);
 
@@ -856,11 +939,16 @@ export function useVideoChat(
   }, []);
 
   const setChatOpen = useCallback((open: boolean) => {
-    setChatState((prev) => ({
-      ...prev,
-      isChatOpen: open,
-      unreadCount: open ? 0 : prev.unreadCount,
-    }));
+    setChatState((prev) => {
+      if (open && prev.matchId && prev.partnerSessionId) {
+        sendSeenStatus(prev.matchId, prev.partnerSessionId);
+      }
+      return {
+        ...prev,
+        isChatOpen: open,
+        unreadCount: open ? 0 : prev.unreadCount,
+      };
+    });
   }, []);
 
   return {

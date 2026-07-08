@@ -30,6 +30,7 @@ export interface RealtimeCallbacks {
   onNewMessage?: (data: { matchId: string; senderSessionId: string; message: string; createdAt: string }) => void;
   onPartnerTyping?: (data: { typing: boolean }) => void;
   onReaction?: (data: { emoji: string }) => void;
+  onMessageSeen?: (data: { matchId: string; senderId: string }) => void;
 }
 
 let sessionChannel: RealtimeChannel | null = null;
@@ -202,6 +203,9 @@ export function connectRealtime(
     .on('broadcast', { event: 'partner_typing' }, ({ payload }) => {
       callbacks.onPartnerTyping?.(payload as { typing: boolean });
     })
+    .on('broadcast', { event: 'message_seen' }, ({ payload }) => {
+      callbacks.onMessageSeen?.(payload as { matchId: string; senderId: string });
+    })
     .subscribe((status) => {
       console.log(`[Realtime] Session channel status: ${status}`);
       if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
@@ -346,5 +350,13 @@ export function sendTyping(typing: boolean): void {
     type: 'broadcast',
     event: 'typing',
     payload: { typing },
+  });
+}
+
+export function sendSeenStatus(matchId: string, senderId: string): void {
+  matchChannel?.send({
+    type: 'broadcast',
+    event: 'message_seen',
+    payload: { matchId, senderId },
   });
 }

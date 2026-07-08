@@ -166,9 +166,14 @@ export class WebRTCManager {
     });
   }
 
+  getStats(): Promise<RTCStatsReport> | null {
+    return this.peerConnection?.getStats() ?? null;
+  }
+
   getConnectionState(): RTCPeerConnectionState | null {
     return this.peerConnection?.connectionState ?? null;
   }
+
 
   resetConnection(): void {
     this.cleanupPeerConnection(false); // Clean candidates on hard reset
