@@ -2,34 +2,57 @@ import { useEffect, useState, useRef } from 'react';
 
 interface SearchingAnimationProps {
   queuePosition?: number;
+  matchMode?: string;
+  onDisableStrict?: () => void;
 }
 
-const WAITING_MESSAGES = [
-  "🌍 Searching globally...",
-  "🔥 Thousands of people use Kaboom every day.",
-  "💜 Your next conversation could start any second.",
-  "😊 Stay here. New people join every moment.",
-  "✨ Preparing the fastest match...",
-  "🚀 Finding someone with the best connection...",
-  "🎉 Most users match within a few seconds.",
-  "☕ Grab a coffee. We're searching."
-];
-
-export function SearchingAnimation({ queuePosition }: SearchingAnimationProps) {
-  const [statusText, setStatusText] = useState(WAITING_MESSAGES[0]);
+export function SearchingAnimation({ queuePosition, matchMode, onDisableStrict }: SearchingAnimationProps) {
+  const [elapsed, setElapsed] = useState(0);
+  const [statusText, setStatusText] = useState("🌍 Searching globally...");
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
-  // Status message rotation - every 5 seconds
+  const activeMatchMode = matchMode || localStorage.getItem('kaboom_match_mode') || 'RANDOM';
+  const uni = localStorage.getItem('kaboom_university') || '';
+  const city = localStorage.getItem('kaboom_city') || '';
+
+  const WAITING_MESSAGES = [
+    "🌍 Searching globally...",
+    "🔥 Thousands of people use Kaboom every day.",
+    "💜 Your next conversation could start any second.",
+    "😊 Stay here. New people join every moment.",
+    "✨ Preparing the fastest match...",
+    "🚀 Finding someone with the best connection...",
+    "🎉 Most users match within a few seconds.",
+    "☕ Grab a coffee. We're searching."
+  ];
+
+  if (uni) {
+    WAITING_MESSAGES.push(`🎓 Looking around ${uni} campus...`);
+    WAITING_MESSAGES.push(`🏫 Searching nearby universities...`);
+  }
+  if (city) {
+    WAITING_MESSAGES.push(`📍 Looking for someone in ${city}...`);
+  }
+
+  // 15 seconds timer and text rotation
   useEffect(() => {
-    const interval = setInterval(() => {
+    const textInterval = setInterval(() => {
       setStatusText((prev) => {
         const remaining = WAITING_MESSAGES.filter(m => m !== prev);
         const index = Math.floor(Math.random() * remaining.length);
         return remaining[index];
       });
     }, 5000);
-    return () => clearInterval(interval);
-  }, []);
+
+    const timeInterval = setInterval(() => {
+      setElapsed(prev => prev + 1);
+    }, 1000);
+
+    return () => {
+      clearInterval(textInterval);
+      clearInterval(timeInterval);
+    };
+  }, [uni, city]);
 
   // HTML5 Canvas Ambient Particle Network & Nodes
   useEffect(() => {
@@ -169,6 +192,33 @@ export function SearchingAnimation({ queuePosition }: SearchingAnimationProps) {
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-white/5 bg-white/[0.02] text-[10px] font-semibold tracking-wider text-stone-500 uppercase shadow-inner mt-2">
             <span className="w-1 h-1 rounded-full bg-amber-500 animate-pulse" />
             Queue Position: {queuePosition}
+          </div>
+        )}
+
+        {activeMatchMode === 'STRICT' && elapsed >= 15 && (
+          <div className="mt-8 p-5 rounded-2xl border border-purple-500/20 bg-purple-950/20 backdrop-blur-xl animate-fade-in text-center flex flex-col items-center">
+            <h4 className="text-xs font-bold text-purple-300 uppercase tracking-wider mb-1">Strict Matching Suggestion</h4>
+            <p className="text-[11px] text-stone-300 leading-relaxed max-w-[280px] mb-3.5">
+              We couldn't find anyone matching your selected filters yet. Disabling strict matching lets us connect you with random people instantly.
+            </p>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setElapsed(0)}
+                className="px-3 py-1.5 rounded-lg border border-white/10 hover:bg-white/5 text-[10px] font-semibold text-white/70 hover:text-white"
+              >
+                Continue Waiting
+              </button>
+              {onDisableStrict && (
+                <button
+                  type="button"
+                  onClick={onDisableStrict}
+                  className="px-3 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-[10px] font-bold text-white shadow-md shadow-purple-600/20"
+                >
+                  Disable Strict Matching
+                </button>
+              )}
+            </div>
           </div>
         )}
 

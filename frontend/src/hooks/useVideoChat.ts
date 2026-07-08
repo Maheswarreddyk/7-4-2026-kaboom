@@ -213,6 +213,8 @@ export function useVideoChat(
       partnerSessionId: string;
       isInitiator: boolean;
       iceServers: { urls: string | string[] }[];
+      matchReasonMetadata?: any;
+      partnerProfile?: any;
     }) => {
       if (skipInProgressRef.current) return;
       if (webrtcManager.getConnectionState() === 'connected') {
@@ -250,6 +252,8 @@ export function useVideoChat(
         messages: existingMessages,
         unreadCount: 0,
         partnerTyping: false,
+        partnerProfile: data.partnerProfile || null,
+        matchReasonMetadata: data.matchReasonMetadata || null,
       });
     },
     [updateChatState, setSignalingState, startWebRTCTimeout]
@@ -261,6 +265,8 @@ export function useVideoChat(
       partnerSessionId: string;
       isInitiator: boolean;
       iceServers: { urls: string | string[] }[];
+      matchReasonMetadata?: any;
+      partnerProfile?: any;
     }) => {
       if (skipInProgressRef.current) return;
       if (webrtcManager.getConnectionState() === 'connected') {
@@ -282,6 +288,8 @@ export function useVideoChat(
         partnerSessionId: data.partnerSessionId,
         matchId: data.matchId,
         isInitiator: data.isInitiator,
+        partnerProfile: data.partnerProfile || null,
+        matchReasonMetadata: data.matchReasonMetadata || null,
       });
 
       if (data.isInitiator) {

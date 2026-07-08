@@ -31,6 +31,68 @@ router.post('/restore-session', sessionController.restoreSession);
 router.post('/report', reportRateLimiter, reportController.submitReport);
 router.post('/feedback', feedbackController.submitFeedback);
 
+const SEEDED_UNIVERSITIES = [
+  { name: 'Indian Institute of Technology Madras (IIT Madras)', country: 'India' },
+  { name: 'Indian Institute of Technology Delhi (IIT Delhi)', country: 'India' },
+  { name: 'Indian Institute of Technology Bombay (IIT Bombay)', country: 'India' },
+  { name: 'Indian Institute of Technology Kanpur (IIT Kanpur)', country: 'India' },
+  { name: 'Indian Institute of Technology Kharagpur (IIT Kharagpur)', country: 'India' },
+  { name: 'Indian Institute of Technology Roorkee (IIT Roorkee)', country: 'India' },
+  { name: 'Indian Institute of Technology Hyderabad (IIT Hyderabad)', country: 'India' },
+  { name: 'Indian Institute of Technology Guwahati (IIT Guwahati)', country: 'India' },
+  { name: 'Indian Institute of Science (IISc Bengaluru)', country: 'India' },
+  { name: 'National Institute of Technology Tiruchirappalli (NIT Trichy)', country: 'India' },
+  { name: 'National Institute of Technology Karnataka (NIT Surathkal)', country: 'India' },
+  { name: 'National Institute of Technology Warangal (NIT Warangal)', country: 'India' },
+  { name: 'Motilal Nehru National Institute of Technology (MNNIT Allahabad)', country: 'India' },
+  { name: 'College of Engineering, Guindy (CEG Chennai)', country: 'India' },
+  { name: 'Birla Institute of Technology & Science (BITS Pilani)', country: 'India' },
+  { name: 'Vellore Institute of Technology (VIT Vellore)', country: 'India' },
+  { name: 'SRM Institute of Science and Technology (SRM Chennai)', country: 'India' },
+  { name: 'Amrita School of Engineering (Coimbatore)', country: 'India' },
+  { name: 'Thapar Institute of Engineering and Technology (Patiala)', country: 'India' },
+  { name: 'Manipal Institute of Technology (MIT Manipal)', country: 'India' },
+  { name: 'Chandigarh University (Mohali)', country: 'India' },
+  { name: 'International Institute of Information Technology (IIIT Hyderabad)', country: 'India' },
+  { name: 'PES University (Bengaluru)', country: 'India' },
+  { name: 'Ramaiah Institute of Technology (MSRIT Bengaluru)', country: 'India' },
+  { name: 'RV College of Engineering (RVCE Bengaluru)', country: 'India' },
+  { name: 'BMS College of Engineering (BMSCE Bengaluru)', country: 'India' },
+  { name: 'PSG College of Technology (PSG Tech Coimbatore)', country: 'India' },
+  { name: 'Sathyabama Institute of Science and Technology (Chennai)', country: 'India' },
+  { name: 'SSN College of Engineering (Chennai)', country: 'India' },
+  { name: 'Rajalakshmi Engineering College (Chennai)', country: 'India' },
+  { name: 'Kalinga Institute of Industrial Technology (KIIT Bhubaneswar)', country: 'India' },
+  { name: 'Siksha O Anusandhan (SOA Bhubaneswar)', country: 'India' },
+  { name: 'Amity University (Noida)', country: 'India' },
+  { name: 'Lovely Professional University (LPU Phagwara)', country: 'India' },
+  { name: 'Nirma University (Ahmedabad)', country: 'India' },
+  { name: 'Pandit Deendayal Energy University (PDEU Gandhinagar)', country: 'India' },
+  { name: 'Symbiosis Institute of Technology (SIT Pune)', country: 'India' },
+  { name: 'Maharashtra Institute of Technology (MIT-WPU Pune)', country: 'India' },
+  { name: 'COEP Technological University (Pune)', country: 'India' },
+  { name: 'Veermata Jijabai Technological Institute (VJTI Mumbai)', country: 'India' },
+  { name: 'Dwarkadas J. Sanghvi College of Engineering (DJSCE Mumbai)', country: 'India' },
+  { name: 'Chaitanya Bharathi Institute of Technology (CBIT Hyderabad)', country: 'India' },
+  { name: 'VNR Vignana Jyothi Institute of Engineering and Technology (VNR VJIET Hyderabad)', country: 'India' },
+  { name: 'Gokaraju Rangaraju Institute of Engineering and Technology (GRIET Hyderabad)', country: 'India' },
+  { name: 'Vardhaman College of Engineering (Hyderabad)', country: 'India' },
+  { name: 'Institute of Engineering and Management (IEM Kolkata)', country: 'India' },
+  { name: 'Heritage Institute of Technology (Kolkata)', country: 'India' },
+  { name: 'Anna University (Chennai)', country: 'India' },
+  { name: 'Jadavpur University (Kolkata)', country: 'India' },
+  { name: 'University of Delhi (DU New Delhi)', country: 'India' },
+  { name: 'Jawaharlal Nehru University (JNU New Delhi)', country: 'India' },
+  { name: 'Jamia Millia Islamia (JMI New Delhi)', country: 'India' },
+  { name: 'Banaras Hindu University (BHU Varanasi)', country: 'India' },
+  { name: 'Aligarh Muslim University (AMU Aligarh)', country: 'India' },
+  { name: 'Visvesvaraya Technological University (VTU Belagavi)', country: 'India' },
+  { name: 'Jawaharlal Nehru Technological University (JNTU Hyderabad)', country: 'India' },
+  { name: 'Andhra University (Visakhapatnam)', country: 'India' }
+];
+
+const universityCache = new Map<string, any[]>();
+
 router.post('/preferences', async (req, res, next) => {
   try {
     const { sessionId, sessionToken, preferences } = req.body;
@@ -45,11 +107,85 @@ router.post('/preferences', async (req, res, next) => {
         district: preferences.district ?? null,
         city: preferences.city ?? null,
         interest_tags: preferences.interest_tags ?? null,
+        
+        // V6 Identity & Smart Matching Columns
+        display_name: preferences.display_name ?? 'Guest',
+        bio: preferences.bio ?? null,
+        match_mode: preferences.match_mode ?? 'RANDOM',
+        match_constraints: preferences.match_constraints ?? {},
+        match_attributes: preferences.match_attributes ?? {},
+        
         last_activity: new Date().toISOString()
       })
       .eq('id', sessionId);
     if (error) throw error;
     res.json({ success: true });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get('/universities', async (req, res, next) => {
+  try {
+    const query = (req.query.q as string || '').trim();
+    if (!query || query.length < 2) {
+      return res.json({ success: true, data: [] });
+    }
+
+    const cleanQ = query.toLowerCase();
+
+    // 1. Filter local seeded fallbacks
+    const localFiltered = SEEDED_UNIVERSITIES.filter(u => 
+      u.name.toLowerCase().includes(cleanQ)
+    );
+
+    // 2. Check API Cache
+    if (universityCache.has(cleanQ)) {
+      return res.json({ success: true, data: universityCache.get(cleanQ) });
+    }
+
+    // 3. Fetch from Hipo Labs API using native fetch with 2.5s timeout
+    let apiResults: any[] = [];
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 2500);
+
+    try {
+      const response = await fetch(
+        `http://universities.hipolabs.com/search?name=${encodeURIComponent(query)}`,
+        { signal: controller.signal }
+      );
+      clearTimeout(timeoutId);
+
+      if (response.ok) {
+        const data = await response.json() as any[];
+        apiResults = (data || []).map(u => ({
+          name: u.name,
+          country: u.country
+        }));
+      }
+    } catch (apiErr) {
+      console.warn('[Universities API] Search fetch aborted or failed:', (apiErr as Error).message);
+    }
+
+    // 4. Merge results and deduplicate by name
+    const merged = [...localFiltered];
+    const seenNames = new Set(localFiltered.map(u => u.name.toLowerCase()));
+
+    apiResults.forEach(u => {
+      const nameLower = u.name.toLowerCase();
+      if (!seenNames.has(nameLower)) {
+        seenNames.add(nameLower);
+        merged.push(u);
+      }
+    });
+
+    // Take top 15 results
+    const finalResults = merged.slice(0, 15);
+    
+    // Save to Cache
+    universityCache.set(cleanQ, finalResults);
+
+    res.json({ success: true, data: finalResults });
   } catch (err) {
     next(err);
   }

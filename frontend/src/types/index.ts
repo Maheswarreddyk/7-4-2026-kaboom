@@ -75,6 +75,18 @@ export interface ChatState {
   isChatOpen?: boolean;
   partnerTyping?: boolean;
   connectionQuality?: 'excellent' | 'good' | 'poor' | null;
+  partnerProfile?: {
+    displayName: string;
+    bio?: string;
+    matchMode?: 'RANDOM' | 'PREFER' | 'STRICT';
+    matchConstraints?: Record<string, boolean>;
+    matchAttributes?: Record<string, string[]>;
+  } | null;
+  matchReasonMetadata?: {
+    reason: 'strict_filters' | 'prefer_filters' | 'random';
+    confidence: number;
+    matchedBy: string[];
+  } | null;
 }
 
 export const REPORT_REASONS: { value: ReportReason; label: string }[] = [

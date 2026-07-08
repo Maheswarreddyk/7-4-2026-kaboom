@@ -19,6 +19,13 @@ export interface SessionProfile {
   queue_entered_at?: string | null;
   last_partner?: string | null;
   status?: string;
+  
+  // V6 & V6.5 temporary profile fields
+  display_name?: string | null;
+  bio?: string | null;
+  match_mode?: 'RANDOM' | 'PREFER' | 'STRICT' | null;
+  match_constraints?: Record<string, boolean> | null;
+  match_attributes?: Record<string, string[]> | null;
 }
 
 export interface ScoreResult {
@@ -29,6 +36,11 @@ export interface ScoreResult {
   phase: RelaxationPhase;
   rank: number;
   passesThreshold: boolean;
+  reasonMetadata?: {
+    reason: 'strict_filters' | 'prefer_filters' | 'random';
+    confidence: number;
+    matchedBy: string[];
+  };
 }
 
 function scoreMutualPreference(self: SessionProfile, partner: SessionProfile): { points: number; note: string } {
@@ -119,18 +131,40 @@ export function calculateCompatibility(
   if (partner.status === 'ended') return null;
   if (reportedIds.has(partner.id)) return null;
 
+  // 1. Evaluate Generic Constraints for STRICT mode
+  const evaluateStrictConstraints = (user1: SessionProfile, user2: SessionProfile): boolean => {
+    if (user1.match_mode !== 'STRICT') return true;
+    const constraints = user1.match_constraints || {};
+    for (const [key, isStrict] of Object.entries(constraints)) {
+      if (!isStrict) continue;
+      
+      const val1 = user1.match_attributes?.[key] || [];
+      const val2 = user2.match_attributes?.[key] || [];
+      
+      // Ensure there is at least one shared value
+      const hasOverlap = val1.some(v => val2.includes(v));
+      if (!hasOverlap) {
+        return false;
+      }
+    }
+    return true;
+  };
+
+  // Both parties must satisfy each other's strict constraints
+  if (!evaluateStrictConstraints(self, partner) || !evaluateStrictConstraints(partner, self)) {
+    return null;
+  }
+
   const phase = getRelaxationPhase(waitingSeconds);
   const threshold = getMinScoreThreshold(phase);
 
   // Check rematch cooldown logic
   const isPreviousPartner = partner.id === self.last_partner;
   if (isPreviousPartner) {
-    // Only allow previous partner if relaxation has progressed to allow_previous or random phase
     if (phase !== 'allow_previous' && phase !== 'random') {
       return null;
     }
     
-    // Check if the 15-second cooldown since the last match ended has elapsed
     const lastEndedAt = endedMatchesMap?.get(partner.id);
     if (lastEndedAt) {
       const elapsedMs = Date.now() - new Date(lastEndedAt).getTime();
@@ -141,6 +175,7 @@ export function calculateCompatibility(
     }
   }
 
+  // Calculate scores
   const parts = [
     scoreMutualPreference(self, partner),
     scoreLanguages(self, partner, phase),
@@ -152,6 +187,51 @@ export function calculateCompatibility(
   let rawScore = parts.reduce((sum, p) => sum + p.points, 0);
   const reasons = parts.map((p) => p.note).filter(Boolean);
 
+  // V6 Addition: Add points for same university & education tags
+  const matchedBy: string[] = [];
+  
+  const selfUni = self.match_attributes?.['university'] || [];
+  const partUni = partner.match_attributes?.['university'] || [];
+  const hasSharedUni = selfUni.length > 0 && partUni.length > 0 && selfUni.some(u => partUni.includes(u));
+  if (hasSharedUni) {
+    rawScore += 100;
+    reasons.push(`Same University: ${selfUni.join(', ')} (+100)`);
+    matchedBy.push('🎓 Same University');
+  }
+
+  const selfTags = self.match_attributes?.['education_tags'] || [];
+  const partTags = partner.match_attributes?.['education_tags'] || [];
+  const sharedTags = selfTags.filter(t => partTags.includes(t));
+  if (sharedTags.length > 0) {
+    const pts = Math.min(sharedTags.length * 30, 90);
+    rawScore += pts;
+    reasons.push(`Shared Campus Tags: ${sharedTags.join(', ')} (+${pts})`);
+    matchedBy.push('🏫 Shared Campus Tags');
+  }
+
+  // Record other match explanation labels
+  if (self.city && partner.city && self.city === partner.city) {
+    matchedBy.push('📍 Same City');
+  } else if (self.state && partner.state && self.state === partner.state) {
+    matchedBy.push('📍 Same State');
+  } else if (self.country && partner.country && self.country === partner.country) {
+    matchedBy.push('🌎 Same Country');
+  }
+
+  if (self.interest_tags && partner.interest_tags) {
+    const sharedInts = self.interest_tags.filter(t => partner.interest_tags!.includes(t));
+    if (sharedInts.length > 0) {
+      matchedBy.push('💻 Shared Interests');
+    }
+  }
+
+  if (self.languages && partner.languages) {
+    const sharedLangs = self.languages.filter(t => partner.languages!.includes(t));
+    if (sharedLangs.length > 0) {
+      matchedBy.push('🗣 Same Language');
+    }
+  }
+
   if (recentPartners.has(partner.id)) {
     rawScore -= MATCH_WEIGHTS.recentPartnerPenalty;
     reasons.push(`Matched Recently (-${MATCH_WEIGHTS.recentPartnerPenalty})`);
@@ -159,6 +239,15 @@ export function calculateCompatibility(
 
   const weightedScore = rawScore;
   const passesThreshold = phase === 'random' ? true : weightedScore >= threshold;
+
+  // Determine structured match reason
+  const isStrictMatch = self.match_mode === 'STRICT' || partner.match_mode === 'STRICT';
+  const confidence = rawScore > 0 ? Math.min(Math.round((rawScore / 200) * 100), 100) : 41;
+  const reasonMetadata: ScoreResult['reasonMetadata'] = {
+    reason: isStrictMatch ? 'strict_filters' : (matchedBy.length > 0 ? 'prefer_filters' : 'random'),
+    confidence,
+    matchedBy: matchedBy.length > 0 ? matchedBy : ['🎲 Random Match']
+  };
 
   return {
     rawScore,
@@ -168,6 +257,7 @@ export function calculateCompatibility(
     phase,
     rank: 0,
     passesThreshold,
+    reasonMetadata
   };
 }
 

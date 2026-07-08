@@ -16,6 +16,18 @@ interface TemporaryChatProps {
   selfSessionId: string;
   partnerTyping: boolean;
   onTyping: (typing: boolean) => void;
+  partnerProfile?: {
+    displayName: string;
+    bio?: string;
+    matchMode?: 'RANDOM' | 'PREFER' | 'STRICT';
+    matchConstraints?: Record<string, boolean>;
+    matchAttributes?: Record<string, string[]>;
+  } | null;
+  matchReasonMetadata?: {
+    reason: 'strict_filters' | 'prefer_filters' | 'random';
+    confidence: number;
+    matchedBy: string[];
+  } | null;
 }
 
 const EMOJIS = ['👋', '❤️', '😂', '🔥', '👍', '😍', '😮', '👏'];
@@ -28,6 +40,8 @@ export function TemporaryChat({
   selfSessionId,
   partnerTyping,
   onTyping,
+  partnerProfile = null,
+  matchReasonMetadata = null,
 }: TemporaryChatProps) {
   const [inputText, setInputText] = useState('');
   const [isExpandedFull, setIsExpandedFull] = useState(false); // Mobile half vs full sheet
@@ -215,6 +229,50 @@ export function TemporaryChat({
 
         {/* Messages List Area */}
         <div className="flex-1 overflow-y-auto p-5 space-y-3.5 scrollbar-none">
+          {/* 🎓 Compatibility Summary Header Card */}
+          {matchReasonMetadata && (
+            <div className="mb-4 p-4 rounded-2xl border border-white/5 bg-white/[0.02] flex flex-col gap-2.5">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] text-stone-500 uppercase tracking-wider font-extrabold">Compatibility Summary</span>
+                <span className={cn(
+                  "px-2 py-0.5 rounded-full text-[10px] font-bold border",
+                  matchReasonMetadata.confidence >= 80 
+                    ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400" 
+                    : (matchReasonMetadata.confidence >= 50 ? "bg-amber-500/10 border-amber-500/20 text-amber-400" : "bg-stone-500/10 border-stone-500/20 text-stone-400")
+                )}>
+                  ⭐ {matchReasonMetadata.confidence}% Match
+                </span>
+              </div>
+              
+              {/* Partner Card details */}
+              <div className="flex flex-col gap-1">
+                <h4 className="text-sm font-bold text-white">
+                  {partnerProfile?.displayName || 'Guest'}
+                </h4>
+                {partnerProfile?.bio && (
+                  <p className="text-xs text-white/50 italic leading-relaxed">
+                    "{partnerProfile.bio}"
+                  </p>
+                )}
+              </div>
+
+              {/* Match Criteria list badges */}
+              <div className="flex flex-wrap gap-1.5 pt-1.5 border-t border-white/[0.03]">
+                {matchReasonMetadata.matchedBy.map((item, idx) => (
+                  <span key={idx} className="inline-flex items-center px-2.5 py-0.5 rounded-full bg-white/5 text-[10px] font-semibold text-white/80 border border-white/5">
+                    {item}
+                  </span>
+                ))}
+              </div>
+              
+              {matchReasonMetadata.reason === 'random' && (
+                <p className="text-[10px] text-white/30 leading-relaxed mt-1">
+                  🎲 No shared preferences found. You were matched randomly. Enjoy meeting someone new!
+                </p>
+              )}
+            </div>
+          )}
+
           {messages.length === 0 ? (
             /* Beautiful empty skeleton state */
             <div className="h-full flex flex-col items-center justify-center text-center p-4">

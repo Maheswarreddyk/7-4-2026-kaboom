@@ -401,7 +401,12 @@ export async function runGlobalMatchCycle(supabase: SupabaseClient): Promise<voi
             last_partner,
             queue_entered_at,
             last_activity,
-            status
+            status,
+            display_name,
+            bio,
+            match_mode,
+            match_constraints,
+            match_attributes
           )
         `)
         .eq('status', 'waiting')
@@ -541,6 +546,7 @@ export async function runGlobalMatchCycle(supabase: SupabaseClient): Promise<voi
           user_b: userB,
           match_score: bestMatch.weightedScore,
           matched_reason: bestMatch.reason,
+          match_reason_metadata: bestMatch.reasonMetadata,
           user_a_ready: false,
           user_b_ready: false,
           negotiation_started: false,
@@ -610,20 +616,40 @@ export async function runGlobalMatchCycle(supabase: SupabaseClient): Promise<voi
         }),
       ]);
 
-      // Broadcast matched event to both sessions
+      // Broadcast matched event to both sessions with profile and reason metadata
       const iceServers = getIceServers();
+      const pA = profileA as any;
+      const entryB = activeWaiting.find((w) => w.session_id === sessionIdB);
+      const pB = entryB?.visitor_sessions as any;
+
       await Promise.all([
         broadcastToSession(userA, 'matched', {
           matchId: match.id,
           partnerSessionId: userB,
           isInitiator: userA === sessionIdA,
           iceServers,
+          matchReasonMetadata: bestMatch.reasonMetadata,
+          partnerProfile: {
+            displayName: pB?.display_name || 'Guest',
+            bio: pB?.bio || '',
+            matchMode: pB?.match_mode || 'RANDOM',
+            matchConstraints: pB?.match_constraints || {},
+            matchAttributes: pB?.match_attributes || {},
+          },
         }),
         broadcastToSession(userB, 'matched', {
           matchId: match.id,
           partnerSessionId: userA,
           isInitiator: userB === sessionIdA,
           iceServers,
+          matchReasonMetadata: bestMatch.reasonMetadata,
+          partnerProfile: {
+            displayName: pA?.display_name || 'Guest',
+            bio: pA?.bio || '',
+            matchMode: pA?.match_mode || 'RANDOM',
+            matchConstraints: pA?.match_constraints || {},
+            matchAttributes: pA?.match_attributes || {},
+          },
         }),
       ]);
 

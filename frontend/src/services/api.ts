@@ -115,6 +115,11 @@ export const apiService = {
       district?: string;
       city?: string;
       interest_tags?: string[];
+      display_name?: string;
+      bio?: string;
+      match_mode?: 'RANDOM' | 'PREFER' | 'STRICT';
+      match_constraints?: Record<string, boolean>;
+      match_attributes?: Record<string, string[]>;
     }
   ): Promise<void> {
     await api.post('/preferences', { sessionId, sessionToken, preferences });
@@ -127,6 +132,11 @@ export const apiService = {
 
   async getInterests(query: string): Promise<any[]> {
     const { data } = await api.get(`/interests?q=${encodeURIComponent(query)}`);
+    return data.data || [];
+  },
+
+  async getUniversities(query: string): Promise<any[]> {
+    const { data } = await api.get(`/universities?q=${encodeURIComponent(query)}`);
     return data.data || [];
   },
 

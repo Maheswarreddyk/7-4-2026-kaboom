@@ -33,6 +33,9 @@ export function ChatPage() {
   const [showReportModal, setShowReportModal] = useState(false);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [showPreferenceModal, setShowPreferenceModal] = useState(false);
+  const [showWelcomeGate, setShowWelcomeGate] = useState(() => {
+    return !localStorage.getItem('kaboom_display_name');
+  });
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [initializing, setInitializing] = useState(false);
   const [permissionGranted, setPermissionGranted] = useState<boolean | null>(null);
@@ -126,6 +129,49 @@ export function ChatPage() {
     triggerReaction(emoji);
     sendReaction(emoji);
   }, [triggerReaction, sendReaction]);
+
+  const handleDisableStrict = useCallback(async () => {
+    localStorage.setItem('kaboom_match_mode', 'PREFER');
+    
+    // Read local fields
+    const savedGender = localStorage.getItem('kaboom_gender') || 'Prefer not to say';
+    const savedLooking = JSON.parse(localStorage.getItem('kaboom_looking') || '["Anyone"]');
+    const savedLangs = JSON.parse(localStorage.getItem('kaboom_languages') || '["English"]');
+    const savedCountry = localStorage.getItem('kaboom_country') || '';
+    const savedState = localStorage.getItem('kaboom_state') || '';
+    const savedCity = localStorage.getItem('kaboom_city') || '';
+    const savedInterests = JSON.parse(localStorage.getItem('kaboom_interest_tags') || '[]');
+    const savedName = localStorage.getItem('kaboom_display_name') || 'Guest';
+    const savedBio = localStorage.getItem('kaboom_bio') || '';
+    const savedConstraints = JSON.parse(localStorage.getItem('kaboom_match_constraints') || '{}');
+    const savedUni = localStorage.getItem('kaboom_university') || '';
+    const savedEduTags = JSON.parse(localStorage.getItem('kaboom_education_tags') || '[]');
+
+    await updatePreferences({
+      gender: savedGender,
+      looking_for: savedLooking,
+      languages: savedLangs,
+      country: savedCountry || null,
+      state: savedState || null,
+      city: savedCity || null,
+      interest_tags: savedInterests,
+      display_name: savedName,
+      bio: savedBio || null,
+      match_mode: 'PREFER',
+      match_constraints: savedConstraints,
+      match_attributes: {
+        university: savedUni ? [savedUni] : [],
+        education_tags: savedEduTags,
+        city: savedCity ? [savedCity] : [],
+        state: savedState ? [savedState] : [],
+        country: savedCountry ? [savedCountry] : [],
+        languages: savedLangs,
+        interests: savedInterests
+      }
+    });
+
+    showToast('success', 'Strict Matching disabled. Searching globally...');
+  }, [updatePreferences, showToast]);
 
   // V5.1 Root Touch Gestures: Swipe Left to Next, Swipe Down to Leave
   const touchStartX = useRef<number | null>(null);
@@ -313,6 +359,7 @@ export function ChatPage() {
   useEffect(() => {
     if (isLoading) return; // Wait until session restore loading finishes!
     if (session) return;
+    if (showWelcomeGate) return; // Wait until they complete the profile setup!
 
     let cancelled = false;
     setInitializing(true);
@@ -331,7 +378,7 @@ export function ChatPage() {
     return () => {
       cancelled = true;
     };
-  }, [session, isLoading, startSession, showToast, navigate]);
+  }, [session, isLoading, startSession, showToast, navigate, showWelcomeGate]);
 
   useEffect(() => {
     if (!session || isLoading) return;
@@ -627,6 +674,45 @@ export function ChatPage() {
         </div>
       )}
 
+      {isConnected && chatState.partnerProfile && (
+        <div 
+          className="absolute z-20 flex flex-col gap-1.5 p-3 rounded-2xl border border-white/10 bg-black/40 backdrop-blur-xl max-w-[240px] shadow-2xl animate-fade-in pointer-events-none select-none"
+          style={{
+            left: isMobile ? '16px' : '24px',
+            top: isMobile ? '96px' : '108px',
+          }}
+        >
+          <div className="flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="text-xs font-black text-stone-100 tracking-tight">
+              {chatState.partnerProfile.displayName || 'Guest'}
+            </span>
+          </div>
+          {chatState.partnerProfile.bio && (
+            <p className="text-[10px] text-stone-300 font-medium leading-relaxed italic line-clamp-2">
+              "{chatState.partnerProfile.bio}"
+            </p>
+          )}
+          <div className="flex flex-wrap gap-1">
+            {chatState.partnerProfile.matchAttributes?.university?.[0] && (
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-white/10 text-[8px] font-bold text-white/90">
+                🎓 {chatState.partnerProfile.matchAttributes.university[0].slice(0, 18)}...
+              </span>
+            )}
+            {chatState.partnerProfile.matchAttributes?.city?.[0] && (
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-white/10 text-[8px] font-bold text-white/90">
+                📍 {chatState.partnerProfile.matchAttributes.city[0]}
+              </span>
+            )}
+            {chatState.partnerProfile.matchAttributes?.country?.[0] && (
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-white/10 text-[8px] font-bold text-white/90">
+                🌎 {chatState.partnerProfile.matchAttributes.country[0]}
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* ── LAYER 2: Gradient overlay ─────────────────────── */}
       <div
         className="absolute inset-0 pointer-events-none"
@@ -642,7 +728,11 @@ export function ChatPage() {
           className="absolute inset-0 flex items-center justify-center bg-stone-950"
           style={{ zIndex: 'calc(var(--z-overlay) + 1)' as any }}
         >
-          <SearchingAnimation queuePosition={chatState.queuePosition} />
+          <SearchingAnimation
+            queuePosition={chatState.queuePosition}
+            matchMode={localStorage.getItem('kaboom_match_mode') || 'RANDOM'}
+            onDisableStrict={handleDisableStrict}
+          />
         </div>
       )}
 
@@ -799,13 +889,26 @@ export function ChatPage() {
         selfSessionId={session.sessionId}
         partnerTyping={chatState.partnerTyping || false}
         onTyping={setTypingStatus}
+        partnerProfile={chatState.partnerProfile}
+        matchReasonMetadata={chatState.matchReasonMetadata}
       />
 
       {/* ── PREFERENCES MODAL ─────────────────────────────── */}
       <PreferenceModal
-        isOpen={showPreferenceModal}
-        onClose={() => setShowPreferenceModal(false)}
-        onSave={updatePreferences}
+        isOpen={showPreferenceModal || showWelcomeGate}
+        onClose={() => {
+          if (showWelcomeGate) {
+            navigate('/');
+          } else {
+            setShowPreferenceModal(false);
+          }
+        }}
+        onSave={async (prefs) => {
+          await updatePreferences(prefs);
+          if (showWelcomeGate) {
+            setShowWelcomeGate(false);
+          }
+        }}
         currentPreferences={{
           gender: chatState.gender,
           looking_for: chatState.lookingFor,
@@ -815,6 +918,31 @@ export function ChatPage() {
           district: chatState.district,
           city: chatState.city,
           interest_tags: chatState.interestTags,
+          display_name: localStorage.getItem('kaboom_display_name') || '',
+          bio: localStorage.getItem('kaboom_bio') || '',
+          match_mode: localStorage.getItem('kaboom_match_mode') || 'RANDOM',
+          match_constraints: (() => {
+            try {
+              return JSON.parse(localStorage.getItem('kaboom_match_constraints') || '{}');
+            } catch {
+              return {};
+            }
+          })(),
+          match_attributes: {
+            university: localStorage.getItem('kaboom_university') ? [localStorage.getItem('kaboom_university') || ''] : [],
+            education_tags: (() => {
+              try {
+                return JSON.parse(localStorage.getItem('kaboom_education_tags') || '[]');
+              } catch {
+                return [];
+              }
+            })(),
+            city: chatState.city ? [chatState.city] : [],
+            state: chatState.state ? [chatState.state] : [],
+            country: chatState.country ? [chatState.country] : [],
+            languages: chatState.languages || [],
+            interests: chatState.interestTags || []
+          }
         }}
       />
 

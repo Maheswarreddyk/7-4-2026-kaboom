@@ -183,7 +183,12 @@ export async function loadWaitingCandidates(
         last_partner,
         queue_entered_at,
         last_activity,
-        status
+        status,
+        display_name,
+        bio,
+        match_mode,
+        match_constraints,
+        match_attributes
       )
     `)
     .eq('status', 'waiting')
