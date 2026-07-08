@@ -95,9 +95,9 @@ export function TemporaryChat({
     }
   };
 
-  // Filter unpinned messages decay timer for closed overlay mode (8 seconds)
+  // Filter unpinned messages decay timer for closed overlay mode (7 seconds)
   const isMessageVisibleInOverlay = (msg: { createdAt: number; id: string }) => {
-    return now - msg.createdAt < 8000;
+    return now - msg.createdAt < 7000;
   };
 
   // ── RENDER OVERLAY MODE (Closed Drawer, floating transparent notifications) ──
@@ -119,8 +119,8 @@ export function TemporaryChat({
                 className={cn(
                   "flex flex-col gap-0.5 rounded-[18px] rounded-tl-none py-2 px-3.5 shadow-lg max-w-[90%] transition-all duration-300 scale-100 translate-y-0",
                   isSelf
-                    ? "bg-amber-500/25 backdrop-blur-md border border-amber-500/15 text-stone-100 self-start"
-                    : "bg-stone-900/40 backdrop-blur-md border border-white/5 text-white/90 self-start"
+                    ? "bg-amber-500/20 backdrop-blur-md border border-amber-500/10 text-stone-100 self-start"
+                    : "bg-stone-900/30 backdrop-blur-md border border-white/5 text-white/90 self-start"
                 )}
               >
                 <span className="text-[9px] text-white/40 font-bold uppercase tracking-wider">
@@ -135,7 +135,7 @@ export function TemporaryChat({
 
           {/* Typing indicator bubble */}
           {partnerTyping && (
-            <div className="flex items-center gap-2 bg-stone-900/40 backdrop-blur-md border border-white/5 text-white/50 rounded-full px-3.5 py-2 self-start animate-fade-in shadow-lg">
+            <div className="flex items-center gap-2 bg-stone-900/30 backdrop-blur-md border border-white/5 text-white/50 rounded-full px-3.5 py-2 self-start animate-fade-in shadow-lg">
               <span className="flex gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-white/60 animate-bounce" style={{ animationDelay: '0ms' }} />
                 <span className="w-1.5 h-1.5 rounded-full bg-white/60 animate-bounce" style={{ animationDelay: '150ms' }} />
@@ -159,7 +159,7 @@ export function TemporaryChat({
       {/* Slide up sheet */}
       <div 
         className={cn(
-          "w-full bg-stone-950/95 backdrop-blur-2xl border-t border-white/10 rounded-t-[24px] shadow-[0_-16px_48px_rgba(0,0,0,0.8)] flex flex-col transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] pointer-events-auto",
+          "w-full bg-stone-950/80 backdrop-blur-xl border-t border-white/10 rounded-t-[28px] shadow-[0_-16px_48px_rgba(0,0,0,0.8)] flex flex-col transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] pointer-events-auto",
           isExpandedFull ? "h-[88vh]" : "h-[70vh] sm:h-[45vh]"
         )}
       >

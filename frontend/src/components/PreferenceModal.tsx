@@ -149,6 +149,7 @@ export function PreferenceModal({ isOpen, onClose, onSave, currentPreferences = 
 
   const handleSave = () => {
     localStorage.setItem('kaboom_show_tips', showTips ? 'true' : 'false');
+    localStorage.setItem('kaboom_suggestions_enabled', showTips ? 'ON' : 'OFF');
     localStorage.setItem('kaboom_theme', theme);
     document.documentElement.className = `theme-${theme}`;
 

@@ -5,21 +5,21 @@ interface SearchingAnimationProps {
 }
 
 const WAITING_MESSAGES = [
-  "Looking for interesting humans...",
-  "Good conversations take a second...",
-  "Handshaking WebRTC parameters...",
-  "Securing peer-to-peer tunnel...",
-  "Finding matching vibes...",
-  "Connecting nodes globally...",
-  "Warming up the pixels...",
-  "Ready to skip if needed..."
+  "🌍 Searching globally...",
+  "🔥 Thousands of people use Kaboom every day.",
+  "💜 Your next conversation could start any second.",
+  "😊 Stay here. New people join every moment.",
+  "✨ Preparing the fastest match...",
+  "🚀 Finding someone with the best connection...",
+  "🎉 Most users match within a few seconds.",
+  "☕ Grab a coffee. We're searching."
 ];
 
 export function SearchingAnimation({ queuePosition }: SearchingAnimationProps) {
   const [statusText, setStatusText] = useState(WAITING_MESSAGES[0]);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
-  // Status message rotation
+  // Status message rotation - every 5 seconds
   useEffect(() => {
     const interval = setInterval(() => {
       setStatusText((prev) => {
@@ -27,11 +27,11 @@ export function SearchingAnimation({ queuePosition }: SearchingAnimationProps) {
         const index = Math.floor(Math.random() * remaining.length);
         return remaining[index];
       });
-    }, 4500);
+    }, 5000);
     return () => clearInterval(interval);
   }, []);
 
-  // HTML5 Canvas Ambient Particle Network
+  // HTML5 Canvas Ambient Particle Network & Nodes
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -49,7 +49,7 @@ export function SearchingAnimation({ queuePosition }: SearchingAnimationProps) {
     };
     window.addEventListener('resize', handleResize);
 
-    // Particle class
+    // Particle class with node characteristics
     class Particle {
       x: number;
       y: number;
@@ -61,36 +61,33 @@ export function SearchingAnimation({ queuePosition }: SearchingAnimationProps) {
 
       constructor() {
         this.x = Math.random() * width;
-        this.y = height + Math.random() * 100;
-        this.size = Math.random() * 2 + 0.5;
-        this.speedY = -(Math.random() * 0.8 + 0.3);
+        this.y = Math.random() * height;
+        this.size = Math.random() * 2.5 + 1.0;
+        this.speedY = (Math.random() * 0.4 - 0.2);
         this.speedX = (Math.random() * 0.4 - 0.2);
-        this.opacity = Math.random() * 0.5 + 0.1;
-        this.fadeSpeed = Math.random() * 0.002 + 0.001;
+        this.opacity = Math.random() * 0.6 + 0.2;
+        this.fadeSpeed = Math.random() * 0.001 + 0.0005;
       }
 
       update() {
         this.y += this.speedY;
         this.x += this.speedX;
-        this.opacity -= this.fadeSpeed;
 
-        if (this.opacity <= 0 || this.y < -10) {
-          this.y = height + Math.random() * 10;
-          this.x = Math.random() * width;
-          this.opacity = Math.random() * 0.5 + 0.2;
-        }
+        // Bounce off bounds
+        if (this.x < 0 || this.x > width) this.speedX *= -1;
+        if (this.y < 0 || this.y > height) this.speedY *= -1;
       }
 
       draw() {
         if (!ctx) return;
         ctx.beginPath();
         ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(245, 166, 35, ${this.opacity})`; // Warm amber particles
+        ctx.fillStyle = `rgba(245, 158, 11, ${this.opacity})`; // Warm amber particles
         ctx.fill();
       }
     }
 
-    const particlesArray: Particle[] = Array.from({ length: 45 }).map(() => new Particle());
+    const particlesArray: Particle[] = Array.from({ length: 40 }).map(() => new Particle());
 
     const animate = () => {
       ctx.clearRect(0, 0, width, height);
@@ -101,11 +98,29 @@ export function SearchingAnimation({ queuePosition }: SearchingAnimationProps) {
       const glowY = height / 2.5 + Math.cos(time * 0.8) * 80;
 
       const gradient = ctx.createRadialGradient(glowX, glowY, 50, glowX, glowY, 400);
-      gradient.addColorStop(0, 'rgba(255, 91, 53, 0.04)'); // Soft Sunset Orange
-      gradient.addColorStop(0.5, 'rgba(245, 166, 35, 0.02)'); // Warm Gold
+      gradient.addColorStop(0, 'rgba(255, 91, 53, 0.05)'); // Soft Sunset Orange
+      gradient.addColorStop(0.5, 'rgba(245, 166, 35, 0.03)'); // Warm Gold
       gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
       ctx.fillStyle = gradient;
       ctx.fillRect(0, 0, width, height);
+
+      // Draw connection links between close nodes (glowing network lines)
+      for (let a = 0; a < particlesArray.length; a++) {
+        for (let b = a + 1; b < particlesArray.length; b++) {
+          const dx = particlesArray[a].x - particlesArray[b].x;
+          const dy = particlesArray[a].y - particlesArray[b].y;
+          const dist = Math.hypot(dx, dy);
+          if (dist < 130) {
+            ctx.beginPath();
+            ctx.moveTo(particlesArray[a].x, particlesArray[a].y);
+            ctx.lineTo(particlesArray[b].x, particlesArray[b].y);
+            const lineOpacity = (1 - dist / 130) * 0.15;
+            ctx.strokeStyle = `rgba(245, 158, 11, ${lineOpacity})`;
+            ctx.lineWidth = 0.6;
+            ctx.stroke();
+          }
+        }
+      }
 
       // Update and draw particles
       particlesArray.forEach((p) => {

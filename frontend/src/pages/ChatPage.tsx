@@ -16,6 +16,7 @@ import { apiService } from '../services/api.js';
 import type { ReportReason } from '../types/index.js';
 import { formatDuration } from '../utils/index.js';
 import { cn } from '../utils/index.js';
+import { playTapSound } from '../utils/audio.js';
 import { MobileHeader } from '../components/MobileHeader.js';
 import { BottomToolbar } from '../components/BottomToolbar.js';
 import { RightActionDock } from '../components/RightActionDock.js';
@@ -23,6 +24,7 @@ import { GestureLayer } from '../components/GestureLayer.js';
 import { MetaManager } from '../components/MetaManager.js';
 import { hintEngine } from '../services/HintEngine.js';
 import { TutorialOverlay } from '../components/TutorialOverlay.js';
+import { TipEngine } from '../components/TipEngine.js';
 
 export function ChatPage() {
   const navigate = useNavigate();
@@ -66,9 +68,10 @@ export function ChatPage() {
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const [snapCorner, setSnapCorner] = useState<'br' | 'bl' | 'tr' | 'tl'>(() => {
-    return (localStorage.getItem('kaboom_pip_corner') as any) || 'tl';
+    return (localStorage.getItem('pipPosition') as any) || 'tl';
   });
   const dragStart = useRef({ x: 0, y: 0 });
+  const [showReactionHub, setShowReactionHub] = useState(false);
 
   // Onboarding Hint state
   const [activeHint, setActiveHint] = useState<string | null>(null);
@@ -250,22 +253,46 @@ export function ChatPage() {
     };
 
     const handleMouseUp = () => {
+      if (!isDragging) {
+        setIsDragging(false);
+        touchStartDist.current = null;
+        return;
+      }
       setIsDragging(false);
       touchStartDist.current = null;
       
       const vw = window.innerWidth;
       const vh = window.innerHeight;
       const pipW = (vw < 640 ? vw * 0.3 : 220) * pipScale;
-      const pipH = (vw < 640 ? vw * 0.3 * 0.73 : 160) * pipScale;
+      const pipH = (vw < 640 ? vw * 0.3 * 1.33 : 160) * pipScale; // aspect ratio 1.33 for FaceTime layout
       
-      const absX = vw - 24 - pipW + dragOffset.x;
-      const absY = vh - 100 - pipH + dragOffset.y;
-      const isLeft  = absX + pipW / 2 < vw / 2;
-      const isTop   = absY + pipH / 2 < vh / 2;
+      // Calculate absolute center position relative to active corner
+      let currentX = 0;
+      let currentY = 0;
       
+      const safeBottom = isMobile ? 198 : 100;
+      const safeTop = isMobile ? (72 + 54) : (72 + 16); // Account for header size
+      
+      if (snapCorner === 'br') {
+        currentX = vw - 24 - pipW + dragOffset.x;
+        currentY = vh - safeBottom - pipH + dragOffset.y;
+      } else if (snapCorner === 'bl') {
+        currentX = 24 + dragOffset.x;
+        currentY = vh - safeBottom - pipH + dragOffset.y;
+      } else if (snapCorner === 'tr') {
+        currentX = vw - 24 - pipW + dragOffset.x;
+        currentY = safeTop + dragOffset.y;
+      } else if (snapCorner === 'tl') {
+        currentX = 24 + dragOffset.x;
+        currentY = safeTop + dragOffset.y;
+      }
+      
+      const isLeft = currentX + pipW / 2 < vw / 2;
+      const isTop = currentY + pipH / 2 < vh / 2;
       const finalCorner = isTop ? (isLeft ? 'tl' : 'tr') : (isLeft ? 'bl' : 'br');
+      
       setSnapCorner(finalCorner);
-      localStorage.setItem('kaboom_pip_corner', finalCorner);
+      localStorage.setItem('pipPosition', finalCorner);
       setDragOffset({ x: 0, y: 0 });
     };
 
@@ -562,11 +589,14 @@ export function ChatPage() {
       aria-label="Video chat"
     >
       <MetaManager page="chat" />
+      <TipEngine />
       {/* ── LAYER 1: Remote video — z-index: var(--z-video) ── */}
       {isMobile ? (
         <GestureLayer
           onSwipeLeft={handleNext}
+          onSwipeDown={handleLeave}
           onDoubleTap={handleLike}
+          onLongPress={() => setShowPreferenceModal(true)}
           disabled={chatState.isChatOpen || isDragging}
         >
           <div className="video-viewport opacity-100 scale-100 translate-x-0">
@@ -824,21 +854,70 @@ export function ChatPage() {
         </div>
       )}
 
-      {/* ── FLOATING REACTION COLUMN ─────────────────────── */}
+      {/* ── FLOATING REACTION HUB ─────────────────────────── */}
       {isConnected && (
         <div 
-          className="absolute right-6 bottom-36 flex flex-col gap-2.5" 
-          style={{ zIndex: 'var(--z-controls)' as any }}
+          className="absolute right-5 flex items-center justify-center select-none"
+          style={{ 
+            zIndex: 'var(--z-controls)' as any,
+            bottom: isMobile ? 'calc(env(safe-area-inset-bottom) + 400px)' : '360px'
+          }}
         >
-          {['🔥', '😂', '🎉', '👍', '😮'].map((emoji) => (
-            <button
-              key={emoji}
-              onClick={() => handleSendReaction(emoji)}
-              className="w-11 h-11 rounded-full bg-black/40 backdrop-blur-md border border-white/5 hover:bg-white/10 hover:scale-115 active:scale-90 transition-all flex items-center justify-center text-lg shadow-lg hover:shadow-amber-500/10 pointer-events-auto"
-            >
-              {emoji}
-            </button>
-          ))}
+          {/* Radial Expansion Emojis */}
+          {['🔥', '😂', '🎉', '😍', '👍', '😮'].map((emoji, idx) => {
+            const N = 6;
+            const startAngle = 100;
+            const endAngle = 260;
+            const angleStep = (endAngle - startAngle) / (N - 1);
+            const theta = startAngle + idx * angleStep;
+            const rad = (theta * Math.PI) / 180;
+            const distance = 84; // Radius of menu arc
+            
+            const x = Math.cos(rad) * distance;
+            const y = -Math.sin(rad) * distance;
+
+            return (
+              <button
+                key={emoji}
+                onClick={() => {
+                  handleSendReaction(emoji);
+                  setShowReactionHub(false);
+                }}
+                className={cn(
+                  "absolute w-12 h-12 rounded-full bg-black/60 backdrop-blur-xl border border-white/10 flex items-center justify-center text-xl shadow-lg transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] cursor-pointer hover:scale-125 active:scale-90 hover:bg-black/80 hover:border-amber-400/40",
+                  showReactionHub 
+                    ? "opacity-100 scale-100 pointer-events-auto" 
+                    : "opacity-0 scale-0 pointer-events-none"
+                )}
+                style={{
+                  transform: showReactionHub ? `translate(${x}px, ${y}px)` : 'translate(0px, 0px)',
+                  transitionDelay: showReactionHub ? `${idx * 30}ms` : '0ms'
+                }}
+              >
+                {emoji}
+              </button>
+            );
+          })}
+
+          {/* Main Toggle Reaction Hub Button */}
+          <button
+            onClick={() => {
+              playTapSound();
+              setShowReactionHub(!showReactionHub);
+            }}
+            className={cn(
+              "w-16 h-16 rounded-full flex items-center justify-center text-2xl shadow-xl transition-all duration-300 active:scale-95 bg-black/40 backdrop-blur-xl border border-white/10",
+              showReactionHub 
+                ? "border-amber-400 shadow-amber-500/20 scale-105" 
+                : "shadow-black/40 hover:scale-105 hover:bg-white/10"
+            )}
+            style={{
+              boxShadow: '0 0 24px rgba(245, 158, 11, 0.15), inset 0 0 12px rgba(255, 255, 255, 0.05)'
+            }}
+            aria-label="Toggle emoji reactions panel"
+          >
+            😊
+          </button>
         </div>
       )}
 
