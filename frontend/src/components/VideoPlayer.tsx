@@ -8,6 +8,8 @@ interface VideoPlayerProps {
   className?: string;
   label?: string;
   placeholder?: string;
+  fullscreen?: boolean;
+  onAspectRatioChange?: (ratio: number) => void;
 }
 
 export function VideoPlayer({
@@ -17,17 +19,49 @@ export function VideoPlayer({
   className,
   label,
   placeholder = 'Waiting for video...',
+  fullscreen = false,
+  onAspectRatioChange,
 }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
+
+  // Keep latest aspect ratio callback ref to avoid resetting effects
+  const onAspectRatioChangeRef = useRef(onAspectRatioChange);
+  useEffect(() => {
+    onAspectRatioChangeRef.current = onAspectRatioChange;
+  }, [onAspectRatioChange]);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    const handleResize = () => {
+      if (video.videoWidth && video.videoHeight) {
+        const ratio = video.videoWidth / video.videoHeight;
+        onAspectRatioChangeRef.current?.(ratio);
+      }
+    };
+
+    video.addEventListener('resize', handleResize);
+    video.addEventListener('loadedmetadata', handleResize);
+
+    // Run immediately to capture dimensions of already loaded streams
+    if (video.videoWidth && video.videoHeight) {
+      handleResize();
+    }
+
+    return () => {
+      video.removeEventListener('resize', handleResize);
+      video.removeEventListener('loadedmetadata', handleResize);
+    };
+  }, [stream]);
 
   useEffect(() => {
     const video = videoRef.current;
     if (video && stream) {
       video.srcObject = stream;
       
-      // Phase 3 fix: Explicitly call play() to trigger stream presentation.
-      // If Safari iOS blocks audio autoplay on remote stream, register a one-time click/touchstart 
-      // gesture fallback to resume playback on first user touch.
+      // Explicitly call play() to trigger stream presentation.
+      // Register interaction fallbacks for autoplay policies on iOS/Safari.
       video.play().catch((error) => {
         console.warn('[VideoPlayer] Autoplay was prevented by browser security policy:', error);
         
@@ -44,14 +78,24 @@ export function VideoPlayer({
   }, [stream]);
 
   return (
-    <div className={cn('relative overflow-hidden bg-black/50', className)}>
+    <div className={cn('relative overflow-hidden bg-black/50 w-full h-full flex items-center justify-center', className)}>
       {stream ? (
         <video
           ref={videoRef}
           autoPlay
           playsInline
           muted={muted}
-          className={cn('w-full h-full object-cover', mirrored && 'scale-x-[-1]')}
+          className={cn(
+            'transition-all duration-300 w-full h-full',
+            fullscreen ? 'object-cover' : 'object-contain',
+            mirrored && 'scale-x-[-1]'
+          )}
+          style={{
+            // Hardware acceleration hints for high quality scaling without flickering
+            willChange: 'transform',
+            transform: mirrored ? 'scaleX(-1) translate3d(0,0,0)' : 'translate3d(0,0,0)',
+            backfaceVisibility: 'hidden',
+          }}
         />
       ) : (
         <div className="absolute inset-0 flex items-center justify-center">

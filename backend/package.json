@@ -25,11 +25,13 @@
     "express-rate-limit": "^7.5.0",
     "helmet": "^8.0.0",
     "indiatv": "file:..",
+    "pg": "^8.22.0",
     "socket.io": "^4.8.1",
     "typescript": "^5.8.2",
     "uuid": "^11.1.0"
   },
   "devDependencies": {
+    "@types/pg": "^8.20.0",
     "tsx": "^4.19.3"
   }
 }

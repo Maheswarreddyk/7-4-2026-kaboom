@@ -119,6 +119,165 @@ export function ChatPage() {
     sendReaction,
   } = useVideoChat(session?.sessionId ?? null, session?.sessionToken ?? null, triggerReaction);
 
+  const isConnected = chatState.status === 'CONNECTED';
+  const isSearching = [
+    'REQUESTING_MEDIA', 'MEDIA_READY', 'CONNECTING_REALTIME', 
+    'SEARCHING', 'REQUEUEING', 'PARTNER_LEFT', 'MATCH_FOUND', 'READY', 'NEGOTIATING', 'ICE_CONNECTING'
+  ].includes(chatState.status);
+  const [remoteAspectRatio, setRemoteAspectRatio] = useState<number | null>(null);
+  const [localAspectRatio, setLocalAspectRatio] = useState<number | null>(null);
+
+  const mainAspectRatio = isPlacementsSwapped ? localAspectRatio : remoteAspectRatio;
+  const pipAspectRatio = isPlacementsSwapped ? remoteAspectRatio : localAspectRatio;
+
+  useEffect(() => {
+    if (!isConnected) {
+      setRemoteAspectRatio(null);
+    }
+  }, [isConnected]);
+
+  const handleRemoteAspectRatioChange = useCallback((ratio: number) => {
+    setRemoteAspectRatio(ratio);
+  }, []);
+
+  const handleLocalAspectRatioChange = useCallback((ratio: number) => {
+    setLocalAspectRatio(ratio);
+  }, []);
+
+  const getRemoteVideoStyle = useCallback((): React.CSSProperties => {
+    const ratio = mainAspectRatio;
+    if (!isConnected || !ratio) {
+      return { width: '100%', height: '100%', left: 0, top: 0, transform: 'none', borderRadius: 0 };
+    }
+    
+    const baseStyles: React.CSSProperties = {
+      position: 'absolute',
+      left: '50%',
+      top: '50%',
+      transform: 'translate(-50%, -50%)',
+      borderRadius: '24px',
+      border: '1.5px solid rgba(255, 255, 255, 0.08)',
+      boxShadow: '0 24px 64px rgba(0, 0, 0, 0.9)',
+      overflow: 'hidden',
+      transition: 'all 0.5s cubic-bezier(0.16, 1, 0.3, 1)'
+    };
+
+    if (isMobile) {
+      if (ratio >= 1) {
+        return {
+          ...baseStyles,
+          width: '90vw',
+          height: `calc(90vw / ${ratio})`,
+          maxWidth: '100%',
+          maxHeight: '80vh'
+        };
+      }
+      return { width: '100%', height: '100%', left: 0, top: 0, transform: 'none', borderRadius: 0 };
+    } else {
+      if (ratio < 1) {
+        return {
+          ...baseStyles,
+          height: '80vh',
+          width: `calc(80vh * ${ratio})`,
+          maxHeight: '90%',
+          maxWidth: '90%'
+        };
+      }
+      return {
+        ...baseStyles,
+        width: '80vw',
+        height: `calc(80vw / ${ratio})`,
+        maxHeight: '80vh',
+        maxWidth: `calc(80vh * ${ratio})`
+      };
+    }
+  }, [isConnected, isMobile, mainAspectRatio]);
+
+  const renderVideoAndOverlays = useCallback(() => {
+    return (
+      <div className="w-full h-full relative">
+        <VideoPlayer
+          stream={isPlacementsSwapped ? localStream : remoteStream}
+          mirrored={isPlacementsSwapped}
+          muted={isPlacementsSwapped}
+          fullscreen={chatState.isFullscreen}
+          onAspectRatioChange={isPlacementsSwapped ? handleLocalAspectRatioChange : handleRemoteAspectRatioChange}
+          placeholder={isSearching ? 'Looking for a partner...' : 'Partner video will appear here'}
+        />
+
+        {/* Partner Card overlay inside video borders */}
+        {isConnected && chatState.partnerProfile && (
+          <div 
+            className="absolute z-20 flex flex-col gap-1.5 p-3 rounded-2xl border border-white/10 bg-black/40 backdrop-blur-xl max-w-[200px] shadow-2xl animate-fade-in pointer-events-none select-none"
+            style={{
+              left: '16px',
+              top: '16px',
+            }}
+          >
+            <div className="flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="text-xs font-black text-stone-100 tracking-tight/90 line-clamp-1">
+                {chatState.partnerProfile.displayName || 'Guest'}
+              </span>
+            </div>
+            {chatState.partnerProfile.bio && (
+              <p className="text-[10px] text-stone-300 font-medium leading-relaxed italic line-clamp-2">
+                "{chatState.partnerProfile.bio}"
+              </p>
+            )}
+            <div className="flex flex-wrap gap-1">
+              {chatState.partnerProfile.matchAttributes?.university?.[0] && (
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-white/10 text-[8px] font-bold text-white/90">
+                  🎓 {chatState.partnerProfile.matchAttributes.university[0].slice(0, 15)}...
+                </span>
+              )}
+              {chatState.partnerProfile.matchAttributes?.city?.[0] && (
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-white/10 text-[8px] font-bold text-white/90">
+                  📍 {chatState.partnerProfile.matchAttributes.city[0]}
+                </span>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Connection Quality widget inside video borders */}
+        {isConnected && chatState.connectionQuality && (
+          <div
+            className="absolute right-4 flex items-center gap-1.5 px-3 py-1.5 rounded-full border bg-black/45 backdrop-blur-md text-[10px] font-extrabold uppercase tracking-wider"
+            style={{
+              top: '16px',
+              zIndex: 20,
+              borderColor: 
+                chatState.connectionQuality === 'excellent' ? 'rgba(16,185,129,0.2)' :
+                chatState.connectionQuality === 'good' ? 'rgba(245,158,11,0.2)' : 'rgba(239,68,68,0.2)',
+              color:
+                chatState.connectionQuality === 'excellent' ? '#10b981' :
+                chatState.connectionQuality === 'good' ? '#f59e0b' : '#ef4444'
+            }}
+          >
+            <span className={cn(
+              "w-1.5 h-1.5 rounded-full",
+              chatState.connectionQuality === 'excellent' ? "bg-emerald-500 animate-pulse" :
+              chatState.connectionQuality === 'good' ? "bg-amber-500 animate-pulse" : "bg-red-500 animate-ping"
+            )} />
+            <span>Net: {chatState.connectionQuality}</span>
+          </div>
+        )}
+      </div>
+    );
+  }, [
+    isConnected,
+    isPlacementsSwapped,
+    localStream,
+    remoteStream,
+    chatState.partnerProfile,
+    chatState.connectionQuality,
+    chatState.isFullscreen,
+    isSearching,
+    handleLocalAspectRatioChange,
+    handleRemoteAspectRatioChange
+  ]);
+
   const handleLike = useCallback(async () => {
     triggerReaction('❤️');
     sendReaction('❤️');
@@ -309,8 +468,10 @@ export function ChatPage() {
       
       const vw = window.innerWidth;
       const vh = window.innerHeight;
-      const pipW = (vw < 640 ? vw * 0.3 : 220) * pipScale;
-      const pipH = (vw < 640 ? vw * 0.3 * 1.33 : 160) * pipScale; // aspect ratio 1.33 for FaceTime layout
+      const baseWidth = vw < 640 ? vw * 0.28 : 200;
+      const pipRatio = pipAspectRatio || 1.33;
+      const pipW = baseWidth * pipScale;
+      const pipH = (baseWidth / pipRatio) * pipScale;
       
       // Calculate absolute center position relative to active corner
       let currentX = 0;
@@ -619,11 +780,6 @@ export function ChatPage() {
     );
   }
 
-  const isSearching = [
-    'REQUESTING_MEDIA', 'MEDIA_READY', 'CONNECTING_REALTIME', 
-    'SEARCHING', 'REQUEUEING', 'PARTNER_LEFT', 'MATCH_FOUND', 'READY', 'NEGOTIATING', 'ICE_CONNECTING'
-  ].includes(chatState.status);
-  const isConnected = chatState.status === 'CONNECTED';
 
   return (
     /* Root: fills entire 100dvh viewport (set by layout-immersive on parent) */
@@ -637,7 +793,7 @@ export function ChatPage() {
     >
       <MetaManager page="chat" />
       <TipEngine />
-      {/* ── LAYER 1: Remote video — z-index: var(--z-video) ── */}
+       {/* ── LAYER 1: Remote video — z-index: var(--z-video) ── */}
       {isMobile ? (
         <GestureLayer
           onSwipeLeft={handleNext}
@@ -646,14 +802,11 @@ export function ChatPage() {
           onLongPress={() => setShowPreferenceModal(true)}
           disabled={chatState.isChatOpen || isDragging}
         >
-          <div className="video-viewport opacity-100 scale-100 translate-x-0">
-            <VideoPlayer
-              stream={isPlacementsSwapped ? localStream : remoteStream}
-              mirrored={isPlacementsSwapped}
-              muted={isPlacementsSwapped}
-              className="w-full h-full object-cover"
-              placeholder={isSearching ? 'Looking for a partner...' : 'Partner video will appear here'}
-            />
+          <div 
+            className="video-viewport opacity-100 scale-100 translate-x-0"
+            style={getRemoteVideoStyle()}
+          >
+            {renderVideoAndOverlays()}
           </div>
         </GestureLayer>
       ) : (
@@ -662,54 +815,10 @@ export function ChatPage() {
             "video-viewport transition-all duration-[750ms] ease-[cubic-bezier(0.16,1,0.3,1)]",
             isConnected ? "opacity-100 scale-100 translate-x-0" : "opacity-0 scale-95 -translate-x-10"
           )}
+          style={getRemoteVideoStyle()}
           onDoubleClick={handleLike}
         >
-          <VideoPlayer
-            stream={isPlacementsSwapped ? localStream : remoteStream}
-            mirrored={isPlacementsSwapped}
-            muted={isPlacementsSwapped}
-            className="w-full h-full object-cover"
-            placeholder={isSearching ? 'Looking for a partner...' : 'Partner video will appear here'}
-          />
-        </div>
-      )}
-
-      {isConnected && chatState.partnerProfile && (
-        <div 
-          className="absolute z-20 flex flex-col gap-1.5 p-3 rounded-2xl border border-white/10 bg-black/40 backdrop-blur-xl max-w-[240px] shadow-2xl animate-fade-in pointer-events-none select-none"
-          style={{
-            left: isMobile ? '16px' : '24px',
-            top: isMobile ? '96px' : '108px',
-          }}
-        >
-          <div className="flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            <span className="text-xs font-black text-stone-100 tracking-tight">
-              {chatState.partnerProfile.displayName || 'Guest'}
-            </span>
-          </div>
-          {chatState.partnerProfile.bio && (
-            <p className="text-[10px] text-stone-300 font-medium leading-relaxed italic line-clamp-2">
-              "{chatState.partnerProfile.bio}"
-            </p>
-          )}
-          <div className="flex flex-wrap gap-1">
-            {chatState.partnerProfile.matchAttributes?.university?.[0] && (
-              <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-white/10 text-[8px] font-bold text-white/90">
-                🎓 {chatState.partnerProfile.matchAttributes.university[0].slice(0, 18)}...
-              </span>
-            )}
-            {chatState.partnerProfile.matchAttributes?.city?.[0] && (
-              <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-white/10 text-[8px] font-bold text-white/90">
-                📍 {chatState.partnerProfile.matchAttributes.city[0]}
-              </span>
-            )}
-            {chatState.partnerProfile.matchAttributes?.country?.[0] && (
-              <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-white/10 text-[8px] font-bold text-white/90">
-                🌎 {chatState.partnerProfile.matchAttributes.country[0]}
-              </span>
-            )}
-          </div>
+          {renderVideoAndOverlays()}
         </div>
       )}
 
@@ -763,29 +872,6 @@ export function ChatPage() {
         </div>
       )}
 
-      {/* ── DESKTOP CONNECTION HEALTH WIDGET (top-right) ── */}
-      {!isMobile && isConnected && chatState.connectionQuality && (
-        <div
-          className="absolute right-4 flex items-center gap-1.5 px-3 py-1.5 rounded-full border bg-black/45 backdrop-blur-md text-[10px] font-extrabold uppercase tracking-wider"
-          style={{
-            top: 'calc(var(--header-h) + 12px)',
-            zIndex: 'var(--z-controls)' as any,
-            borderColor: 
-              chatState.connectionQuality === 'excellent' ? 'rgba(16,185,129,0.2)' :
-              chatState.connectionQuality === 'good' ? 'rgba(245,158,11,0.2)' : 'rgba(239,68,68,0.2)',
-            color:
-              chatState.connectionQuality === 'excellent' ? '#10b981' :
-              chatState.connectionQuality === 'good' ? '#f59e0b' : '#ef4444'
-          }}
-        >
-          <span className={cn(
-            "w-1.5 h-1.5 rounded-full",
-            chatState.connectionQuality === 'excellent' ? "bg-emerald-500 animate-pulse" :
-            chatState.connectionQuality === 'good' ? "bg-amber-500 animate-pulse" : "bg-red-500 animate-ping"
-          )} />
-          <span>Net: {chatState.connectionQuality}</span>
-        </div>
-      )}
 
       {/* ── COACH MARK (hint) — always below header ────────── */}
       {activeHint && !hintDismissed && (
@@ -811,6 +897,8 @@ export function ChatPage() {
       <div
         className={cn('self-preview transition-transform', isDragging && 'shadow-2xl border-amber-500/30')}
         style={{
+          width: isMobile ? '28vw' : '200px',
+          height: isMobile ? `calc(28vw / ${pipAspectRatio || 1.33})` : `calc(200px / ${pipAspectRatio || 1.33})`,
           transform: `translate(${dragOffset.x}px, ${dragOffset.y}px) scale(${isDragging ? pipScale * 1.03 : pipScale})`,
           bottom: undefined,
           right: undefined,
@@ -828,7 +916,8 @@ export function ChatPage() {
           stream={isPlacementsSwapped ? remoteStream : localStream}
           muted={!isPlacementsSwapped}
           mirrored={!isPlacementsSwapped}
-          className="w-full h-full object-cover pointer-events-none"
+          onAspectRatioChange={isPlacementsSwapped ? handleRemoteAspectRatioChange : handleLocalAspectRatioChange}
+          className="w-full h-full pointer-events-none"
           label={isPlacementsSwapped ? "Partner" : "You"}
         />
       </div>
