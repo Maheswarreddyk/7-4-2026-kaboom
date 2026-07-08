@@ -126,6 +126,11 @@
     z-index: var(--z-video);
     background: #020202;
   }
+  .video-viewport video {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+  }
 
   /* =====================================================
      GLASSMORPHISM & depth (visionOS Card style)
@@ -221,8 +226,8 @@
   @media (max-width: 640px) {
     .self-preview {
       width: 30vw;
-      height: calc(30vw * 0.73);
-      border-radius: 14px;
+      height: calc(30vw * 1.33);
+      border-radius: 18px;
     }
   }
 

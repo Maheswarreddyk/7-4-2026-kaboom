@@ -16,6 +16,10 @@ import { apiService } from '../services/api.js';
 import type { ReportReason } from '../types/index.js';
 import { formatDuration } from '../utils/index.js';
 import { cn } from '../utils/index.js';
+import { MobileHeader } from '../components/MobileHeader.js';
+import { BottomToolbar } from '../components/BottomToolbar.js';
+import { RightActionDock } from '../components/RightActionDock.js';
+import { GestureLayer } from '../components/GestureLayer.js';
 import { hintEngine } from '../services/HintEngine.js';
 import { TutorialOverlay } from '../components/TutorialOverlay.js';
 
@@ -37,6 +41,16 @@ export function ChatPage() {
   const [showTutorial, setShowTutorial] = useState(() => {
     return localStorage.getItem('kaboom_tutorial_dismissed') !== 'true';
   });
+
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 640);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 640);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   useEffect(() => {
     const activeTheme = localStorage.getItem('kaboom_theme') || 'ember';
@@ -547,21 +561,39 @@ export function ChatPage() {
       aria-label="Video chat"
     >
       {/* ── LAYER 1: Remote video — z-index: var(--z-video) ── */}
-      <div 
-        className={cn(
-          "video-viewport transition-all duration-[750ms] ease-[cubic-bezier(0.16,1,0.3,1)]",
-          isConnected ? "opacity-100 scale-100 translate-x-0" : "opacity-0 scale-95 -translate-x-10"
-        )}
-        onDoubleClick={handleLike}
-      >
-        <VideoPlayer
-          stream={isPlacementsSwapped ? localStream : remoteStream}
-          mirrored={isPlacementsSwapped}
-          muted={isPlacementsSwapped}
-          className="w-full h-full object-cover"
-          placeholder={isSearching ? 'Looking for a partner...' : 'Partner video will appear here'}
-        />
-      </div>
+      {isMobile ? (
+        <GestureLayer
+          onSwipeLeft={handleNext}
+          onDoubleTap={handleLike}
+          disabled={chatState.isChatOpen || isDragging}
+        >
+          <div className="video-viewport opacity-100 scale-100 translate-x-0">
+            <VideoPlayer
+              stream={isPlacementsSwapped ? localStream : remoteStream}
+              mirrored={isPlacementsSwapped}
+              muted={isPlacementsSwapped}
+              className="w-full h-full object-cover"
+              placeholder={isSearching ? 'Looking for a partner...' : 'Partner video will appear here'}
+            />
+          </div>
+        </GestureLayer>
+      ) : (
+        <div 
+          className={cn(
+            "video-viewport transition-all duration-[750ms] ease-[cubic-bezier(0.16,1,0.3,1)]",
+            isConnected ? "opacity-100 scale-100 translate-x-0" : "opacity-0 scale-95 -translate-x-10"
+          )}
+          onDoubleClick={handleLike}
+        >
+          <VideoPlayer
+            stream={isPlacementsSwapped ? localStream : remoteStream}
+            mirrored={isPlacementsSwapped}
+            muted={isPlacementsSwapped}
+            className="w-full h-full object-cover"
+            placeholder={isSearching ? 'Looking for a partner...' : 'Partner video will appear here'}
+          />
+        </div>
+      )}
 
       {/* ── LAYER 2: Gradient overlay ─────────────────────── */}
       <div
@@ -582,24 +614,35 @@ export function ChatPage() {
         </div>
       )}
 
-      {/* ── STATUS BAR (top-left, below header) ──────────── */}
-      <div
-        className="absolute left-4 flex items-center gap-3"
-        style={{
-          top: 'calc(var(--header-h) + 12px)',
-          zIndex: 'var(--z-controls)' as any,
-        }}
-      >
-        <ConnectionStatusBadge status={chatState.connectionStatus} />
-        {isConnected && (
-          <span className="px-3 py-1 bg-black/40 backdrop-blur-md rounded-full border border-white/10 text-sm text-white/80 font-mono tracking-wider shadow-lg">
-            {formatDuration(elapsedSeconds)}
-          </span>
-        )}
-      </div>
+      {/* ── MOBILE HEADER (top layout) ── */}
+      {isMobile ? (
+        <MobileHeader
+          elapsedSeconds={elapsedSeconds}
+          connectionStatus={chatState.connectionStatus}
+          connectionQuality={chatState.connectionQuality ?? null}
+          isConnected={isConnected}
+          onLeave={handleLeave}
+        />
+      ) : (
+        /* ── DESKTOP STATUS BAR (top-left, below header) ── */
+        <div
+          className="absolute left-4 flex items-center gap-3"
+          style={{
+            top: 'calc(var(--header-h) + 12px)',
+            zIndex: 'var(--z-controls)' as any,
+          }}
+        >
+          <ConnectionStatusBadge status={chatState.connectionStatus} />
+          {isConnected && (
+            <span className="px-3 py-1 bg-black/40 backdrop-blur-md rounded-full border border-white/10 text-sm text-white/80 font-mono tracking-wider shadow-lg">
+              {formatDuration(elapsedSeconds)}
+            </span>
+          )}
+        </div>
+      )}
 
-      {/* ── CONNECTION HEALTH WIDGET (top-right) ─────────── */}
-      {isConnected && chatState.connectionQuality && (
+      {/* ── DESKTOP CONNECTION HEALTH WIDGET (top-right) ── */}
+      {!isMobile && isConnected && chatState.connectionQuality && (
         <div
           className="absolute right-4 flex items-center gap-1.5 px-3 py-1.5 rounded-full border bg-black/45 backdrop-blur-md text-[10px] font-extrabold uppercase tracking-wider"
           style={{
@@ -626,6 +669,9 @@ export function ChatPage() {
       {activeHint && !hintDismissed && (
         <div
           className="coach-mark coach-mark--center cursor-pointer hover:bg-white/10 transition-colors"
+          style={{
+            top: isMobile ? 'calc(var(--header-h) + 54px)' : 'calc(var(--header-h) + 12px)',
+          }}
           onClick={handleDismissHint}
           role="status"
           aria-live="polite"
@@ -646,10 +692,10 @@ export function ChatPage() {
           transform: `translate(${dragOffset.x}px, ${dragOffset.y}px) scale(${isDragging ? pipScale * 1.03 : pipScale})`,
           bottom: undefined,
           right: undefined,
-          ...(snapCorner === 'br' ? { bottom: '100px', right: '24px' } : {}),
-          ...(snapCorner === 'bl' ? { bottom: '100px', left: '24px'  } : {}),
-          ...(snapCorner === 'tr' ? { top: 'calc(var(--header-h) + 16px)', right: '24px' } : {}),
-          ...(snapCorner === 'tl' ? { top: 'calc(var(--header-h) + 16px)', left: '24px' } : {}),
+          ...(snapCorner === 'br' ? { bottom: isMobile ? '198px' : '100px', right: '24px' } : {}),
+          ...(snapCorner === 'bl' ? { bottom: isMobile ? '198px' : '100px', left: '24px'  } : {}),
+          ...(snapCorner === 'tr' ? { top: isMobile ? 'calc(var(--header-h) + 54px)' : 'calc(var(--header-h) + 16px)', right: '24px' } : {}),
+          ...(snapCorner === 'tl' ? { top: isMobile ? 'calc(var(--header-h) + 54px)' : 'calc(var(--header-h) + 16px)', left: '24px' } : {}),
           zIndex: 'var(--z-controls)' as any,
         }}
         onMouseDown={handleMouseDown}
@@ -666,28 +712,51 @@ export function ChatPage() {
       </div>
 
       {/* ── CONTROLS DOCK ─────────────────────────────────── */}
-      <div
-        className={cn('controls-dock', !controlsVisible && 'controls-dock--hidden')}
-      >
-        <ChatControls
-          isMuted={chatState.isMuted}
-          isCameraOff={chatState.isCameraOff}
-          isFullscreen={chatState.isFullscreen}
-          onToggleMute={toggleMute}
-          onToggleCamera={toggleCamera}
-          onNext={handleNext}
-          onReport={() => setShowReportModal(true)}
-          onLeave={handleLeave}
-          onToggleFullscreen={toggleFullscreen}
-          disabled={isSearching}
-          isChatOpen={chatState.isChatOpen}
-          onToggleChat={() => setChatOpen(!chatState.isChatOpen)}
-          liked={chatState.liked}
-          onLike={handleLike}
-          onOpenPreferences={() => setShowPreferenceModal(true)}
-          unreadCount={chatState.unreadCount}
-        />
-      </div>
+      {isMobile ? (
+        <div className={cn("transition-all duration-300 pointer-events-none", !controlsVisible && "opacity-0 scale-95")}>
+          <RightActionDock
+            onNext={handleNext}
+            onToggleChat={() => setChatOpen(!chatState.isChatOpen)}
+            onOpenPreferences={() => setShowPreferenceModal(true)}
+            onReport={() => setShowReportModal(true)}
+            unreadCount={chatState.unreadCount}
+            isChatOpen={chatState.isChatOpen || false}
+            disabled={isSearching}
+          />
+          <BottomToolbar
+            isMuted={chatState.isMuted}
+            isCameraOff={chatState.isCameraOff}
+            liked={chatState.liked || false}
+            onToggleMute={toggleMute}
+            onToggleCamera={toggleCamera}
+            onLike={handleLike}
+            disabled={isSearching}
+          />
+        </div>
+      ) : (
+        <div
+          className={cn('controls-dock', !controlsVisible && 'controls-dock--hidden')}
+        >
+          <ChatControls
+            isMuted={chatState.isMuted}
+            isCameraOff={chatState.isCameraOff}
+            isFullscreen={chatState.isFullscreen}
+            onToggleMute={toggleMute}
+            onToggleCamera={toggleCamera}
+            onNext={handleNext}
+            onReport={() => setShowReportModal(true)}
+            onLeave={handleLeave}
+            onToggleFullscreen={toggleFullscreen}
+            disabled={isSearching}
+            isChatOpen={chatState.isChatOpen}
+            onToggleChat={() => setChatOpen(!chatState.isChatOpen)}
+            liked={chatState.liked}
+            onLike={handleLike}
+            onOpenPreferences={() => setShowPreferenceModal(true)}
+            unreadCount={chatState.unreadCount}
+          />
+        </div>
+      )}
 
       {/* ── FLOATING CHAT OVERLAY ─────────────────────────── */}
       <TemporaryChat

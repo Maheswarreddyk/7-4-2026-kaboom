@@ -159,12 +159,40 @@ export function TemporaryChat({
       {/* Slide up sheet */}
       <div 
         className={cn(
-          "w-full bg-stone-950/90 backdrop-blur-2xl border-t border-white/10 rounded-t-[24px] shadow-[0_-16px_48px_rgba(0,0,0,0.8)] flex flex-col transition-all duration-350 ease-[cubic-bezier(0.16,1,0.3,1)] pointer-events-auto",
-          isExpandedFull ? "h-[85vh] sm:h-[80vh]" : "h-[50vh] sm:h-[45vh]"
+          "w-full bg-stone-950/95 backdrop-blur-2xl border-t border-white/10 rounded-t-[24px] shadow-[0_-16px_48px_rgba(0,0,0,0.8)] flex flex-col transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] pointer-events-auto",
+          isExpandedFull ? "h-[88vh]" : "h-[70vh] sm:h-[45vh]"
         )}
       >
         {/* Drag sheet handle */}
         <div 
+          onTouchStart={(e) => {
+            const touch = e.touches[0];
+            (e.currentTarget as any)._startY = touch.clientY;
+            (e.currentTarget as any)._isSwiping = true;
+          }}
+          onTouchMove={(e) => {
+            const currentY = e.touches[0].clientY;
+            const startY = (e.currentTarget as any)._startY || 0;
+            const diffY = currentY - startY;
+            if (diffY > 0) {
+              const sheetEl = e.currentTarget.parentElement;
+              if (sheetEl) sheetEl.style.transform = `translateY(${diffY}px)`;
+            }
+          }}
+          onTouchEnd={(e) => {
+            const startY = (e.currentTarget as any)._startY || 0;
+            const currentY = e.changedTouches[0].clientY;
+            const diffY = currentY - startY;
+            const sheetEl = e.currentTarget.parentElement;
+            if (sheetEl) sheetEl.style.transform = '';
+            
+            if (diffY > 80) {
+              onClose();
+            } else if (diffY > 20) {
+              // Toggle expansion instead
+              setIsExpandedFull(false);
+            }
+          }}
           onClick={() => setIsExpandedFull(!isExpandedFull)}
           className="w-full py-2.5 cursor-pointer flex justify-center hover:bg-white/[0.02]"
         >
