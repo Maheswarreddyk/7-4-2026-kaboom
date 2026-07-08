@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useToast } from '../contexts/ToastContext.js';
+import { useSession } from '../contexts/SessionContext.js';
 import { apiService } from '../services/api.js';
 import {
   connectRealtime,
@@ -16,6 +17,8 @@ import {
   sendAnswerAck,
   sendReaction,
   sendSeenStatus,
+  sendSkipPending,
+  sendSkipCancelled,
 } from '../services/realtime.js';
 import { webrtcManager } from '../webrtc/index.js';
 import type { ChatState, ConnectionStatus, SessionStatus } from '../types/index.js';
@@ -33,6 +36,7 @@ const initialChatState: ChatState = {
   matchStartTime: null,
   queuePosition: 0,
   connectionQuality: null,
+  partnerSkipPending: false,
 };
 
 export function useVideoChat(
@@ -41,6 +45,7 @@ export function useVideoChat(
   onReaction?: (emoji: string) => void
 ) {
   const { showToast } = useToast();
+  const { updateSessionLifecycleState } = useSession();
   const [chatState, setChatState] = useState<ChatState>(initialChatState);
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
@@ -51,6 +56,7 @@ export function useVideoChat(
     isQueuePausedRef.current = paused;
   }, []);
   const partnerSessionIdRef = useRef<string | null>(null);
+  const matchIdRef = useRef<string | null>(null);
   const sessionIdRef = useRef<string | null>(null);
   const sessionTokenRef = useRef<string | null>(null);
   const callbacksRef = useRef<ReturnType<typeof buildCallbacks> | null>(null);
@@ -101,6 +107,7 @@ export function useVideoChat(
   const signalingStateRef = useRef<SessionStatus>('IDLE');
   const triggerAutoRejoinRef = useRef<() => Promise<void>>(async () => {});
   const webrtcTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const partnerReconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const clearWebRTCTimeout = useCallback(() => {
     if (webrtcTimeoutRef.current) {
@@ -133,7 +140,37 @@ export function useVideoChat(
     if (state === 'CONNECTED' || state === 'IDLE' || state === 'ENDED') {
       clearWebRTCTimeout();
     }
-  }, [clearWebRTCTimeout]);
+
+    // Session Lifecycle Manager updates
+    let lifecycleState: 'CONNECTED' | 'QUEUE' | 'IDLE' | 'LEAVING' | 'DESTROYED' = 'IDLE';
+    if (state === 'CONNECTED') {
+      lifecycleState = 'CONNECTED';
+    } else if ([
+      'REQUESTING_MEDIA', 'MEDIA_READY', 'CONNECTING_REALTIME', 
+      'SEARCHING', 'REQUEUEING', 'MATCH_FOUND', 'READY', 'NEGOTIATING', 'ICE_CONNECTING'
+    ].includes(state)) {
+      lifecycleState = 'QUEUE';
+    } else if (state === 'ENDED' || state === 'PARTNER_LEFT') {
+      lifecycleState = 'LEAVING';
+    } else {
+      lifecycleState = 'IDLE';
+    }
+    updateSessionLifecycleState(lifecycleState, matchIdRef.current, partnerSessionIdRef.current);
+  }, [clearWebRTCTimeout, updateSessionLifecycleState]);
+
+  const executePartnerLeftTeardown = useCallback(() => {
+    setSignalingState('PARTNER_LEFT');
+    setRemoteStream(null);
+    webrtcManager.resetConnection();
+    lastProcessedOfferSdpRef.current = null;
+    lastProcessedAnswerSdpRef.current = null;
+    
+    showToast('info', 'Partner left. Finding someone new...');
+    // Wait 2.5 seconds to show the left animation overlay, then automatically rejoin the queue
+    setTimeout(() => {
+      void triggerAutoRejoinRef.current();
+    }, 2500);
+  }, [showToast, setSignalingState]);
 
   sessionIdRef.current = sessionId;
   sessionTokenRef.current = sessionToken;
@@ -176,6 +213,10 @@ export function useVideoChat(
   const setupWebRTC = useCallback(async () => {
     webrtcManager.setCallbacks({
       onRemoteStream: (stream) => {
+        if (partnerReconnectTimerRef.current) {
+          clearTimeout(partnerReconnectTimerRef.current);
+          partnerReconnectTimerRef.current = null;
+        }
         setRemoteStream(stream);
         setSignalingState('CONNECTED');
         playConnectChime();
@@ -194,6 +235,10 @@ export function useVideoChat(
         if (state === 'connecting') {
           setSignalingState('ICE_CONNECTING');
         } else if (state === 'connected') {
+          if (partnerReconnectTimerRef.current) {
+            clearTimeout(partnerReconnectTimerRef.current);
+            partnerReconnectTimerRef.current = null;
+          }
           setSignalingState('CONNECTED');
           playConnectChime();
         } else if (state === 'failed') {
@@ -354,6 +399,9 @@ export function useVideoChat(
       };
       existingMessages.unshift(systemMsg);
 
+      matchIdRef.current = data.matchId;
+      partnerSessionIdRef.current = data.partnerSessionId;
+
       updateChatState({
         connectionStatus: 'connecting',
         partnerSessionId: data.partnerSessionId,
@@ -389,6 +437,7 @@ export function useVideoChat(
       }
 
       partnerSessionIdRef.current = data.partnerSessionId;
+      matchIdRef.current = data.matchId;
       isInitiatorRef.current = data.isInitiator;
 
       clearSignalingRetryTimers();
@@ -504,19 +553,24 @@ export function useVideoChat(
         }
         handleStartNegotiation(data);
       },
-      onPartnerLeft: () => {
+      onPartnerLeft: (data?: { reason: string }) => {
         if (skipInProgressRef.current) return;
-        setSignalingState('PARTNER_LEFT');
-        setRemoteStream(null);
-        webrtcManager.resetConnection();
-        lastProcessedOfferSdpRef.current = null;
-        lastProcessedAnswerSdpRef.current = null;
-        
-        showToast('info', 'Partner left. Finding someone new...');
-        // Wait 2.5 seconds to show the left animation overlay, then automatically rejoin the queue
-        setTimeout(() => {
-          void triggerAutoRejoin();
-        }, 2500);
+
+        if (data?.reason === 'disconnect') {
+          console.log('[Grace Period] Partner disconnected accidentally. Starting 10s grace period...');
+          updateChatState({ partnerSkipPending: false });
+          setChatState((prev) => ({ ...prev, connectionStatus: 'reconnecting' }));
+
+          if (partnerReconnectTimerRef.current) clearTimeout(partnerReconnectTimerRef.current);
+          partnerReconnectTimerRef.current = setTimeout(() => {
+            console.log('[Grace Period] 10s grace period expired. Cleaning up...');
+            partnerReconnectTimerRef.current = null;
+            executePartnerLeftTeardown();
+          }, 10000);
+          return;
+        }
+
+        executePartnerLeftTeardown();
       },
       onSearching: (data: { message: string }) => {
         if (skipInProgressRef.current) return;
@@ -544,6 +598,14 @@ export function useVideoChat(
         if (skipInProgressRef.current) return;
         updateChatState({ mutualLike: true });
         showToast('success', "It's a Match! ❤️");
+      },
+      onPartnerSkipPending: () => {
+        if (skipInProgressRef.current) return;
+        updateChatState({ partnerSkipPending: true });
+      },
+      onPartnerSkipCancelled: () => {
+        if (skipInProgressRef.current) return;
+        updateChatState({ partnerSkipPending: false });
       },
       onNewMessage: (data: { matchId: string; senderSessionId: string; message: string; createdAt: string }) => {
         if (skipInProgressRef.current) return;
@@ -745,6 +807,7 @@ export function useVideoChat(
     lastProcessedAnswerSdpRef.current = null;
     setChatState(initialChatState);
     partnerSessionIdRef.current = null;
+    matchIdRef.current = null;
   }, [clearSignalingRetryTimers, setSignalingState]);
 
   const handleNext = useCallback(async () => {
@@ -760,6 +823,8 @@ export function useVideoChat(
     webrtcManager.resetConnection();
     lastProcessedOfferSdpRef.current = null;
     lastProcessedAnswerSdpRef.current = null;
+    partnerSessionIdRef.current = null;
+    matchIdRef.current = null;
     updateChatState({
       partnerSessionId: null,
       matchId: null,
@@ -1099,6 +1164,14 @@ export function useVideoChat(
     }
   }, [sessionId, sessionToken, setQueuePaused]);
 
+  const broadcastSkipPending = useCallback(() => {
+    sendSkipPending();
+  }, []);
+
+  const broadcastSkipCancelled = useCallback(() => {
+    sendSkipCancelled();
+  }, []);
+
   return {
     chatState,
     localStream,
@@ -1118,5 +1191,7 @@ export function useVideoChat(
     isQueuePaused,
     pauseQueue,
     resumeQueue,
+    broadcastSkipPending,
+    broadcastSkipCancelled,
   };
 }

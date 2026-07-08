@@ -8,6 +8,7 @@ interface SearchingAnimationProps {
   status?: string;
   partnerProfile?: any;
   isQueuePaused?: boolean;
+  onLeaveQueue?: () => void;
 }
 
 export function SearchingAnimation({
@@ -16,24 +17,56 @@ export function SearchingAnimation({
   onOpenPreferences,
   status,
   partnerProfile,
-  isQueuePaused
+  isQueuePaused,
+  onLeaveQueue
 }: SearchingAnimationProps) {
   const [elapsed, setElapsed] = useState(0);
   const [animationStep, setAnimationStep] = useState(0);
+  const [mobileExpanded, setMobileExpanded] = useState(false);
   const [stats, setStats] = useState({ online: 127, searching: 41, wait: 8 });
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
-  // Extract preferences from localStorage for the "Searching As" card
-  const displayName = localStorage.getItem('kaboom_display_name') || 'Guest';
-  const country = localStorage.getItem('kaboom_country') || '';
-  const city = localStorage.getItem('kaboom_city') || '';
-  const university = localStorage.getItem('kaboom_university') || '';
-  let interests: string[] = [];
-  try {
-    interests = JSON.parse(localStorage.getItem('kaboom_interest_tags') || '[]');
-  } catch {}
+  // Expose local preference cache state
+  const [prefData, setPrefData] = useState({
+    displayName: localStorage.getItem('kaboom_display_name') || 'Guest',
+    country: localStorage.getItem('kaboom_country') || '',
+    city: localStorage.getItem('kaboom_city') || '',
+    university: localStorage.getItem('kaboom_university') || '',
+    interests: (() => {
+      try {
+        return JSON.parse(localStorage.getItem('kaboom_interest_tags') || '[]');
+      } catch {
+        return [];
+      }
+    })()
+  });
 
   const activeMatchMode = matchMode || localStorage.getItem('kaboom_match_mode') || 'RANDOM';
+
+  // Update preferences state and reset wait timer when search resumes
+  useEffect(() => {
+    if (!isQueuePaused) {
+      setPrefData({
+        displayName: localStorage.getItem('kaboom_display_name') || 'Guest',
+        country: localStorage.getItem('kaboom_country') || '',
+        city: localStorage.getItem('kaboom_city') || '',
+        university: localStorage.getItem('kaboom_university') || '',
+        interests: (() => {
+          try {
+            return JSON.parse(localStorage.getItem('kaboom_interest_tags') || '[]');
+          } catch {
+            return [];
+          }
+        })()
+      });
+      setElapsed(0);
+    }
+  }, [isQueuePaused]);
+
+  // Reset timer on matchMode or status changes
+  useEffect(() => {
+    setElapsed(0);
+  }, [activeMatchMode, status]);
 
   // Format wait timer (e.g. 00:15)
   const formatTimer = (secs: number) => {
@@ -172,18 +205,49 @@ export function SearchingAnimation({
     };
   }, []);
 
-  // Build the matching stages sequence dynamically
-  const matchingStages = [
-    `👤 ${displayName}`,
-    "🔍 Searching...",
-    country ? `🌍 ${country}` : "🌍 Worldwide",
-    "⚡ Finding someone...",
-    university ? `🎓 ${university}` : "🏫 Campus Network",
-    interests.length > 0 ? `✨ ${interests[0]}` : "💬 Friendly Chat",
-    "🔒 Checking compatibility...",
-    "🤝 Found Candidate!"
+  // Mode-Specific rotating messages
+  const randomMessages = [
+    "🌍 Searching worldwide...",
+    "👥 Checking active users...",
+    "⚡ Finding someone online...",
+    "✨ Finding your next conversation..."
   ];
-  const currentStageText = matchingStages[animationStep % matchingStages.length];
+
+  const smartMessages = [
+    "🎵 Looking for shared interests...",
+    "🎓 Checking universities...",
+    "📍 Searching nearby...",
+    "🤝 Matching shared preferences..."
+  ];
+
+  const strictMessages = [
+    "🔒 Searching exact matches...",
+    "📝 Checking your selected filters...",
+    prefData.university ? `🏫 Waiting for another ${prefData.university} student...` : "🏫 Searching selected campus network...",
+    "⚠️ Exact matching takes slightly longer..."
+  ];
+
+  const getRotatingMessages = () => {
+    if (activeMatchMode === 'STRICT') return strictMessages;
+    if (activeMatchMode === 'PREFER') return smartMessages;
+    return randomMessages;
+  };
+
+  const currentMessages = getRotatingMessages();
+  const currentStageText = currentMessages[animationStep % currentMessages.length];
+
+  // Dynamic colors for matching stages
+  const getStageColor = (step: number) => {
+    const stage = step % 4;
+    switch (stage) {
+      case 0: return { border: 'border-amber-500/30', text: 'text-amber-400', bg: 'bg-amber-500/10', ping: 'border-amber-500/10' };
+      case 1: return { border: 'border-purple-500/30', text: 'text-purple-400', bg: 'bg-purple-500/10', ping: 'border-purple-500/10' };
+      case 2: return { border: 'border-cyan-500/30', text: 'text-cyan-400', bg: 'bg-cyan-500/10', ping: 'border-cyan-500/10' };
+      default: return { border: 'border-emerald-500/30', text: 'text-emerald-400', bg: 'bg-emerald-500/10', ping: 'border-emerald-500/10' };
+    }
+  };
+
+  const colors = getStageColor(animationStep);
 
   // Renamed mode formatting
   const getModeLabel = (mode: string) => {
@@ -199,9 +263,9 @@ export function SearchingAnimation({
       {/* Background Particle Canvas */}
       <canvas ref={canvasRef} className="absolute inset-0 w-full h-full pointer-events-none" />
 
-      {/* Top Section: "Searching As" summary card */}
+      {/* ── DESKTOP "SEARCHING AS" CARD ─────────────────── */}
       {status !== 'PARTNER_LEFT' && (
-        <div className="absolute top-16 left-1/2 -translate-x-1/2 w-full max-w-sm bg-white/[0.02] border border-white/10 rounded-2xl p-4 backdrop-blur-xl z-20 shadow-2xl flex flex-col gap-2">
+        <div className="hidden sm:flex absolute top-16 left-1/2 -translate-x-1/2 w-full max-w-sm bg-white/[0.02] border border-white/10 rounded-2xl p-4 backdrop-blur-xl z-20 shadow-2xl flex-col gap-2">
           <div className="flex items-center justify-between">
             <span className="text-[10px] text-stone-500 font-bold uppercase tracking-wider">Searching As</span>
             <div className="flex items-center gap-1.5">
@@ -211,7 +275,7 @@ export function SearchingAnimation({
           </div>
           
           <div className="flex items-center justify-between">
-            <h4 className="text-sm font-black text-white">{displayName}</h4>
+            <h4 className="text-sm font-black text-white">{prefData.displayName}</h4>
             <span className="text-[10px] px-2 py-0.5 rounded bg-purple-500/10 border border-purple-500/20 text-purple-300 font-bold">
               {getModeLabel(activeMatchMode)}
             </span>
@@ -219,10 +283,10 @@ export function SearchingAnimation({
 
           {/* Active preference chips */}
           <div className="flex flex-wrap gap-1.5 mt-1">
-            {country && <span className="text-[9px] px-2 py-0.5 bg-white/5 rounded-full text-stone-300 border border-white/5 font-semibold">🌍 {country}</span>}
-            {city && <span className="text-[9px] px-2 py-0.5 bg-white/5 rounded-full text-stone-300 border border-white/5 font-semibold">📍 {city}</span>}
-            {university && <span className="text-[9px] px-2 py-0.5 bg-white/5 rounded-full text-stone-300 border border-white/5 font-semibold">🎓 {university}</span>}
-            {interests.slice(0, 2).map((item) => (
+            {prefData.country && <span className="text-[9px] px-2 py-0.5 bg-white/5 rounded-full text-stone-300 border border-white/5 font-semibold">🌍 {prefData.country}</span>}
+            {prefData.city && <span className="text-[9px] px-2 py-0.5 bg-white/5 rounded-full text-stone-300 border border-white/5 font-semibold">📍 {prefData.city}</span>}
+            {prefData.university && <span className="text-[9px] px-2 py-0.5 bg-white/5 rounded-full text-stone-300 border border-white/5 font-semibold">🎓 {prefData.university}</span>}
+            {prefData.interests.slice(0, 2).map((item: string) => (
               <span key={item} className="text-[9px] px-2 py-0.5 bg-white/5 rounded-full text-stone-300 border border-white/5 font-semibold">#{item}</span>
             ))}
           </div>
@@ -238,8 +302,86 @@ export function SearchingAnimation({
         </div>
       )}
 
+      {/* ── MOBILE COLLAPSIBLE "SEARCHING AS" CARD ────────── */}
+      {status !== 'PARTNER_LEFT' && (
+        <div 
+          onClick={() => setMobileExpanded(!mobileExpanded)}
+          className="absolute top-20 left-1/2 -translate-x-1/2 w-[92%] bg-stone-900/80 border border-white/10 rounded-2xl p-3 backdrop-blur-xl z-20 shadow-2xl flex sm:hidden flex-col gap-2 cursor-pointer transition-all duration-300"
+        >
+          {!mobileExpanded ? (
+            /* Collapsed view */
+            <div className="flex items-center justify-between text-xs">
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                <span className="font-extrabold text-stone-100">{prefData.displayName}</span>
+                <span className="text-[10px] text-stone-500 font-bold uppercase tracking-wider">
+                  ({getModeLabel(activeMatchMode).split(' ').pop()})
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] bg-white/5 border border-white/10 px-2 py-0.5 rounded text-amber-400 font-black font-mono">
+                  ⏱ {elapsed}s
+                </span>
+                <svg className="w-4 h-4 text-stone-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
+            </div>
+          ) : (
+            /* Expanded view */
+            <div className="flex flex-col gap-2 animate-fade-in">
+              <div className="flex items-center justify-between">
+                <span className="text-[9px] text-stone-500 font-bold uppercase tracking-wider">Searching As</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-[9px] bg-white/5 border border-white/10 px-2 py-0.5 rounded text-amber-400 font-black font-mono">
+                    ⏱ Waiting {elapsed}s
+                  </span>
+                  <svg className="w-4 h-4 text-stone-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                  </svg>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between border-b border-white/5 pb-2">
+                <h4 className="text-sm font-black text-white">{prefData.displayName}</h4>
+                <span className="text-[9px] px-2 py-0.5 rounded bg-purple-500/10 border border-purple-500/20 text-purple-300 font-bold">
+                  {getModeLabel(activeMatchMode)}
+                </span>
+              </div>
+
+              {prefData.university && (
+                <div className="text-xs text-stone-300 font-semibold flex items-center gap-1">
+                  🎓 {prefData.university}
+                </div>
+              )}
+
+              {/* Active preference chips */}
+              <div className="flex flex-wrap gap-1.5 mt-1 border-t border-white/5 pt-2">
+                {prefData.country && <span className="text-[9px] px-2 py-0.5 bg-white/5 rounded-full text-stone-300 border border-white/5 font-semibold">🌍 {prefData.country}</span>}
+                {prefData.city && <span className="text-[9px] px-2 py-0.5 bg-white/5 rounded-full text-stone-300 border border-white/5 font-semibold">📍 {prefData.city}</span>}
+                {prefData.interests.slice(0, 2).map((item: string) => (
+                  <span key={item} className="text-[9px] px-2 py-0.5 bg-white/5 rounded-full text-stone-300 border border-white/5 font-semibold">#{item}</span>
+                ))}
+              </div>
+
+              {onOpenPreferences && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onOpenPreferences();
+                  }}
+                  className="mt-1 text-center text-[10px] py-1.5 bg-amber-500/10 hover:bg-amber-500/15 border border-amber-500/25 text-amber-400 font-extrabold rounded-xl transition-all animate-fade-in"
+                >
+                  ✏️ Edit Filters
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Main Searching Panel */}
-      <div className="relative z-10 text-center flex flex-col items-center max-w-sm w-full mt-24">
+      <div className="relative z-10 text-center flex flex-col items-center max-w-sm w-full mt-24 animate-fade-in">
         {status === 'PARTNER_LEFT' ? (
           /* Partner Left State */
           <div className="flex flex-col items-center animate-fade-in">
@@ -269,12 +411,12 @@ export function SearchingAnimation({
         ) : (
           /* Standard Searching State */
           <>
-            {/* Apple/Nothing Radar Pulse */}
+            {/* Apple/Nothing Radar Pulse (Visually changes color per stage) */}
             <div className="relative mb-8 animate-fade-in">
-              <div className="absolute inset-0 rounded-full border border-amber-500/10 animate-ping" style={{ animationDuration: '3s' }} />
+              <div className={`absolute inset-0 rounded-full border ${colors.ping} animate-ping`} style={{ animationDuration: '3s' }} />
               <div className="w-24 h-24 rounded-full border border-white/5 bg-white/[0.01] flex items-center justify-center relative shadow-2xl glass">
-                <div className="absolute w-16 h-16 rounded-full border border-amber-500/20 bg-amber-500/[0.02] animate-pulse" />
-                <div className="w-10 h-10 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400 font-bold text-lg animate-spin" style={{ animationDuration: '8s' }}>
+                <div className={`absolute w-16 h-16 rounded-full border ${colors.border} ${colors.bg} animate-pulse`} />
+                <div className={`w-10 h-10 rounded-xl ${colors.bg} border ${colors.border} flex items-center justify-center ${colors.text} font-bold text-lg animate-spin`} style={{ animationDuration: '8s' }}>
                   ✦
                 </div>
               </div>
@@ -327,7 +469,7 @@ export function SearchingAnimation({
 
             {/* Long wait time invite suggest (elapsed >= 30 seconds) */}
             {elapsed >= 30 && (
-              <div className="mt-6 p-4 rounded-xl border border-white/5 bg-white/[0.01] animate-fade-in text-center flex flex-col items-center">
+              <div className="mt-6 p-4 rounded-xl border border-white/5 bg-white/[0.01] animate-fade-in text-center flex flex-col items-center animate-fade-in">
                 <p className="text-[11px] text-stone-400 leading-relaxed max-w-[260px]">
                   No compatible users yet. Invite friends to Kaboom or keep searching!
                 </p>
@@ -344,6 +486,43 @@ export function SearchingAnimation({
                 />
               ))}
             </div>
+
+            {/* I'm still here check (elapsed >= 300 seconds) */}
+            {elapsed >= 300 && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black/95 backdrop-blur-md z-[60] p-6 text-center animate-fade-in pointer-events-auto">
+                <div className="max-w-xs w-full bg-stone-900 border border-white/10 rounded-3xl p-6 shadow-2xl space-y-6">
+                  <div className="space-y-2 animate-spring-in">
+                    <div className="w-12 h-12 rounded-full border border-amber-500/30 bg-amber-500/10 flex items-center justify-center text-xl mx-auto">
+                      👋
+                    </div>
+                    <h3 className="text-lg font-bold text-white">Still looking?</h3>
+                    <p className="text-xs text-stone-400">
+                      You've been in the queue for a while. Do you want to keep searching?
+                    </p>
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <button
+                      onClick={() => setElapsed(0)}
+                      className="w-full py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-stone-950 font-bold text-xs transition-all active:scale-95"
+                    >
+                      Keep Searching
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (onLeaveQueue) {
+                          onLeaveQueue();
+                        } else {
+                          window.location.href = '/';
+                        }
+                      }}
+                      className="w-full py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-white font-medium text-xs border border-white/10 transition-all active:scale-95"
+                    >
+                      Leave Queue
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </>
         )}
       </div>

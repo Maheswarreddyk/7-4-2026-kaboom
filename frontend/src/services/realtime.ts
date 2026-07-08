@@ -31,6 +31,8 @@ export interface RealtimeCallbacks {
   onPartnerTyping?: (data: { typing: boolean }) => void;
   onReaction?: (data: { emoji: string }) => void;
   onMessageSeen?: (data: { matchId: string; senderId: string }) => void;
+  onPartnerSkipPending?: () => void;
+  onPartnerSkipCancelled?: () => void;
 }
 
 let sessionChannel: RealtimeChannel | null = null;
@@ -114,6 +116,12 @@ function subscribeToMatchChannel(matchId: string, callbacks: RealtimeCallbacks):
       })
       .on('broadcast', { event: 'reaction' }, ({ payload }) => {
         callbacks.onReaction?.(payload as { emoji: string });
+      })
+      .on('broadcast', { event: 'skip_pending' }, () => {
+        callbacks.onPartnerSkipPending?.();
+      })
+      .on('broadcast', { event: 'skip_cancelled' }, () => {
+        callbacks.onPartnerSkipCancelled?.();
       });
 
     matchChannel.subscribe((status) => {
@@ -145,6 +153,22 @@ export function sendReaction(emoji: string) {
     type: 'broadcast',
     event: 'reaction',
     payload: { emoji },
+  });
+}
+
+export function sendSkipPending() {
+  matchChannel?.send({
+    type: 'broadcast',
+    event: 'skip_pending',
+    payload: {},
+  });
+}
+
+export function sendSkipCancelled() {
+  matchChannel?.send({
+    type: 'broadcast',
+    event: 'skip_cancelled',
+    payload: {},
   });
 }
 

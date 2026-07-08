@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useBlocker } from 'react-router-dom';
 import { ChatControls } from '../components/ChatControls.js';
 import { ConnectionStatusBadge } from '../components/ConnectionStatusBadge.js';
 import { FeedbackModal } from '../components/FeedbackModal.js';
@@ -126,7 +126,92 @@ export function ChatPage() {
     isQueuePaused,
     pauseQueue,
     resumeQueue,
+    broadcastSkipPending,
+    broadcastSkipCancelled,
   } = useVideoChat(session?.sessionId ?? null, session?.sessionToken ?? null, triggerReaction);
+
+  const [isSkipPending, setIsSkipPending] = useState(false);
+  const [skipCountdown, setSkipCountdown] = useState(5);
+  const skipTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const startSkipCountdown = useCallback(() => {
+    if (chatState.status !== 'CONNECTED') {
+      handleNext();
+      return;
+    }
+
+    setIsSkipPending(true);
+    setSkipCountdown(5);
+    broadcastSkipPending();
+
+    if (skipTimerRef.current) clearInterval(skipTimerRef.current);
+    skipTimerRef.current = setInterval(() => {
+      setSkipCountdown((prev) => {
+        if (prev <= 1) {
+          if (skipTimerRef.current) clearInterval(skipTimerRef.current);
+          setIsSkipPending(false);
+          handleNext();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  }, [chatState.status, handleNext, broadcastSkipPending]);
+
+  const cancelSkipCountdown = useCallback(() => {
+    if (skipTimerRef.current) clearInterval(skipTimerRef.current);
+    setIsSkipPending(false);
+    broadcastSkipCancelled();
+  }, [broadcastSkipCancelled]);
+
+  const forceSkipImmediately = useCallback(() => {
+    if (skipTimerRef.current) clearInterval(skipTimerRef.current);
+    setIsSkipPending(false);
+    handleNext();
+  }, [handleNext]);
+
+  useEffect(() => {
+    return () => {
+      if (skipTimerRef.current) clearInterval(skipTimerRef.current);
+    };
+  }, []);
+
+  const prevPartnerSkipPendingRef = useRef(false);
+  const [showResumedBanner, setShowResumedBanner] = useState(false);
+
+  useEffect(() => {
+    if (chatState.status === 'CONNECTED') {
+      if (prevPartnerSkipPendingRef.current && !chatState.partnerSkipPending) {
+        setShowResumedBanner(true);
+        const timer = setTimeout(() => setShowResumedBanner(false), 3000);
+        return () => clearTimeout(timer);
+      }
+    } else {
+      setShowResumedBanner(false);
+    }
+    prevPartnerSkipPendingRef.current = chatState.partnerSkipPending || false;
+  }, [chatState.partnerSkipPending, chatState.status]);
+
+  const [goodbyePhase, setGoodbyePhase] = useState<'leaving' | 'cleaning' | 'goodbye' | null>(null);
+
+  const blocker = useBlocker(
+    ({ nextLocation }) =>
+      chatState.status !== 'IDLE' &&
+      chatState.status !== 'ENDED' &&
+      !pendingLeaveRef.current &&
+      nextLocation.pathname !== '/chat'
+  );
+
+  const handleConfirmBlockerLeave = useCallback(async () => {
+    pendingLeaveRef.current = true;
+    try {
+      await stopChat();
+      await endSession();
+    } catch {}
+    if (blocker.proceed) {
+      blocker.proceed();
+    }
+  }, [stopChat, endSession, blocker]);
 
   const isConnected = chatState.status === 'CONNECTED';
   const isSearching = [
@@ -275,7 +360,24 @@ export function ChatPage() {
           fullscreen={chatState.isFullscreen}
           onAspectRatioChange={isPlacementsSwapped ? handleLocalAspectRatioChange : handleRemoteAspectRatioChange}
           placeholder={isSearching ? 'Looking for a partner...' : 'Partner video will appear here'}
+          frozen={isPlacementsSwapped ? isSkipPending : false}
         />
+
+        {/* Partner Skip Pending status banner */}
+        {chatState.partnerSkipPending && (
+          <div className="absolute top-20 left-1/2 -translate-x-1/2 bg-amber-500/90 backdrop-blur-md text-stone-950 px-4 py-2 rounded-full font-semibold text-xs shadow-lg animate-pulse flex items-center gap-2 z-30 border border-amber-400">
+            <span className="w-2 h-2 rounded-full bg-stone-950 animate-ping" />
+            Partner is deciding whether to continue...
+          </div>
+        )}
+
+        {/* Conversation Resumed status banner */}
+        {showResumedBanner && (
+          <div className="absolute top-20 left-1/2 -translate-x-1/2 bg-emerald-500/90 backdrop-blur-md text-white px-4 py-2 rounded-full font-semibold text-xs shadow-lg animate-bounce flex items-center gap-2 z-30 border border-emerald-400">
+            <span className="w-2 h-2 rounded-full bg-white" />
+            Conversation resumed.
+          </div>
+        )}
 
         {/* Partner Card overlay inside video borders */}
         {isConnected && chatState.partnerProfile && (
@@ -763,13 +865,20 @@ export function ChatPage() {
 
   const finishLeave = async () => {
     try {
+      setGoodbyePhase('leaving');
+      await new Promise(r => setTimeout(r, 200));
+      setGoodbyePhase('cleaning');
       await endSession();
+      setGoodbyePhase('goodbye');
+      await new Promise(r => setTimeout(r, 250));
     } catch {
       // Ignore
+    } finally {
+      navigate('/');
+      showToast('info', 'You left the chat');
+      pendingLeaveRef.current = false;
+      setGoodbyePhase(null);
     }
-    navigate('/');
-    showToast('info', 'You left the chat');
-    pendingLeaveRef.current = false;
   };
 
   const handleFeedbackSubmit = async (rating: number, feedback: string) => {
@@ -865,12 +974,9 @@ export function ChatPage() {
       <MetaManager page="chat" />
       <TipEngine />
        {/* ── LAYER 1: Remote video — z-index: var(--z-video) ── */}
-      {isMobile ? (
+       {isMobile ? (
         <GestureLayer
-          onSwipeLeft={handleNext}
-          onSwipeDown={handleLeave}
-          onDoubleTap={handleLike}
-          onLongPress={() => setShowPreferenceModal(true)}
+          onSwipeLeft={startSkipCountdown}
           disabled={chatState.isChatOpen || isDragging}
         >
           <div 
@@ -919,6 +1025,7 @@ export function ChatPage() {
             status={chatState.status}
             partnerProfile={chatState.partnerProfile}
             isQueuePaused={isQueuePaused}
+            onLeaveQueue={handleLeave}
           />
         </div>
       )}
@@ -1001,6 +1108,7 @@ export function ChatPage() {
               ? (chatState.partnerProfile?.displayName || 'Partner') 
               : `You • ${localStorage.getItem('kaboom_display_name')?.split(' ')[0] || 'Guest'}`
           }
+          frozen={isPlacementsSwapped ? false : isSkipPending}
         />
       </div>
 
@@ -1008,7 +1116,7 @@ export function ChatPage() {
       {isMobile ? (
         <div className={cn("transition-all duration-300 pointer-events-none", !controlsVisible && "opacity-0 scale-95")}>
           <RightActionDock
-            onNext={handleNext}
+            onNext={startSkipCountdown}
             onToggleChat={() => setChatOpen(!chatState.isChatOpen)}
             onOpenPreferences={async () => {
               await pauseQueue();
@@ -1039,7 +1147,7 @@ export function ChatPage() {
             isFullscreen={chatState.isFullscreen}
             onToggleMute={toggleMute}
             onToggleCamera={toggleCamera}
-            onNext={handleNext}
+            onNext={startSkipCountdown}
             onReport={() => setShowReportModal(true)}
             onLeave={handleLeave}
             onToggleFullscreen={toggleFullscreen}
@@ -1083,9 +1191,8 @@ export function ChatPage() {
         }}
         onSave={async (prefs) => {
           await updatePreferences(prefs);
-          if (showWelcomeGate) {
-            setShowWelcomeGate(false);
-          }
+          setShowWelcomeGate(false);
+          setShowPreferenceModal(false);
           await resumeQueue();
         }}
         currentPreferences={{
@@ -1254,6 +1361,58 @@ export function ChatPage() {
         onSubmit={handleFeedbackSubmit}
       />
 
+      {/* ── SAFE SKIP FLOW OVERLAY ───────────────────────── */}
+      {isSkipPending && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 backdrop-blur-md animate-fade-in z-50 p-6 text-center">
+          <div className="max-w-xs w-full bg-stone-900 border border-white/10 rounded-3xl p-6 shadow-2xl space-y-6">
+            <div className="space-y-2">
+              <h3 className="text-xl font-bold text-white">Switching to next person?</h3>
+              <p className="text-stone-400 text-sm">Conversation will disconnect in</p>
+            </div>
+            
+            <div className="relative w-24 h-24 mx-auto flex items-center justify-center">
+              <svg className="absolute inset-0 w-full h-full transform -rotate-90">
+                <circle
+                  cx="48"
+                  cy="48"
+                  r="40"
+                  stroke="rgba(255,255,255,0.1)"
+                  strokeWidth="6"
+                  fill="transparent"
+                />
+                <circle
+                  cx="48"
+                  cy="48"
+                  r="40"
+                  stroke="#f59e0b"
+                  strokeWidth="6"
+                  fill="transparent"
+                  strokeDasharray="251.2"
+                  strokeDashoffset={251.2 - (251.2 * skipCountdown) / 5}
+                  className="transition-all duration-1000 ease-linear"
+                />
+              </svg>
+              <span className="text-4xl font-extrabold text-amber-500">{skipCountdown}</span>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <button
+                onClick={cancelSkipCountdown}
+                className="w-full py-3 rounded-xl bg-white/10 hover:bg-white/15 text-white font-medium text-sm transition-all active:scale-95"
+              >
+                Continue Conversation
+              </button>
+              <button
+                onClick={forceSkipImmediately}
+                className="w-full py-3 rounded-xl bg-red-500/20 hover:bg-red-500/30 text-red-200 font-semibold text-sm transition-all border border-red-500/30 active:scale-95"
+              >
+                Skip Now
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── ONBOARDING TUTORIAL WIZARD ───────────────────── */}
       {showTutorial && (
         <TutorialOverlay onClose={() => setShowTutorial(false)} />
@@ -1345,6 +1504,71 @@ export function ChatPage() {
                 {countdown}
               </div>
               <span className="text-stone-500 text-[10px] font-bold uppercase tracking-wider mt-4">Starting video feed...</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── RECONNECTING GRACE PERIOD OVERLAY ───────────── */}
+      {chatState.connectionStatus === 'reconnecting' && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/85 backdrop-blur-md z-45 p-6 text-center animate-fade-in">
+          <div className="space-y-4 max-w-xs w-full bg-stone-900 border border-white/10 rounded-3xl p-6 shadow-2xl">
+            <div className="w-12 h-12 rounded-full border border-amber-500/30 bg-amber-500/10 flex items-center justify-center text-xl mx-auto animate-spin">
+              🌀
+            </div>
+            <h3 className="text-lg font-bold text-white">Reconnecting...</h3>
+            <p className="text-xs text-stone-400 leading-relaxed">
+              Connection lost. Waiting up to 10 seconds to restore...
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* ── GOODBYE ANIMATION OVERLAY ──────────────────── */}
+      {goodbyePhase && (
+        <div className="absolute inset-0 bg-stone-950 flex flex-col items-center justify-center z-[100] text-center animate-fade-in">
+          <div className="space-y-4 animate-pulse">
+            <div className="w-16 h-16 rounded-full border border-amber-500/30 bg-amber-500/10 flex items-center justify-center text-2xl mx-auto shadow-lg">
+              ⏳
+            </div>
+            <h3 className="text-xl font-bold text-white tracking-wide">
+              {goodbyePhase === 'leaving' && 'Leaving Queue...'}
+              {goodbyePhase === 'cleaning' && 'Cleaning Session...'}
+              {goodbyePhase === 'goodbye' && 'Goodbye!'}
+            </h3>
+            <p className="text-stone-500 text-xs uppercase tracking-widest font-black">
+              Kaboom Video Chat
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* ── NAVIGATION BLOCKER OVERLAY ──────────────────── */}
+      {blocker.state === 'blocked' && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black/80 backdrop-blur-md z-[90] p-6 text-center">
+          <div className="max-w-xs w-full bg-stone-900 border border-white/10 rounded-3xl p-6 shadow-2xl space-y-6 animate-spring-in">
+            <div className="space-y-2">
+              <h3 className="text-xl font-bold text-white">
+                {chatState.status === 'CONNECTED' ? 'Leave Conversation?' : 'Leave Search?'}
+              </h3>
+              <p className="text-stone-400 text-sm">
+                {chatState.status === 'CONNECTED' ? 'Your current chat will end.' : 'Your current search will stop.'}
+              </p>
+            </div>
+            
+            <div className="flex flex-col gap-2">
+              <button
+                onClick={() => blocker.reset && blocker.reset()}
+                className="w-full py-3 rounded-xl bg-white/10 hover:bg-white/15 text-white font-medium text-sm transition-all active:scale-95"
+              >
+                {chatState.status === 'CONNECTED' ? 'Continue Chat' : 'Continue Searching'}
+              </button>
+              <button
+                onClick={handleConfirmBlockerLeave}
+                className="w-full py-3 rounded-xl bg-red-500 hover:bg-red-600 text-white font-semibold text-sm transition-all active:scale-95"
+              >
+                Leave
+              </button>
             </div>
           </div>
         </div>

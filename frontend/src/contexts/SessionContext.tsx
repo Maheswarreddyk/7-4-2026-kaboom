@@ -11,6 +11,13 @@ import { apiService } from '../services/api.js';
 import type { SessionData, StatsData } from '../types/index.js';
 import { STORAGE_KEYS } from '../types/index.js';
 
+interface SessionLifecycle {
+  state: 'CONNECTED' | 'QUEUE' | 'IDLE' | 'LEAVING' | 'DESTROYED';
+  timestamp: number;
+  matchId?: string | null;
+  partnerSessionId?: string | null;
+}
+
 interface SessionContextValue {
   session: SessionData | null;
   stats: StatsData | null;
@@ -18,6 +25,7 @@ interface SessionContextValue {
   startSession: () => Promise<SessionData>;
   endSession: () => Promise<void>;
   refreshStats: () => Promise<void>;
+  updateSessionLifecycleState: (state: SessionLifecycle['state'], matchId?: string | null, partnerSessionId?: string | null) => void;
 }
 
 const SessionContext = createContext<SessionContextValue | null>(null);
@@ -42,22 +50,57 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     return () => clearInterval(interval);
   }, [refreshStats]);
 
+  const updateSessionLifecycleState = useCallback((
+    state: SessionLifecycle['state'],
+    matchId: string | null = null,
+    partnerSessionId: string | null = null
+  ) => {
+    const data: SessionLifecycle = {
+      state,
+      timestamp: Date.now(),
+      matchId,
+      partnerSessionId
+    };
+    localStorage.setItem('kaboom_session_lifecycle', JSON.stringify(data));
+  }, []);
+
   useEffect(() => {
     const storedId = localStorage.getItem(STORAGE_KEYS.SESSION_ID);
     const storedToken = localStorage.getItem(STORAGE_KEYS.SESSION_TOKEN);
+    const lifecycleRaw = localStorage.getItem('kaboom_session_lifecycle');
+
+    let shouldRestore = false;
+    if (lifecycleRaw) {
+      try {
+        const lifecycle: SessionLifecycle = JSON.parse(lifecycleRaw);
+        const ageSecs = (Date.now() - lifecycle.timestamp) / 1000;
+        if (lifecycle.state === 'CONNECTED' && ageSecs < 15) {
+          shouldRestore = true;
+        }
+      } catch {}
+    }
+
+    // Always clear the temporary flag on boot
+    localStorage.removeItem('kaboom_session_lifecycle');
+
     if (storedId && storedToken) {
-      setIsLoading(true);
-      apiService.restoreSession(storedId, storedToken)
-        .then((data) => {
-          setSession(data);
-        })
-        .catch(() => {
-          localStorage.removeItem(STORAGE_KEYS.SESSION_ID);
-          localStorage.removeItem(STORAGE_KEYS.SESSION_TOKEN);
-        })
-        .finally(() => {
-          setIsLoading(false);
-        });
+      if (shouldRestore) {
+        setIsLoading(true);
+        apiService.restoreSession(storedId, storedToken)
+          .then((data) => {
+            setSession(data);
+          })
+          .catch(() => {
+            localStorage.removeItem(STORAGE_KEYS.SESSION_ID);
+            localStorage.removeItem(STORAGE_KEYS.SESSION_TOKEN);
+          })
+          .finally(() => {
+            setIsLoading(false);
+          });
+      } else {
+        localStorage.removeItem(STORAGE_KEYS.SESSION_ID);
+        localStorage.removeItem(STORAGE_KEYS.SESSION_TOKEN);
+      }
     }
   }, []);
 
@@ -68,22 +111,24 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       setSession(data);
       localStorage.setItem(STORAGE_KEYS.SESSION_ID, data.sessionId);
       localStorage.setItem(STORAGE_KEYS.SESSION_TOKEN, data.sessionToken);
+      updateSessionLifecycleState('IDLE');
       return data;
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [updateSessionLifecycleState]);
 
   const endSession = useCallback(async () => {
     if (!session) return;
     try {
+      updateSessionLifecycleState('DESTROYED');
       await apiService.endSession(session.sessionId);
     } finally {
       setSession(null);
       localStorage.removeItem(STORAGE_KEYS.SESSION_ID);
       localStorage.removeItem(STORAGE_KEYS.SESSION_TOKEN);
     }
-  }, [session]);
+  }, [session, updateSessionLifecycleState]);
 
   const value = useMemo(
     () => ({
@@ -93,8 +138,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       startSession,
       endSession,
       refreshStats,
+      updateSessionLifecycleState,
     }),
-    [session, stats, isLoading, startSession, endSession, refreshStats]
+    [session, stats, isLoading, startSession, endSession, refreshStats, updateSessionLifecycleState]
   );
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;

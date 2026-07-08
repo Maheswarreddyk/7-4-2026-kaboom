@@ -87,6 +87,7 @@ export interface ChatState {
     confidence: number;
     matchedBy: string[];
   } | null;
+  partnerSkipPending?: boolean;
 }
 
 export const REPORT_REASONS: { value: ReportReason; label: string }[] = [

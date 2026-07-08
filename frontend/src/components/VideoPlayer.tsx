@@ -10,6 +10,7 @@ interface VideoPlayerProps {
   placeholder?: string;
   fullscreen?: boolean;
   onAspectRatioChange?: (ratio: number) => void;
+  frozen?: boolean;
 }
 
 export function VideoPlayer({
@@ -21,6 +22,7 @@ export function VideoPlayer({
   placeholder = 'Waiting for video...',
   fullscreen = false,
   onAspectRatioChange,
+  frozen = false,
 }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
 
@@ -29,6 +31,16 @@ export function VideoPlayer({
   useEffect(() => {
     onAspectRatioChangeRef.current = onAspectRatioChange;
   }, [onAspectRatioChange]);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    if (frozen) {
+      video.pause();
+    } else {
+      video.play().catch(() => {});
+    }
+  }, [frozen]);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -88,7 +100,8 @@ export function VideoPlayer({
           className={cn(
             'transition-all duration-300 w-full h-full',
             fullscreen ? 'object-cover' : 'object-contain',
-            mirrored && 'scale-x-[-1]'
+            mirrored && 'scale-x-[-1]',
+            frozen && 'blur-[4px] grayscale-[0.3] brightness-[0.8]'
           )}
           style={{
             // Hardware acceleration hints for high quality scaling without flickering
