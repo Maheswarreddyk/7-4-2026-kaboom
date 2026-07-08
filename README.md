@@ -116,7 +116,7 @@ Click **Deploy**. Your app will be live at `https://your-project.vercel.app`.
 
 ### Step 5 — Custom Domain (Optional)
 
-In Vercel → **Settings → Domains**, add your domain (e.g. `indiatv.app`). Vercel handles SSL automatically.
+In Vercel → **Settings → Domains**, add your domain (e.g. `kaboom-tv.com`). Vercel handles SSL automatically.
 
 ---
 

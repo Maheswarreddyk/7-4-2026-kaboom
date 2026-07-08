@@ -1,16 +1,18 @@
+import { MetaManager } from '../components/MetaManager.js';
+
 export function AboutPage() {
   return (
-    <div className="max-w-3xl mx-auto px-4 py-12 animate-fade-in">
-      <h1 className="text-3xl sm:text-4xl font-bold text-white mb-6">About Kaboom</h1>
-
-      <div className="space-y-6 text-white/70 leading-relaxed">
+    <main className="max-w-3xl mx-auto px-4 py-12 animate-fade-in" role="main">
+      <MetaManager page="about" />
+      <article className="space-y-6 text-white/70 leading-relaxed">
+        <h1 className="text-3xl sm:text-4xl font-bold text-white mb-6">About Kaboom</h1>
         <p>
           Kaboom is an anonymous random video chat platform that connects people from around the
           world in real time. Inspired by the simplicity of classic random chat services, we built
           Kaboom with a focus on privacy, speed, and ease of use.
         </p>
 
-        <div className="glass-card space-y-4">
+        <section className="glass-card space-y-4">
           <h2 className="text-xl font-semibold text-white">How It Works</h2>
           <ol className="list-decimal list-inside space-y-2 text-white/60">
             <li>Click &quot;Start Chat&quot; on the homepage — no account needed.</li>
@@ -19,18 +21,18 @@ export function AboutPage() {
             <li>Chat via video and audio. Press &quot;Next&quot; to find someone new.</li>
             <li>Report any inappropriate behavior using the Report button.</li>
           </ol>
-        </div>
+        </section>
 
-        <div className="glass-card space-y-4">
+        <section className="glass-card space-y-4">
           <h2 className="text-xl font-semibold text-white">Technology</h2>
           <p>
             Kaboom uses WebRTC for peer-to-peer video and audio streaming, Supabase Realtime for
             live matching and signaling, and Supabase PostgreSQL for session management and moderation
             data. All connections are encrypted end-to-end between peers.
           </p>
-        </div>
+        </section>
 
-        <div className="glass-card space-y-4">
+        <section className="glass-card space-y-4">
           <h2 className="text-xl font-semibold text-white">Community Guidelines</h2>
           <ul className="list-disc list-inside space-y-2 text-white/60">
             <li>Be respectful to other users.</li>
@@ -39,8 +41,8 @@ export function AboutPage() {
             <li>Report violations immediately.</li>
             <li>Users must be 18 years or older.</li>
           </ul>
-        </div>
-      </div>
-    </div>
+        </section>
+      </article>
+    </main>
   );
 }

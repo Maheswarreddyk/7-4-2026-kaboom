@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Disallow: /chat
+Disallow: /api
+Disallow: /session
+Disallow: /match
+
+Sitemap: https://kaboom-tv.com/sitemap.xml

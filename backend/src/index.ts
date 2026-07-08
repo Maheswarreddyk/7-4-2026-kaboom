@@ -59,8 +59,18 @@ const io = new SocketServer(server, {
 
 app.set('trust proxy', 1);
 
+// Add Permissions-Policy header middleware
+app.use((req, res, next) => {
+  res.setHeader(
+    'Permissions-Policy',
+    'camera=(self), microphone=(self), geolocation=(), interest-cohort=()'
+  );
+  next();
+});
+
 app.use(helmet({
   crossOriginResourcePolicy: { policy: 'cross-origin' },
+  referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],

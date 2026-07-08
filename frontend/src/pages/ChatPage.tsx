@@ -20,6 +20,7 @@ import { MobileHeader } from '../components/MobileHeader.js';
 import { BottomToolbar } from '../components/BottomToolbar.js';
 import { RightActionDock } from '../components/RightActionDock.js';
 import { GestureLayer } from '../components/GestureLayer.js';
+import { MetaManager } from '../components/MetaManager.js';
 import { hintEngine } from '../services/HintEngine.js';
 import { TutorialOverlay } from '../components/TutorialOverlay.js';
 
@@ -560,6 +561,7 @@ export function ChatPage() {
       role="main"
       aria-label="Video chat"
     >
+      <MetaManager page="chat" />
       {/* ── LAYER 1: Remote video — z-index: var(--z-video) ── */}
       {isMobile ? (
         <GestureLayer

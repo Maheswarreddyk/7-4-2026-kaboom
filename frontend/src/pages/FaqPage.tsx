@@ -1,3 +1,5 @@
+import { MetaManager } from '../components/MetaManager.js';
+
 const faqs = [
   {
     question: 'Do I need to create an account?',
@@ -43,21 +45,24 @@ const faqs = [
 
 export function FaqPage() {
   return (
-    <div className="max-w-3xl mx-auto px-4 py-12 animate-fade-in">
-      <h1 className="text-3xl sm:text-4xl font-bold text-white mb-2">Frequently Asked Questions</h1>
-      <p className="text-white/50 mb-10">Everything you need to know about using Kaboom.</p>
+    <main className="max-w-3xl mx-auto px-4 py-12 animate-fade-in" role="main">
+      <MetaManager page="faq" />
+      <article>
+        <h1 className="text-3xl sm:text-4xl font-bold text-white mb-2">Frequently Asked Questions</h1>
+        <p className="text-white/50 mb-10">Everything you need to know about using Kaboom.</p>
 
-      <div className="space-y-4">
-        {faqs.map((faq) => (
-          <details key={faq.question} className="glass-card group">
-            <summary className="font-semibold text-white cursor-pointer list-none flex items-center justify-between gap-4">
-              {faq.question}
-              <span className="text-white/40 group-open:rotate-180 transition-transform shrink-0">▼</span>
-            </summary>
-            <p className="mt-4 text-white/60 leading-relaxed">{faq.answer}</p>
-          </details>
-        ))}
-      </div>
-    </div>
+        <section className="space-y-4">
+          {faqs.map((faq) => (
+            <details key={faq.question} className="glass-card group">
+              <summary className="font-semibold text-white cursor-pointer list-none flex items-center justify-between gap-4">
+                {faq.question}
+                <span className="text-white/40 group-open:rotate-180 transition-transform shrink-0">▼</span>
+              </summary>
+              <p className="mt-4 text-white/60 leading-relaxed">{faq.answer}</p>
+            </details>
+          ))}
+        </section>
+      </article>
+    </main>
   );
 }

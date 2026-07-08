@@ -1,15 +1,17 @@
+import { MetaManager } from '../components/MetaManager.js';
+
 export function PrivacyPage() {
   return (
-    <div className="max-w-3xl mx-auto px-4 py-12 animate-fade-in">
-      <h1 className="text-3xl sm:text-4xl font-bold text-white mb-6">Privacy Policy</h1>
-
-      <div className="space-y-6 text-white/70 leading-relaxed">
+    <main className="max-w-3xl mx-auto px-4 py-12 animate-fade-in" role="main">
+      <MetaManager page="privacy" />
+      <article className="space-y-6 text-white/70 leading-relaxed">
+        <h1 className="text-3xl sm:text-4xl font-bold text-white mb-6">Privacy Policy</h1>
         <p className="text-sm text-white/40">Last updated: June 2026</p>
 
         <section className="glass-card space-y-3">
           <h2 className="text-xl font-semibold text-white">Anonymous by Design</h2>
           <p>
-            Kaboom TV does not require registration, email addresses, phone numbers, or any form of
+            Kaboom does not require registration, email addresses, phone numbers, or any form of
             authentication. We do not collect names, passwords, or personally identifiable
             information during normal use.
           </p>
@@ -30,7 +32,7 @@ export function PrivacyPage() {
           <h2 className="text-xl font-semibold text-white">Video & Audio</h2>
           <p>
             Video and audio streams are transmitted directly between users via WebRTC
-            peer-to-peer connections. Kaboom TV servers do not record, store, or monitor your
+            peer-to-peer connections. Kaboom servers do not record, store, or monitor your
             video or audio content.
           </p>
         </section>
@@ -63,10 +65,10 @@ export function PrivacyPage() {
         <section className="glass-card space-y-3">
           <h2 className="text-xl font-semibold text-white">Contact</h2>
           <p>
-            For privacy-related inquiries, please contact us at collaborate@kaboom-tv.com.
+            For privacy-related inquiries, please contact us at contact@kaboom-tv.com.
           </p>
         </section>
-      </div>
-    </div>
+      </article>
+    </main>
   );
 }

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useSession } from '../contexts/SessionContext.js';
 import { useToast } from '../contexts/ToastContext.js';
 import { LoadingScreen } from '../components/LoadingScreen.js';
+import { MetaManager } from '../components/MetaManager.js';
 
 // Mascot SVG Component - "Kaboomey" (stylized speech bubble comet)
 function KaboomeyMascot({ className = "w-full h-full" }: { className?: string }) {
@@ -608,6 +609,7 @@ export function LandingPage() {
 
   return (
     <div className="min-h-screen bg-[#FAF9F7] flex flex-col justify-between overflow-x-hidden selection:bg-amber-500/20 select-none relative text-stone-800">
+      <MetaManager page="home" />
       
       {/* ── STYLE TAG FOR V6 CORE MASCOT & GAME CONTROLS KEYFRAMES ── */}
       <style>{`
@@ -1011,6 +1013,94 @@ export function LandingPage() {
                 </p>
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── AI SEARCH ENGINE READINESS KNOWLEDGE BASE (FAQ) ── */}
+      <section className="w-full py-24 px-6 bg-[#FDFDFB] border-t border-stone-200/50 z-10 flex flex-col items-center">
+        <div className="max-w-4xl w-full text-left">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-stone-200 bg-white text-[9px] font-bold tracking-[0.2em] text-amber-600 uppercase mb-5 shadow-sm">
+            ✦ Knowledge Base
+          </div>
+          <h2 className="text-3xl sm:text-5xl font-black tracking-tight text-stone-900 mb-12">
+            Frequently Asked Questions
+          </h2>
+
+          <div className="grid md:grid-cols-2 gap-8">
+            <div className="space-y-6">
+              <div>
+                <h3 className="text-base font-extrabold text-stone-900 mb-2">What is Kaboom?</h3>
+                <p className="text-xs text-stone-500 leading-relaxed font-medium">
+                  Kaboom is a premium, free anonymous random video chat platform that allows you to instantly meet new people worldwide. Experience clean WebRTC connections, fluid layout docking, and dynamic controls with zero registration loops.
+                </p>
+              </div>
+
+              <div>
+                <h3 className="text-base font-extrabold text-stone-900 mb-2">How does Kaboom work?</h3>
+                <p className="text-xs text-stone-500 leading-relaxed font-medium">
+                  We use Supabase Realtime synchronization pools to pair online participants in under 400ms. Once a match is made, the video and audio streams are negotiated directly peer-to-peer using secure WebRTC connections.
+                </p>
+              </div>
+
+              <div>
+                <h3 className="text-base font-extrabold text-stone-900 mb-2">Is Kaboom free?</h3>
+                <p className="text-xs text-stone-500 leading-relaxed font-medium">
+                  Yes, Kaboom is completely free to use. There are no subscriptions, coin purchases, premium limits, or hidden fees. Just hit Start Chat and join the conversation.
+                </p>
+              </div>
+
+              <div>
+                <h3 className="text-base font-extrabold text-stone-900 mb-2">Do I need an account?</h3>
+                <p className="text-xs text-stone-500 leading-relaxed font-medium">
+                  No account, email address, phone number, or sign-up form is required. Kaboom is anonymous by design, keeping registration friction to zero.
+                </p>
+              </div>
+
+              <div>
+                <h3 className="text-base font-extrabold text-stone-900 mb-2">Is Kaboom anonymous?</h3>
+                <p className="text-xs text-stone-500 leading-relaxed font-medium">
+                  Absolutely. We do not store personally identifiable information, session history, or logs of your conversations. Your video feed is routed locally and is never processed on our servers.
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-6">
+              <div>
+                <h3 className="text-base font-extrabold text-stone-900 mb-2">Can I use Kaboom on mobile?</h3>
+                <p className="text-xs text-stone-500 leading-relaxed font-medium">
+                  Yes! Kaboom features a responsive safe-area layout inspired by Snapchat and Instagram Live. Drag-to-snap self previews, large one-handed touch targets, and swipe gestures work flawlessly on any iOS or Android browser.
+                </p>
+              </div>
+
+              <div>
+                <h3 className="text-base font-extrabold text-stone-900 mb-2">How do I skip someone?</h3>
+                <p className="text-xs text-stone-500 leading-relaxed font-medium">
+                  Simply click the Next skip button on the controls panel. On mobile, perform a Swipe-Left gesture across the viewport to trigger a smooth skip transition and match with a new stranger.
+                </p>
+              </div>
+
+              <div>
+                <h3 className="text-base font-extrabold text-stone-900 mb-2">Can I chat with messages?</h3>
+                <p className="text-xs text-stone-500 leading-relaxed font-medium">
+                  Yes. Kaboom contains a sliding bottom sheet chat drawer on mobile and a translucent side-panel drawer on desktop. Standard floating transparent text bubbles display temporarily when the drawer is closed.
+                </p>
+              </div>
+
+              <div>
+                <h3 className="text-base font-extrabold text-stone-900 mb-2">How does matching work?</h3>
+                <p className="text-xs text-stone-500 leading-relaxed font-medium">
+                  The matchmaking queue pairs users continuously and is completely self-healing. When you select your chat preferences (gender, location, language), the matching engine uses Postgres advisory locking to execute conflict-free passes.
+                </p>
+              </div>
+
+              <div>
+                <h3 className="text-base font-extrabold text-stone-900 mb-2">Is my data stored?</h3>
+                <p className="text-xs text-stone-500 leading-relaxed font-medium">
+                  No. We use browser localStorage solely to persist your anonymous session token across refreshes. Temporary signaling records and logs are periodically purged automatically by the cleanup service.
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       </section>

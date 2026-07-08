@@ -1,11 +1,12 @@
 import { Link } from 'react-router-dom';
+import { MetaManager } from '../components/MetaManager.js';
 
 export function TermsPage() {
   return (
-    <div className="max-w-3xl mx-auto px-4 py-12 animate-fade-in">
-      <h1 className="text-3xl sm:text-4xl font-bold text-white mb-6">Terms of Service</h1>
-
-      <div className="space-y-6 text-white/70 leading-relaxed">
+    <main className="max-w-3xl mx-auto px-4 py-12 animate-fade-in" role="main">
+      <MetaManager page="terms" />
+      <article className="space-y-6 text-white/70 leading-relaxed">
+        <h1 className="text-3xl sm:text-4xl font-bold text-white mb-6">Terms of Service</h1>
         <p className="text-sm text-white/40">Last updated: June 2026</p>
 
         <section className="glass-card space-y-3">
@@ -65,13 +66,13 @@ export function TermsPage() {
           <h2 className="text-xl font-semibold text-white">Contact</h2>
           <p>
             Questions about these terms? Visit our{' '}
-            <Link to="/contact" className="text-accent-light hover:underline">
+            <Link to="/contact" className="text-amber-400 hover:underline">
               Contact page
             </Link>{' '}
-            or email collaborate@kaboom-tv.com.
+            or email contact@kaboom-tv.com.
           </p>
         </section>
-      </div>
-    </div>
+      </article>
+    </main>
   );
 }
