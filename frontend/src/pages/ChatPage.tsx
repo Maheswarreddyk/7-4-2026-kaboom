@@ -185,6 +185,17 @@ export function ChatPage() {
     }
   }, [countdown]);
 
+  // Automatically open the chat drawer for 3 seconds when connected
+  useEffect(() => {
+    if (isConnected && chatState.partnerProfile) {
+      setChatOpen(true);
+      const timer = setTimeout(() => {
+        setChatOpen(false);
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [isConnected, chatState.partnerProfile, setChatOpen]);
+
   const [remoteAspectRatio, setRemoteAspectRatio] = useState<number | null>(null);
   const [localAspectRatio, setLocalAspectRatio] = useState<number | null>(null);
 
@@ -269,35 +280,34 @@ export function ChatPage() {
         {/* Partner Card overlay inside video borders */}
         {isConnected && chatState.partnerProfile && (
           <div 
-            className="absolute z-20 flex flex-col gap-1.5 p-3 rounded-2xl border border-white/10 bg-black/40 backdrop-blur-xl max-w-[200px] shadow-2xl animate-fade-in pointer-events-none select-none"
+            className="absolute z-20 flex flex-col gap-1 p-3.5 rounded-2xl border border-white/10 bg-black/40 backdrop-blur-xl max-w-[240px] shadow-2xl animate-fade-in pointer-events-none select-none"
             style={{
               left: '16px',
-              top: '16px',
+              bottom: '16px',
             }}
           >
-            <div className="flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            <div className="flex items-center gap-1.5 flex-wrap">
               <span className="text-xs font-black text-stone-100 tracking-tight/90 line-clamp-1">
-                {chatState.partnerProfile.displayName || 'Guest'}
+                👤 {chatState.partnerProfile.displayName || 'Guest'}
+              </span>
+              <span className="inline-flex items-center gap-1 text-[8px] px-1.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-black uppercase tracking-wider">
+                🟢 Online
               </span>
             </div>
-            {chatState.partnerProfile.bio && (
-              <p className="text-[10px] text-stone-300 font-medium leading-relaxed italic line-clamp-2">
-                "{chatState.partnerProfile.bio}"
+
+            {/* University */}
+            {(chatState.partnerProfile.matchAttributes?.university?.[0] || (chatState.partnerProfile as any).university) && (
+              <p className="text-[10px] text-stone-300 font-extrabold leading-normal mt-0.5">
+                🎓 {chatState.partnerProfile.matchAttributes?.university?.[0] || (chatState.partnerProfile as any).university}
               </p>
             )}
-            <div className="flex flex-wrap gap-1">
-              {chatState.partnerProfile.matchAttributes?.university?.[0] && (
-                <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-white/10 text-[8px] font-bold text-white/90">
-                  🎓 {chatState.partnerProfile.matchAttributes.university[0].slice(0, 15)}...
-                </span>
-              )}
-              {chatState.partnerProfile.matchAttributes?.city?.[0] && (
-                <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-white/10 text-[8px] font-bold text-white/90">
-                  📍 {chatState.partnerProfile.matchAttributes.city[0]}
-                </span>
-              )}
-            </div>
+
+            {/* Bio / Status */}
+            {chatState.partnerProfile.bio && (
+              <p className="text-[10px] text-stone-400 font-medium leading-relaxed italic mt-0.5">
+                💬 {chatState.partnerProfile.bio}
+              </p>
+            )}
           </div>
         )}
 
@@ -986,13 +996,12 @@ export function ChatPage() {
           mirrored={!isPlacementsSwapped}
           onAspectRatioChange={isPlacementsSwapped ? handleRemoteAspectRatioChange : handleLocalAspectRatioChange}
           className="w-full h-full pointer-events-none"
-          label={isPlacementsSwapped ? "Partner" : "You"}
+          label={
+            isPlacementsSwapped 
+              ? (chatState.partnerProfile?.displayName || 'Partner') 
+              : `You • ${localStorage.getItem('kaboom_display_name')?.split(' ')[0] || 'Guest'}`
+          }
         />
-        {!isPlacementsSwapped && (
-          <div className="absolute bottom-1.5 left-1.5 z-10 px-2 py-0.5 rounded bg-black/60 backdrop-blur-md border border-white/5 text-[9px] font-bold text-stone-200 pointer-events-none uppercase tracking-wider">
-            You: {localStorage.getItem('kaboom_display_name') || 'Guest'}
-          </div>
-        )}
       </div>
 
       {/* ── CONTROLS DOCK ─────────────────────────────────── */}
@@ -1250,50 +1259,57 @@ export function ChatPage() {
         <TutorialOverlay onClose={() => setShowTutorial(false)} />
       )}
 
-      {/* ── COUNTDOWN INTRO OVERLAY ───────────────────────── */}
       {showIntro && activePartnerProfile && (
         <div
-          className="absolute inset-0 flex flex-col items-center justify-center bg-black/90 backdrop-blur-2xl animate-fade-in"
+          className="absolute inset-0 flex flex-col items-center justify-center bg-black/95 backdrop-blur-3xl animate-fade-in"
           style={{ zIndex: 'var(--z-overlay)' as any }}
         >
           <div className="text-center max-w-sm px-6 animate-spring-in">
-            <span className="text-stone-500 text-[10px] font-bold uppercase tracking-wider block mb-2">Connected Successfully</span>
-            
-            <h2 className="text-3xl font-black text-white bg-gradient-to-r from-amber-400 to-pink-500 bg-clip-text text-transparent mb-6">
-              🎉 YOU MATCHED!
-            </h2>
+            <span className="text-amber-400 text-xs font-black uppercase tracking-widest block mb-4 animate-pulse">
+              ✨ YOU MATCHED ✨
+            </span>
 
-            {/* Profile Card */}
-            <div className="bg-white/[0.02] border border-white/10 rounded-3xl p-6 shadow-2xl backdrop-blur-md mb-8 flex flex-col items-center gap-3">
-              <div className="w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-2xl font-black text-amber-400">
-                {activePartnerProfile.displayName?.[0]?.toUpperCase() || 'P'}
+            {/* Profile Intro Card */}
+            <div className="bg-white/[0.02] border border-white/10 rounded-3xl p-6 shadow-2xl backdrop-blur-md mb-8 flex flex-col items-center gap-4">
+              <div className="w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-3xl font-black text-amber-400">
+                👤
               </div>
-              <div>
-                <h3 className="text-lg font-black text-white">
+              
+              <div className="text-center">
+                <h3 className="text-2xl font-black text-white">
                   {activePartnerProfile.displayName || 'Guest'}
                 </h3>
+                
+                {/* University */}
+                {(activePartnerProfile.matchAttributes?.university?.[0] || (activePartnerProfile as any).university) && (
+                  <p className="text-sm font-bold text-stone-300 mt-1 flex items-center justify-center gap-1">
+                    🎓 {activePartnerProfile.matchAttributes?.university?.[0] || (activePartnerProfile as any).university}
+                  </p>
+                )}
+                
+                {/* Bio */}
                 {activePartnerProfile.bio && (
-                  <p className="text-xs text-stone-400 mt-1 italic leading-relaxed">
-                    "{activePartnerProfile.bio}"
+                  <p className="text-xs text-stone-400 mt-2 italic max-w-[240px]">
+                    💬 {activePartnerProfile.bio}
                   </p>
                 )}
               </div>
 
-              {/* Shared items details */}
-              <div className="w-full border-t border-white/5 pt-3 mt-1 text-left">
-                <span className="text-[10px] text-stone-500 font-bold uppercase tracking-wider block mb-2">Match Parameters</span>
+              {/* Matched Because Reasons */}
+              <div className="w-full border-t border-white/5 pt-4 mt-1 text-center">
+                <span className="text-[10px] text-stone-500 font-bold uppercase tracking-wider block mb-2">Matched because</span>
                 {(() => {
                   const shared: string[] = [];
                   const myUni = localStorage.getItem('kaboom_university');
-                  const pUni = activePartnerProfile.match_attributes?.university?.[0] || activePartnerProfile.university;
-                  if (myUni && pUni && myUni.toLowerCase() === pUni.toLowerCase()) shared.push(`🎓 ${myUni}`);
+                  const pUni = activePartnerProfile.match_attributes?.university?.[0] || (activePartnerProfile as any).university;
+                  if (myUni && pUni && myUni.toLowerCase() === pUni.toLowerCase()) shared.push(`🎓 Same University`);
 
                   const myCity = localStorage.getItem('kaboom_city');
-                  const pCity = activePartnerProfile.match_attributes?.city?.[0] || activePartnerProfile.city;
+                  const pCity = activePartnerProfile.match_attributes?.city?.[0] || (activePartnerProfile as any).city;
                   if (myCity && pCity && myCity.toLowerCase() === pCity.toLowerCase()) shared.push(`📍 ${myCity}`);
 
                   const myCountry = localStorage.getItem('kaboom_country');
-                  const pCountry = activePartnerProfile.match_attributes?.country?.[0] || activePartnerProfile.country;
+                  const pCountry = activePartnerProfile.match_attributes?.country?.[0] || (activePartnerProfile as any).country;
                   if (myCountry && pCountry && myCountry.toLowerCase() === pCountry.toLowerCase()) shared.push(`🌍 ${myCountry}`);
 
                   let myInterests: string[] = [];
@@ -1304,21 +1320,18 @@ export function ChatPage() {
 
                   if (shared.length > 0) {
                     return (
-                      <div className="flex flex-col gap-1.5">
-                        <span className="text-[11px] text-stone-300 font-semibold">Shared:</span>
-                        <div className="flex flex-wrap gap-1.5">
-                          {shared.map((attr, idx) => (
-                            <span key={idx} className="text-[10px] px-2.5 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-300 font-bold">
-                              {attr}
-                            </span>
-                          ))}
-                        </div>
+                      <div className="flex flex-wrap gap-1.5 justify-center">
+                        {shared.map((attr, idx) => (
+                          <span key={idx} className="text-[10px] px-2.5 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-300 font-bold">
+                            {attr}
+                          </span>
+                        ))}
                       </div>
                     );
                   } else {
                     return (
-                      <p className="text-[11px] text-stone-400 italic">
-                        Matched randomly. Let's start the conversation!
+                      <p className="text-[10px] text-stone-400 italic">
+                        🎲 Random Match. Meet someone completely new today!
                       </p>
                     );
                   }
@@ -1328,10 +1341,10 @@ export function ChatPage() {
 
             {/* Glowing Big countdown digits */}
             <div className="flex flex-col items-center">
-              <div className="w-20 h-20 rounded-full border border-amber-500/30 bg-amber-500/5 flex items-center justify-center text-4xl font-black text-amber-400 shadow-2xl shadow-amber-500/10 animate-ping">
+              <div className="w-16 h-16 rounded-full border border-amber-500/30 bg-amber-500/5 flex items-center justify-center text-3xl font-black text-amber-400 shadow-2xl shadow-amber-500/10 animate-ping">
                 {countdown}
               </div>
-              <span className="text-stone-400 text-xs font-bold uppercase tracking-wider mt-4">Starting video in {countdown}...</span>
+              <span className="text-stone-500 text-[10px] font-bold uppercase tracking-wider mt-4">Starting video feed...</span>
             </div>
           </div>
         </div>

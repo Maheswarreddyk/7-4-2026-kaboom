@@ -269,50 +269,88 @@ export function useVideoChat(
       }
 
       // Construct matched details system message
-      const partnerName = data.partnerProfile?.displayName || 'Guest';
-      const myName = localStorage.getItem('kaboom_display_name') || 'You';
-      const sharedAttrs: string[] = [];
+      
+      const matchedBy = data.matchReasonMetadata?.matchedBy || [];
+      const matchReason = data.matchReasonMetadata?.reason || 'random';
 
-      const myUni = localStorage.getItem('kaboom_university');
-      const partnerUni = data.partnerProfile?.match_attributes?.university?.[0] || data.partnerProfile?.university;
-      if (myUni && partnerUni && myUni.toLowerCase() === partnerUni.toLowerCase()) {
-        sharedAttrs.push(`🎓 ${myUni}`);
+      // Stars rating based on compatibility
+      let ratingBadge = '⭐⭐⭐ Random Match';
+      if (matchedBy.length >= 2 && matchedBy[0] !== '🎲 Random Match') {
+        ratingBadge = '⭐⭐⭐⭐⭐ Excellent Match';
+      } else if (matchedBy.length === 1 && matchedBy[0] !== '🎲 Random Match') {
+        ratingBadge = '⭐⭐⭐⭐ Good Match';
       }
 
-      const myCity = localStorage.getItem('kaboom_city');
-      const partnerCity = data.partnerProfile?.match_attributes?.city?.[0] || data.partnerProfile?.city;
-      if (myCity && partnerCity && myCity.toLowerCase() === partnerCity.toLowerCase()) {
-        sharedAttrs.push(`📍 ${myCity}`);
-      }
+      let matchTextLines: string[] = [];
+      
+      if (matchReason === 'strict_filters') {
+        matchTextLines.push(`🔒 Exact Match • ${ratingBadge}`);
+        matchTextLines.push(`You were matched because your selected filters matched perfectly.\nEnjoy your conversation.`);
+      } else if (matchReason === 'prefer_filters' || (matchedBy.length > 0 && matchedBy[0] !== '🎲 Random Match')) {
+        matchTextLines.push(`✨ Great Match • ${ratingBadge}`);
+        
+        // List the matches
+        const bullets: string[] = [];
+        const myUni = localStorage.getItem('kaboom_university');
+        const pUni = data.partnerProfile?.match_attributes?.university?.[0] || data.partnerProfile?.university;
+        if (myUni && pUni && myUni.toLowerCase() === pUni.toLowerCase()) {
+          bullets.push(`🎓 You both selected ${myUni}`);
+        }
 
-      const myCountry = localStorage.getItem('kaboom_country');
-      const partnerCountry = data.partnerProfile?.match_attributes?.country?.[0] || data.partnerProfile?.country;
-      if (myCountry && partnerCountry && myCountry.toLowerCase() === partnerCountry.toLowerCase()) {
-        sharedAttrs.push(`🌍 ${myCountry}`);
-      }
+        const myCity = localStorage.getItem('kaboom_city');
+        const pCity = data.partnerProfile?.match_attributes?.city?.[0] || data.partnerProfile?.city;
+        if (myCity && pCity && myCity.toLowerCase() === pCity.toLowerCase()) {
+          bullets.push(`📍 Both of you are from ${myCity}`);
+        }
 
-      let myInterests: string[] = [];
-      try {
-        myInterests = JSON.parse(localStorage.getItem('kaboom_interest_tags') || '[]');
-      } catch {}
-      const partnerInterests = data.partnerProfile?.match_attributes?.interests || data.partnerProfile?.interest_tags || [];
-      const sharedInterests = myInterests.filter(x => partnerInterests.some((y: string) => y.toLowerCase() === x.toLowerCase()));
-      if (sharedInterests.length > 0) {
-        sharedInterests.forEach(i => sharedAttrs.push(`✨ ${i}`));
-      }
+        const myCountry = localStorage.getItem('kaboom_country');
+        const pCountry = data.partnerProfile?.match_attributes?.country?.[0] || data.partnerProfile?.country;
+        if (myCountry && pCountry && myCountry.toLowerCase() === pCountry.toLowerCase()) {
+          bullets.push(`🌎 Both of you are from ${myCountry}`);
+        }
 
-      let matchText = '';
-      if (sharedAttrs.length > 0) {
-        matchText = `🎉 YOU MATCHED: ${myName} 🤝 ${partnerName}\nShared: ${sharedAttrs.join(', ')}`;
+        let myLanguages: string[] = [];
+        try { myLanguages = JSON.parse(localStorage.getItem('kaboom_languages') || '[]'); } catch {}
+        const pLanguages = data.partnerProfile?.match_attributes?.languages || data.partnerProfile?.languages || [];
+        const sharedLanguages = myLanguages.filter(x => pLanguages.some((y: string) => y.toLowerCase() === x.toLowerCase()));
+        if (sharedLanguages.length > 0) {
+          bullets.push(`🗣 You both speak ${sharedLanguages.join(', ')}`);
+        }
+
+        let myInterests: string[] = [];
+        try { myInterests = JSON.parse(localStorage.getItem('kaboom_interest_tags') || '[]'); } catch {}
+        const pInterests = data.partnerProfile?.match_attributes?.interests || data.partnerProfile?.interest_tags || [];
+        const sharedInterests = myInterests.filter(x => pInterests.some((y: string) => y.toLowerCase() === x.toLowerCase()));
+        if (sharedInterests.length > 0) {
+          bullets.push(`🎵 Shared interests found: ${sharedInterests.join(', ')}`);
+        }
+
+        let myTags: string[] = [];
+        try { myTags = JSON.parse(localStorage.getItem('kaboom_education_tags') || '[]'); } catch {}
+        const pTags = data.partnerProfile?.match_attributes?.education_tags || [];
+        const sharedTags = myTags.filter(x => pTags.some((y: string) => y.toLowerCase() === x.toLowerCase()));
+        if (sharedTags.length > 0) {
+          bullets.push(`🎓 Shared campus tags: ${sharedTags.join(', ')}`);
+        }
+
+        if (bullets.length > 0) {
+          matchTextLines.push(bullets.join('\n'));
+        } else {
+          matchTextLines.push(`You share several preferences.\nSome filters were relaxed to help you meet faster.\nEnjoy!`);
+        }
       } else {
-        matchText = `🎉 YOU MATCHED: ${myName} 🤝 ${partnerName}\nMatched Randomly. Meet someone new.`;
+        matchTextLines.push(`🎲 Random Match • ${ratingBadge}`);
+        matchTextLines.push(`No common filters were found.\nMeet someone completely new today!\nSometimes the best conversations are unexpected.`);
       }
+
+      const matchText = matchTextLines.join('\n');
 
       const systemMsg = {
         id: `system_${Date.now()}`,
         senderSessionId: 'system',
         message: matchText,
-        createdAt: Date.now() - 1000 // slightly older so it sits at top
+        createdAt: Date.now() - 1000,
+        type: 'system_match'
       };
       existingMessages.unshift(systemMsg);
 

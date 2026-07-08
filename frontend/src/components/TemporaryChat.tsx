@@ -11,6 +11,7 @@ interface TemporaryChatProps {
     message: string;
     createdAt: number;
     status?: 'sending' | 'delivered' | 'seen';
+    type?: string;
   }>;
   onSendMessage: (msg: string) => void;
   selfSessionId: string;
@@ -45,6 +46,47 @@ export function TemporaryChat({
 }: TemporaryChatProps) {
   const [inputText, setInputText] = useState('');
   const [isExpandedFull, setIsExpandedFull] = useState(false); // Mobile half vs full sheet
+
+  const getSuggestions = () => {
+    const matchedBy = matchReasonMetadata?.matchedBy || [];
+    const hasUni = matchedBy.some((x: string) => x.toLowerCase().includes('university'));
+    const hasInterests = matchedBy.some((x: string) => x.toLowerCase().includes('interests'));
+    const hasCity = matchedBy.some((x: string) => x.toLowerCase().includes('city'));
+
+    if (hasUni) {
+      return [
+        "🏫 Which department are you in?",
+        "☕ What's your favorite place on campus?",
+        "🎓 Which year are you studying?"
+      ];
+    }
+    if (hasInterests) {
+      return [
+        "💻 What tech stack do you use?",
+        "🚀 Working on anything interesting?",
+        "🤖 Have you tried AI coding tools?"
+      ];
+    }
+    if (hasCity) {
+      return [
+        "🍜 Favorite place to eat?",
+        "🌆 Which area do you live in?",
+        "☕ Best café nearby?"
+      ];
+    }
+    return [
+      "👋 Hi!",
+      "😊 How's your day going?",
+      "🎥 Where are you joining from?"
+    ];
+  };
+
+  const handleSelectSuggestion = (suggestion: string) => {
+    setInputText(suggestion);
+    if (inputRef.current) {
+      inputRef.current.focus();
+    }
+  };
   const [now, setNow] = useState(Date.now());
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -215,9 +257,16 @@ export function TemporaryChat({
 
         {/* Drawer Header */}
         <div className="px-5 pb-3 border-b border-white/5 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse" />
-            <h3 className="text-sm font-bold text-white tracking-wide">Live Conversation</h3>
+          <div className="flex flex-col">
+            <div className="flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+              <h3 className="text-sm font-black text-white tracking-wide">
+                {partnerProfile?.displayName || 'Guest'}
+              </h3>
+            </div>
+            <span className="text-[9px] text-stone-500 font-extrabold ml-3 uppercase tracking-wider">
+              {partnerTyping ? 'Typing...' : 'Active now'}
+            </span>
           </div>
           <button 
             onClick={onClose}
@@ -229,50 +278,6 @@ export function TemporaryChat({
 
         {/* Messages List Area */}
         <div className="flex-1 overflow-y-auto p-5 space-y-3.5 scrollbar-none">
-          {/* 🎓 Compatibility Summary Header Card */}
-          {matchReasonMetadata && (
-            <div className="mb-4 p-4 rounded-2xl border border-white/5 bg-white/[0.02] flex flex-col gap-2.5">
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] text-stone-500 uppercase tracking-wider font-extrabold">Compatibility Summary</span>
-                <span className={cn(
-                  "px-2 py-0.5 rounded-full text-[10px] font-bold border",
-                  matchReasonMetadata.confidence >= 80 
-                    ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400" 
-                    : (matchReasonMetadata.confidence >= 50 ? "bg-amber-500/10 border-amber-500/20 text-amber-400" : "bg-stone-500/10 border-stone-500/20 text-stone-400")
-                )}>
-                  ⭐ {matchReasonMetadata.confidence}% Match
-                </span>
-              </div>
-              
-              {/* Partner Card details */}
-              <div className="flex flex-col gap-1">
-                <h4 className="text-sm font-bold text-white">
-                  {partnerProfile?.displayName || 'Guest'}
-                </h4>
-                {partnerProfile?.bio && (
-                  <p className="text-xs text-white/50 italic leading-relaxed">
-                    "{partnerProfile.bio}"
-                  </p>
-                )}
-              </div>
-
-              {/* Match Criteria list badges */}
-              <div className="flex flex-wrap gap-1.5 pt-1.5 border-t border-white/[0.03]">
-                {matchReasonMetadata.matchedBy.map((item, idx) => (
-                  <span key={idx} className="inline-flex items-center px-2.5 py-0.5 rounded-full bg-white/5 text-[10px] font-semibold text-white/80 border border-white/5">
-                    {item}
-                  </span>
-                ))}
-              </div>
-              
-              {matchReasonMetadata.reason === 'random' && (
-                <p className="text-[10px] text-white/30 leading-relaxed mt-1">
-                  🎲 No shared preferences found. You were matched randomly. Enjoy meeting someone new!
-                </p>
-              )}
-            </div>
-          )}
-
           {messages.length === 0 ? (
             /* Beautiful empty skeleton state */
             <div className="h-full flex flex-col items-center justify-center text-center p-4">
@@ -291,19 +296,42 @@ export function TemporaryChat({
                 const lines = msg.message.split('\n');
                 const titleLine = lines[0];
                 const detailLine = lines.slice(1).join('\n');
+                const isMatchSystem = msg.type === 'system_match';
+                const suggestions = getSuggestions();
+
                 return (
                   <div
                     key={msg.id}
-                    className="w-full flex justify-center py-2 px-1 animate-fade-in"
+                    className="w-full flex flex-col items-center py-2 px-1 animate-fade-in gap-3"
                   >
-                    <div className="bg-white/[0.03] border border-white/10 rounded-2xl px-4 py-3 text-center max-w-[90%] shadow-lg backdrop-blur-md">
-                      <span className="text-[12px] font-semibold text-amber-400 block mb-1">
+                    <div className="bg-white/[0.03] border border-white/10 rounded-2xl px-5 py-4 text-center w-full max-w-[95%] shadow-lg backdrop-blur-md">
+                      <span className="text-[12px] font-black text-amber-400 block mb-1">
                         {titleLine}
                       </span>
-                      <p className="text-[11px] text-stone-300 font-medium leading-relaxed italic">
+                      <p className="text-[11px] text-stone-200 font-medium leading-relaxed whitespace-pre-line">
                         {detailLine}
                       </p>
                     </div>
+
+                    {isMatchSystem && (
+                      <div className="w-full flex flex-col gap-2 mt-1.5 animate-fade-in">
+                        <span className="text-[9px] text-stone-500 font-extrabold uppercase tracking-wider text-center">
+                          💡 Tap to start conversation
+                        </span>
+                        <div className="flex flex-wrap gap-1.5 justify-center">
+                          {suggestions.map((suggestion) => (
+                            <button
+                              key={suggestion}
+                              type="button"
+                              onClick={() => handleSelectSuggestion(suggestion)}
+                              className="px-3.5 py-1.5 rounded-full border border-amber-500/20 hover:border-amber-400 bg-amber-500/5 text-[10px] text-amber-300 font-bold hover:scale-[1.03] active:scale-95 transition-all shadow-md"
+                            >
+                              {suggestion}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 );
               }
