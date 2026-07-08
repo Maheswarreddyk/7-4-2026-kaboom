@@ -80,7 +80,13 @@ export function ChatPage() {
   const [activeHint, setActiveHint] = useState<string | null>(null);
   const [hintDismissed, setHintDismissed] = useState(false);
   const [showMutualMatchPopup, setShowMutualMatchPopup] = useState(false);
-  
+
+  // V6.1 countdown intro states
+  const [countdown, setCountdown] = useState<number | null>(null);
+  const [showIntro, setShowIntro] = useState(false);
+  const [activePartnerProfile, setActivePartnerProfile] = useState<any>(null);
+
+
   // High fidelity reactions
   const [reactions, setReactions] = useState<Array<{ id: number; emoji: string; left: number; delay: number }>>([]);
   const [isPlacementsSwapped, setIsPlacementsSwapped] = useState(false);
@@ -117,6 +123,9 @@ export function ChatPage() {
     setTypingStatus,
     setChatOpen,
     sendReaction,
+    isQueuePaused,
+    pauseQueue,
+    resumeQueue,
   } = useVideoChat(session?.sessionId ?? null, session?.sessionToken ?? null, triggerReaction);
 
   const isConnected = chatState.status === 'CONNECTED';
@@ -124,6 +133,58 @@ export function ChatPage() {
     'REQUESTING_MEDIA', 'MEDIA_READY', 'CONNECTING_REALTIME', 
     'SEARCHING', 'REQUEUEING', 'PARTNER_LEFT', 'MATCH_FOUND', 'READY', 'NEGOTIATING', 'ICE_CONNECTING'
   ].includes(chatState.status);
+
+  // Start countdown sequence when matched & connected
+  useEffect(() => {
+    if (isConnected && chatState.partnerProfile) {
+      setActivePartnerProfile(chatState.partnerProfile);
+      setShowIntro(true);
+      setCountdown(3);
+    } else if (!isConnected) {
+      setShowIntro(false);
+      setCountdown(null);
+      setActivePartnerProfile(null);
+    }
+  }, [isConnected, chatState.partnerProfile]);
+
+  // Countdown timer ticking down
+  useEffect(() => {
+    if (countdown === null) return;
+    
+    if (countdown > 0) {
+      // Play tick sound
+      try {
+        const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+        if (AudioContextClass) {
+          const ctx = new AudioContextClass();
+          const now = ctx.currentTime;
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(1000 + (3 - countdown) * 100, now);
+          gain.gain.setValueAtTime(0, now);
+          gain.gain.linearRampToValueAtTime(0.08, now + 0.01);
+          gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.1);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(now);
+          osc.stop(now + 0.1);
+        }
+      } catch {}
+
+      const timer = setTimeout(() => {
+        setCountdown(countdown - 1);
+      }, 1000);
+      return () => clearTimeout(timer);
+    } else {
+      const timer = setTimeout(() => {
+        setShowIntro(false);
+        setCountdown(null);
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [countdown]);
+
   const [remoteAspectRatio, setRemoteAspectRatio] = useState<number | null>(null);
   const [localAspectRatio, setLocalAspectRatio] = useState<number | null>(null);
 
@@ -841,6 +902,13 @@ export function ChatPage() {
             queuePosition={chatState.queuePosition}
             matchMode={localStorage.getItem('kaboom_match_mode') || 'RANDOM'}
             onDisableStrict={handleDisableStrict}
+            onOpenPreferences={async () => {
+              await pauseQueue();
+              setShowPreferenceModal(true);
+            }}
+            status={chatState.status}
+            partnerProfile={chatState.partnerProfile}
+            isQueuePaused={isQueuePaused}
           />
         </div>
       )}
@@ -920,6 +988,11 @@ export function ChatPage() {
           className="w-full h-full pointer-events-none"
           label={isPlacementsSwapped ? "Partner" : "You"}
         />
+        {!isPlacementsSwapped && (
+          <div className="absolute bottom-1.5 left-1.5 z-10 px-2 py-0.5 rounded bg-black/60 backdrop-blur-md border border-white/5 text-[9px] font-bold text-stone-200 pointer-events-none uppercase tracking-wider">
+            You: {localStorage.getItem('kaboom_display_name') || 'Guest'}
+          </div>
+        )}
       </div>
 
       {/* ── CONTROLS DOCK ─────────────────────────────────── */}
@@ -928,7 +1001,10 @@ export function ChatPage() {
           <RightActionDock
             onNext={handleNext}
             onToggleChat={() => setChatOpen(!chatState.isChatOpen)}
-            onOpenPreferences={() => setShowPreferenceModal(true)}
+            onOpenPreferences={async () => {
+              await pauseQueue();
+              setShowPreferenceModal(true);
+            }}
             onReport={() => setShowReportModal(true)}
             unreadCount={chatState.unreadCount}
             isChatOpen={chatState.isChatOpen || false}
@@ -963,7 +1039,10 @@ export function ChatPage() {
             onToggleChat={() => setChatOpen(!chatState.isChatOpen)}
             liked={chatState.liked}
             onLike={handleLike}
-            onOpenPreferences={() => setShowPreferenceModal(true)}
+            onOpenPreferences={async () => {
+              await pauseQueue();
+              setShowPreferenceModal(true);
+            }}
             unreadCount={chatState.unreadCount}
           />
         </div>
@@ -985,11 +1064,12 @@ export function ChatPage() {
       {/* ── PREFERENCES MODAL ─────────────────────────────── */}
       <PreferenceModal
         isOpen={showPreferenceModal || showWelcomeGate}
-        onClose={() => {
+        onClose={async () => {
           if (showWelcomeGate) {
             navigate('/');
           } else {
             setShowPreferenceModal(false);
+            await resumeQueue();
           }
         }}
         onSave={async (prefs) => {
@@ -997,6 +1077,7 @@ export function ChatPage() {
           if (showWelcomeGate) {
             setShowWelcomeGate(false);
           }
+          await resumeQueue();
         }}
         currentPreferences={{
           gender: chatState.gender,
@@ -1167,6 +1248,93 @@ export function ChatPage() {
       {/* ── ONBOARDING TUTORIAL WIZARD ───────────────────── */}
       {showTutorial && (
         <TutorialOverlay onClose={() => setShowTutorial(false)} />
+      )}
+
+      {/* ── COUNTDOWN INTRO OVERLAY ───────────────────────── */}
+      {showIntro && activePartnerProfile && (
+        <div
+          className="absolute inset-0 flex flex-col items-center justify-center bg-black/90 backdrop-blur-2xl animate-fade-in"
+          style={{ zIndex: 'var(--z-overlay)' as any }}
+        >
+          <div className="text-center max-w-sm px-6 animate-spring-in">
+            <span className="text-stone-500 text-[10px] font-bold uppercase tracking-wider block mb-2">Connected Successfully</span>
+            
+            <h2 className="text-3xl font-black text-white bg-gradient-to-r from-amber-400 to-pink-500 bg-clip-text text-transparent mb-6">
+              🎉 YOU MATCHED!
+            </h2>
+
+            {/* Profile Card */}
+            <div className="bg-white/[0.02] border border-white/10 rounded-3xl p-6 shadow-2xl backdrop-blur-md mb-8 flex flex-col items-center gap-3">
+              <div className="w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-2xl font-black text-amber-400">
+                {activePartnerProfile.displayName?.[0]?.toUpperCase() || 'P'}
+              </div>
+              <div>
+                <h3 className="text-lg font-black text-white">
+                  {activePartnerProfile.displayName || 'Guest'}
+                </h3>
+                {activePartnerProfile.bio && (
+                  <p className="text-xs text-stone-400 mt-1 italic leading-relaxed">
+                    "{activePartnerProfile.bio}"
+                  </p>
+                )}
+              </div>
+
+              {/* Shared items details */}
+              <div className="w-full border-t border-white/5 pt-3 mt-1 text-left">
+                <span className="text-[10px] text-stone-500 font-bold uppercase tracking-wider block mb-2">Match Parameters</span>
+                {(() => {
+                  const shared: string[] = [];
+                  const myUni = localStorage.getItem('kaboom_university');
+                  const pUni = activePartnerProfile.match_attributes?.university?.[0] || activePartnerProfile.university;
+                  if (myUni && pUni && myUni.toLowerCase() === pUni.toLowerCase()) shared.push(`🎓 ${myUni}`);
+
+                  const myCity = localStorage.getItem('kaboom_city');
+                  const pCity = activePartnerProfile.match_attributes?.city?.[0] || activePartnerProfile.city;
+                  if (myCity && pCity && myCity.toLowerCase() === pCity.toLowerCase()) shared.push(`📍 ${myCity}`);
+
+                  const myCountry = localStorage.getItem('kaboom_country');
+                  const pCountry = activePartnerProfile.match_attributes?.country?.[0] || activePartnerProfile.country;
+                  if (myCountry && pCountry && myCountry.toLowerCase() === pCountry.toLowerCase()) shared.push(`🌍 ${myCountry}`);
+
+                  let myInterests: string[] = [];
+                  try { myInterests = JSON.parse(localStorage.getItem('kaboom_interest_tags') || '[]'); } catch {}
+                  const pInterests = activePartnerProfile.match_attributes?.interests || activePartnerProfile.interest_tags || [];
+                  const sharedInterests = myInterests.filter(x => pInterests.some((y: string) => y.toLowerCase() === x.toLowerCase()));
+                  sharedInterests.forEach(i => shared.push(`✨ ${i}`));
+
+                  if (shared.length > 0) {
+                    return (
+                      <div className="flex flex-col gap-1.5">
+                        <span className="text-[11px] text-stone-300 font-semibold">Shared:</span>
+                        <div className="flex flex-wrap gap-1.5">
+                          {shared.map((attr, idx) => (
+                            <span key={idx} className="text-[10px] px-2.5 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-300 font-bold">
+                              {attr}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  } else {
+                    return (
+                      <p className="text-[11px] text-stone-400 italic">
+                        Matched randomly. Let's start the conversation!
+                      </p>
+                    );
+                  }
+                })()}
+              </div>
+            </div>
+
+            {/* Glowing Big countdown digits */}
+            <div className="flex flex-col items-center">
+              <div className="w-20 h-20 rounded-full border border-amber-500/30 bg-amber-500/5 flex items-center justify-center text-4xl font-black text-amber-400 shadow-2xl shadow-amber-500/10 animate-ping">
+                {countdown}
+              </div>
+              <span className="text-stone-400 text-xs font-bold uppercase tracking-wider mt-4">Starting video in {countdown}...</span>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

@@ -5,7 +5,7 @@ import { cn } from '../utils/index.js';
 interface PreferenceModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (preferences: any) => void;
+  onSave: (preferences: any) => Promise<void> | void;
   currentPreferences?: any;
 }
 
@@ -15,7 +15,6 @@ const LANGUAGES = [
 ];
 
 export function PreferenceModal({ isOpen, onClose, onSave, currentPreferences = {} }: PreferenceModalProps) {
-  const [activeTab, setActiveTab] = useState<'profile' | 'location' | 'interests' | 'appSettings'>('profile');
   const [gender, setGender] = useState<string>(currentPreferences.gender || 'Prefer not to say');
   const [lookingFor, setLookingFor] = useState<string[]>(currentPreferences.looking_for || ['Anyone']);
   
@@ -55,6 +54,11 @@ export function PreferenceModal({ isOpen, onClose, onSave, currentPreferences = 
     const attrs = currentPreferences.match_attributes || {};
     return attrs.education_tags || JSON.parse(localStorage.getItem('kaboom_education_tags') || '[]');
   });
+
+  // Saving states
+  const [isSavingState, setIsSavingState] = useState<'idle' | 'joining' | 'spinner' | 'success'>('idle');
+  const [isFadingOut, setIsFadingOut] = useState(false);
+  const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
 
   const [universityQuery, setUniversityQuery] = useState('');
   const [universityResults, setUniversityResults] = useState<any[]>([]);
@@ -207,7 +211,7 @@ export function PreferenceModal({ isOpen, onClose, onSave, currentPreferences = 
     setEduTags([]);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     // Validate Display Name
     const nameClean = displayName.trim();
     if (!nameClean || nameClean.length < 3) {
@@ -218,6 +222,35 @@ export function PreferenceModal({ isOpen, onClose, onSave, currentPreferences = 
       alert('Display Name cannot exceed 25 characters.');
       return;
     }
+
+    // HTML tags check
+    if (/<[^>]*>/g.test(nameClean)) {
+      alert('Display Name cannot contain HTML tags.');
+      return;
+    }
+
+    // Emoji spam check
+    const emojiRegex = /[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/gu;
+    const emojisFound = nameClean.match(emojiRegex) || [];
+    if (emojisFound.length > 2) {
+      alert('Display Name cannot contain more than 2 emojis.');
+      return;
+    }
+    const consecutiveEmojiRegex = /([\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]){2,}/gu;
+    if (consecutiveEmojiRegex.test(nameClean)) {
+      alert('Display Name cannot contain consecutive emojis.');
+      return;
+    }
+
+    // Basic profanity check
+    const badWords = ['fuck', 'shit', 'asshole', 'bitch', 'crap', 'dick', 'pussy', 'bastard', 'cunt', 'nigger', 'faggot'];
+    const lowerName = nameClean.toLowerCase();
+    if (badWords.some(w => lowerName.includes(w))) {
+      alert('Please keep your display name clean and friendly.');
+      return;
+    }
+
+    setIsSavingState('joining');
 
     localStorage.setItem('kaboom_show_tips', showTips ? 'true' : 'false');
     localStorage.setItem('kaboom_suggestions_enabled', showTips ? 'ON' : 'OFF');
@@ -230,211 +263,265 @@ export function PreferenceModal({ isOpen, onClose, onSave, currentPreferences = 
     localStorage.setItem('kaboom_match_constraints', JSON.stringify(matchConstraints));
     localStorage.setItem('kaboom_university', university);
     localStorage.setItem('kaboom_education_tags', JSON.stringify(eduTags));
+    localStorage.setItem('kaboom_interest_tags', JSON.stringify(interestTags));
+    localStorage.setItem('kaboom_languages', JSON.stringify(languages));
+    localStorage.setItem('kaboom_country', country);
+    localStorage.setItem('kaboom_city', city);
 
-    onSave({
-      gender,
-      looking_for: lookingFor,
-      languages,
-      country: country || null,
-      state: state || null,
-      district: district || null,
-      city: city || null,
-      interest_tags: interestTags,
+    setTimeout(() => {
+      setIsSavingState('spinner');
+    }, 800);
+
+    try {
+      await onSave({
+        gender,
+        looking_for: lookingFor,
+        languages,
+        country: country || null,
+        state: state || null,
+        district: district || null,
+        city: city || null,
+        interest_tags: interestTags,
+        display_name: nameClean,
+        bio: bio.trim() || null,
+        match_mode: matchMode,
+        match_constraints: matchConstraints,
+        match_attributes: {
+          university: university ? [university] : [],
+          education_tags: eduTags,
+          city: city ? [city] : [],
+          state: state ? [state] : [],
+          country: country ? [country] : [],
+          languages: languages,
+          interests: interestTags
+        }
+      });
       
-      // V6 & V6.5 keys
-      display_name: nameClean,
-      bio: bio.trim() || null,
-      match_mode: matchMode,
-      match_constraints: matchConstraints,
-      match_attributes: {
-        university: university ? [university] : [],
-        education_tags: eduTags,
-        city: city ? [city] : [],
-        state: state ? [state] : [],
-        country: country ? [country] : [],
-        languages: languages,
-        interests: interestTags
-      }
-    });
-    onClose();
+      setTimeout(() => {
+        setIsSavingState('success');
+      }, 1600);
+
+      setTimeout(() => {
+        setIsFadingOut(true);
+      }, 2200);
+
+      setTimeout(() => {
+        onClose();
+        setIsSavingState('idle');
+        setIsFadingOut(false);
+      }, 2550);
+
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Save failed');
+      setIsSavingState('idle');
+    }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/75 backdrop-blur-md transition-opacity">
-      <div className="relative w-full max-w-2xl bg-slate-900 border border-white/10 rounded-t-3xl sm:rounded-3xl overflow-hidden shadow-2xl flex flex-col max-h-[85vh] sm:max-h-[90vh]">
+    <div className={cn(
+      "fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/75 backdrop-blur-md transition-all duration-300",
+      isFadingOut ? "opacity-0 pointer-events-none scale-95" : "opacity-100 scale-100"
+    )}>
+      <div className="relative w-full max-w-2xl bg-slate-900 border border-white/10 rounded-t-3xl sm:rounded-3xl overflow-hidden shadow-2xl flex flex-col max-h-[85vh] sm:max-h-[90vh] transition-transform duration-300">
         {/* Header */}
         <div className="px-6 py-4 flex items-center justify-between border-b border-white/10 bg-slate-950">
           <h2 className="text-xl font-bold text-white bg-gradient-to-r from-accent to-pink-400 bg-clip-text text-transparent">Match Preferences</h2>
-          <button onClick={onClose} className="p-2 text-white/50 hover:text-white rounded-full hover:bg-white/5">
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
+          {isSavingState === 'idle' && (
+            <button onClick={onClose} className="p-2 text-white/50 hover:text-white rounded-full hover:bg-white/5">
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          )}
         </div>
 
         {/* Form Body */}
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
-          {/* Identity & Matching */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-xs font-semibold text-white/50 uppercase tracking-wider mb-2">I Am</label>
-              <div className="grid grid-cols-2 gap-2">
-                {['Male', 'Female', 'Non Binary', 'Prefer not to say'].map((g) => (
-                  <button
-                    key={g}
-                    type="button"
-                    onClick={() => setGender(g)}
-                    className={cn(
-                      "px-3 py-2 text-sm rounded-xl font-medium border text-center transition-all duration-200",
-                      gender === g 
-                        ? "bg-accent border-accent text-white shadow-lg shadow-accent/20" 
-                        : "border-white/10 bg-white/5 text-white/70 hover:bg-white/10"
-                    )}
-                  >
-                    {g}
-                  </button>
-                ))}
+          {/* SECTION 1: Your Identity */}
+          <div className="space-y-4">
+            <h3 className="text-xs font-bold text-accent-light uppercase tracking-wider">Section 1: Your Identity</h3>
+            <div className="grid grid-cols-1 gap-4">
+              <div>
+                <label className="block text-xs text-white/50 uppercase mb-2">Display Name (Mandatory, 3-25 chars)</label>
+                <input
+                  type="text"
+                  placeholder="Enter display name... e.g. Alex"
+                  value={displayName}
+                  onChange={(e) => setDisplayName(e.target.value)}
+                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-accent"
+                  disabled={isSavingState !== 'idle'}
+                />
+                <p className="text-[10px] text-amber-500/80 mt-1.5 font-medium leading-relaxed">
+                  This name will be visible during this chat only. It disappears after you leave.
+                </p>
               </div>
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-white/50 uppercase tracking-wider mb-2">Looking For</label>
-              <div className="grid grid-cols-3 gap-2">
-                {['Male', 'Female', 'Anyone'].map((l) => (
-                  <button
-                    key={l}
-                    type="button"
-                    onClick={() => handleLookingForChange(l)}
-                    className={cn(
-                      "px-3 py-2 text-sm rounded-xl font-medium border text-center transition-all duration-200",
-                      lookingFor.includes(l)
-                        ? "bg-accent border-accent text-white shadow-lg shadow-accent/20" 
-                        : "border-white/10 bg-white/5 text-white/70 hover:bg-white/10"
-                    )}
-                  >
-                    {l}
-                  </button>
-                ))}
+              <div>
+                <label className="block text-xs text-white/50 uppercase mb-2">Bio / Status (Optional, Max 120 chars)</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Study buddy, learning English, just chilling..."
+                  value={bio}
+                  onChange={(e) => setBio(e.target.value.slice(0, 120))}
+                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-accent"
+                  disabled={isSavingState !== 'idle'}
+                />
               </div>
             </div>
           </div>
 
-          {/* Location & Interest Tabs */}
-          <div>
-            <div className="flex border-b border-white/10 mb-4">
-              <button
-                onClick={() => setActiveTab('profile')}
-                className={cn(
-                  "flex-1 pb-3 text-sm font-semibold border-b-2 transition-all",
-                  activeTab === 'profile' 
-                    ? "border-accent text-accent-light" 
-                    : "border-transparent text-white/50 hover:text-white"
-                )}
-              >
-                👤 Profile
-              </button>
-              <button
-                onClick={() => setActiveTab('location')}
-                className={cn(
-                  "flex-1 pb-3 text-sm font-semibold border-b-2 transition-all",
-                  activeTab === 'location' 
-                    ? "border-accent text-accent-light" 
-                    : "border-transparent text-white/50 hover:text-white"
-                )}
-              >
-                📍 Location
-              </button>
-              <button
-                onClick={() => setActiveTab('interests')}
-                className={cn(
-                  "flex-1 pb-3 text-sm font-semibold border-b-2 transition-all",
-                  activeTab === 'interests' 
-                    ? "border-accent text-accent-light" 
-                    : "border-transparent text-white/50 hover:text-white"
-                )}
-              >
-                ✨ Interests
-              </button>
-              <button
-                onClick={() => setActiveTab('appSettings')}
-                className={cn(
-                  "flex-1 pb-3 text-sm font-semibold border-b-2 transition-all",
-                  activeTab === 'appSettings' 
-                    ? "border-accent text-accent-light" 
-                    : "border-transparent text-white/50 hover:text-white"
-                )}
-              >
-                ⚙️ Settings
-              </button>
+          <div className="border-t border-white/5" />
+
+          {/* SECTION 2: Basic Match Preferences */}
+          <div className="space-y-6">
+            <h3 className="text-xs font-bold text-accent-light uppercase tracking-wider">Section 2: Basic Match Preferences</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-xs font-semibold text-white/50 uppercase tracking-wider mb-2">I Am</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {['Male', 'Female', 'Non Binary', 'Prefer not to say'].map((g) => (
+                    <button
+                      key={g}
+                      type="button"
+                      disabled={isSavingState !== 'idle'}
+                      onClick={() => setGender(g)}
+                      className={cn(
+                        "px-3 py-2 text-sm rounded-xl font-medium border text-center transition-all duration-200",
+                        gender === g 
+                          ? "bg-accent border-accent text-white shadow-lg shadow-accent/20" 
+                          : "border-white/10 bg-white/5 text-white/70 hover:bg-white/10"
+                      )}
+                    >
+                      {g}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-white/50 uppercase tracking-wider mb-2">Looking For</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {['Male', 'Female', 'Anyone'].map((l) => (
+                    <button
+                      key={l}
+                      type="button"
+                      disabled={isSavingState !== 'idle'}
+                      onClick={() => handleLookingForChange(l)}
+                      className={cn(
+                        "px-3 py-2 text-sm rounded-xl font-medium border text-center transition-all duration-200",
+                        lookingFor.includes(l)
+                          ? "bg-accent border-accent text-white shadow-lg shadow-accent/20" 
+                          : "border-white/10 bg-white/5 text-white/70 hover:bg-white/10"
+                      )}
+                    >
+                      {l}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
 
-            {activeTab === 'profile' && (
+            {/* Languages list */}
+            <div>
+              <label className="block text-xs text-white/50 uppercase mb-2">Languages You Speak</label>
+              <div className="flex flex-wrap gap-2">
+                {LANGUAGES.map((lang) => (
+                  <button
+                    key={lang}
+                    type="button"
+                    disabled={isSavingState !== 'idle'}
+                    onClick={() => toggleLanguage(lang)}
+                    className={cn(
+                      "px-3 py-1.5 rounded-full text-xs font-semibold border transition-all duration-200",
+                      languages.includes(lang) 
+                        ? "bg-accent/20 border-accent text-accent-light" 
+                        : "border-white/10 bg-white/5 text-white/50 hover:bg-white/10"
+                    )}
+                  >
+                    {lang}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Search Location */}
+            <div>
+              <label className="block text-xs text-white/50 uppercase mb-2">Search Location / Country</label>
+              <input
+                type="text"
+                placeholder="Search by city, state, or country..."
+                value={locationQuery}
+                disabled={isSavingState !== 'idle'}
+                onChange={(e) => setLocationQuery(e.target.value)}
+                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-accent"
+              />
+              {locationResults.length > 0 && (
+                <div className="mt-2 bg-slate-950 border border-white/10 rounded-xl max-h-48 overflow-y-auto divide-y divide-white/5 shadow-xl relative z-10">
+                  {locationResults.map((loc) => (
+                    <button
+                      key={loc.id}
+                      type="button"
+                      onClick={() => handleSelectLocation(loc)}
+                      className="w-full px-4 py-3 text-left hover:bg-white/5 text-sm text-white/80 flex justify-between items-center"
+                    >
+                      <span>{loc.name}</span>
+                      <span className="text-xs text-white/30 capitalize">{loc.type}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* Selected Location Details */}
+              {(country || state || city) && (
+                <div className="p-4 mt-3 bg-white/5 rounded-xl border border-white/10 flex items-center justify-between">
+                  <div>
+                    <h4 className="text-sm font-semibold text-accent-light">Selected Location:</h4>
+                    <p className="text-xs text-white/70 mt-1">
+                      {[city, state, country].filter(Boolean).join(' • ')}
+                    </p>
+                  </div>
+                  {isSavingState === 'idle' && (
+                    <button
+                      onClick={() => {
+                        setCountry('');
+                        setState('');
+                        setDistrict('');
+                        setCity('');
+                      }}
+                      className="text-xs text-red-400 hover:underline"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="border-t border-white/5" />
+
+          {/* SECTION 3: Collapsible Advanced Filters */}
+          <div className="border border-white/5 rounded-2xl p-4 bg-white/[0.01]">
+            <button
+              type="button"
+              onClick={() => setIsAdvancedOpen(!isAdvancedOpen)}
+              className="w-full flex items-center justify-between text-left focus:outline-none"
+            >
+              <div>
+                <h4 className="text-sm font-bold text-white flex items-center gap-1.5">
+                  <span>⚙️</span> Advanced Filters
+                </h4>
+                <p className="text-xs text-white/40 mt-0.5">Find people with similar interests, universities, or locations.</p>
+              </div>
+              <span className={cn("text-white/45 transform transition-transform duration-300", isAdvancedOpen && "rotate-180")}>
+                ▼
+              </span>
+            </button>
+
+            <div className={cn(
+              "transition-all duration-300 overflow-hidden",
+              isAdvancedOpen ? "max-h-[1200px] mt-6 opacity-100" : "max-h-0 opacity-0 pointer-events-none"
+            )}>
               <div className="space-y-6">
-                {/* Display Name & Bio */}
-                <div className="grid grid-cols-1 gap-4">
-                  <div>
-                    <label className="block text-xs text-white/50 uppercase mb-2">Display Name (Mandatory, 3-25 chars)</label>
-                    <input
-                      type="text"
-                      placeholder="Enter display name... e.g. Alex"
-                      value={displayName}
-                      onChange={(e) => setDisplayName(e.target.value)}
-                      className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-accent"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs text-white/50 uppercase mb-2">Bio / Status (Optional, Max 120 chars)</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Study buddy, learning English, just chilling..."
-                      value={bio}
-                      onChange={(e) => setBio(e.target.value.slice(0, 120))}
-                      className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-accent"
-                    />
-                  </div>
-                </div>
-
-                {/* Match Mode Selection */}
-                <div>
-                  <label className="block text-xs text-white/50 uppercase mb-2">Matchmaking Search Mode</label>
-                  <div className="grid grid-cols-3 gap-2">
-                    {(['RANDOM', 'PREFER', 'STRICT'] as const).map((m) => (
-                      <button
-                        key={m}
-                        type="button"
-                        onClick={() => {
-                          setMatchMode(m);
-                          if (m === 'STRICT') {
-                            setMatchConstraints(prev => ({
-                              university: !!university,
-                              city: !!city,
-                              country: !!country,
-                              language: false,
-                              interests: false,
-                              ...prev
-                            }));
-                          }
-                        }}
-                        className={cn(
-                          "px-3 py-3 text-xs rounded-xl font-bold border text-center transition-all duration-200",
-                          matchMode === m
-                            ? "bg-gradient-to-r from-accent to-purple-600 border-accent text-white shadow-lg"
-                            : "border-white/10 bg-white/5 text-white/70 hover:bg-white/10"
-                        )}
-                      >
-                        {m === 'RANDOM' && '🎲 RANDOM'}
-                        {m === 'PREFER' && '🎯 PREFER'}
-                        {m === 'STRICT' && '🔒 STRICT'}
-                      </button>
-                    ))}
-                  </div>
-                  <p className="text-[11px] text-white/40 mt-1.5 leading-relaxed">
-                    {matchMode === 'RANDOM' && '🎲 Random Match: Connect with anyone instantly. Compatibility scoring & relaxation apply.'}
-                    {matchMode === 'PREFER' && '🎯 Prefer Matching: Prioritizes interests & locations, but relaxes filters if waiting to ensure connection.'}
-                    {matchMode === 'STRICT' && '🔒 Strict Match: Never fall back. Wait indefinitely in the queue until a user matches your strict filters.'}
-                  </p>
-                </div>
-
                 {/* University Search Autocomplete */}
                 <div>
                   <label className="block text-xs text-white/50 uppercase mb-2">University / College (Optional)</label>
@@ -442,6 +529,7 @@ export function PreferenceModal({ isOpen, onClose, onSave, currentPreferences = 
                     type="text"
                     placeholder="Search university... e.g. IIT, Stanford, Osmania"
                     value={universityQuery}
+                    disabled={isSavingState !== 'idle'}
                     onChange={(e) => {
                       setUniversityQuery(e.target.value);
                       if (!e.target.value) {
@@ -451,7 +539,7 @@ export function PreferenceModal({ isOpen, onClose, onSave, currentPreferences = 
                     className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-accent"
                   />
                   {universityResults.length > 0 && (
-                    <div className="mt-2 bg-slate-950 border border-white/10 rounded-xl max-h-48 overflow-y-auto divide-y divide-white/5 shadow-xl z-50 relative">
+                    <div className="mt-2 bg-slate-950 border border-white/10 rounded-xl max-h-48 overflow-y-auto divide-y divide-white/5 shadow-xl relative z-10">
                       {universityResults.map((u) => (
                         <button
                           key={u.name}
@@ -475,27 +563,30 @@ export function PreferenceModal({ isOpen, onClose, onSave, currentPreferences = 
                   {university && (
                     <div className="mt-2 flex items-center justify-between p-3 bg-accent/10 border border-accent/20 rounded-xl">
                       <span className="text-xs text-white font-medium">🎓 {university}</span>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setUniversity('');
-                          setMatchConstraints(prev => ({ ...prev, university: false }));
-                        }}
-                        className="text-xs text-red-400 hover:underline"
-                      >
-                        Remove
-                      </button>
+                      {isSavingState === 'idle' && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setUniversity('');
+                            setMatchConstraints(prev => ({ ...prev, university: false }));
+                          }}
+                          className="text-xs text-red-400 hover:underline"
+                        >
+                          Remove
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>
 
-                {/* Campus Education Tags (Choose up to 3) */}
+                {/* Campus Education Tags */}
                 <div>
                   <label className="block text-xs text-white/50 uppercase mb-2">Campus / Education Tags (Max 3, press Enter to add)</label>
                   <input
                     type="text"
                     placeholder="e.g. Microsoft Internship, AWS Community, GDSC..."
                     value={eduTagInput}
+                    disabled={isSavingState !== 'idle'}
                     onChange={(e) => setEduTagInput(e.target.value)}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') {
@@ -514,17 +605,103 @@ export function PreferenceModal({ isOpen, onClose, onSave, currentPreferences = 
                       {eduTags.map((tag) => (
                         <span key={tag} className="inline-flex items-center gap-1.5 px-3 py-1 bg-purple-500/20 text-purple-300 rounded-full text-xs border border-purple-500/20">
                           {tag}
-                          <button
-                            type="button"
-                            onClick={() => setEduTags(eduTags.filter(x => x !== tag))}
-                            className="hover:text-red-400 font-bold ml-1"
-                          >
-                            ×
-                          </button>
+                          {isSavingState === 'idle' && (
+                            <button
+                              type="button"
+                              onClick={() => setEduTags(eduTags.filter(x => x !== tag))}
+                              className="hover:text-red-400 font-bold ml-1"
+                            >
+                              ×
+                            </button>
+                          )}
                         </span>
                       ))}
                     </div>
                   )}
+                </div>
+
+                {/* Interests Search */}
+                <div>
+                  <label className="block text-xs text-white/50 uppercase mb-2">Interests (Autocomplete)</label>
+                  <input
+                    type="text"
+                    placeholder="Search e.g. Gaming, Cricket, Chess, AI..."
+                    value={interestQuery}
+                    disabled={isSavingState !== 'idle'}
+                    onChange={(e) => setInterestQuery(e.target.value)}
+                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-accent"
+                  />
+                  {interestResults.length > 0 && (
+                    <div className="mt-2 bg-slate-950 border border-white/10 rounded-xl max-h-48 overflow-y-auto divide-y divide-white/5 shadow-xl relative z-10">
+                      {interestResults.map((item) => (
+                        <button
+                          key={item.id}
+                          type="button"
+                          onClick={() => handleSelectInterest(item.name)}
+                          className="w-full px-4 py-3 text-left hover:bg-white/5 text-sm text-white/80 flex justify-between items-center"
+                        >
+                          <span>{item.name}</span>
+                          <span className="text-xs px-2 py-0.5 bg-accent/20 text-accent-light rounded-full text-[10px]">{item.category}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Active Tags */}
+                  {interestTags.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mt-3">
+                      {interestTags.map((t) => (
+                        <span key={t} className="inline-flex items-center gap-1.5 px-3 py-1 bg-white/10 text-white rounded-full text-xs border border-white/5">
+                          {t}
+                          {isSavingState === 'idle' && (
+                            <button onClick={() => removeInterest(t)} className="hover:text-red-400 font-bold ml-1">×</button>
+                          )}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Match Mode Selection */}
+                <div>
+                  <label className="block text-xs text-white/50 uppercase mb-2">Matchmaking Search Mode</label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {(['RANDOM', 'PREFER', 'STRICT'] as const).map((m) => (
+                      <button
+                        key={m}
+                        type="button"
+                        disabled={isSavingState !== 'idle'}
+                        onClick={() => {
+                          setMatchMode(m);
+                          if (m === 'STRICT') {
+                            setMatchConstraints(prev => ({
+                              university: !!university,
+                              city: !!city,
+                              country: !!country,
+                              language: false,
+                              interests: false,
+                              ...prev
+                            }));
+                          }
+                        }}
+                        className={cn(
+                          "px-3 py-3 text-xs rounded-xl font-bold border text-center transition-all duration-200",
+                          matchMode === m
+                            ? "bg-gradient-to-r from-accent to-purple-600 border-accent text-white shadow-lg"
+                            : "border-white/10 bg-white/5 text-white/70 hover:bg-white/10"
+                        )}
+                      >
+                        {m === 'RANDOM' && '🌍 Random'}
+                        {m === 'PREFER' && '🎯 Smart Match'}
+                        {m === 'STRICT' && '🔒 Exact Match'}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-[11px] text-white/40 mt-2 leading-relaxed">
+                    {matchMode === 'RANDOM' && '🌍 Random: Connect with anyone instantly. Compatibility scoring & relaxation apply.'}
+                    {matchMode === 'PREFER' && '🎯 Smart Match: Prioritizes interests & locations, but relaxes filters if waiting to ensure connection.'}
+                    {matchMode === 'STRICT' && '🔒 Exact Match: Never fall back. Wait indefinitely in the queue until a user matches your strict filters.'}
+                  </p>
                 </div>
 
                 {/* STRICT Constraints selection */}
@@ -545,7 +722,7 @@ export function PreferenceModal({ isOpen, onClose, onSave, currentPreferences = 
                         <button
                           key={c.key}
                           type="button"
-                          disabled={!c.enabled}
+                          disabled={!c.enabled || isSavingState !== 'idle'}
                           onClick={() => setMatchConstraints(prev => ({ ...prev, [c.key]: !prev[c.key] }))}
                           className={cn(
                             "p-3 rounded-xl border text-left flex items-start justify-between transition-all duration-200",
@@ -573,180 +750,7 @@ export function PreferenceModal({ isOpen, onClose, onSave, currentPreferences = 
                   </div>
                 )}
               </div>
-            )}
-
-            {activeTab === 'location' && (
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-xs text-white/50 uppercase mb-2">Search Location</label>
-                  <input
-                    type="text"
-                    placeholder="Search by city, state, or country..."
-                    value={locationQuery}
-                    onChange={(e) => setLocationQuery(e.target.value)}
-                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-accent"
-                  />
-                  {locationResults.length > 0 && (
-                    <div className="mt-2 bg-slate-950 border border-white/10 rounded-xl max-h-48 overflow-y-auto divide-y divide-white/5 shadow-xl">
-                      {locationResults.map((loc) => (
-                        <button
-                          key={loc.id}
-                          type="button"
-                          onClick={() => handleSelectLocation(loc)}
-                          className="w-full px-4 py-3 text-left hover:bg-white/5 text-sm text-white/80 flex justify-between items-center"
-                        >
-                          <span>{loc.name}</span>
-                          <span className="text-xs text-white/30 capitalize">{loc.type}</span>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                {/* Selected Location Details */}
-                {(country || state || city) && (
-                  <div className="p-4 bg-white/5 rounded-xl border border-white/10 flex items-center justify-between">
-                    <div>
-                      <h4 className="text-sm font-semibold text-accent-light">Selected Location:</h4>
-                      <p className="text-xs text-white/70 mt-1">
-                        {[city, state, country].filter(Boolean).join(' • ')}
-                      </p>
-                    </div>
-                    <button
-                      onClick={() => {
-                        setCountry('');
-                        setState('');
-                        setDistrict('');
-                        setCity('');
-                      }}
-                      className="text-xs text-red-400 hover:underline"
-                    >
-                      Clear
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {activeTab === 'interests' && (
-              <div className="space-y-6">
-                {/* Interests Search */}
-                <div>
-                  <label className="block text-xs text-white/50 uppercase mb-2">Interests (Autocomplete)</label>
-                  <input
-                    type="text"
-                    placeholder="Search e.g. Gaming, Cricket, Chess, AI..."
-                    value={interestQuery}
-                    onChange={(e) => setInterestQuery(e.target.value)}
-                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-accent"
-                  />
-                  {interestResults.length > 0 && (
-                    <div className="mt-2 bg-slate-950 border border-white/10 rounded-xl max-h-48 overflow-y-auto divide-y divide-white/5 shadow-xl">
-                      {interestResults.map((item) => (
-                        <button
-                          key={item.id}
-                          type="button"
-                          onClick={() => handleSelectInterest(item.name)}
-                          className="w-full px-4 py-3 text-left hover:bg-white/5 text-sm text-white/80 flex justify-between items-center"
-                        >
-                          <span>{item.name}</span>
-                          <span className="text-xs px-2 py-0.5 bg-accent/20 text-accent-light rounded-full text-[10px]">{item.category}</span>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Active Tags */}
-                  {interestTags.length > 0 && (
-                    <div className="flex flex-wrap gap-2 mt-3">
-                      {interestTags.map((t) => (
-                        <span key={t} className="inline-flex items-center gap-1.5 px-3 py-1 bg-white/10 text-white rounded-full text-xs border border-white/5">
-                          {t}
-                          <button onClick={() => removeInterest(t)} className="hover:text-red-400 font-bold ml-1">×</button>
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                {/* Languages list */}
-                <div>
-                  <label className="block text-xs text-white/50 uppercase mb-2">Languages</label>
-                  <div className="flex flex-wrap gap-2">
-                    {LANGUAGES.map((lang) => (
-                      <button
-                        key={lang}
-                        type="button"
-                        onClick={() => toggleLanguage(lang)}
-                        className={cn(
-                          "px-3 py-1.5 rounded-full text-xs font-semibold border transition-all duration-200",
-                          languages.includes(lang) 
-                            ? "bg-accent/20 border-accent text-accent-light" 
-                            : "border-white/10 bg-white/5 text-white/50 hover:bg-white/10"
-                        )}
-                      >
-                        {lang}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {activeTab === 'appSettings' && (
-              <div className="space-y-6">
-                {/* Onboarding Tips Toggle */}
-                <div className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/10">
-                  <div>
-                    <h4 className="text-sm font-bold text-white">Smart Feature Coach</h4>
-                    <p className="text-xs text-white/50 mt-1">Show helpful interaction tips and shortcuts during video chats.</p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setShowTips(!showTips)}
-                    className={cn(
-                      "w-12 h-6 rounded-full p-0.5 transition-colors duration-200 focus:outline-none",
-                      showTips ? "bg-amber-500" : "bg-white/20"
-                    )}
-                  >
-                    <div
-                      className={cn(
-                        "w-5 h-5 rounded-full bg-white shadow-md transform transition-transform duration-200",
-                        showTips ? "translate-x-6" : "translate-x-0"
-                      )}
-                    />
-                  </button>
-                </div>
-
-                {/* Theme Selection */}
-                <div>
-                  <label className="block text-xs font-semibold text-white/50 uppercase tracking-wider mb-3">App Color Theme</label>
-                  <div className="grid grid-cols-2 gap-3">
-                    {[
-                      { id: 'ember', name: 'Ember Orange', color: 'bg-amber-500' },
-                      { id: 'aurora', name: 'Aurora Sunset', color: 'bg-purple-500' },
-                      { id: 'emerald', name: 'Emerald Mint', color: 'bg-emerald-500' },
-                      { id: 'midnight', name: 'Midnight Dark', color: 'bg-zinc-500' }
-                    ].map((th) => (
-                      <button
-                        key={th.id}
-                        type="button"
-                        onClick={() => setTheme(th.id)}
-                        className={cn(
-                          "p-4 rounded-2xl border flex items-center gap-3 transition-all duration-300 hover:bg-white/[0.04]",
-                          theme === th.id
-                            ? "border-amber-400 bg-white/5 text-white"
-                            : "border-white/5 bg-white/[0.02] text-white/70"
-                        )}
-                      >
-                        <span className={cn("w-3.5 h-3.5 rounded-full shadow-inner", th.color)} />
-                        <span className="text-xs font-bold">{th.name}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
+            </div>
           </div>
         </div>
 
@@ -754,22 +758,34 @@ export function PreferenceModal({ isOpen, onClose, onSave, currentPreferences = 
         <div className="px-6 py-4 border-t border-white/10 bg-slate-950 flex items-center justify-between">
           <button
             onClick={handleReset}
-            className="px-4 py-2 border border-white/10 hover:bg-white/5 text-white/60 hover:text-white text-sm rounded-xl font-medium"
+            disabled={isSavingState !== 'idle'}
+            className="px-4 py-2 border border-white/10 hover:bg-white/5 text-white/60 hover:text-white text-sm rounded-xl font-medium disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Reset All
           </button>
           <div className="flex gap-3">
-            <button
-              onClick={onClose}
-              className="px-4 py-2 border border-white/10 hover:bg-white/5 text-white text-sm rounded-xl font-medium"
-            >
-              Cancel
-            </button>
+            {isSavingState === 'idle' && (
+              <button
+                onClick={onClose}
+                className="px-4 py-2 border border-white/10 hover:bg-white/5 text-white text-sm rounded-xl font-medium"
+              >
+                Cancel
+              </button>
+            )}
             <button
               onClick={handleSave}
-              className="px-6 py-2 bg-gradient-to-r from-accent to-purple-600 hover:opacity-90 text-white text-sm rounded-xl font-semibold shadow-lg shadow-accent/20"
+              disabled={isSavingState !== 'idle'}
+              className="px-6 py-2 bg-gradient-to-r from-accent to-purple-600 hover:opacity-90 text-white text-sm rounded-xl font-semibold shadow-lg shadow-accent/20 flex items-center gap-2 min-w-[120px] justify-center disabled:opacity-80"
             >
-              Save & Join
+              {isSavingState === 'idle' && 'Save & Join'}
+              {isSavingState === 'joining' && 'Joining...'}
+              {isSavingState === 'spinner' && (
+                <svg className="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                </svg>
+              )}
+              {isSavingState === 'success' && '✓ Session Created'}
             </button>
           </div>
         </div>

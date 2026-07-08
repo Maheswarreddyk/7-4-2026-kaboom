@@ -4,6 +4,9 @@ import { useSession } from '../contexts/SessionContext.js';
 import { useToast } from '../contexts/ToastContext.js';
 import { LoadingScreen } from '../components/LoadingScreen.js';
 import { MetaManager } from '../components/MetaManager.js';
+import { PreferenceModal } from '../components/PreferenceModal.js';
+import { apiService } from '../services/api.js';
+import { cn } from '../utils/index.js';
 
 // Mascot SVG Component - "Kaboomey" (stylized speech bubble comet)
 function KaboomeyMascot({ className = "w-full h-full" }: { className?: string }) {
@@ -434,6 +437,8 @@ export function LandingPage() {
   const { session, isLoading, startSession } = useSession();
   const { showToast } = useToast();
   const [starting, setStarting] = useState(false);
+  const [showPreferenceModal, setShowPreferenceModal] = useState(false);
+  const [showTutorial, setShowTutorial] = useState(false);
 
   // V4.1 Auto-Restoration Redirect (Requirement 6 & 17)
   useEffect(() => {
@@ -592,6 +597,17 @@ export function LandingPage() {
     // Satisfying game click animation sequence
     triggerClickExplosion();
     await new Promise((resolve) => setTimeout(resolve, 800));
+
+    const hasName = localStorage.getItem('kaboom_display_name');
+    if (!hasName) {
+      const tutorialSeen = localStorage.getItem('kaboom_tutorial_seen') === 'true';
+      if (!tutorialSeen) {
+        setShowTutorial(true);
+      } else {
+        setShowPreferenceModal(true);
+      }
+      return;
+    }
 
     setStarting(true);
     try {
@@ -1133,6 +1149,112 @@ export function LandingPage() {
           </div>
         </div>
       </section>
+
+      {showPreferenceModal && (
+        <PreferenceModal
+          isOpen={showPreferenceModal}
+          onClose={() => setShowPreferenceModal(false)}
+          onSave={async (prefs) => {
+            setStarting(true);
+            try {
+              const data = await startSession();
+              await apiService.submitPreferences(data.sessionId, data.sessionToken, prefs);
+              setShowPreferenceModal(false);
+              navigate('/chat');
+            } catch (error) {
+              showToast('error', error instanceof Error ? error.message : 'Failed to join chat');
+              setStarting(false);
+            }
+          }}
+          currentPreferences={{}}
+        />
+      )}
+
+      {showTutorial && (
+        <TutorialSlider
+          onClose={() => {
+            setShowTutorial(false);
+            setShowPreferenceModal(true);
+          }}
+        />
+      )}
     </div>
   );
 }
+
+function TutorialSlider({ onClose }: { onClose: () => void }) {
+  const [slide, setSlide] = useState(0);
+
+  const slides = [
+    {
+      title: "Choose your profile",
+      description: "Set up your public identity and preferences to match with compatible peers.",
+      icon: "👤"
+    },
+    {
+      title: "Meet people instantly",
+      description: "Join the queue and get connected securely over direct peer-to-peer tunnels.",
+      icon: "⚡"
+    },
+    {
+      title: "Swipe Next anytime",
+      description: "Don't like the match? Swipe left or press Next to match with someone new instantly.",
+      icon: "🔄"
+    }
+  ];
+
+  const handleNext = () => {
+    if (slide < slides.length - 1) {
+      setSlide(slide + 1);
+    } else {
+      localStorage.setItem('kaboom_tutorial_seen', 'true');
+      onClose();
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md animate-fade-in p-4">
+      <div className="relative w-full max-w-md bg-stone-900 border border-white/10 rounded-3xl p-8 flex flex-col items-center justify-between text-center min-h-[420px] shadow-2xl">
+        {/* Slide Icon */}
+        <div className="w-20 h-20 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-4xl mb-6 shadow-inner animate-pulse">
+          {slides[slide].icon}
+        </div>
+
+        {/* Title & Desc */}
+        <div className="flex-1 flex flex-col justify-center mb-8">
+          <h3 className="text-2xl font-black text-stone-100 tracking-tight mb-3">
+            {slides[slide].title}
+          </h3>
+          <p className="text-stone-400 text-sm leading-relaxed max-w-[280px] mx-auto font-medium">
+            {slides[slide].description}
+          </p>
+        </div>
+
+        {/* Progress dots */}
+        <div className="flex gap-2 mb-8">
+          {slides.map((_, i) => (
+            <div
+              key={i}
+              className={cn(
+                "w-2 h-2 rounded-full transition-all duration-300",
+                slide === i ? "bg-amber-500 w-6" : "bg-white/20"
+              )}
+            />
+          ))}
+        </div>
+
+        {/* Action Button */}
+        <button
+          onClick={handleNext}
+          className="w-full relative group"
+        >
+          <div className="absolute -inset-0.5 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 opacity-60 blur-sm group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+          <div className="relative text-sm px-6 py-3.5 bg-stone-950 border border-amber-500/30 text-stone-100 font-bold rounded-2xl hover:scale-[1.02] active:scale-[0.98] transition-all duration-300">
+            {slide === slides.length - 1 ? 'Get Started' : 'Next'}
+          </div>
+        </button>
+      </div>
+    </div>
+  );
+}
+

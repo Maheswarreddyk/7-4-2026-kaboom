@@ -44,6 +44,12 @@ export function useVideoChat(
   const [chatState, setChatState] = useState<ChatState>(initialChatState);
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
+  const [isQueuePaused, setIsQueuePaused] = useState(false);
+  const isQueuePausedRef = useRef(false);
+  const setQueuePaused = useCallback((paused: boolean) => {
+    setIsQueuePaused(paused);
+    isQueuePausedRef.current = paused;
+  }, []);
   const partnerSessionIdRef = useRef<string | null>(null);
   const sessionIdRef = useRef<string | null>(null);
   const sessionTokenRef = useRef<string | null>(null);
@@ -222,6 +228,28 @@ export function useVideoChat(
         return;
       }
 
+      // Play soft success ding
+      try {
+        const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+        if (AudioContextClass) {
+          const ctx = new AudioContextClass();
+          const now = ctx.currentTime;
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(880, now); // A5 note
+          gain.gain.setValueAtTime(0, now);
+          gain.gain.linearRampToValueAtTime(0.12, now + 0.02);
+          gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.4);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(now);
+          osc.stop(now + 0.4);
+        }
+      } catch (e) {
+        console.warn('Audio success ding failed to play:', e);
+      }
+
       partnerSessionIdRef.current = data.partnerSessionId;
       isInitiatorRef.current = data.isInitiator;
       setSignalingState('MATCH_FOUND');
@@ -239,6 +267,54 @@ export function useVideoChat(
       } catch (err) {
         console.warn('Failed to restore chat messages:', err);
       }
+
+      // Construct matched details system message
+      const partnerName = data.partnerProfile?.displayName || 'Guest';
+      const myName = localStorage.getItem('kaboom_display_name') || 'You';
+      const sharedAttrs: string[] = [];
+
+      const myUni = localStorage.getItem('kaboom_university');
+      const partnerUni = data.partnerProfile?.match_attributes?.university?.[0] || data.partnerProfile?.university;
+      if (myUni && partnerUni && myUni.toLowerCase() === partnerUni.toLowerCase()) {
+        sharedAttrs.push(`🎓 ${myUni}`);
+      }
+
+      const myCity = localStorage.getItem('kaboom_city');
+      const partnerCity = data.partnerProfile?.match_attributes?.city?.[0] || data.partnerProfile?.city;
+      if (myCity && partnerCity && myCity.toLowerCase() === partnerCity.toLowerCase()) {
+        sharedAttrs.push(`📍 ${myCity}`);
+      }
+
+      const myCountry = localStorage.getItem('kaboom_country');
+      const partnerCountry = data.partnerProfile?.match_attributes?.country?.[0] || data.partnerProfile?.country;
+      if (myCountry && partnerCountry && myCountry.toLowerCase() === partnerCountry.toLowerCase()) {
+        sharedAttrs.push(`🌍 ${myCountry}`);
+      }
+
+      let myInterests: string[] = [];
+      try {
+        myInterests = JSON.parse(localStorage.getItem('kaboom_interest_tags') || '[]');
+      } catch {}
+      const partnerInterests = data.partnerProfile?.match_attributes?.interests || data.partnerProfile?.interest_tags || [];
+      const sharedInterests = myInterests.filter(x => partnerInterests.some((y: string) => y.toLowerCase() === x.toLowerCase()));
+      if (sharedInterests.length > 0) {
+        sharedInterests.forEach(i => sharedAttrs.push(`✨ ${i}`));
+      }
+
+      let matchText = '';
+      if (sharedAttrs.length > 0) {
+        matchText = `🎉 YOU MATCHED: ${myName} 🤝 ${partnerName}\nShared: ${sharedAttrs.join(', ')}`;
+      } else {
+        matchText = `🎉 YOU MATCHED: ${myName} 🤝 ${partnerName}\nMatched Randomly. Meet someone new.`;
+      }
+
+      const systemMsg = {
+        id: `system_${Date.now()}`,
+        senderSessionId: 'system',
+        message: matchText,
+        createdAt: Date.now() - 1000 // slightly older so it sits at top
+      };
+      existingMessages.unshift(systemMsg);
 
       updateChatState({
         connectionStatus: 'connecting',
@@ -393,11 +469,16 @@ export function useVideoChat(
       onPartnerLeft: () => {
         if (skipInProgressRef.current) return;
         setSignalingState('PARTNER_LEFT');
+        setRemoteStream(null);
+        webrtcManager.resetConnection();
+        lastProcessedOfferSdpRef.current = null;
+        lastProcessedAnswerSdpRef.current = null;
+        
         showToast('info', 'Partner left. Finding someone new...');
-        // Auto-rejoin after the reconnect delay (500ms)
+        // Wait 2.5 seconds to show the left animation overlay, then automatically rejoin the queue
         setTimeout(() => {
           void triggerAutoRejoin();
-        }, 500);
+        }, 2500);
       },
       onSearching: (data: { message: string }) => {
         if (skipInProgressRef.current) return;
@@ -750,6 +831,7 @@ export function useVideoChat(
   useEffect(() => {
     if (
       chatState.status !== 'SEARCHING' ||
+      isQueuePaused ||
       skipInProgressRef.current ||
       webrtcManager.getConnectionState() === 'connected' ||
       !sessionId ||
@@ -769,7 +851,7 @@ export function useVideoChat(
     }, 4000);
 
     return () => clearInterval(interval);
-  }, [chatState.status, sessionId, sessionToken]);
+  }, [chatState.status, isQueuePaused, sessionId, sessionToken]);
 
   // Mobile Lifecycle Event Listeners: visibilitychange, pagehide, freeze/resume, online/offline
   useEffect(() => {
@@ -796,7 +878,7 @@ export function useVideoChat(
     const handleResumeOrFocus = () => {
       console.log('[Lifecycle] App resumed or focused');
       // Self-healing queue: If status is SEARCHING, send a heartbeat joinQueue immediately
-      if (signalingStateRef.current === 'SEARCHING' && sessionIdRef.current && sessionTokenRef.current && callbacksRef.current) {
+      if (signalingStateRef.current === 'SEARCHING' && !isQueuePausedRef.current && sessionIdRef.current && sessionTokenRef.current && callbacksRef.current) {
         console.log('[Lifecycle] Queue active — forcing immediate heartbeat registration');
         void joinQueue(sessionIdRef.current, sessionTokenRef.current, callbacksRef.current);
       }
@@ -804,7 +886,7 @@ export function useVideoChat(
 
     const handleOnline = () => {
       console.log('[Lifecycle] Internet connection restored');
-      if (signalingStateRef.current === 'SEARCHING' && sessionIdRef.current && sessionTokenRef.current && callbacksRef.current) {
+      if (signalingStateRef.current === 'SEARCHING' && !isQueuePausedRef.current && sessionIdRef.current && sessionTokenRef.current && callbacksRef.current) {
         void joinQueue(sessionIdRef.current, sessionTokenRef.current, callbacksRef.current);
       }
     };
@@ -959,6 +1041,26 @@ export function useVideoChat(
     });
   }, []);
 
+  const pauseQueue = useCallback(async () => {
+    if (!sessionId || !sessionToken) return;
+    try {
+      setQueuePaused(true);
+      await leaveQueue(sessionId, sessionToken);
+    } catch (err) {
+      console.error('Failed to pause queue:', err);
+    }
+  }, [sessionId, sessionToken, setQueuePaused]);
+
+  const resumeQueue = useCallback(async () => {
+    if (!sessionId || !sessionToken || !callbacksRef.current) return;
+    try {
+      setQueuePaused(false);
+      await joinQueue(sessionId, sessionToken, callbacksRef.current);
+    } catch (err) {
+      console.error('Failed to resume queue:', err);
+    }
+  }, [sessionId, sessionToken, setQueuePaused]);
+
   return {
     chatState,
     localStream,
@@ -975,5 +1077,8 @@ export function useVideoChat(
     setTypingStatus,
     setChatOpen,
     sendReaction,
+    isQueuePaused,
+    pauseQueue,
+    resumeQueue,
   };
 }

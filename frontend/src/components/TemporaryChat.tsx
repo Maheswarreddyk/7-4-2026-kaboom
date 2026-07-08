@@ -116,7 +116,7 @@ export function TemporaryChat({
 
   // ── RENDER OVERLAY MODE (Closed Drawer, floating transparent notifications) ──
   if (!isOpen) {
-    const visibleMessages = messages.filter(isMessageVisibleInOverlay);
+    const visibleMessages = messages.filter((msg) => isMessageVisibleInOverlay(msg) && msg.senderSessionId !== 'system');
     if (visibleMessages.length === 0 && !partnerTyping) return null;
 
     return (
@@ -285,12 +285,35 @@ export function TemporaryChat({
           ) : (
             messages.map((msg) => {
               const isSelf = msg.senderSessionId === selfSessionId;
+              const isSystem = msg.senderSessionId === 'system';
+
+              if (isSystem) {
+                const lines = msg.message.split('\n');
+                const titleLine = lines[0];
+                const detailLine = lines.slice(1).join('\n');
+                return (
+                  <div
+                    key={msg.id}
+                    className="w-full flex justify-center py-2 px-1 animate-fade-in"
+                  >
+                    <div className="bg-white/[0.03] border border-white/10 rounded-2xl px-4 py-3 text-center max-w-[90%] shadow-lg backdrop-blur-md">
+                      <span className="text-[12px] font-semibold text-amber-400 block mb-1">
+                        {titleLine}
+                      </span>
+                      <p className="text-[11px] text-stone-300 font-medium leading-relaxed italic">
+                        {detailLine}
+                      </p>
+                    </div>
+                  </div>
+                );
+              }
+
               return (
                 <div
                   key={msg.id}
                   className={cn(
                     "flex flex-col gap-1 max-w-[80%] animate-spring-in",
-                    isSelf ? "self-end items-end ml-auto" : "self-start items-startmr-auto"
+                    isSelf ? "self-end items-end ml-auto" : "self-start items-start mr-auto"
                   )}
                 >
                   <div
@@ -305,7 +328,7 @@ export function TemporaryChat({
                   </div>
                   {isSelf && renderStatus(msg.status)}
                 </div>
-              )
+              );
             })
           )}
 
