@@ -286,10 +286,13 @@ export function SearchingAnimation({
       <canvas ref={canvasRef} className="absolute inset-0 w-full h-full pointer-events-none" />
 
       {/* Unified Waiting Room Content Layer */}
-      <div className={cn(
-        "relative z-10 flex flex-col items-center w-full max-w-[380px] sm:max-w-[420px] mx-auto px-4 text-center transition-all duration-500",
-        isMinimalLayout ? "gap-2" : "gap-6"
-      )}>
+      <div 
+        className={cn(
+          "relative z-10 flex flex-col items-center w-full max-w-[380px] sm:max-w-[420px] mx-auto px-4 text-center transition-all duration-500",
+          isMinimalLayout ? "gap-2" : "gap-6"
+        )}
+        style={{ transform: isMinimalLayout ? 'none' : 'translateY(-30px)' }}
+      >
         {status === 'PARTNER_LEFT' ? (
           /* Case A: Partner Left */
           <div className="flex flex-col items-center animate-fade-in w-full">
