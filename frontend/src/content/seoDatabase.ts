@@ -114,12 +114,12 @@ export const SEO_FEATURES = [
 
 // 6. Competitor Comparisons
 export const SEO_COMPARISONS = [
-  { competitor: 'Omegle', activeYears: '2009-2023', limitation: 'Shutdown due to safety challenges & high moderation costs', differentiator: 'Kaboom implements strict automated FSM queues, direct report integrations, and modern glassmorphism UI layout' },
-  { competitor: 'OmeTV', activeYears: 'Active', limitation: 'Requires account login, social integration, and contains heavy ad clutter', differentiator: 'Kaboom features zero login forms, no downloads, and clean, ad-free visionOS UI elements' },
-  { competitor: 'Chatroulette', activeYears: 'Active', limitation: 'Requires registration, purchases of credits, and high lag', differentiator: 'Kaboom is 100% free with WebRTC speed optimizations matching in milliseconds' },
-  { competitor: 'Chatrandom', activeYears: 'Active', limitation: 'Heavy pop-ups, payment walls for filter queries, and basic developer layout', differentiator: 'Kaboom is premium-designed, fully mobile responsive with gestural swipes, and 100% free' },
-  { competitor: 'Monkey', activeYears: 'Active', limitation: 'App-heavy, gamified loops targeting younger audiences with data storage', differentiator: 'Kaboom is fully browser-based, respects absolute privacy with zero storage, and utilizes pure WebRTC P2P' },
-  { competitor: 'Emerald Chat', activeYears: 'Active', limitation: 'Subscription walls, coin systems, and complex account setups', differentiator: 'Kaboom is completely un-gated, free, and features modern snapping camera viewports' }
+  { competitor: 'Omegle', activeYears: '2009-2023', limitation: 'Shutdown due to safety challenges & high moderation costs', differentiator: 'Kaboom TV implements strict automated FSM queues, direct report integrations, and modern glassmorphism UI layout' },
+  { competitor: 'OmeTV', activeYears: 'Active', limitation: 'Requires account login, social integration, and contains heavy ad clutter', differentiator: 'Kaboom TV features zero login forms, no downloads, and clean, ad-free visionOS UI elements' },
+  { competitor: 'Chatroulette', activeYears: 'Active', limitation: 'Requires registration, purchases of credits, and high lag', differentiator: 'Kaboom TV is 100% free with WebRTC speed optimizations matching in milliseconds' },
+  { competitor: 'Chatrandom', activeYears: 'Active', limitation: 'Heavy pop-ups, payment walls for filter queries, and basic developer layout', differentiator: 'Kaboom TV is premium-designed, fully mobile responsive with gestural swipes, and 100% free' },
+  { competitor: 'Monkey', activeYears: 'Active', limitation: 'App-heavy, gamified loops targeting younger audiences with data storage', differentiator: 'Kaboom TV is fully browser-based, respects absolute privacy with zero storage, and utilizes pure WebRTC P2P' },
+  { competitor: 'Emerald Chat', activeYears: 'Active', limitation: 'Subscription walls, coin systems, and complex account setups', differentiator: 'Kaboom TV is completely un-gated, free, and features modern snapping camera viewports' }
 ];
 
 // 7. Technical Glossary terms

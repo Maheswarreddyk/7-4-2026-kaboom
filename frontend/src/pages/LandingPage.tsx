@@ -942,7 +942,7 @@ export function LandingPage() {
               JUST MATCH.
             </h2>
             <p className="text-stone-500 text-sm leading-relaxed mb-8 font-bold">
-              We built Kaboom to strip away the friction of modern web communication. No signup gates, no configuration details. Just pure connections, routed P2P.
+              We built Kaboom TV to strip away the friction of modern web communication. No signup gates, no configuration details. Just pure connections, routed P2P.
             </p>
 
             <div className="flex flex-col gap-5 w-full">
@@ -1046,35 +1046,35 @@ export function LandingPage() {
           <div className="grid md:grid-cols-2 gap-8">
             <div className="space-y-6">
               <div>
-                <h3 className="text-base font-extrabold text-stone-900 mb-2">What is Kaboom?</h3>
+                <h3 className="text-base font-extrabold text-stone-900 mb-2">What is Kaboom TV?</h3>
                 <p className="text-xs text-stone-500 leading-relaxed font-medium">
-                  Kaboom is a premium, free anonymous random video chat platform that allows you to instantly meet new people worldwide. Experience clean WebRTC connections, fluid layout docking, and dynamic controls with zero registration loops.
+                  Kaboom TV is a premium, free anonymous random video chat platform that allows you to instantly meet new people worldwide. Experience clean WebRTC connections, fluid layout docking, and dynamic controls with zero registration loops.
                 </p>
               </div>
 
               <div>
-                <h3 className="text-base font-extrabold text-stone-900 mb-2">How does Kaboom work?</h3>
+                <h3 className="text-base font-extrabold text-stone-900 mb-2">How does Kaboom TV work?</h3>
                 <p className="text-xs text-stone-500 leading-relaxed font-medium">
                   We use Supabase Realtime synchronization pools to pair online participants in under 400ms. Once a match is made, the video and audio streams are negotiated directly peer-to-peer using secure WebRTC connections.
                 </p>
               </div>
 
               <div>
-                <h3 className="text-base font-extrabold text-stone-900 mb-2">Is Kaboom free?</h3>
+                <h3 className="text-base font-extrabold text-stone-900 mb-2">Is Kaboom TV free?</h3>
                 <p className="text-xs text-stone-500 leading-relaxed font-medium">
-                  Yes, Kaboom is completely free to use. There are no subscriptions, coin purchases, premium limits, or hidden fees. Just hit Start Chat and join the conversation.
+                  Yes, Kaboom TV is completely free to use. There are no subscriptions, coin purchases, premium limits, or hidden fees. Just hit Start Chat and join the conversation.
                 </p>
               </div>
 
               <div>
                 <h3 className="text-base font-extrabold text-stone-900 mb-2">Do I need an account?</h3>
                 <p className="text-xs text-stone-500 leading-relaxed font-medium">
-                  No account, email address, phone number, or sign-up form is required. Kaboom is anonymous by design, keeping registration friction to zero.
+                  No account, email address, phone number, or sign-up form is required. Kaboom TV is anonymous by design, keeping registration friction to zero.
                 </p>
               </div>
 
               <div>
-                <h3 className="text-base font-extrabold text-stone-900 mb-2">Is Kaboom anonymous?</h3>
+                <h3 className="text-base font-extrabold text-stone-900 mb-2">Is Kaboom TV anonymous?</h3>
                 <p className="text-xs text-stone-500 leading-relaxed font-medium">
                   Absolutely. We do not store personally identifiable information, session history, or logs of your conversations. Your video feed is routed locally and is never processed on our servers.
                 </p>
@@ -1083,9 +1083,9 @@ export function LandingPage() {
 
             <div className="space-y-6">
               <div>
-                <h3 className="text-base font-extrabold text-stone-900 mb-2">Can I use Kaboom on mobile?</h3>
+                <h3 className="text-base font-extrabold text-stone-900 mb-2">Can I use Kaboom TV on mobile?</h3>
                 <p className="text-xs text-stone-500 leading-relaxed font-medium">
-                  Yes! Kaboom features a responsive safe-area layout inspired by Snapchat and Instagram Live. Drag-to-snap self previews, large one-handed touch targets, and swipe gestures work flawlessly on any iOS or Android browser.
+                  Yes! Kaboom TV features a responsive safe-area layout inspired by Snapchat and Instagram Live. Drag-to-snap self previews, large one-handed touch targets, and swipe gestures work flawlessly on any iOS or Android browser.
                 </p>
               </div>
 
@@ -1099,7 +1099,7 @@ export function LandingPage() {
               <div>
                 <h3 className="text-base font-extrabold text-stone-900 mb-2">Can I chat with messages?</h3>
                 <p className="text-xs text-stone-500 leading-relaxed font-medium">
-                  Yes. Kaboom contains a sliding bottom sheet chat drawer on mobile and a translucent side-panel drawer on desktop. Standard floating transparent text bubbles display temporarily when the drawer is closed.
+                  Yes. Kaboom TV contains a sliding bottom sheet chat drawer on mobile and a translucent side-panel drawer on desktop. Standard floating transparent text bubbles display temporarily when the drawer is closed.
                 </p>
               </div>
 

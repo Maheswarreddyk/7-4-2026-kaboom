@@ -16,8 +16,8 @@ export function TagPage() {
       <MetaManager 
         page="faq" 
         customConfig={{
-          title: `#${tagName} Articles | Topic Collections | Kaboom`,
-          description: `Browse all articles, guides, and technical explanations tagged with #${tagName} on Kaboom.`,
+          title: `#${tagName} Articles | Topic Collections | Kaboom TV`,
+          description: `Browse all articles, guides, and technical explanations tagged with #${tagName} on Kaboom TV.`,
           keywords: [tagName || '', 'topics list', 'collection'],
           canonical: `https://kaboom-tv.com/tag/${tagName}`
         }}

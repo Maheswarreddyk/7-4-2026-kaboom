@@ -7,10 +7,10 @@ export interface PageSeoConfig {
 }
 
 export const SEO_GLOBAL = {
-  siteName: 'Kaboom',
+  siteName: 'Kaboom TV',
   brandName: 'Kaboom TV',
-  defaultTitle: 'Kaboom – Free Random Video Chat | Meet New People Instantly',
-  defaultDescription: 'Meet new people instantly with Kaboom, a free anonymous random video chat platform. No sign-up required. Start video chatting with strangers worldwide in seconds.',
+  defaultTitle: 'Kaboom TV – Free Random Video Chat | Meet New People Instantly',
+  defaultDescription: 'Meet new people instantly with Kaboom TV, a free anonymous random video chat platform. No sign-up required. Start video chatting with strangers worldwide in seconds.',
   canonicalUrl: 'https://kaboom-tv.com',
   socialImageUrl: 'https://kaboom-tv.com/og-preview.png',
   keywords: [
@@ -27,7 +27,7 @@ export const SEO_GLOBAL = {
   organization: {
     name: 'Kaboom TV',
     url: 'https://kaboom-tv.com',
-    logo: 'https://kaboom-tv.com/favicon.svg',
+    logo: 'https://kaboom-tv.com/images/icon_kaboom.png',
     email: 'contact@kaboom-tv.com',
     supportEmail: 'contact@kaboom-tv.com',
     collaborateEmail: 'collaborate@kaboom-tv.com',
@@ -48,43 +48,43 @@ export const SEO_GLOBAL = {
 
 export const SEO_PAGES: Record<string, PageSeoConfig> = {
   home: {
-    title: 'Kaboom – Free Random Video Chat | Meet New People Instantly',
-    description: 'Meet new people instantly with Kaboom, a free anonymous random video chat platform. No sign-up required. Start video chatting with strangers worldwide in seconds.',
+    title: 'Kaboom TV – Free Random Video Chat | Meet New People Instantly',
+    description: 'Meet new people instantly with Kaboom TV, a free anonymous random video chat platform. No sign-up required. Start video chatting with strangers worldwide in seconds.',
     keywords: ['free random video chat', 'anonymous video chat', 'omegle alternative', 'chat with strangers'],
     canonical: 'https://kaboom-tv.com/'
   },
   about: {
-    title: 'About Kaboom | Modern Random Video Chat Platform',
-    description: 'Learn about Kaboom, the next-generation random video chat platform designed for fast, safe, anonymous, and premium peer connections globally.',
+    title: 'About Kaboom TV | Modern Random Video Chat Platform',
+    description: 'Learn about Kaboom TV, the next-generation random video chat platform designed for fast, safe, anonymous, and premium peer connections globally.',
     keywords: ['about kaboom', 'modern video chat', 'secure chat platform'],
     canonical: 'https://kaboom-tv.com/about'
   },
   faq: {
-    title: 'Kaboom FAQ | Random Video Chat Questions Answered',
-    description: 'Find answers to common questions about Kaboom. Learn about anonymity, skipping, safety reporting, WebRTC connections, and mobile compatibility.',
+    title: 'Kaboom TV FAQ | Random Video Chat Questions Answered',
+    description: 'Find answers to common questions about Kaboom TV. Learn about anonymity, skipping, safety reporting, WebRTC connections, and mobile compatibility.',
     keywords: ['kaboom faq', 'video chat safety', 'how does kaboom work'],
     canonical: 'https://kaboom-tv.com/faq'
   },
   privacy: {
-    title: 'Privacy Policy | Kaboom',
-    description: 'Read the Kaboom Privacy Policy. Learn about our commitment to your anonymity, data security, cookie usage, and how we handle signaling connections.',
+    title: 'Privacy Policy | Kaboom TV',
+    description: 'Read the Kaboom TV Privacy Policy. Learn about our commitment to your anonymity, data security, cookie usage, and how we handle signaling connections.',
     keywords: ['privacy policy', 'anonymous data safety', 'web chat privacy'],
     canonical: 'https://kaboom-tv.com/privacy'
   },
   terms: {
-    title: 'Terms of Service | Kaboom',
-    description: 'Review the Terms of Service for Kaboom. Learn about community guidelines, prohibited behavior, automated safety sweeps, and matching rules.',
+    title: 'Terms of Service | Kaboom TV',
+    description: 'Review the Terms of Service for Kaboom TV. Learn about community guidelines, prohibited behavior, automated safety sweeps, and matching rules.',
     keywords: ['terms of service', 'community guidelines', 'chat rules'],
     canonical: 'https://kaboom-tv.com/terms'
   },
   contact: {
-    title: 'Contact Kaboom Support | Help and Collaboration',
-    description: 'Need help or want to collaborate? Contact the Kaboom support and partnerships team at contact@kaboom-tv.com or collaborate@kaboom-tv.com.',
+    title: 'Contact Kaboom TV Support | Help and Collaboration',
+    description: 'Need help or want to collaborate? Contact the Kaboom TV support and partnerships team at contact@kaboom-tv.com or collaborate@kaboom-tv.com.',
     keywords: ['contact kaboom', 'customer support', 'partnerships'],
     canonical: 'https://kaboom-tv.com/contact'
   },
   chat: {
-    title: 'Random Video Chat | Kaboom',
+    title: 'Random Video Chat | Kaboom TV',
     description: 'Enter the live random video chat. Match instantly with verified peers worldwide. Experience high-definition WebRTC video and self-healing queues.',
     keywords: ['live chat room', 'webrtc chat room', 'anonymous matched chat'],
     canonical: 'https://kaboom-tv.com/chat',

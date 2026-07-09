@@ -2,6 +2,7 @@ import { formatDuration } from '../utils/index.js';
 import { ConnectionStatusBadge } from './ConnectionStatusBadge.js';
 import { playTapSound } from '../utils/audio.js';
 import { cn } from '../utils/index.js';
+import logoKaboom from '../../images/logo_kaboom.png';
 
 interface MobileHeaderProps {
   elapsedSeconds: number;
@@ -42,10 +43,12 @@ export function MobileHeader({
       >
         {/* Left: Logo */}
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-xl bg-amber-500 flex items-center justify-center text-stone-950 font-black text-sm shadow-[0_0_12px_rgba(245,166,35,0.25)]">
-            K
-          </div>
-          <span className="text-sm font-extrabold tracking-tight text-white uppercase">Kaboom</span>
+          <img 
+            src={logoKaboom} 
+            alt="Kaboom TV Logo" 
+            className="w-8 h-8 object-cover rounded-lg border border-white/10" 
+          />
+          <span className="text-sm font-extrabold tracking-tight text-white uppercase">Kaboom TV</span>
         </div>
 
         {/* Center: Live Timer */}

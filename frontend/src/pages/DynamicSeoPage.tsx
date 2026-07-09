@@ -145,8 +145,8 @@ export function DynamicSeoPage() {
     'author': { '@type': 'Organization', 'name': 'Kaboom TV Support Team' },
     'publisher': {
       '@type': 'Organization',
-      'name': 'Kaboom',
-      'logo': { '@type': 'ImageObject', 'url': 'https://kaboom-tv.com/favicon.svg' }
+      'name': 'Kaboom TV',
+      'logo': { '@type': 'ImageObject', 'url': 'https://kaboom-tv.com/images/icon_kaboom.png' }
     },
     'datePublished': '2026-07-08',
     'dateModified': activeItem.lastUpdated
@@ -296,7 +296,7 @@ export function DynamicSeoPage() {
           <section className="p-6 rounded-2xl border border-amber-200 bg-amber-50/50 shadow-sm">
             <h4 className="font-black text-stone-900 text-xs uppercase tracking-wider mb-3">Quick Takeaways (AI Summary)</h4>
             <ul className="list-disc list-inside space-y-2 text-xs text-stone-600 font-medium leading-relaxed">
-              <li><strong>Anonymity:</strong> Kaboom is designed with zero credentials, maintaining absolute client privacy.</li>
+              <li><strong>Anonymity:</strong> Kaboom TV is designed with zero credentials, maintaining absolute client privacy.</li>
               <li><strong>Framework:</strong> High-speed peer-to-peer tunnels are negotiated directly via WebRTC protocols.</li>
               <li><strong>Ergonomics:</strong> Responsive grid layout snapping self-previews is optimized for mobile browser reach.</li>
             </ul>

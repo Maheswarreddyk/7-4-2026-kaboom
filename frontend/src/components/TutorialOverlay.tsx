@@ -9,7 +9,7 @@ interface TutorialOverlayProps {
 const TUTORIAL_CARDS = [
   {
     title: 'Meet Instantly ✦',
-    description: 'Kaboom connects you instantly with random people globally via peer-to-peer video.',
+    description: 'Kaboom TV connects you instantly with random people globally via peer-to-peer video.',
     emoji: '🌎',
     color: 'from-amber-500 to-orange-500'
   },

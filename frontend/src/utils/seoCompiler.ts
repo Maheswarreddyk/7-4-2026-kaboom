@@ -25,7 +25,7 @@ export function compileSeoPages(): SeoItem[] {
   SEO_COUNTRIES.forEach((c) => {
     items.push({
       slug: `video-chat-${slugify(c.name)}`,
-      title: `${c.name} Random Video Chat | Meet People Online | Kaboom`,
+      title: `${c.name} Random Video Chat | Meet People Online | Kaboom TV`,
       description: `Experience random video chat in ${c.name}. Connect with online peers in seconds with zero login requirements. Fully mobile responsive and secure.`,
       h1: `${c.name} Random Video Chat`,
       category: 'countries',
@@ -45,7 +45,7 @@ export function compileSeoPages(): SeoItem[] {
     // 2. Country Mobile variations (32 pages)
     items.push({
       slug: `video-chat-${slugify(c.name)}-mobile`,
-      title: `Mobile Video Chat in ${c.name} | Chat on iPhone & Android | Kaboom`,
+      title: `Mobile Video Chat in ${c.name} | Chat on iPhone & Android | Kaboom TV`,
       description: `Spontaneous mobile video chat in ${c.name}. Start matching with one tap on Android, iOS, or iPad. Drag-to-snap self preview, swipe gestures, and no app installs.`,
       h1: `Mobile Video Chat in ${c.name}`,
       category: 'countries',
@@ -68,7 +68,7 @@ export function compileSeoPages(): SeoItem[] {
   SEO_LANGUAGES.forEach((l) => {
     items.push({
       slug: `${slugify(l.name)}-video-chat`,
-      title: `${l.name} Speaking Video Chat | Learn & Practice Online | Kaboom`,
+      title: `${l.name} Speaking Video Chat | Learn & Practice Online | Kaboom TV`,
       description: `Practice speaking ${l.name} with native speakers globally. Connect instantly for language learning, cultural exchange, and conversation practice.`,
       h1: `${l.name} Language Video Chat`,
       category: 'languages',
@@ -90,7 +90,7 @@ export function compileSeoPages(): SeoItem[] {
   SEO_DEVICES.forEach((d) => {
     items.push({
       slug: `video-chat-for-${slugify(d.name)}`,
-      title: `Random Video Chat for ${d.name} | Browser P2P Streaming | Kaboom`,
+      title: `Random Video Chat for ${d.name} | Browser P2P Streaming | Kaboom TV`,
       description: `Optimized WebRTC random video chat for ${d.name}. Connect instantly on your ${d.type} device with zero downloads or configuration loops.`,
       h1: `Random Video Chat for ${d.name}`,
       category: 'devices',
@@ -112,7 +112,7 @@ export function compileSeoPages(): SeoItem[] {
   SEO_INTENTS.forEach((intent) => {
     items.push({
       slug: slugify(intent.term),
-      title: `${intent.term} Online | Free Random Video Call Rooms | Kaboom`,
+      title: `${intent.term} Online | Free Random Video Call Rooms | Kaboom TV`,
       description: `Spontaneously ${intent.term.toLowerCase()} with strangers worldwide. Start matching instantly with HD video, messaging capabilities, and no signup gates.`,
       h1: intent.term,
       category: 'intent',
@@ -132,8 +132,8 @@ export function compileSeoPages(): SeoItem[] {
   SEO_FEATURES.forEach((f) => {
     items.push({
       slug: slugify(f.name),
-      title: `${f.name} Random Video Chat | Safe Spontaneous Connections | Kaboom`,
-      description: `Experience the benefits of ${f.name}. Kaboom is designed with privacy-first standards, fast WebRTC signaling, and high-end responsive layouts.`,
+      title: `${f.name} Random Video Chat | Safe Spontaneous Connections | Kaboom TV`,
+      description: `Experience the benefits of ${f.name}. Kaboom TV is designed with privacy-first standards, fast WebRTC signaling, and high-end responsive layouts.`,
       h1: `${f.name} Anonymous Video Chat`,
       category: 'features',
       tags: ['features', slugify(f.name), 'privacy', 'webrtc'],
@@ -152,9 +152,9 @@ export function compileSeoPages(): SeoItem[] {
   SEO_COMPARISONS.forEach((comp) => {
     items.push({
       slug: `kaboom-vs-${slugify(comp.competitor)}`,
-      title: `Kaboom vs ${comp.competitor} | Comparative Video Chat Analysis | Kaboom`,
-      description: `A factual, comparative analysis of Kaboom vs ${comp.competitor}. Learn about differences in sign-up, WebRTC speeds, safety features, and layout design.`,
-      h1: `Kaboom vs ${comp.competitor}`,
+      title: `Kaboom TV vs ${comp.competitor} | Comparative Video Chat Analysis | Kaboom TV`,
+      description: `A factual, comparative analysis of Kaboom TV vs ${comp.competitor}. Learn about differences in sign-up, WebRTC speeds, safety features, and layout design.`,
+      h1: `Kaboom TV vs ${comp.competitor}`,
       category: 'comparisons',
       tags: ['comparisons', slugify(comp.competitor), 'alternative', 'safety'],
       readTime: 8,
@@ -174,7 +174,7 @@ export function compileSeoPages(): SeoItem[] {
   SEO_GLOSSARY.forEach((g) => {
     items.push({
       slug: `glossary-${slugify(g.term)}`,
-      title: `What is ${g.term}? | Technical WebRTC Glossary | Kaboom`,
+      title: `What is ${g.term}? | Technical WebRTC Glossary | Kaboom TV`,
       description: `Understand the technical term ${g.term} and its applications in peer-to-peer streaming, signaling handshakes, and online communications.`,
       h1: `WebRTC Glossary: ${g.term}`,
       category: 'glossary',
@@ -194,7 +194,7 @@ export function compileSeoPages(): SeoItem[] {
   SEO_GUIDES.forEach((guide) => {
     items.push({
       slug: guide.slug,
-      title: `${guide.title} | Technical Guide | Kaboom`,
+      title: `${guide.title} | Technical Guide | Kaboom TV`,
       description: guide.desc,
       h1: guide.title,
       category: 'guides',
@@ -218,7 +218,7 @@ export function compileSeoPages(): SeoItem[] {
     audiences.forEach((aud) => {
       items.push({
         slug: `${slugify(aud)}-video-chat-in-${slugify(country)}`,
-        title: `${aud} Video Chat in ${country} | Meet Peer Groups | Kaboom`,
+        title: `${aud} Video Chat in ${country} | Meet Peer Groups | Kaboom TV`,
         description: `Connect with other ${aud.toLowerCase()} in ${country} using random video chat. Match instantly with common interest filters and responsive screen interfaces.`,
         h1: `${aud} Video Chat in ${country}`,
         category: 'intent',
@@ -239,7 +239,7 @@ export function compileSeoPages(): SeoItem[] {
   topCountries.forEach((country) => {
     items.push({
       slug: `late-night-video-chat-in-${slugify(country)}`,
-      title: `Late Night Random Video Chat in ${country} | Online Matching | Kaboom`,
+      title: `Late Night Random Video Chat in ${country} | Online Matching | Kaboom TV`,
       description: `Connect at night in ${country} using random video chat. Pair with online peers during evening and late hours. Spontaneous, secure, and zero registration.`,
       h1: `Late Night Video Chat in ${country}`,
       category: 'intent',
@@ -274,7 +274,7 @@ export function generatePageContent(item: SeoItem) {
     sections.push(
       {
         heading: `Local Video Chat Usage & Trends in ${country}`,
-        text: `Spontaneous random communication platforms have grown exponentially in ${country}. Millions of users seek clean, registration-free alternatives to connect with peers locally and globally. Kaboom offers an ideal interface for ${country} users, prioritizing high-speed WebRTC pairing and seamless browser-based matching.`
+        text: `Spontaneous random communication platforms have grown exponentially in ${country}. Millions of users seek clean, registration-free alternatives to connect with peers locally and globally. Kaboom TV offers an ideal interface for ${country} users, prioritizing high-speed WebRTC pairing and seamless browser-based matching.`
       },
       {
         heading: `${isMobile ? 'Mobile Browser Optimization' : 'WebRTC Connections'} & Performance in ${country}`,
@@ -282,7 +282,7 @@ export function generatePageContent(item: SeoItem) {
       },
       {
         heading: `Safety Protocols & Moderation for ${country} Chats`,
-        text: `Anonymity is a double-edged sword, which is why Kaboom introduces a multi-tier safety architecture. Users in ${country} can flag violations using the integrated Report modal. Matches are moderated automatically through reported thresholds and Postgres advisory locking, instantly booting bad actors out of active signaling queues.`
+        text: `Anonymity is a double-edged sword, which is why Kaboom TV introduces a multi-tier safety architecture. Users in ${country} can flag violations using the integrated Report modal. Matches are moderated automatically through reported thresholds and Postgres advisory locking, instantly booting bad actors out of active signaling queues.`
       },
       {
         heading: `Tips for Spontaneous Global Matching in ${country}`,
@@ -293,15 +293,15 @@ export function generatePageContent(item: SeoItem) {
     faqs.push(
       {
         question: `Is video chat free in ${country}?`,
-        answer: `Yes, Kaboom is 100% free with no coins, payment gateways, or subscription limits for users in ${country}.`
+        answer: `Yes, Kaboom TV is 100% free with no coins, payment gateways, or subscription limits for users in ${country}.`
       },
       {
         question: `Do I need to sign up in ${country}?`,
-        answer: `No. Kaboom respects your privacy. You can start matching instantly with zero registration, emails, or personal details.`
+        answer: `No. Kaboom TV respects your privacy. You can start matching instantly with zero registration, emails, or personal details.`
       },
       {
-        question: `Can I use Kaboom on my smartphone in ${country}?`,
-        answer: `Absolutely! Kaboom is optimized with snapping previews and swipe gestures for all mobile browsers in ${country}.`
+        question: `Can I use Kaboom TV on my smartphone in ${country}?`,
+        answer: `Absolutely! Kaboom TV is optimized with snapping previews and swipe gestures for all mobile browsers in ${country}.`
       },
       {
         question: `How safe is the matching engine in ${country}?`,
@@ -312,16 +312,16 @@ export function generatePageContent(item: SeoItem) {
         answer: `Rooms support ${lang} by default, but you can match with english speakers and users worldwide.`
       },
       {
-        question: `What is the safety score of Kaboom in ${country}?`,
-        answer: `Kaboom maintains a high safety index of ${item.details.safetyScore}/10 by enforcing strict community guidelines.`
+        question: `What is the safety score of Kaboom TV in ${country}?`,
+        answer: `Kaboom TV maintains a high safety index of ${item.details.safetyScore}/10 by enforcing strict community guidelines.`
       },
       {
         question: `Can I skip people I don't want to chat with?`,
         answer: `Yes. Simply click the Next button or swipe left on your mobile device to immediately match with another user.`
       },
       {
-        question: `Is data stored on Kaboom in ${country}?`,
-        answer: `No. Kaboom uses localStorage locally to keep your temporary session token, which is periodically deleted.`
+        question: `Is data stored on Kaboom TV in ${country}?`,
+        answer: `No. Kaboom TV uses localStorage locally to keep your temporary session token, which is periodically deleted.`
       }
     );
   } else if (item.category === 'languages') {
@@ -333,7 +333,7 @@ export function generatePageContent(item: SeoItem) {
     sections.push(
       {
         heading: `Learn & Practice speaking ${lang} (${native}) via Video Chat`,
-        text: `The best way to build speaking confidence is through direct conversational practice. With over ${speakers} speakers globally, practicing ${lang} in real-time has never been easier. Kaboom connects you with native speakers and language learners to foster natural language practice.`
+        text: `The best way to build speaking confidence is through direct conversational practice. With over ${speakers} speakers globally, practicing ${lang} in real-time has never been easier. Kaboom TV connects you with native speakers and language learners to foster natural language practice.`
       },
       {
         heading: `Cultural Exchange and Spontaneous ${lang} Conversations`,
@@ -351,8 +351,8 @@ export function generatePageContent(item: SeoItem) {
 
     faqs.push(
       {
-        question: `Can I practice ${lang} on Kaboom?`,
-        answer: `Yes! Kaboom is widely used by students and language learners to practice speaking ${lang} with real speakers.`
+        question: `Can I practice ${lang} on Kaboom TV?`,
+        answer: `Yes! Kaboom TV is widely used by students and language learners to practice speaking ${lang} with real speakers.`
       },
       {
         question: `Are there dedicated rooms for ${lang}?`,
@@ -360,14 +360,14 @@ export function generatePageContent(item: SeoItem) {
       },
       {
         question: `Is language practice free?`,
-        answer: `Absolutely. There are no fees or time limits to practice speaking on Kaboom.`
+        answer: `Absolutely. There are no fees or time limits to practice speaking on Kaboom TV.`
       },
       {
         question: `What if I cannot understand the other speaker?`,
         answer: `You can use our in-app chat text drawer to send messages, ask for spellings, or share translation hints.`
       },
       {
-        question: `Is Kaboom anonymous during language practice?`,
+        question: `Is Kaboom TV anonymous during language practice?`,
         answer: `Yes. No accounts or profile forms are required, keeping your learning experience secure and private.`
       },
       {
@@ -390,54 +390,54 @@ export function generatePageContent(item: SeoItem) {
 
     sections.push(
       {
-        heading: `Factual Comparison: Kaboom vs ${comp}`,
-        text: `When comparing random video chat platforms, users prioritize speed, device availability, privacy, and safety. ${comp} is a notable name in the industry, but contains several operational constraints. Here, we analyze how Kaboom addresses these gaps.`
+        heading: `Factual Comparison: Kaboom TV vs ${comp}`,
+        text: `When comparing random video chat platforms, users prioritize speed, device availability, privacy, and safety. ${comp} is a notable name in the industry, but contains several operational constraints. Here, we analyze how Kaboom TV addresses these gaps.`
       },
       {
         heading: `Addressing Safety and Moderation Gaps`,
-        text: `Safety is a massive concern in public chats. ${comp} has struggled with ${limit}. Kaboom addresses this using automated FSM transition checks, keeping users isolated in READY/RESERVED queues until secure peer-to-peer handshakes occur.`
+        text: `Safety is a massive concern in public chats. ${comp} has struggled with ${limit}. Kaboom TV addresses this using automated FSM transition checks, keeping users isolated in READY/RESERVED queues until secure peer-to-peer handshakes occur.`
       },
       {
         heading: `User Interface and Gestural Experience`,
-        text: `While older sites use basic text-heavy designs, Kaboom introduces high-end glassmorphism styling and snapping viewports. On mobile, we offer one-handed layouts, swipe gestures, and dynamic celebration visual effects.`
+        text: `While older sites use basic text-heavy designs, Kaboom TV introduces high-end glassmorphism styling and snapping viewports. On mobile, we offer one-handed layouts, swipe gestures, and dynamic celebration visual effects.`
       },
       {
         heading: `WebRTC Connectivity and Signaling Performance`,
-        text: `We use direct WebRTC connections. Unlike competitors that route streams through slow central relay nodes, Kaboom establishes direct P2P connections, resulting in low packet loss and optimized video quality.`
+        text: `We use direct WebRTC connections. Unlike competitors that route streams through slow central relay nodes, Kaboom TV establishes direct P2P connections, resulting in low packet loss and optimized video quality.`
       }
     );
 
     faqs.push(
       {
-        question: `How is Kaboom different from ${comp}?`,
+        question: `How is Kaboom TV different from ${comp}?`,
         answer: `${diff}`
       },
       {
-        question: `Is Kaboom safer than ${comp}?`,
-        answer: `Yes. Kaboom implements active state transition verification, quick reporting systems, and ephemeral signaling records.`
+        question: `Is Kaboom TV safer than ${comp}?`,
+        answer: `Yes. Kaboom TV implements active state transition verification, quick reporting systems, and ephemeral signaling records.`
       },
       {
-        question: `Do I need to pay for filters on Kaboom?`,
-        answer: `No. Unlike other platforms, matching preference filters (gender, region) on Kaboom are 100% free.`
+        question: `Do I need to pay for filters on Kaboom TV?`,
+        answer: `No. Unlike other platforms, matching preference filters (gender, region) on Kaboom TV are 100% free.`
       },
       {
-        question: `Does Kaboom require an app install?`,
-        answer: `No. Kaboom runs entirely in your mobile or desktop browser without requiring any downloads.`
+        question: `Does Kaboom TV require an app install?`,
+        answer: `No. Kaboom TV runs entirely in your mobile or desktop browser without requiring any downloads.`
       },
       {
         question: `What happened to ${comp}?`,
-        answer: `${comp} experienced operational challenges, while Kaboom remains fully active, safe, and secure.`
+        answer: `${comp} experienced operational challenges, while Kaboom TV remains fully active, safe, and secure.`
       },
       {
         question: `Can I text chat on both?`,
-        answer: `Yes. However, Kaboom includes a sliding bottom drawer sheet with delivery seen receipts and emoji bars.`
+        answer: `Yes. However, Kaboom TV includes a sliding bottom drawer sheet with delivery seen receipts and emoji bars.`
       },
       {
-        question: `Does Kaboom sell user data?`,
-        answer: `No. Kaboom does not collect accounts or personal data, making it impossible to sell user information.`
+        question: `Does Kaboom TV sell user data?`,
+        answer: `No. Kaboom TV does not collect accounts or personal data, making it impossible to sell user information.`
       },
       {
-        question: `Is the connection quality high on Kaboom?`,
+        question: `Is the connection quality high on Kaboom TV?`,
         answer: `Yes. We use direct peer-to-peer WebRTC connections, bypassing intermediate server lags.`
       }
     );
@@ -470,8 +470,8 @@ export function generatePageContent(item: SeoItem) {
         answer: `${name} allows users to connect, learn, and experience high-performance WebRTC matching safely and instantly.`
       },
       {
-        question: `Is ${name} free on Kaboom?`,
-        answer: `Yes. Every feature on Kaboom, including filters and dynamic layout matching, is free to use.`
+        question: `Is ${name} free on Kaboom TV?`,
+        answer: `Yes. Every feature on Kaboom TV, including filters and dynamic layout matching, is free to use.`
       },
       {
         question: `Do I need to sign up for ${name}?`,
@@ -482,7 +482,7 @@ export function generatePageContent(item: SeoItem) {
         answer: `Yes, all programmatic pages and features are fully responsive for Android and iOS mobile web clients.`
       },
       {
-        question: `How does Kaboom optimize ${name}?`,
+        question: `How does Kaboom TV optimize ${name}?`,
         answer: `By utilizing modern WebRTC parameters, localized signaling loops, and clean CSS safe-area grids.`
       },
       {
@@ -494,8 +494,8 @@ export function generatePageContent(item: SeoItem) {
         answer: `Yes, click the Settings button inside the dock to configure matching preferences.`
       },
       {
-        question: `Does Kaboom store my chat logs?`,
-        answer: `No. All messages and sessions are completely ephemeral and are purged immediately upon leaving.`
+        question: `Does Kaboom TV store my chat logs?`,
+        answer: `No. All messages and sessions are ephemeral and are purged immediately upon leaving.`
       }
     );
   }

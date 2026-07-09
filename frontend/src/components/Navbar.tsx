@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from '../utils/index.js';
+import logoKaboom from '../../images/logo_kaboom.png';
 
 const NAV_LINKS = [
   { to: '/',        label: 'Home' },
@@ -30,12 +31,14 @@ export function Navbar({ isTransparent = false }: NavbarProps) {
         <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 flex items-center justify-between h-full">
 
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-2 group shrink-0">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center shadow-lg shadow-amber-500/10 group-hover:scale-105 transition-transform duration-200">
-              <span className="text-white font-extrabold text-sm select-none">K</span>
-            </div>
+          <Link to="/" className="flex items-center gap-2.5 group shrink-0">
+            <img 
+              src={logoKaboom} 
+              alt="Kaboom TV Logo" 
+              className="h-10 w-10 md:h-11 md:w-11 object-cover rounded-xl shadow-md border border-white/10 group-hover:scale-105 transition-transform duration-200" 
+            />
             <span className="text-xl font-bold bg-gradient-to-r from-white to-white/70 bg-clip-text text-transparent tracking-tight">
-              Kaboom
+              Kaboom TV
             </span>
           </Link>
 

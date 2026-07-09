@@ -168,26 +168,26 @@ function getStructuredDataForPage(page: string, config: PageSeoConfig) {
           'mainEntity': [
             {
               '@type': 'Question',
-              'name': 'What is Kaboom?',
+              'name': 'What is Kaboom TV?',
               'acceptedAnswer': {
                 '@type': 'Answer',
-                'text': 'Kaboom is a premium, free anonymous random video chat platform that allows you to instantly meet new people worldwide using WebRTC connections with zero sign-up required.'
+                'text': 'Kaboom TV is a premium, free anonymous random video chat platform that allows you to instantly meet new people worldwide using WebRTC connections with zero sign-up required.'
               }
             },
             {
               '@type': 'Question',
-              'name': 'Is Kaboom anonymous?',
+              'name': 'Is Kaboom TV anonymous?',
               'acceptedAnswer': {
                 '@type': 'Answer',
-                'text': 'Yes. Kaboom is 100% anonymous. We do not require accounts, sign-ups, or personal information. Your local video feeds go peer-to-peer using encrypted WebRTC.'
+                'text': 'Yes. Kaboom TV is 100% anonymous. We do not require accounts, sign-ups, or personal information. Your local video feeds go peer-to-peer using encrypted WebRTC.'
               }
             },
             {
               '@type': 'Question',
-              'name': 'Is Kaboom mobile compatible?',
+              'name': 'Is Kaboom TV mobile compatible?',
               'acceptedAnswer': {
                 '@type': 'Answer',
-                'text': 'Absolutely. Kaboom is fully optimized with responsive layout grids, safe areas, snapping previews, and swipe gestures designed for all Android and iOS smartphones.'
+                'text': 'Absolutely. Kaboom TV is fully optimized with responsive layout grids, safe areas, snapping previews, and swipe gestures designed for all Android and iOS smartphones.'
               }
             },
             {

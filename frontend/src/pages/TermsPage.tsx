@@ -12,7 +12,7 @@ export function TermsPage() {
         <section className="glass-card space-y-3">
           <h2 className="text-xl font-semibold text-white">Acceptance of Terms</h2>
           <p>
-            By accessing or using Kaboom, you agree to be bound by these Terms of Service. If you do not
+            By accessing or using Kaboom TV, you agree to be bound by these Terms of Service. If you do not
             agree, do not use the service.
           </p>
         </section>
@@ -20,7 +20,7 @@ export function TermsPage() {
         <section className="glass-card space-y-3">
           <h2 className="text-xl font-semibold text-white">Eligibility</h2>
           <p>
-            You must be at least 18 years old to use Kaboom. By using the service, you represent and
+            You must be at least 18 years old to use Kaboom TV. By using the service, you represent and
             warrant that you meet this age requirement.
           </p>
         </section>
@@ -40,7 +40,7 @@ export function TermsPage() {
         <section className="glass-card space-y-3">
           <h2 className="text-xl font-semibold text-white">Service Availability</h2>
           <p>
-            Kaboom is provided &quot;as is&quot; without warranties of any kind. We do not guarantee
+            Kaboom TV is provided &quot;as is&quot; without warranties of any kind. We do not guarantee
             uninterrupted access, matching availability, or connection quality. Service may be modified
             or discontinued at any time.
           </p>
@@ -49,8 +49,8 @@ export function TermsPage() {
         <section className="glass-card space-y-3">
           <h2 className="text-xl font-semibold text-white">Limitation of Liability</h2>
           <p>
-            Kaboom is not responsible for user conduct, content shared between users, or any damages
-            arising from use of the service. You use Kaboom at your own risk.
+            Kaboom TV is not responsible for user conduct, content shared between users, or any damages
+            arising from use of the service. You use Kaboom TV at your own risk.
           </p>
         </section>
 

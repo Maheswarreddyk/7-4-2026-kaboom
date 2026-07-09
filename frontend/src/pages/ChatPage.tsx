@@ -1537,7 +1537,7 @@ export function ChatPage() {
               {goodbyePhase === 'goodbye' && 'Goodbye!'}
             </h3>
             <p className="text-stone-500 text-xs uppercase tracking-widest font-black">
-              Kaboom Video Chat
+              Kaboom TV Video Chat
             </p>
           </div>
         </div>

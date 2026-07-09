@@ -471,7 +471,7 @@ export function SearchingAnimation({
             {elapsed >= 30 && (
               <div className="mt-6 p-4 rounded-xl border border-white/5 bg-white/[0.01] animate-fade-in text-center flex flex-col items-center animate-fade-in">
                 <p className="text-[11px] text-stone-400 leading-relaxed max-w-[260px]">
-                  No compatible users yet. Invite friends to Kaboom or keep searching!
+                  No compatible users yet. Invite friends to Kaboom TV or keep searching!
                 </p>
               </div>
             )}

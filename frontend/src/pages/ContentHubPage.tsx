@@ -68,7 +68,7 @@ export function ContentHubPage() {
       <MetaManager 
         page="faq" // Fallback fallback or default
         customConfig={{
-          title: 'Topics & Knowledge Hub | Random Video Chat Guides | Kaboom',
+          title: 'Topics & Knowledge Hub | Random Video Chat Guides | Kaboom TV',
           description: 'Explore our topics library. Get answers to STUN, TURN, WebRTC, mobile compatibility, country guidelines, and competitor comparisons.',
           keywords: ['knowledge base', 'faq topics', 'webrtc guides'],
           canonical: 'https://kaboom-tv.com/topics'

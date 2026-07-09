@@ -1,23 +1,23 @@
 {
-  "short_name": "Kaboom",
-  "name": "Kaboom – Free Random Video Chat",
-  "description": "Meet new people instantly with Kaboom, a free anonymous random video chat platform.",
+  "short_name": "Kaboom TV",
+  "name": "Kaboom TV – Free Random Video Chat",
+  "description": "Meet new people instantly with Kaboom TV, a free anonymous random video chat platform.",
   "icons": [
     {
-      "src": "/favicon.svg",
-      "type": "image/svg+xml",
+      "src": "/images/icon_kaboom.png",
+      "type": "image/png",
       "sizes": "any",
       "purpose": "any"
     },
     {
-      "src": "/favicon.svg",
-      "type": "image/svg+xml",
+      "src": "/images/icon_kaboom.png",
+      "type": "image/png",
       "sizes": "192x192",
       "purpose": "maskable"
     },
     {
-      "src": "/favicon.svg",
-      "type": "image/svg+xml",
+      "src": "/images/icon_kaboom.png",
+      "type": "image/png",
       "sizes": "512x512",
       "purpose": "maskable"
     }
