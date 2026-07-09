@@ -4,6 +4,7 @@ import { ConnectionStatusBadge } from '../components/ConnectionStatusBadge.js';
 import { LoadingScreen } from '../components/LoadingScreen.js';
 import { ReportModal } from '../components/ReportModal.js';
 import { SearchingAnimation } from '../components/SearchingAnimation.js';
+import { QueueCard } from '../components/QueueCard.js';
 import { VideoPlayer } from '../components/VideoPlayer.js';
 import { PreferenceModal } from '../components/PreferenceModal.js';
 import { TemporaryChat } from '../components/TemporaryChat.js';
@@ -247,7 +248,8 @@ export function ChatPage() {
 
   // Register searching header indicator
   useEffect(() => {
-    registerComponent('searching-header', 'TL', 110, 32, isSearching, 'statusBadges', 1);
+    const zKey = isSearching ? 'toast' : 'statusBadges';
+    registerComponent('searching-header', 'TL', 110, 32, isSearching, zKey, 1);
   }, [isSearching, registerComponent]);
 
   // Register self-preview PiP
@@ -256,8 +258,16 @@ export function ChatPage() {
     const pipW = isSearching ? 100 : (isMobile ? 112 : 200);
     const pipH = isSearching ? 100 : (isMobile ? 84 : 150);
     const priority = isSearching ? 2 : 1;
-    registerComponent('self-preview', screenPos, pipW, pipH, true, 'videoLocal', priority);
+    const zKey = isSearching ? 'toast' : 'videoLocal';
+    registerComponent('self-preview', screenPos, pipW, pipH, true, zKey, priority);
   }, [snapCorner, registerComponent, isSearching, isMobile]);
+
+  // Register queue card directly at top level
+  useEffect(() => {
+    const widthVal = isMobile ? 340 : 420;
+    const heightVal = isMobile ? 220 : 280;
+    registerComponent('queue-card', 'BC', widthVal, heightVal, isSearching, 'queueCard', 1);
+  }, [isSearching, registerComponent, isMobile]);
 
   // Register partner info card
   const showPartnerCard = !!(isConnected && chatState.partnerProfile);
@@ -1066,24 +1076,37 @@ export function ChatPage() {
         </div>
       )}
 
-      {/* ── UNIFIED SEARCHING EXPERIENCE (Radar, Status, Queue, Actions) ── */}
+      {/* ── BACKGROUND & SEARCHING LAYERS (Globe, Radar, Status) ── */}
       {isSearching && (
         <SearchingAnimation
           status={chatState.status}
           partnerProfile={chatState.partnerProfile}
           isQueuePaused={isQueuePaused}
-          elapsed={searchElapsed}
-          matchMode={activeMatchMode}
-          onOpenPreferences={async () => {
-            await pauseQueue();
-            setShowPreferenceModal(true);
-          }}
-          onResumeQueue={resumeQueue}
-          onPauseQueue={pauseQueue}
-          onLeaveQueue={handleLeave}
-          stats={queueStats}
-          onDisableStrict={handleDisableStrict}
         />
+      )}
+
+      {/* ── QUEUE LAYER (QueueCard Controls Dashboard) ── */}
+      {isSearching && (
+        <div 
+          className="pointer-events-auto"
+          style={getStyle('queue-card')}
+          data-layout-id="queue-card"
+        >
+          <QueueCard
+            elapsed={searchElapsed}
+            matchMode={activeMatchMode}
+            isQueuePaused={isQueuePaused}
+            onOpenPreferences={async () => {
+              await pauseQueue();
+              setShowPreferenceModal(true);
+            }}
+            onResumeQueue={resumeQueue}
+            onPauseQueue={pauseQueue}
+            onLeaveQueue={handleLeave}
+            stats={queueStats}
+            onDisableStrict={handleDisableStrict}
+          />
+        </div>
       )}
 
       {/* ── MOBILE HEADER (top layout) ── */}

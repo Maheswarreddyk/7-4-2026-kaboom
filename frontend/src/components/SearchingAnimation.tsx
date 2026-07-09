@@ -1,34 +1,17 @@
 import { useEffect, useState, useRef } from 'react';
 import { useResponsiveLayout } from '../hooks/useResponsiveLayout.js';
 import { cn } from '../utils/index.js';
-import { QueueCard } from './QueueCard.js';
 
 interface SearchingAnimationProps {
   status?: string;
   partnerProfile?: any;
   isQueuePaused?: boolean;
-  elapsed: number;
-  matchMode: string;
-  onOpenPreferences?: () => void;
-  onResumeQueue?: () => void;
-  onPauseQueue?: () => void;
-  onLeaveQueue?: () => void;
-  stats: { online: number; searching: number; wait: number };
-  onDisableStrict?: () => void;
 }
 
 export function SearchingAnimation({
   status,
   partnerProfile,
-  isQueuePaused = false,
-  elapsed,
-  matchMode,
-  onOpenPreferences,
-  onResumeQueue,
-  onPauseQueue,
-  onLeaveQueue,
-  stats,
-  onDisableStrict
+  isQueuePaused = false
 }: SearchingAnimationProps) {
   const { width, height } = useResponsiveLayout();
   const isMinimalLayout = width < 560 || height < 500;
@@ -298,7 +281,7 @@ export function SearchingAnimation({
   }, []);
 
   return (
-    <div className="absolute inset-0 w-full h-full bg-stone-950 overflow-hidden select-none z-0 flex flex-col items-center justify-center">
+    <div className="absolute inset-0 w-full h-full bg-stone-950 overflow-hidden select-none z-[70] flex flex-col items-center justify-center">
       {/* 3D Global connectivity canvas network */}
       <canvas ref={canvasRef} className="absolute inset-0 w-full h-full pointer-events-none" />
 
@@ -310,43 +293,43 @@ export function SearchingAnimation({
         {status === 'PARTNER_LEFT' ? (
           /* Case A: Partner Left */
           <div className="flex flex-col items-center animate-fade-in w-full">
-            <div className="w-16 h-16 rounded-full border border-red-500/25 bg-red-500/5 flex items-center justify-center relative shadow-2xl mb-4">
-              <span className="text-2xl animate-bounce">👋</span>
+            <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full border border-red-500/25 bg-red-500/5 flex items-center justify-center relative shadow-2xl mb-2 sm:mb-4">
+              <span className="text-xl sm:text-2xl animate-bounce">👋</span>
             </div>
-            <p className="text-red-400 font-extrabold text-base tracking-tight mb-1">
+            <p className="text-red-400 font-extrabold text-sm sm:text-base tracking-tight mb-1">
               {partnerProfile?.displayName || 'Partner'} left.
             </p>
-            <p className="text-stone-400 text-xs font-semibold tracking-wide animate-pulse mb-4">
+            <p className="text-stone-400 text-[10px] sm:text-xs font-semibold tracking-wide animate-pulse">
               Finding another person...
             </p>
           </div>
         ) : isQueuePaused ? (
           /* Case B: Queue Paused */
           <div className="flex flex-col items-center animate-fade-in w-full">
-            <div className="w-16 h-16 rounded-full border border-amber-500/20 bg-amber-500/5 flex items-center justify-center relative shadow-2xl mb-4">
-              <span className="text-2xl">⏸️</span>
+            <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full border border-amber-500/20 bg-amber-500/5 flex items-center justify-center relative shadow-2xl mb-2 sm:mb-4">
+              <span className="text-xl sm:text-2xl">⏸️</span>
             </div>
-            <p className="text-amber-500 font-extrabold text-base tracking-tight mb-1">
+            <p className="text-amber-500 font-extrabold text-sm sm:text-base tracking-tight mb-1">
               Matchmaking Paused
             </p>
-            <p className="text-stone-400 text-xs font-semibold tracking-wide mb-4">
+            <p className="text-stone-400 text-[10px] sm:text-xs font-semibold tracking-wide">
               Resume matching when you are ready
             </p>
           </div>
         ) : (
           /* Case C: Standard Active Matchmaking */
           <div className="flex flex-col items-center w-full">
-            {/* Center Breathing Radar (No spinning, calm breathing animation) */}
-            <div className={cn("relative shrink-0 flex items-center justify-center", isMinimalLayout ? "mb-2" : "mb-5")}>
+            {/* Center Breathing Radar (Scales down dynamically) */}
+            <div className={cn("relative shrink-0 flex items-center justify-center", isMinimalLayout ? "mb-1" : "mb-5")}>
               {/* Outer pulsing expanding rings */}
-              <div className="absolute rounded-full border border-amber-500/20 ring-expand-glow w-16 h-16 sm:w-20 sm:h-20" />
-              <div className="absolute rounded-full border border-amber-500/10 ring-expand-glow w-24 h-24 sm:w-28 sm:h-28" style={{ animationDelay: '1.2s' }} />
+              <div className="absolute rounded-full border border-amber-500/20 ring-expand-glow w-12 h-12 sm:w-20 sm:h-20" />
+              <div className="absolute rounded-full border border-amber-500/10 ring-expand-glow w-16 h-16 sm:w-28 sm:h-28" style={{ animationDelay: '1.2s' }} />
 
               {/* Central glowing core badge */}
-              <div className="rounded-full border border-white/5 bg-white/[0.01] flex items-center justify-center relative shadow-2xl glass w-16 h-16 sm:w-20 sm:h-20">
-                <div className="absolute rounded-full border border-amber-500/20 bg-amber-500/10 radar-breathing w-12 h-12 sm:w-14 sm:h-14" />
+              <div className="rounded-full border border-white/5 bg-white/[0.01] flex items-center justify-center relative shadow-2xl glass w-12 h-12 sm:w-20 sm:h-20">
+                <div className="absolute rounded-full border border-amber-500/20 bg-amber-500/10 radar-breathing w-8 h-8 sm:w-14 sm:h-14" />
                 <svg
-                  className="w-6 h-6 text-amber-400 relative z-10"
+                  className="w-4 h-4 sm:w-6 sm:h-6 text-amber-400 relative z-10"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -363,39 +346,24 @@ export function SearchingAnimation({
 
             {/* Fading matched stages text */}
             <p
-              className="text-stone-100 font-bold text-xs tracking-tight mb-2.5 h-5 overflow-hidden transition-opacity duration-150 shrink-0 select-none"
+              className="text-stone-100 font-bold text-[11px] sm:text-xs tracking-tight mb-2 h-5 overflow-hidden transition-opacity duration-150 shrink-0 select-none"
               style={{ opacity: fadeOpacity }}
             >
               {fadingText}
             </p>
 
             {/* Jump loader dots */}
-            <div className="flex items-center justify-center gap-1.5 shrink-0 mb-4">
+            <div className="flex items-center justify-center gap-1.5 shrink-0">
               {[0, 1, 2].map((i) => (
                 <div
                   key={i}
-                  className="w-1.5 h-1.5 rounded-full bg-amber-500/60 animate-bounce"
+                  className="w-1.2 h-1.2 sm:w-1.5 sm:h-1.5 rounded-full bg-amber-500/60 animate-bounce"
                   style={{ animationDelay: `${i * 0.15}s` }}
                 />
               ))}
             </div>
           </div>
         )}
-
-        {/* Cohesive Queue Dashboard panel */}
-        <div className="w-full shrink-0">
-          <QueueCard
-            elapsed={elapsed}
-            matchMode={matchMode}
-            isQueuePaused={isQueuePaused}
-            onOpenPreferences={onOpenPreferences}
-            onResumeQueue={onResumeQueue}
-            onPauseQueue={onPauseQueue}
-            onLeaveQueue={onLeaveQueue}
-            stats={stats}
-            onDisableStrict={onDisableStrict}
-          />
-        </div>
       </div>
     </div>
   );
