@@ -133,18 +133,18 @@ export function ChatPage() {
     broadcastSkipCancelled,
   } = useVideoChat(session?.sessionId ?? null, session?.sessionToken ?? null, triggerReaction);
 
-  // V7: Trigger Match Reveal card on new match connection
+  // V7: Trigger Match Reveal card on new match connection (reactively checks profile availability)
   useEffect(() => {
-    if (chatState.partnerSessionId && chatState.partnerSessionId !== lastPartnerIdRef.current) {
-      lastPartnerIdRef.current = chatState.partnerSessionId;
-      if (chatState.partnerProfile) {
+    if (chatState.status === 'CONNECTED' && chatState.partnerSessionId) {
+      if (chatState.partnerProfile && chatState.partnerSessionId !== lastPartnerIdRef.current) {
+        lastPartnerIdRef.current = chatState.partnerSessionId;
         setShowMatchIntro(true);
       }
-    } else if (!chatState.partnerSessionId) {
+    } else if (chatState.status !== 'CONNECTED' && !chatState.partnerSessionId) {
       lastPartnerIdRef.current = null;
       setShowMatchIntro(false);
     }
-  }, [chatState.partnerSessionId, chatState.partnerProfile]);
+  }, [chatState.status, chatState.partnerSessionId, chatState.partnerProfile]);
 
   const [isSkipPending, setIsSkipPending] = useState(false);
   const [skipCountdown, setSkipCountdown] = useState(5);
@@ -238,10 +238,12 @@ export function ChatPage() {
   }, [stopChat, endSession]);
 
   const isConnected = chatState.status === 'CONNECTED';
-  const isSearching = [
-    'REQUESTING_MEDIA', 'MEDIA_READY', 'CONNECTING_REALTIME', 
-    'SEARCHING', 'REQUEUEING', 'PARTNER_LEFT', 'MATCH_FOUND', 'READY', 'NEGOTIATING', 'ICE_CONNECTING'
-  ].includes(chatState.status);
+  const isSearching = chatState.status !== 'CONNECTED' && chatState.status !== 'IDLE' && chatState.status !== 'ENDED';
+
+  // Dispatch search state to global Navbar receiver
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent('kaboom_search_state', { detail: { isSearching } }));
+  }, [isSearching]);
 
   // Central Responsive Layout Manager hooks
   const { registerComponent, getStyle } = useFloatingLayout();

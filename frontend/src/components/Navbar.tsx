@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from '../utils/index.js';
 import { useResponsiveLayout } from '../hooks/useResponsiveLayout.js';
@@ -22,6 +22,22 @@ export function Navbar({ isTransparent = false }: NavbarProps) {
   const isChatPage = location.pathname === '/chat';
   const [drawerOpen, setDrawerOpen] = useState(false);
   const { layoutMode } = useResponsiveLayout();
+
+  const [isSearching, setIsSearching] = useState(isChatPage);
+
+  useEffect(() => {
+    setIsSearching(location.pathname === '/chat');
+
+    const handleSearchState = (e: Event) => {
+      const customEvent = e as CustomEvent<{ isSearching: boolean }>;
+      setIsSearching(customEvent.detail.isSearching);
+    };
+
+    window.addEventListener('kaboom_search_state', handleSearchState);
+    return () => {
+      window.removeEventListener('kaboom_search_state', handleSearchState);
+    };
+  }, [location.pathname]);
 
   // Determine visibility states based on LayoutMode space states
   const showFullLogo = layoutMode === 'Comfortable';
@@ -93,7 +109,7 @@ export function Navbar({ isTransparent = false }: NavbarProps) {
                   {link.label}
                 </Link>
               ))}
-              {isChatPage ? (
+              {isSearching ? (
                 <span className="px-3.5 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-black tracking-wide animate-pulse">
                   ⚡ Searching...
                 </span>
@@ -112,7 +128,7 @@ export function Navbar({ isTransparent = false }: NavbarProps) {
           {/* Mobile/Hamburger Nav Segment (MINIMAL, MOBILE) */}
           {showHamburger && (
             <div className="flex items-center gap-2">
-              {isChatPage ? (
+              {isSearching ? (
                 <span className="px-3 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 text-[10px] font-black tracking-wide animate-pulse">
                   ⚡ Searching...
                 </span>
