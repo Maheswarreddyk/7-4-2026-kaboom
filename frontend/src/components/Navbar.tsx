@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from '../utils/index.js';
 import logoKaboom from '../../images/logo_kaboom.png';
+import iconKaboom from '../../images/icon_kaboom.png';
 
 const NAV_LINKS = [
   { to: '/',        label: 'Home' },
@@ -31,15 +32,19 @@ export function Navbar({ isTransparent = false }: NavbarProps) {
         <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 flex items-center justify-between h-full">
 
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-2.5 group shrink-0">
+          <Link to="/" className="flex items-center gap-[14px] group shrink-0">
             <img 
-              src={logoKaboom} 
-              alt="Kaboom TV Logo" 
-              className="h-10 w-10 md:h-11 md:w-11 object-cover rounded-xl shadow-md border border-white/10 group-hover:scale-105 transition-transform duration-200" 
+              src={iconKaboom} 
+              alt="Kaboom TV Icon" 
+              className="w-9 h-9 md:w-10 md:h-10 lg:w-11 lg:h-11 object-contain rounded-[10px] md:rounded-[12px] transition-transform duration-300 group-hover:scale-105" 
             />
-            <span className="text-xl font-bold bg-gradient-to-r from-white to-white/70 bg-clip-text text-transparent tracking-tight">
-              Kaboom TV
-            </span>
+            <div className="flex items-center justify-center p-[4px_8px] rounded-[14px] bg-transparent transition-all duration-300 hover:shadow-[0_0_15px_rgba(255,255,255,0.08)] group-hover:scale-[1.02]">
+              <img 
+                src={logoKaboom} 
+                alt="Kaboom TV Logo" 
+                className="h-[38px] md:h-[44px] lg:h-[48px] w-auto object-contain"
+              />
+            </div>
           </Link>
 
           {/* Desktop Nav */}

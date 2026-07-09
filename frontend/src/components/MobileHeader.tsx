@@ -3,6 +3,7 @@ import { ConnectionStatusBadge } from './ConnectionStatusBadge.js';
 import { playTapSound } from '../utils/audio.js';
 import { cn } from '../utils/index.js';
 import logoKaboom from '../../images/logo_kaboom.png';
+import iconKaboom from '../../images/icon_kaboom.png';
 
 interface MobileHeaderProps {
   elapsedSeconds: number;
@@ -42,13 +43,17 @@ export function MobileHeader({
         style={{ paddingTop: 'env(safe-area-inset-top)' }}
       >
         {/* Left: Logo */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-[12px] select-none pointer-events-auto">
+          <img 
+            src={iconKaboom} 
+            alt="Kaboom TV Icon" 
+            className="w-8 h-8 object-contain rounded-lg" 
+          />
           <img 
             src={logoKaboom} 
             alt="Kaboom TV Logo" 
-            className="w-8 h-8 object-cover rounded-lg border border-white/10" 
+            className="h-[36px] w-auto object-contain" 
           />
-          <span className="text-sm font-extrabold tracking-tight text-white uppercase">Kaboom TV</span>
         </div>
 
         {/* Center: Live Timer */}

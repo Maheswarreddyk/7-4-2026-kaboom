@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import logoKaboom from '../../images/logo_kaboom.png';
+import iconKaboom from '../../images/icon_kaboom.png';
 
 const footerLinks = {
   product: [
@@ -21,13 +22,17 @@ export function Footer() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-8">
           <div>
-            <div className="flex items-center gap-2 mb-4">
+            <div className="flex items-center gap-3 mb-4">
+              <img 
+                src={iconKaboom} 
+                alt="Kaboom TV Icon" 
+                className="w-8 h-8 object-contain rounded-lg" 
+              />
               <img 
                 src={logoKaboom} 
                 alt="Kaboom TV Logo" 
-                className="w-8 h-8 object-cover rounded-lg border border-white/10" 
+                className="h-9 w-auto object-contain" 
               />
-              <span className="text-lg font-bold text-white tracking-tight">Kaboom TV</span>
             </div>
             <p className="text-sm text-white/50 leading-relaxed">
               Anonymous random video chat. No login required. Connect with people worldwide instantly.
