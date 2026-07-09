@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { useResponsive } from '../hooks/useResponsive.js';
+import { useResponsiveLayout } from '../hooks/useResponsiveLayout.js';
 
 export type ScreenPosition = 'TL' | 'TC' | 'TR' | 'BL' | 'BC' | 'BR';
 
@@ -44,7 +44,8 @@ export const Z_INDEX_SYSTEM: Record<string, number> = {
 };
 
 export function FloatingLayoutProvider({ children }: { children: React.ReactNode }) {
-  const { width, height, isMobile, viewportType } = useResponsive();
+  const { width, height, isMobile, viewport } = useResponsiveLayout();
+  const viewportType = viewport;
   const [components, setComponents] = useState<Record<string, FloatingComponent>>({});
 
   // Parse Safe Area Insets ( Notch/Dynamic Island support )

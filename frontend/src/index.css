@@ -50,6 +50,44 @@
   --safe-area-inset-bottom: env(safe-area-inset-bottom, 16px);
   --safe-area-inset-left: env(safe-area-inset-left, 16px);
   --safe-area-inset-right: env(safe-area-inset-right, 16px);
+
+  /* Responsive Design Tokens */
+  --control-size: 48px;
+  --dock-gap: 12px;
+  --dock-padding: 16px;
+  --queue-card-width: 340px;
+  --icon-size: 20px;
+  --font-small: 12px;
+  --font-medium: 14px;
+  --font-large: 18px;
+  --radius-large: 24px;
+  --shadow-elevation: 0 24px 64px -12px rgba(0,0,0,0.85);
+}
+
+@media (max-width: 1200px) {
+  :root {
+    --control-size: 44px;
+    --dock-gap: 10px;
+    --dock-padding: 12px;
+    --queue-card-width: 300px;
+    --icon-size: 18px;
+    --font-small: 11px;
+    --font-medium: 13px;
+    --font-large: 16px;
+  }
+}
+
+@media (max-width: 768px) {
+  :root {
+    --control-size: 40px;
+    --dock-gap: 8px;
+    --dock-padding: 8px;
+    --queue-card-width: 280px;
+    --icon-size: 16px;
+    --font-small: 10px;
+    --font-medium: 12px;
+    --font-large: 14px;
+  }
 }
 
 @media (max-width: 768px) {

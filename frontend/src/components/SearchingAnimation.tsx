@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { useResponsive } from '../hooks/useResponsive.js';
+import { QueueCard } from './QueueCard.js';
 
 interface SearchingAnimationProps {
   queuePosition?: number;
@@ -25,8 +25,7 @@ export function SearchingAnimation({
   onResumeQueue,
   onPauseQueue
 }: SearchingAnimationProps) {
-  const { isMobile } = useResponsive();
-  const [isMobileCardExpanded, setIsMobileCardExpanded] = useState(false);
+
   const [elapsed, setElapsed] = useState(0);
   const [animationStep, setAnimationStep] = useState(0);
   const [stats, setStats] = useState({ online: 127, searching: 41, wait: 8 });
@@ -255,13 +254,7 @@ export function SearchingAnimation({
 
   const colors = getStageColor(animationStep);
 
-  const getModeLabel = (mode: string) => {
-    switch (mode) {
-      case 'STRICT': return '🔒 Exact Match';
-      case 'PREFER': return '🎯 Smart Match';
-      default: return '🌍 Random Match';
-    }
-  };
+
 
   return (
     <div className="relative w-full h-full flex flex-col items-center justify-center overflow-y-auto bg-stone-950 px-4 py-8">
@@ -414,232 +407,18 @@ export function SearchingAnimation({
           </>
         )}
 
-        {/* ── PROFILE INFO CARD & SEARCH CONTROLS (DESKTOP) ── */}
-        <div className="hidden md:flex w-full bg-white/[0.02] border border-white/10 rounded-2xl p-4 md:p-5 backdrop-blur-xl shadow-2xl flex-col gap-4 text-left glass mt-6">
-          <div className="flex items-center justify-between border-b border-white/5 pb-3">
-            <div>
-              <span className="text-[10px] text-stone-500 font-bold uppercase tracking-wider block">Searching As</span>
-              <h4 className="text-sm font-black text-white">{prefData.displayName}</h4>
-            </div>
-            
-            <span className="text-[10px] px-2.5 py-1 rounded bg-purple-500/10 border border-purple-500/20 text-purple-300 font-bold self-start">
-              {getModeLabel(activeMatchMode)}
-            </span>
-          </div>
-
-          <div>
-            <span className="text-[10px] text-stone-500 font-bold uppercase tracking-wider block mb-2">Active Filters</span>
-            {/* List of active preferences */}
-            <div className="flex flex-wrap gap-1.5 max-h-[88px] overflow-y-auto pr-1">
-              {prefData.country && <span className="text-[10px] px-2 py-0.5 bg-white/5 rounded-full text-stone-300 border border-white/5 font-semibold">🌍 {prefData.country}</span>}
-              {prefData.city && <span className="text-[10px] px-2 py-0.5 bg-white/5 rounded-full text-stone-300 border border-white/5 font-semibold">📍 {prefData.city}</span>}
-              {prefData.university && <span className="text-[10px] px-2 py-0.5 bg-white/5 rounded-full text-stone-300 border border-white/5 font-semibold">🎓 {prefData.university}</span>}
-              {prefData.interests.length > 0 ? (
-                prefData.interests.map((item: string) => (
-                  <span key={item} className="text-[10px] px-2 py-0.5 bg-white/5 rounded-full text-stone-300 border border-white/5 font-semibold">#{item}</span>
-                ))
-              ) : null}
-              {!prefData.country && !prefData.city && !prefData.university && prefData.interests.length === 0 && (
-                <span className="text-xs text-stone-500 italic">No search filters active. Matching anyone!</span>
-              )}
-            </div>
-          </div>
-
-          {/* Controls */}
-          <div className="flex flex-col gap-2">
-            <div className="grid grid-cols-2 gap-2">
-              {onOpenPreferences && (
-                <button
-                  type="button"
-                  onClick={onOpenPreferences}
-                  className="py-2.5 px-3 rounded-xl bg-white/5 hover:bg-white/10 text-stone-200 hover:text-white font-bold text-xs border border-white/10 transition-all active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer"
-                >
-                  ✏️ Edit Filters
-                </button>
-              )}
-              {isQueuePaused ? (
-                onResumeQueue && (
-                  <button
-                    type="button"
-                    onClick={onResumeQueue}
-                    className="py-2.5 px-3 rounded-xl bg-green-600 hover:bg-green-500 text-white font-bold text-xs transition-all active:scale-95 flex items-center justify-center gap-1.5 shadow-lg shadow-green-600/10 cursor-pointer"
-                  >
-                    ▶️ Resume
-                  </button>
-                )
-              ) : (
-                onPauseQueue && (
-                  <button
-                    type="button"
-                    onClick={onPauseQueue}
-                    className="py-2.5 px-3 rounded-xl bg-amber-500 hover:bg-amber-600 text-stone-950 font-bold text-xs transition-all active:scale-95 flex items-center justify-center gap-1.5 shadow-lg shadow-amber-500/15 cursor-pointer"
-                  >
-                    ⏸️ Pause
-                  </button>
-                )
-              )}
-            </div>
-
-            {onLeaveQueue && (
-              <button
-                type="button"
-                onClick={onLeaveQueue}
-                className="w-full py-2.5 px-3 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 font-bold text-xs border border-red-500/25 transition-all active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer"
-              >
-                🚪 Leave Queue
-              </button>
-            )}
-          </div>
+        <div className="w-full flex justify-center mt-6">
+          <QueueCard
+            elapsed={elapsed}
+            matchMode={activeMatchMode}
+            isQueuePaused={isQueuePaused}
+            onOpenPreferences={onOpenPreferences}
+            onResumeQueue={onResumeQueue}
+            onPauseQueue={onPauseQueue}
+            onLeaveQueue={onLeaveQueue}
+            stats={stats}
+          />
         </div>
-
-        {/* ── PROFILE INFO CARD (MOBILE COLLAPSED) ── */}
-        {isMobile && (
-          <div 
-            onClick={() => setIsMobileCardExpanded(true)}
-            className="md:hidden w-full bg-white/[0.02] border border-white/10 rounded-2xl p-4 flex items-center justify-between text-left glass mt-6 cursor-pointer hover:bg-white/5 transition-all active:scale-[0.98] select-none"
-          >
-            <div className="flex items-center gap-3 text-xs font-bold text-stone-200">
-              <span className="truncate max-w-[80px]">👤 {prefData.displayName}</span>
-              <span className="w-1 h-1 rounded-full bg-stone-700" />
-              <span>🎯 {activeMatchMode === 'STRICT' ? 'Exact' : activeMatchMode === 'PREFER' ? 'Smart' : 'Random'}</span>
-              {prefData.university && (
-                <>
-                  <span className="w-1 h-1 rounded-full bg-stone-700" />
-                  <span className="truncate max-w-[100px]">🎓 {prefData.university}</span>
-                </>
-              )}
-            </div>
-            <span className="text-amber-500 font-bold text-xs animate-bounce">▲</span>
-          </div>
-        )}
-
-        {/* ── PROFILE INFO CARD (MOBILE EXPANDED BOTTOM SHEET) ── */}
-        {isMobile && isMobileCardExpanded && (
-          <div className="fixed inset-0 bg-black/75 z-[100] flex flex-col justify-end animate-fade-in select-none">
-            <div 
-              className="w-full bg-stone-900 border-t border-white/10 rounded-t-3xl p-6 text-left flex flex-col gap-4 max-h-[85vh] overflow-y-auto animate-slide-up"
-              style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 24px)' }}
-            >
-              <div className="flex items-center justify-between pb-3 border-b border-white/5">
-                <div>
-                  <span className="text-[10px] text-stone-500 font-bold uppercase tracking-wider block">Searching As</span>
-                  <h4 className="text-base font-black text-white">{prefData.displayName}</h4>
-                </div>
-                <button 
-                  onClick={() => setIsMobileCardExpanded(false)}
-                  className="w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-center text-stone-400 hover:text-white"
-                >
-                  ▼
-                </button>
-              </div>
-
-              <div className="space-y-4">
-                {localStorage.getItem('kaboom_bio') && (
-                  <div>
-                    <span className="text-[10px] text-stone-500 font-bold uppercase tracking-wider block mb-1">Bio</span>
-                    <p className="text-xs text-stone-300 italic">"{localStorage.getItem('kaboom_bio')}"</p>
-                  </div>
-                )}
-
-                <div>
-                  <span className="text-[10px] text-stone-500 font-bold uppercase tracking-wider block mb-2">Search Criteria</span>
-                  <div className="flex flex-wrap gap-2">
-                    <span className="text-[10px] px-2.5 py-1 bg-purple-500/10 border border-purple-500/20 text-purple-300 font-bold rounded-full">
-                      🎯 Mode: {activeMatchMode === 'STRICT' ? 'Exact' : activeMatchMode === 'PREFER' ? 'Smart' : 'Random'}
-                    </span>
-                    {prefData.university && <span className="text-[10px] px-2.5 py-1 bg-white/5 border border-white/5 text-stone-300 font-semibold rounded-full">🎓 {prefData.university}</span>}
-                    {prefData.country && <span className="text-[10px] px-2.5 py-1 bg-white/5 border border-white/5 text-stone-300 font-semibold rounded-full">🌍 {prefData.country}</span>}
-                    {prefData.city && <span className="text-[10px] px-2.5 py-1 bg-white/5 border border-white/5 text-stone-300 font-semibold rounded-full">📍 {prefData.city}</span>}
-                    {prefData.interests.length > 0 && prefData.interests.map((tag: string) => (
-                      <span key={tag} className="text-[10px] px-2.5 py-1 bg-white/5 border border-white/5 text-stone-300 font-semibold rounded-full">#{tag}</span>
-                    ))}
-                    {(() => {
-                      try {
-                        const langs = JSON.parse(localStorage.getItem('kaboom_languages') || '[]');
-                        return langs.map((l: string) => (
-                          <span key={l} className="text-[10px] px-2.5 py-1 bg-white/5 border border-white/5 text-stone-300 font-semibold rounded-full">🗣️ {l}</span>
-                        ));
-                      } catch {
-                        return null;
-                      }
-                    })()}
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-3 gap-3 bg-white/[0.02] border border-white/5 rounded-2xl p-4 text-center">
-                  <div>
-                    <span className="text-[9px] text-stone-500 font-bold uppercase tracking-wider block mb-1">Online</span>
-                    <span className="text-xs font-black text-white font-mono">{stats.online}</span>
-                  </div>
-                  <div>
-                    <span className="text-[9px] text-stone-500 font-bold uppercase tracking-wider block mb-1">In Queue</span>
-                    <span className="text-xs font-black text-white font-mono">{stats.searching}</span>
-                  </div>
-                  <div>
-                    <span className="text-[9px] text-stone-500 font-bold uppercase tracking-wider block mb-1">Wait Time</span>
-                    <span className="text-xs font-black text-white font-mono">{elapsed}s</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-2 mt-2">
-                <div className="grid grid-cols-2 gap-2">
-                  {onOpenPreferences && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsMobileCardExpanded(false);
-                        onOpenPreferences();
-                      }}
-                      className="py-3 px-3 rounded-xl bg-white/5 hover:bg-white/10 text-stone-200 hover:text-white font-bold text-xs border border-white/10 flex items-center justify-center gap-1.5 active:scale-95"
-                    >
-                      ✏️ Edit Filters
-                    </button>
-                  )}
-                  {isQueuePaused ? (
-                    onResumeQueue && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setIsMobileCardExpanded(false);
-                          onResumeQueue();
-                        }}
-                        className="py-3 px-3 rounded-xl bg-green-600 hover:bg-green-500 text-white font-bold text-xs flex items-center justify-center gap-1.5 active:scale-95"
-                      >
-                        ▶️ Resume
-                      </button>
-                    )
-                  ) : (
-                    onPauseQueue && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setIsMobileCardExpanded(false);
-                          onPauseQueue();
-                        }}
-                        className="py-3 px-3 rounded-xl bg-amber-500 hover:bg-amber-600 text-stone-950 font-bold text-xs flex items-center justify-center gap-1.5 active:scale-95"
-                      >
-                        ⏸️ Pause
-                      </button>
-                    )
-                  )}
-                </div>
-                {onLeaveQueue && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsMobileCardExpanded(false);
-                      onLeaveQueue();
-                    }}
-                    className="w-full py-3 px-3 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 font-bold text-xs border border-red-500/25 flex items-center justify-center gap-1.5 active:scale-95"
-                  >
-                    🚪 Leave Queue
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );

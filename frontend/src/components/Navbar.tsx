@@ -36,19 +36,21 @@ export function Navbar({ isTransparent = false }: NavbarProps) {
             <img 
               src={iconKaboom} 
               alt="Kaboom TV Icon" 
-              className="w-9 h-9 md:w-10 md:h-10 lg:w-11 lg:h-11 object-contain rounded-[10px] md:rounded-[12px] transition-transform duration-300 group-hover:scale-105" 
+              className="object-contain rounded-[10px] transition-transform duration-300 group-hover:scale-105" 
+              style={{ width: 'clamp(28px, 3vw, 44px)', height: 'clamp(28px, 3vw, 44px)' }}
             />
             <div className="hidden min-[375px]:flex items-center justify-center p-[4px_8px] rounded-[14px] bg-transparent transition-all duration-300 hover:shadow-[0_0_15px_rgba(255,255,255,0.08)] group-hover:scale-[1.02] shrink-0">
               <img 
                 src={logoKaboom} 
                 alt="Kaboom TV Logo" 
-                className="h-[24px] min-[375px]:h-[26px] sm:h-[30px] md:h-[36px] lg:h-[44px] w-auto object-contain shrink-0"
+                className="w-auto object-contain shrink-0"
+                style={{ height: 'clamp(24px, 2.5vw, 44px)' }}
               />
             </div>
           </Link>
 
           {/* Desktop Nav */}
-          <nav className="hidden md:flex items-center gap-1" aria-label="Main navigation">
+          <nav className="hidden lg:flex items-center gap-1" aria-label="Main navigation">
             {NAV_LINKS.map((link) => (
               <Link
                 key={link.to}
@@ -73,7 +75,7 @@ export function Navbar({ isTransparent = false }: NavbarProps) {
           </nav>
 
           {/* Mobile: Start Chat + Hamburger */}
-          <div className="flex md:hidden items-center gap-2">
+          <div className="flex lg:hidden items-center gap-2">
             <Link
               to="/chat"
               className="btn-primary text-sm px-3 py-2 rounded-xl"

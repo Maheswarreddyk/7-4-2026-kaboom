@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useNavigate, useBlocker } from 'react-router-dom';
-import { ChatControls } from '../components/ChatControls.js';
 import { ConnectionStatusBadge } from '../components/ConnectionStatusBadge.js';
 import { LoadingScreen } from '../components/LoadingScreen.js';
 import { ReportModal } from '../components/ReportModal.js';
@@ -19,9 +18,10 @@ import type { ReportReason } from '../types/index.js';
 import { formatDuration } from '../utils/index.js';
 import { cn } from '../utils/index.js';
 import { playTapSound } from '../utils/audio.js';
+import { useResponsiveLayout } from '../hooks/useResponsiveLayout.js';
+import { AdaptiveControlsDock } from '../components/AdaptiveControlsDock.js';
+import { LayoutDebugger } from '../components/LayoutDebugger.js';
 import { MobileHeader } from '../components/MobileHeader.js';
-import { BottomToolbar } from '../components/BottomToolbar.js';
-import { RightActionDock } from '../components/RightActionDock.js';
 import { GestureLayer } from '../components/GestureLayer.js';
 import { MetaManager } from '../components/MetaManager.js';
 import { hintEngine } from '../services/HintEngine.js';
@@ -57,15 +57,7 @@ export function ChatPage() {
     return localStorage.getItem('kaboom_tutorial_dismissed') !== 'true';
   });
 
-  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 640);
-
-  useEffect(() => {
-    const handleResize = () => {
-      setIsMobile(window.innerWidth < 640);
-    };
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
+  const { isMobile } = useResponsiveLayout();
 
 
 
@@ -1128,58 +1120,34 @@ export function ChatPage() {
       </div>
 
       {/* ── CONTROLS DOCK ─────────────────────────────────── */}
-      {isMobile ? (
-        <div className={cn("transition-all duration-300 pointer-events-none", !controlsVisible && "opacity-0 scale-95")}>
-          <RightActionDock
-            onNext={startSkipCountdown}
-            onToggleChat={() => setChatOpen(!chatState.isChatOpen)}
-            onOpenPreferences={async () => {
-              await pauseQueue();
-              setShowPreferenceModal(true);
-            }}
-            onReport={() => setShowReportModal(true)}
-            onLike={handleLike}
-            liked={chatState.liked || false}
-            unreadCount={chatState.unreadCount}
-            isChatOpen={chatState.isChatOpen || false}
-            disabled={isSearching}
-          />
-          <BottomToolbar
-            isMuted={chatState.isMuted}
-            isCameraOff={chatState.isCameraOff}
-            onToggleMute={toggleMute}
-            onToggleCamera={toggleCamera}
-            onLeave={handleLeave}
-            disabled={isSearching}
-          />
-        </div>
-      ) : (
-        <div
-          className={cn('controls-dock', !controlsVisible && 'controls-dock--hidden')}
-        >
-          <ChatControls
-            isMuted={chatState.isMuted}
-            isCameraOff={chatState.isCameraOff}
-            isFullscreen={chatState.isFullscreen}
-            onToggleMute={toggleMute}
-            onToggleCamera={toggleCamera}
-            onNext={startSkipCountdown}
-            onReport={() => setShowReportModal(true)}
-            onLeave={handleLeave}
-            onToggleFullscreen={toggleFullscreen}
-            disabled={isSearching}
-            isChatOpen={chatState.isChatOpen}
-            onToggleChat={() => setChatOpen(!chatState.isChatOpen)}
-            liked={chatState.liked}
-            onLike={handleLike}
-            onOpenPreferences={async () => {
-              await pauseQueue();
-              setShowPreferenceModal(true);
-            }}
-            unreadCount={chatState.unreadCount}
-          />
-        </div>
-      )}
+      <div 
+        className={cn(
+          "transition-all duration-300 pointer-events-auto",
+          !controlsVisible && "opacity-0 scale-95 pointer-events-none"
+        )}
+      >
+        <AdaptiveControlsDock
+          isMuted={chatState.isMuted}
+          isCameraOff={chatState.isCameraOff}
+          isFullscreen={chatState.isFullscreen}
+          onToggleMute={toggleMute}
+          onToggleCamera={toggleCamera}
+          onNext={startSkipCountdown}
+          onReport={() => setShowReportModal(true)}
+          onLeave={handleLeave}
+          onToggleFullscreen={toggleFullscreen}
+          disabled={isSearching}
+          isChatOpen={chatState.isChatOpen}
+          onToggleChat={() => setChatOpen(!chatState.isChatOpen)}
+          liked={chatState.liked}
+          onLike={handleLike}
+          onOpenPreferences={async () => {
+            await pauseQueue();
+            setShowPreferenceModal(true);
+          }}
+          unreadCount={chatState.unreadCount}
+        />
+      </div>
 
       {/* ── FLOATING CHAT OVERLAY ─────────────────────────── */}
       <TemporaryChat
@@ -1637,6 +1605,8 @@ export function ChatPage() {
           </div>
         </div>
       )}
+      {/* Development Layout Debugger */}
+      <LayoutDebugger />
     </div>
   );
 }
