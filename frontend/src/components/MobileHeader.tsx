@@ -58,7 +58,12 @@ export function MobileHeader({
 
         {/* Center: Live Timer */}
         {isConnected && (
-          <div className="px-3.5 py-1.5 rounded-full bg-black/45 backdrop-blur-md border border-white/5 text-xs font-mono font-bold tracking-wider text-white/90 shadow-md">
+          <div className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-black/45 backdrop-blur-md border border-white/5 text-xs font-mono font-bold tracking-wider text-white/90 shadow-md">
+            <span className={cn(
+              "w-1.5 h-1.5 rounded-full",
+              connectionQuality === 'excellent' ? "bg-emerald-500 animate-pulse" :
+              connectionQuality === 'good' ? "bg-amber-500 animate-pulse" : "bg-red-500 animate-ping"
+            )} />
             {formatDuration(elapsedSeconds)}
           </div>
         )}
@@ -76,27 +81,11 @@ export function MobileHeader({
       </div>
 
       {/* ── Status Badges Sub-Bar (Directly below header) ── */}
-      <div className="px-4 py-1.5 flex items-center gap-2 pointer-events-auto">
-        <ConnectionStatusBadge status={connectionStatus} />
-        
-        {/* Net health status */}
-        {isConnected && connectionQuality && (
-          <div
-            className={cn(
-              "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border bg-black/45 backdrop-blur-md text-[10px] font-extrabold uppercase tracking-wider transition-all duration-300",
-              connectionQuality === 'excellent' ? "border-emerald-500/25 text-emerald-400" :
-              connectionQuality === 'good' ? "border-amber-500/25 text-amber-400" : "border-red-500/25 text-red-400"
-            )}
-          >
-            <span className={cn(
-              "w-1.5 h-1.5 rounded-full",
-              connectionQuality === 'excellent' ? "bg-emerald-500 animate-pulse" :
-              connectionQuality === 'good' ? "bg-amber-500 animate-pulse" : "bg-red-500 animate-ping"
-            )} />
-            <span>Net: {connectionQuality}</span>
-          </div>
-        )}
-      </div>
+      {!isConnected && (
+        <div className="px-4 py-1.5 flex items-center gap-2 pointer-events-auto">
+          <ConnectionStatusBadge status={connectionStatus} />
+        </div>
+      )}
     </div>
   );
 }

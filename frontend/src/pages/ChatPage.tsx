@@ -462,28 +462,6 @@ export function ChatPage() {
         )}
 
         {/* Connection Quality widget inside video borders */}
-        {isConnected && chatState.connectionQuality && (
-          <div
-            className="absolute right-4 flex items-center gap-1.5 px-3 py-1.5 rounded-full border bg-black/45 backdrop-blur-md text-[10px] font-extrabold uppercase tracking-wider"
-            style={{
-              top: '16px',
-              zIndex: 20,
-              borderColor: 
-                chatState.connectionQuality === 'excellent' ? 'rgba(16,185,129,0.2)' :
-                chatState.connectionQuality === 'good' ? 'rgba(245,158,11,0.2)' : 'rgba(239,68,68,0.2)',
-              color:
-                chatState.connectionQuality === 'excellent' ? '#10b981' :
-                chatState.connectionQuality === 'good' ? '#f59e0b' : '#ef4444'
-            }}
-          >
-            <span className={cn(
-              "w-1.5 h-1.5 rounded-full",
-              chatState.connectionQuality === 'excellent' ? "bg-emerald-500 animate-pulse" :
-              chatState.connectionQuality === 'good' ? "bg-amber-500 animate-pulse" : "bg-red-500 animate-ping"
-            )} />
-            <span>Net: {chatState.connectionQuality}</span>
-          </div>
-        )}
       </div>
     );
   }, [
@@ -1127,9 +1105,14 @@ export function ChatPage() {
             zIndex: 'var(--z-controls)' as any,
           }}
         >
-          <ConnectionStatusBadge status={chatState.connectionStatus} />
+          {!isConnected && <ConnectionStatusBadge status={chatState.connectionStatus} />}
           {isConnected && (
-            <span className="px-3 py-1 bg-black/40 backdrop-blur-md rounded-full border border-white/10 text-sm text-white/80 font-mono tracking-wider shadow-lg">
+            <span className="flex items-center gap-2 px-3 py-1 bg-black/40 backdrop-blur-md rounded-full border border-white/10 text-sm text-white/80 font-mono tracking-wider shadow-lg">
+              <span className={cn(
+                "w-1.5 h-1.5 rounded-full",
+                chatState.connectionQuality === 'excellent' ? "bg-emerald-500 animate-pulse" :
+                chatState.connectionQuality === 'good' ? "bg-amber-500 animate-pulse" : "bg-red-500 animate-ping"
+              )} />
               {formatDuration(elapsedSeconds)}
             </span>
           )}
