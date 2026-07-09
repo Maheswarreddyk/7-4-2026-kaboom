@@ -582,6 +582,16 @@
 .progress-bar-shrink  { animation: progress-shrink 5s linear forwards; }
 .animate-slide-in     { animation: slideIn    0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
 
+/* V6.12 Dynamic Island notification */
+@keyframes island-slide-in {
+  0%   { opacity: 0; transform: translate(-50%, -20px) scale(0.92); }
+  60%  { opacity: 1; transform: translate(-50%, 4px) scale(1.015); }
+  80%  { transform: translate(-50%, -2px) scale(0.998); }
+  100% { opacity: 1; transform: translate(-50%, 0px) scale(1); }
+}
+.animate-island-in { animation: island-slide-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+.island-progress-bar { animation: progress-shrink 5s linear forwards; }
+
 /* Safe area settings */
 @supports (padding-bottom: env(safe-area-inset-bottom)) {
   .controls-dock {

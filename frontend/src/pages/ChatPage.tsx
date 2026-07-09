@@ -248,6 +248,52 @@ export function ChatPage() {
   // Central Responsive Layout Manager hooks
   const { registerComponent, getStyle } = useFloatingLayout();
 
+  // V6.12 Partner Card expand/collapse state & auto-fade timers
+  const [isPartnerCardExpanded, setIsPartnerCardExpanded] = useState(false);
+  const partnerCardTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const startPartnerCardTimer = useCallback(() => {
+    if (partnerCardTimerRef.current) {
+      clearTimeout(partnerCardTimerRef.current);
+    }
+    partnerCardTimerRef.current = setTimeout(() => {
+      setIsPartnerCardExpanded(false);
+    }, 5000); // 5 seconds auto-fade (Connected -> Show chips -> 5s -> name only)
+  }, []);
+
+  const handleTogglePartnerCard = useCallback(() => {
+    setIsPartnerCardExpanded((prev) => {
+      const next = !prev;
+      if (next) {
+        startPartnerCardTimer();
+      } else {
+        if (partnerCardTimerRef.current) {
+          clearTimeout(partnerCardTimerRef.current);
+          partnerCardTimerRef.current = null;
+        }
+      }
+      return next;
+    });
+  }, [startPartnerCardTimer]);
+
+  useEffect(() => {
+    if (isConnected && chatState.partnerSessionId) {
+      setIsPartnerCardExpanded(true);
+      startPartnerCardTimer();
+    } else {
+      setIsPartnerCardExpanded(false);
+      if (partnerCardTimerRef.current) {
+        clearTimeout(partnerCardTimerRef.current);
+        partnerCardTimerRef.current = null;
+      }
+    }
+    return () => {
+      if (partnerCardTimerRef.current) {
+        clearTimeout(partnerCardTimerRef.current);
+      }
+    };
+  }, [isConnected, chatState.partnerSessionId, startPartnerCardTimer]);
+
   // Register searching header indicator
   useEffect(() => {
     const zKey = isSearching ? 'toast' : 'statusBadges';
@@ -274,7 +320,7 @@ export function ChatPage() {
   // Register partner info card
   const showPartnerCard = !!(isConnected && chatState.partnerProfile);
   useEffect(() => {
-    registerComponent('partner-card', 'BL', 240, 140, showPartnerCard, 'partnerCard', 1);
+    registerComponent('partner-card', 'BL', 240, 160, showPartnerCard, 'partnerCard', 1);
   }, [showPartnerCard, registerComponent]);
 
   // Register temporary chat drawer
@@ -406,60 +452,60 @@ export function ChatPage() {
           </div>
         )}
 
-        {/* Partner Card overlay inside video borders */}
+        {/* V6.12 — Floating glass chips (conversation-first, replaces partner card rectangle) */}
         {isConnected && chatState.partnerProfile && (
-          <div 
-            className="absolute flex flex-col gap-1 p-3.5 rounded-2xl border border-white/10 bg-black/40 backdrop-blur-xl max-w-[240px] shadow-2xl animate-fade-in pointer-events-none select-none"
-            style={{
-              ...getStyle('partner-card'),
-            }}
+          <div
+            className="absolute flex flex-col items-start gap-[8px] pointer-events-auto select-none"
+            style={{ ...getStyle('partner-card') }}
           >
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="text-xs font-black text-stone-100 tracking-tight/90 line-clamp-1">
-                👤 {chatState.partnerProfile.displayName || 'Guest'}
-              </span>
-              <span className="inline-flex items-center gap-1 text-[8px] px-1.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-black uppercase tracking-wider">
+            {/* Name chip — always visible, tap to expand/collapse tags */}
+            <button
+              onClick={handleTogglePartnerCard}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-white/10 bg-black/45 backdrop-blur-[12px] shadow-[0_2px_16px_rgba(0,0,0,0.45)] text-stone-100 text-[11px] font-bold leading-none hover:bg-black/60 transition-colors"
+              aria-label="Toggle partner info"
+            >
+              👤 {chatState.partnerProfile.displayName || 'Guest'}
+            </button>
+
+            {/* Tag chips — visible when expanded */}
+            <div
+              className={`flex flex-col items-start gap-[8px] transition-all duration-500 ease-out ${
+                isPartnerCardExpanded
+                  ? 'opacity-100 translate-y-0 pointer-events-auto'
+                  : 'opacity-0 -translate-y-1 pointer-events-none'
+              }`}
+            >
+              {/* Online status chip */}
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full border border-emerald-500/25 bg-emerald-500/10 backdrop-blur-[12px] shadow-[0_2px_12px_rgba(0,0,0,0.35)] text-emerald-400 text-[10px] font-bold leading-none">
                 🟢 Online
               </span>
+
+              {/* Match reason chips — max 3 */}
+              {(() => {
+                const reasons = chatState.matchReasonMetadata?.matchedBy ?? [];
+                const university = chatState.partnerProfile?.matchAttributes?.university?.[0] || (chatState.partnerProfile as any)?.university || '';
+                const allTags = [...reasons, ...(university ? [`🎓 ${university}`] : [])];
+                const visible = allTags.slice(0, 3);
+                const overflow = allTags.length - 3;
+                return (
+                  <>
+                    {visible.map((tag, i) => (
+                      <span
+                        key={i}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full border border-amber-500/20 bg-amber-500/10 backdrop-blur-[12px] shadow-[0_2px_12px_rgba(0,0,0,0.35)] text-amber-300 text-[10px] font-bold leading-none"
+                      >
+                        🏷 {tag}
+                      </span>
+                    ))}
+                    {overflow > 0 && (
+                      <span className="inline-flex items-center px-2 py-1 rounded-full border border-white/10 bg-white/5 backdrop-blur-[12px] text-stone-400 text-[10px] font-bold leading-none">
+                        +{overflow}
+                      </span>
+                    )}
+                  </>
+                );
+              })()}
             </div>
-
-            {/* University */}
-            {(chatState.partnerProfile.matchAttributes?.university?.[0] || (chatState.partnerProfile as any).university) && (
-              <p className="text-[10px] text-stone-300 font-extrabold leading-normal mt-0.5">
-                🎓 {chatState.partnerProfile.matchAttributes?.university?.[0] || (chatState.partnerProfile as any).university}
-              </p>
-            )}
-
-            {/* Location (City / Country) */}
-            {(chatState.partnerProfile.city || chatState.partnerProfile.country || chatState.partnerProfile.matchAttributes?.city?.[0] || chatState.partnerProfile.matchAttributes?.country?.[0]) && (
-              <p className="text-[10px] text-stone-300 font-extrabold leading-normal mt-0.5">
-                📍 {[
-                  chatState.partnerProfile.city || chatState.partnerProfile.matchAttributes?.city?.[0],
-                  chatState.partnerProfile.country || chatState.partnerProfile.matchAttributes?.country?.[0]
-                ].filter(Boolean).join(', ')}
-              </p>
-            )}
-
-            {/* Bio / Status */}
-            {chatState.partnerProfile.bio && (
-              <p className="text-[10px] text-stone-400 font-medium leading-relaxed italic mt-0.5">
-                💬 {chatState.partnerProfile.bio}
-              </p>
-            )}
-
-            {/* Match Reason tags */}
-            {chatState.matchReasonMetadata?.matchedBy && chatState.matchReasonMetadata.matchedBy.length > 0 && (
-              <div className="flex flex-wrap gap-1 mt-1.5 pt-1.5 border-t border-white/5">
-                {chatState.matchReasonMetadata.matchedBy.slice(0, 2).map((reason: string, idx: number) => (
-                  <span
-                    key={idx}
-                    className="inline-flex items-center px-1.5 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-[8px] font-bold text-amber-400"
-                  >
-                    ✓ {reason}
-                  </span>
-                ))}
-              </div>
-            )}
           </div>
         )}
 
