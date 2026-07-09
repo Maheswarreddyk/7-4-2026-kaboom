@@ -212,6 +212,7 @@ export function FloatingLayoutProvider({ children }: { children: React.ReactNode
       zIndex: Z_INDEX_SYSTEM[comp.zIndexKey] || 10,
       transition: 'all 0.35s cubic-bezier(0.25, 0.8, 0.25, 1)',
       width: `${comp.width}px`,
+      height: `${comp.height}px`,
     };
 
     const isSmallWidth = width < 560;

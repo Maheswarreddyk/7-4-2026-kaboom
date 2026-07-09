@@ -255,8 +255,8 @@ export function ChatPage() {
   // Register self-preview PiP
   useEffect(() => {
     const screenPos = isSearching ? 'TL' : (snapCorner.toUpperCase() as any);
-    const pipW = isSearching ? 100 : (isMobile ? 112 : 200);
-    const pipH = isSearching ? 100 : (isMobile ? 84 : 150);
+    const pipW = isSearching ? 100 : (isMobile ? 130 : 170);
+    const pipH = isSearching ? 100 : (isMobile ? 98 : 128);
     const priority = isSearching ? 2 : 1;
     const zKey = isSearching ? 'toast' : 'videoLocal';
     registerComponent('self-preview', screenPos, pipW, pipH, true, zKey, priority);
@@ -1164,8 +1164,6 @@ export function ChatPage() {
           isDragging && 'shadow-2xl border-amber-500/30'
         )}
         style={{
-          width: isSearching ? 'clamp(72px, 10vw, 110px)' : (isMobile ? '28vw' : '200px'),
-          height: isSearching ? 'clamp(72px, 10vw, 110px)' : (isMobile ? `calc(28vw / ${pipAspectRatio || 1.33})` : `calc(200px / ${pipAspectRatio || 1.33})`),
           transform: isSearching ? 'none' : `translate(${dragOffset.x}px, ${dragOffset.y}px) scale(${isDragging ? pipScale * 1.03 : pipScale})`,
           ...getStyle('self-preview'),
         }}
