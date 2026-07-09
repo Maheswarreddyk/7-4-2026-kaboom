@@ -812,7 +812,7 @@ export function ChatPage() {
         appState: chatState.status as any,
         micMuted: chatState.isMuted,
         cameraOff: chatState.isCameraOff,
-        isMobile: window.innerWidth < 640,
+        isMobile: isMobile, // uses consistent threshold from useResponsiveLayout (width < 768)
         waitingSeconds: 0,
         connectedSeconds: elapsedSeconds,
         hasExchangedMessages: (chatState.messages?.length ?? 0) > 0,

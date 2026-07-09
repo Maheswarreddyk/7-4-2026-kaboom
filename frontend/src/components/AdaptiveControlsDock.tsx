@@ -90,7 +90,10 @@ export const Icons = {
 /* ── DESKTOP DOCK (Expanded 9-button horizontal layout) ── */
 function DesktopDock({ props }: { props: AdaptiveControlsDockProps }) {
   return (
-    <div className="flex items-center justify-center gap-[var(--dock-gap)] p-[var(--dock-padding)] rounded-[var(--radius-large)] bg-black/45 backdrop-blur-2xl border border-white/5 shadow-[var(--shadow-elevation)] pointer-events-auto select-none">
+    <div
+      className="flex items-center justify-center rounded-[var(--radius-large)] bg-black/45 backdrop-blur-2xl border border-white/5 shadow-[var(--shadow-elevation)] pointer-events-auto select-none"
+      style={{ gap: 'var(--dock-gap)', padding: 'var(--dock-padding)' }}
+    >
       {props.onOpenPreferences && (
         <DockButton
           onClick={props.onOpenPreferences}
@@ -177,7 +180,10 @@ function DesktopDock({ props }: { props: AdaptiveControlsDockProps }) {
 /* ── TABLET DOCK (Constraint-based with Overflow Menu) ── */
 function TabletDock({ props }: { props: AdaptiveControlsDockProps }) {
   return (
-    <div className="flex items-center justify-center gap-[var(--dock-gap)] p-[var(--dock-padding)] rounded-[var(--radius-large)] bg-black/45 backdrop-blur-2xl border border-white/5 shadow-[var(--shadow-elevation)] pointer-events-auto select-none">
+    <div
+      className="flex items-center justify-center rounded-[var(--radius-large)] bg-black/45 backdrop-blur-2xl border border-white/5 shadow-[var(--shadow-elevation)] pointer-events-auto select-none"
+      style={{ gap: 'var(--dock-gap)', padding: 'var(--dock-padding)' }}
+    >
       
       {/* Critical Core Left */}
       <DockButton
@@ -272,8 +278,11 @@ function TabletDock({ props }: { props: AdaptiveControlsDockProps }) {
 function MobileDock({ props }: { props: AdaptiveControlsDockProps }) {
   return (
     <div className="fixed inset-0 pointer-events-none z-30 select-none">
-      {/* Permanent Bottom Row: Mic, Camera, End Call */}
-      <div className="absolute bottom-[20px] left-[20px] flex items-center gap-3.5 pointer-events-auto">
+      {/* Permanent Bottom Row: Mic, Camera, Like — always visible */}
+      <div
+        className="absolute left-[20px] flex items-center gap-3.5 pointer-events-auto"
+        style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 20px)' }}
+      >
         <DockButton
           onClick={props.onToggleMute}
           disabled={props.disabled}
@@ -303,7 +312,10 @@ function MobileDock({ props }: { props: AdaptiveControlsDockProps }) {
       </div>
 
       {/* Floating Right Stack: Settings, Report, Chat, Next, Leave */}
-      <div className="absolute bottom-[20px] right-[20px] flex flex-col items-center gap-3.5 pointer-events-auto">
+      <div
+        className="absolute right-[20px] flex flex-col items-center gap-3.5 pointer-events-auto"
+        style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 20px)' }}
+      >
         {props.onOpenPreferences && (
           <DockButton
             onClick={props.onOpenPreferences}

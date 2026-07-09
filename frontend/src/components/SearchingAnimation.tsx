@@ -254,160 +254,176 @@ export function SearchingAnimation({
 
   const colors = getStageColor(animationStep);
 
-
-
   return (
-    <div className="relative w-full h-full flex flex-col items-center justify-center overflow-y-auto bg-stone-950 px-4 py-8">
-      {/* Background Particle Canvas */}
+    /* 
+     * ROOT: Full screen flex column — no justify-center on root so QueueCard never gets pushed off.
+     * The radar section is flex-1 (shrinks to available space).
+     * The QueueCard section is shrink-0 (always visible at the bottom).
+     */
+    <div className="relative w-full h-full flex flex-col bg-stone-950 overflow-hidden">
+      {/* Background Particle Canvas — purely decorative, lowest priority */}
       <canvas ref={canvasRef} className="absolute inset-0 w-full h-full pointer-events-none" />
 
-      {/* Main Searching Panel */}
-      <div className="relative z-10 text-center flex flex-col items-center max-w-sm w-full animate-fade-in my-auto">
-        {status === 'PARTNER_LEFT' ? (
-          /* Partner Left State */
-          <div className="flex flex-col items-center animate-fade-in">
-            <div className="w-24 h-24 rounded-full border border-red-500/25 bg-red-500/5 flex items-center justify-center relative shadow-2xl mb-8">
-              <span className="text-3xl animate-bounce">👋</span>
+      {/* Scrollable inner content */}
+      <div className="relative z-10 flex-1 flex flex-col min-h-0 overflow-y-auto">
+
+        {/* 
+         * RADAR / STATUS SECTION — flex-1 so it fills remaining space above the QueueCard.
+         * min-h guarantees the radar never gets squeezed to nothing.
+         * On short viewports this section shrinks; QueueCard stays anchored.
+         */}
+        <div className="flex-1 flex flex-col items-center justify-center min-h-[180px] px-4 py-6 text-center animate-fade-in">
+          {status === 'PARTNER_LEFT' ? (
+            /* Partner Left State */
+            <div className="flex flex-col items-center animate-fade-in">
+              <div className="w-24 h-24 rounded-full border border-red-500/25 bg-red-500/5 flex items-center justify-center relative shadow-2xl mb-8">
+                <span className="text-3xl animate-bounce">👋</span>
+              </div>
+              <p className="text-red-400 font-extrabold text-lg tracking-tight mb-2">
+                {partnerProfile?.displayName || 'Partner'} left.
+              </p>
+              <p className="text-stone-400 text-xs font-semibold tracking-wide">
+                Finding another person...
+              </p>
             </div>
-            <p className="text-red-400 font-extrabold text-lg tracking-tight mb-2">
-              {partnerProfile?.displayName || 'Partner'} left.
-            </p>
-            <p className="text-stone-400 text-xs font-semibold tracking-wide">
-              Finding another person...
-            </p>
-          </div>
-        ) : isQueuePaused ? (
-          /* Paused State */
-          <div className="flex flex-col items-center animate-fade-in">
-            <div className="w-24 h-24 rounded-full border border-amber-500/20 bg-amber-500/5 flex items-center justify-center relative shadow-2xl mb-8">
-              <span className="text-3xl">⏸️</span>
+          ) : isQueuePaused ? (
+            /* Paused State */
+            <div className="flex flex-col items-center animate-fade-in">
+              <div className="w-24 h-24 rounded-full border border-amber-500/20 bg-amber-500/5 flex items-center justify-center relative shadow-2xl mb-8">
+                <span className="text-3xl">⏸️</span>
+              </div>
+              <p className="text-amber-500 font-extrabold text-lg tracking-tight mb-2">
+                Matchmaking Paused
+              </p>
+              <p className="text-stone-400 text-xs font-semibold tracking-wide">
+                Resume matching when you are ready
+              </p>
             </div>
-            <p className="text-amber-500 font-extrabold text-lg tracking-tight mb-2">
-              Matchmaking Paused
-            </p>
-            <p className="text-stone-400 text-xs font-semibold tracking-wide">
-              Resume matching when you are ready
-            </p>
-          </div>
-        ) : (
-          /* Standard Searching State */
-          <>
-            {/* Apple/Nothing Radar Pulse (Visually changes color per stage) */}
-            <div className="relative mb-6 animate-fade-in">
-              <div className={`absolute inset-0 rounded-full border ${colors.ping} animate-ping`} style={{ animationDuration: '3s' }} />
-              <div className="w-24 h-24 rounded-full border border-white/5 bg-white/[0.01] flex items-center justify-center relative shadow-2xl glass">
-                <div className={`absolute w-16 h-16 rounded-full border ${colors.border} ${colors.bg} animate-pulse`} />
-                <div className={`w-10 h-10 rounded-xl ${colors.bg} border ${colors.border} flex items-center justify-center ${colors.text} font-bold text-lg animate-spin`} style={{ animationDuration: '8s' }}>
-                  ✦
+          ) : (
+            /* Standard Searching State */
+            <>
+              {/* Apple/Nothing Radar Pulse */}
+              <div className="relative mb-5 animate-fade-in shrink-0">
+                <div className={`absolute inset-0 rounded-full border ${colors.ping} animate-ping`} style={{ animationDuration: '3s' }} />
+                <div className="w-20 h-20 rounded-full border border-white/5 bg-white/[0.01] flex items-center justify-center relative shadow-2xl glass">
+                  <div className={`absolute w-14 h-14 rounded-full border ${colors.border} ${colors.bg} animate-pulse`} />
+                  <div className={`w-8 h-8 rounded-xl ${colors.bg} border ${colors.border} flex items-center justify-center ${colors.text} font-bold text-base animate-spin`} style={{ animationDuration: '8s' }}>
+                    ✦
+                  </div>
                 </div>
               </div>
-            </div>
 
-            {/* Interactive Matching animation digits / words */}
-            <p className="text-stone-100 font-extrabold text-base tracking-tight mb-1 h-7 overflow-hidden transition-all duration-300">
-              {currentStageText}
-            </p>
+              {/* Interactive Matching animation text */}
+              <p className="text-stone-100 font-extrabold text-sm tracking-tight mb-1 h-6 overflow-hidden transition-all duration-300 shrink-0">
+                {currentStageText}
+              </p>
 
-            {/* Queue statistics row */}
-            <div className="flex items-center justify-center gap-3 mt-2 text-[10px] text-stone-500 font-semibold uppercase tracking-wider border-t border-white/5 pt-3 w-full max-w-[280px] mx-auto">
-              <div>Online: <span className="text-stone-300 font-bold font-mono">{stats.online}</span></div>
-              <div className="w-1 h-1 rounded-full bg-stone-700" />
-              <div>Queue: <span className="text-stone-300 font-bold font-mono">{stats.searching}</span></div>
-              <div className="w-1 h-1 rounded-full bg-stone-700" />
-              <div>Wait: <span className="text-stone-300 font-bold font-mono">{stats.wait}s</span></div>
-            </div>
+              {/* Queue statistics row */}
+              <div className="flex items-center justify-center gap-3 mt-2 text-[10px] text-stone-500 font-semibold uppercase tracking-wider border-t border-white/5 pt-2.5 w-full max-w-[280px] mx-auto shrink-0">
+                <div>Online: <span className="text-stone-300 font-bold font-mono">{stats.online}</span></div>
+                <div className="w-1 h-1 rounded-full bg-stone-700" />
+                <div>Queue: <span className="text-stone-300 font-bold font-mono">{stats.searching}</span></div>
+                <div className="w-1 h-1 rounded-full bg-stone-700" />
+                <div>Wait: <span className="text-stone-300 font-bold font-mono">{stats.wait}s</span></div>
+              </div>
 
-            {/* Strict countdown / expand search suggest */}
-            {activeMatchMode === 'STRICT' && elapsed >= 15 && (
-              <div className="mt-4 p-4 rounded-2xl border border-purple-500/20 bg-purple-950/20 backdrop-blur-xl animate-fade-in text-center flex flex-col items-center w-full">
-                <div className="text-xs text-purple-300 font-extrabold mb-1">
-                  ⏱️ SEARCH TIME: {formatTimer(elapsed)}
-                </div>
-                <h4 className="text-xs font-bold text-purple-300 uppercase tracking-wider mb-1">Still searching...</h4>
-                <p className="text-[11px] text-stone-300 leading-relaxed max-w-[280px] mb-3">
-                  Exact match not found yet. You can keep waiting or expand your search to Smart Match.
-                </p>
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setElapsed(0)}
-                    className="px-3 py-1.5 rounded-lg border border-white/10 hover:bg-white/5 text-[10px] font-semibold text-white/70 hover:text-white"
-                  >
-                    Continue Waiting
-                  </button>
-                  {onDisableStrict && (
+              {/* Strict countdown / expand search suggest */}
+              {activeMatchMode === 'STRICT' && elapsed >= 15 && (
+                <div className="mt-4 p-4 rounded-2xl border border-purple-500/20 bg-purple-950/20 backdrop-blur-xl animate-fade-in text-center flex flex-col items-center w-full max-w-[320px] shrink-0">
+                  <div className="text-xs text-purple-300 font-extrabold mb-1">
+                    ⏱️ SEARCH TIME: {formatTimer(elapsed)}
+                  </div>
+                  <h4 className="text-xs font-bold text-purple-300 uppercase tracking-wider mb-1">Still searching...</h4>
+                  <p className="text-[11px] text-stone-300 leading-relaxed max-w-[280px] mb-3">
+                    Exact match not found yet. You can keep waiting or expand your search to Smart Match.
+                  </p>
+                  <div className="flex gap-2">
                     <button
                       type="button"
-                      onClick={onDisableStrict}
-                      className="px-3 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-[10px] font-bold text-white shadow-md shadow-purple-600/20"
-                    >
-                      Expand Search
-                    </button>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Long wait time invite suggest (elapsed >= 30 seconds) */}
-            {elapsed >= 30 && (
-              <div className="mt-4 p-3 rounded-xl border border-white/5 bg-white/[0.01] animate-fade-in text-center flex flex-col items-center">
-                <p className="text-[11px] text-stone-400 leading-relaxed max-w-[260px]">
-                  No compatible users yet. Invite friends to Kaboom TV or keep searching!
-                </p>
-              </div>
-            )}
-
-            {/* Nothing Phone dot-jump loader */}
-            <div className="flex items-center justify-center gap-1.5 pt-4">
-              {[0, 1, 2].map((i) => (
-                <div
-                  key={i}
-                  className="w-1.5 h-1.5 rounded-full bg-amber-500/60 animate-bounce"
-                  style={{ animationDelay: `${i * 0.15}s` }}
-                />
-              ))}
-            </div>
-
-            {/* I'm still here check (elapsed >= 300 seconds) */}
-            {elapsed >= 300 && (
-              <div className="absolute inset-0 flex items-center justify-center bg-black/95 backdrop-blur-md z-[60] p-6 text-center animate-fade-in pointer-events-auto">
-                <div className="max-w-xs w-full bg-stone-900 border border-white/10 rounded-3xl p-6 shadow-2xl space-y-6">
-                  <div className="space-y-2 animate-spring-in">
-                    <div className="w-12 h-12 rounded-full border border-amber-500/30 bg-amber-500/10 flex items-center justify-center text-xl mx-auto">
-                      👋
-                    </div>
-                    <h3 className="text-lg font-bold text-white">Still looking?</h3>
-                    <p className="text-xs text-stone-400">
-                      You've been in the queue for a while. Do you want to keep searching?
-                    </p>
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    <button
                       onClick={() => setElapsed(0)}
-                      className="w-full py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-stone-950 font-bold text-xs transition-all active:scale-95"
+                      className="px-3 py-1.5 rounded-lg border border-white/10 hover:bg-white/5 text-[10px] font-semibold text-white/70 hover:text-white"
                     >
-                      Keep Searching
+                      Continue Waiting
                     </button>
-                    <button
-                      onClick={() => {
-                        if (onLeaveQueue) {
-                          onLeaveQueue();
-                        } else {
-                          window.location.href = '/';
-                        }
-                      }}
-                      className="w-full py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-white font-medium text-xs border border-white/10 transition-all active:scale-95"
-                    >
-                      Leave Queue
-                    </button>
+                    {onDisableStrict && (
+                      <button
+                        type="button"
+                        onClick={onDisableStrict}
+                        className="px-3 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-[10px] font-bold text-white shadow-md shadow-purple-600/20"
+                      >
+                        Expand Search
+                      </button>
+                    )}
                   </div>
                 </div>
-              </div>
-            )}
-          </>
-        )}
+              )}
 
-        <div className="w-full flex justify-center mt-6">
+              {/* Long wait time invite suggest (elapsed >= 30 seconds) */}
+              {elapsed >= 30 && (
+                <div className="mt-3 p-3 rounded-xl border border-white/5 bg-white/[0.01] animate-fade-in text-center flex flex-col items-center w-full max-w-[260px] shrink-0">
+                  <p className="text-[11px] text-stone-400 leading-relaxed">
+                    No compatible users yet. Invite friends to Kaboom TV or keep searching!
+                  </p>
+                </div>
+              )}
+
+              {/* Nothing Phone dot-jump loader */}
+              <div className="flex items-center justify-center gap-1.5 pt-3 shrink-0">
+                {[0, 1, 2].map((i) => (
+                  <div
+                    key={i}
+                    className="w-1.5 h-1.5 rounded-full bg-amber-500/60 animate-bounce"
+                    style={{ animationDelay: `${i * 0.15}s` }}
+                  />
+                ))}
+              </div>
+
+              {/* I'm still here check (elapsed >= 300 seconds) */}
+              {elapsed >= 300 && (
+                <div className="absolute inset-0 flex items-center justify-center bg-black/95 backdrop-blur-md z-[60] p-6 text-center animate-fade-in pointer-events-auto">
+                  <div className="max-w-xs w-full bg-stone-900 border border-white/10 rounded-3xl p-6 shadow-2xl space-y-6">
+                    <div className="space-y-2 animate-spring-in">
+                      <div className="w-12 h-12 rounded-full border border-amber-500/30 bg-amber-500/10 flex items-center justify-center text-xl mx-auto">
+                        👋
+                      </div>
+                      <h3 className="text-lg font-bold text-white">Still looking?</h3>
+                      <p className="text-xs text-stone-400">
+                        You've been in the queue for a while. Do you want to keep searching?
+                      </p>
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <button
+                        onClick={() => setElapsed(0)}
+                        className="w-full py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-stone-950 font-bold text-xs transition-all active:scale-95"
+                      >
+                        Keep Searching
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (onLeaveQueue) {
+                            onLeaveQueue();
+                          } else {
+                            window.location.href = '/';
+                          }
+                        }}
+                        className="w-full py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-white font-medium text-xs border border-white/10 transition-all active:scale-95"
+                      >
+                        Leave Queue
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+
+        {/* 
+         * QUEUE CARD — always anchored at bottom, shrink-0 so it never gets cut off.
+         * This is priority 1 — never disappears regardless of viewport height.
+         * The radar section above flexes to use whatever space remains.
+         */}
+        <div className="shrink-0 w-full px-4 pb-6 pt-1">
           <QueueCard
             elapsed={elapsed}
             matchMode={activeMatchMode}
@@ -419,6 +435,7 @@ export function SearchingAnimation({
             stats={stats}
           />
         </div>
+
       </div>
     </div>
   );

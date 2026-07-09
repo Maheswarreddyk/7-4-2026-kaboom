@@ -51,50 +51,121 @@
   --safe-area-inset-left: env(safe-area-inset-left, 16px);
   --safe-area-inset-right: env(safe-area-inset-right, 16px);
 
-  /* Responsive Design Tokens */
-  --control-size: 48px;
-  --dock-gap: 12px;
-  --dock-padding: 16px;
-  --queue-card-width: 340px;
-  --icon-size: 20px;
+  /* ── Responsive Design Tokens — 8-step smooth continuous scaling ──
+   * Each step adjusts incrementally so there are no visual jumps.
+   * Desktop (≥1440px) → Large Laptop → Laptop → Tablet-Large →
+   * Tablet → Large Mobile → Mobile → Small Mobile → Tiny Mobile
+   */
+  --control-size: 50px;
+  --dock-gap: 14px;
+  --dock-padding: 18px 24px;
+  --queue-card-width: 360px;
+  --icon-size: 22px;
   --font-small: 12px;
   --font-medium: 14px;
   --font-large: 18px;
   --radius-large: 24px;
   --shadow-elevation: 0 24px 64px -12px rgba(0,0,0,0.85);
+  /* Header heights */
+  --header-h: var(--header-h-desktop);
 }
 
+/* ── Large Laptop (≤1400px) ── */
+@media (max-width: 1400px) {
+  :root {
+    --control-size: 48px;
+    --dock-gap: 12px;
+    --dock-padding: 16px 20px;
+    --queue-card-width: 340px;
+    --icon-size: 20px;
+  }
+}
+
+/* ── Laptop (≤1200px) ── */
 @media (max-width: 1200px) {
   :root {
-    --control-size: 44px;
+    --control-size: 45px;
     --dock-gap: 10px;
-    --dock-padding: 12px;
-    --queue-card-width: 300px;
-    --icon-size: 18px;
+    --dock-padding: 14px 18px;
+    --queue-card-width: 310px;
+    --icon-size: 19px;
     --font-small: 11px;
     --font-medium: 13px;
     --font-large: 16px;
   }
 }
 
+/* ── Small Laptop (≤1024px) ── */
+@media (max-width: 1024px) {
+  :root {
+    --control-size: 43px;
+    --dock-gap: 9px;
+    --dock-padding: 12px 16px;
+    --queue-card-width: 290px;
+    --icon-size: 18px;
+    --header-h: var(--header-h-tablet);
+  }
+}
+
+/* ── Tablet Large (≤900px) ── */
+@media (max-width: 900px) {
+  :root {
+    --control-size: 42px;
+    --dock-gap: 8px;
+    --dock-padding: 11px 14px;
+    --queue-card-width: 280px;
+    --icon-size: 17px;
+  }
+}
+
+/* ── Tablet (≤768px) ── */
 @media (max-width: 768px) {
   :root {
     --control-size: 40px;
-    --dock-gap: 8px;
-    --dock-padding: 8px;
-    --queue-card-width: 280px;
+    --dock-gap: 7px;
+    --dock-padding: 10px 12px;
+    --queue-card-width: 100%;
     --icon-size: 16px;
     --font-small: 10px;
     --font-medium: 12px;
     --font-large: 14px;
+    --header-h: var(--header-h-tablet);
   }
 }
 
-@media (max-width: 768px) {
-  :root { --header-h: var(--header-h-tablet); }
+/* ── Large Mobile (≤640px) ── */
+@media (max-width: 640px) {
+  :root {
+    --control-size: 38px;
+    --dock-gap: 6px;
+    --dock-padding: 9px 10px;
+    --icon-size: 15px;
+    --header-h: var(--header-h-mobile);
+  }
 }
+
+/* ── Mobile (≤480px) ── */
 @media (max-width: 480px) {
-  :root { --header-h: var(--header-h-mobile); }
+  :root {
+    --control-size: 36px;
+    --dock-gap: 5px;
+    --dock-padding: 8px;
+    --icon-size: 14px;
+    --header-h: var(--header-h-mobile);
+  }
+}
+
+/* ── Small Mobile (≤360px) ── */
+@media (max-width: 360px) {
+  :root {
+    --control-size: 34px;
+    --dock-gap: 4px;
+    --dock-padding: 6px;
+    --icon-size: 13px;
+    --font-small: 9px;
+    --font-medium: 11px;
+    --font-large: 13px;
+  }
 }
 
 /* =====================================================

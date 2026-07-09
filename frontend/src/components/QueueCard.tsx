@@ -61,96 +61,99 @@ export function QueueCard({
     }
   };
 
-  /* ────────── 1 & 2: DESKTOP / COMPACT CARD LAYOUTS ────────── */
-  if (queueCardMode === 'desktop' || queueCardMode === 'compact' || queueCardMode === 'small-laptop') {
-    const isCompact = queueCardMode === 'compact';
-    const isSmallLaptop = queueCardMode === 'small-laptop';
+  const getModeLabelShort = (mode: string) => {
+    switch (mode) {
+      case 'STRICT': return 'Exact';
+      case 'PREFER': return 'Smart';
+      default: return 'Random';
+    }
+  };
 
-    return (
-      <div 
-        className={cn(
-          "w-full bg-white/[0.02] border border-white/10 rounded-2xl backdrop-blur-xl shadow-2xl flex flex-col text-left glass transition-all duration-300 pointer-events-auto",
-          isSmallLaptop ? "p-3 gap-2 text-[11px]" : isCompact ? "p-4 gap-3 text-xs" : "p-5 gap-4 text-sm"
-        )}
-        style={{ width: 'var(--queue-card-width)' }}
+  const hasFilters = country || city || university || interests.length > 0;
+
+  /* ── Shared expanded bottom sheet (used by mobile and mobile-xs) ── */
+  const ExpandedSheet = () => (
+    <div className="fixed inset-0 bg-black/75 z-[90] flex flex-col justify-end animate-fade-in select-none pointer-events-auto">
+      <div
+        className="w-full bg-stone-900 border-t border-white/10 rounded-t-3xl p-6 text-left flex flex-col gap-4 max-h-[85vh] overflow-y-auto animate-slide-up"
+        style={{ paddingBottom: `calc(${safeArea.bottom}px + 24px)` }}
       >
-        {/* Header */}
-        <div className="flex items-center justify-between border-b border-white/5 pb-2.5">
+        {/* Sheet header */}
+        <div className="flex items-center justify-between pb-3 border-b border-white/5">
           <div>
             <span className="text-[9px] text-stone-500 font-bold uppercase tracking-wider block">Searching As</span>
-            <h4 className={cn("font-black text-white truncate", isSmallLaptop ? "max-w-[120px] text-xs" : "max-w-[160px] text-sm")}>
-              {displayName}
-            </h4>
+            <h4 className="text-base font-black text-white">{displayName}</h4>
           </div>
-          <span className={cn("px-2 py-0.5 rounded bg-purple-500/10 border border-purple-500/20 text-purple-300 font-bold text-[9px] shrink-0")}>
-            {getModeLabel(matchMode)}
-          </span>
+          <button
+            onClick={() => setExpandedMobile(false)}
+            className="w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-center text-stone-400 hover:text-white"
+          >
+            ▼
+          </button>
         </div>
 
-        {/* Bio if exists */}
-        {bio && !isSmallLaptop && (
-          <div className="text-[10px] text-stone-400 italic bg-white/[0.01] p-1.5 rounded-lg border border-white/5">
-            "{bio}"
-          </div>
-        )}
+        <div className="space-y-4">
+          {bio && (
+            <div>
+              <span className="text-[9px] text-stone-500 font-bold uppercase tracking-wider block mb-1">Bio</span>
+              <p className="text-xs text-stone-300 italic">"{bio}"</p>
+            </div>
+          )}
 
-        {/* Info Grid */}
-        <div className={cn("grid gap-2", isCompact || isSmallLaptop ? "grid-cols-2" : "grid-cols-1")}>
           <div>
-            <span className="text-[9px] text-stone-500 font-bold uppercase tracking-wider block mb-1">Active Criteria</span>
-            <div className="flex flex-wrap gap-1 max-h-[80px] overflow-y-auto pr-1">
-              {country && <span className="text-[9px] px-1.5 py-0.5 bg-white/5 rounded-full text-stone-300 border border-white/5 font-semibold">🌍 {country}</span>}
-              {city && <span className="text-[9px] px-1.5 py-0.5 bg-white/5 rounded-full text-stone-300 border border-white/5 font-semibold">📍 {city}</span>}
-              {university && <span className="text-[9px] px-1.5 py-0.5 bg-white/5 rounded-full text-stone-300 border border-white/5 font-semibold">🎓 {university}</span>}
+            <span className="text-[9px] text-stone-500 font-bold uppercase tracking-wider block mb-2">Search Criteria</span>
+            <div className="flex flex-wrap gap-2">
+              <span className="text-[9px] px-2.5 py-1 bg-purple-500/10 border border-purple-500/20 text-purple-300 font-bold rounded-full">
+                🎯 Mode: {getModeLabel(matchMode)}
+              </span>
+              {university && <span className="text-[9px] px-2.5 py-1 bg-white/5 border border-white/5 text-stone-300 font-semibold rounded-full">🎓 {university}</span>}
+              {country && <span className="text-[9px] px-2.5 py-1 bg-white/5 border border-white/5 text-stone-300 font-semibold rounded-full">🌍 {country}</span>}
+              {city && <span className="text-[9px] px-2.5 py-1 bg-white/5 border border-white/5 text-stone-300 font-semibold rounded-full">📍 {city}</span>}
               {interests.map((tag) => (
-                <span key={tag} className="text-[9px] px-1.5 py-0.5 bg-white/5 rounded-full text-stone-300 border border-white/5 font-semibold">#{tag}</span>
+                <span key={tag} className="text-[9px] px-2.5 py-1 bg-white/5 border border-white/5 text-stone-300 font-semibold rounded-full">#{tag}</span>
               ))}
               {languages.map((l) => (
-                <span key={l} className="text-[9px] px-1.5 py-0.5 bg-white/5 rounded-full text-stone-300 border border-white/5 font-semibold">🗣️ {l}</span>
+                <span key={l} className="text-[9px] px-2.5 py-1 bg-white/5 border border-white/5 text-stone-300 font-semibold rounded-full">🗣️ {l}</span>
               ))}
-              {!country && !city && !university && interests.length === 0 && (
-                <span className="text-[10px] text-stone-500 italic">Matching anyone!</span>
+              {!hasFilters && languages.length === 0 && (
+                <span className="text-[9px] text-stone-500 italic">Matching anyone!</span>
               )}
             </div>
           </div>
 
-          <div>
-            <span className="text-[9px] text-stone-500 font-bold uppercase tracking-wider block mb-1">Queue Stats</span>
-            <div className="grid grid-cols-3 gap-1 bg-white/[0.01] border border-white/5 rounded-xl p-2 text-center text-[10px]">
-              <div>
-                <span className="text-[8px] text-stone-500 block">Online</span>
-                <span className="font-bold text-white font-mono">{stats.online}</span>
-              </div>
-              <div>
-                <span className="text-[8px] text-stone-500 block">Queue</span>
-                <span className="font-bold text-white font-mono">{stats.searching}</span>
-              </div>
-              <div>
-                <span className="text-[8px] text-stone-500 block">Time</span>
-                <span className="font-bold text-amber-400 font-mono">{formatTimer(elapsed)}</span>
-              </div>
+          <div className="grid grid-cols-3 gap-3 bg-white/[0.02] border border-white/5 rounded-2xl p-4 text-center">
+            <div>
+              <span className="text-[8px] text-stone-500 font-bold uppercase tracking-wider block mb-1">Online</span>
+              <span className="text-xs font-black text-white font-mono">{stats.online}</span>
+            </div>
+            <div>
+              <span className="text-[8px] text-stone-500 font-bold uppercase tracking-wider block mb-1">In Queue</span>
+              <span className="text-xs font-black text-white font-mono">{stats.searching}</span>
+            </div>
+            <div>
+              <span className="text-[8px] text-stone-500 font-bold uppercase tracking-wider block mb-1">Wait Time</span>
+              <span className="text-xs font-black text-amber-400 font-mono">{formatTimer(elapsed)}</span>
             </div>
           </div>
         </div>
 
-        {/* Actions Row */}
-        <div className="flex flex-col gap-1.5 pt-2 border-t border-white/5">
-          <div className="grid grid-cols-2 gap-1.5">
+        <div className="flex flex-col gap-2 mt-2">
+          <div className="grid grid-cols-2 gap-2">
             {onOpenPreferences && (
               <button
                 type="button"
-                onClick={onOpenPreferences}
-                className="py-2 px-2.5 rounded-lg bg-white/5 hover:bg-white/10 text-stone-200 hover:text-white font-bold text-[10px] border border-white/10 transition-all active:scale-95 flex items-center justify-center gap-1 cursor-pointer"
+                onClick={() => { setExpandedMobile(false); onOpenPreferences(); }}
+                className="py-3 px-3 rounded-xl bg-white/5 hover:bg-white/10 text-stone-200 hover:text-white font-bold text-xs border border-white/10 flex items-center justify-center gap-1.5 active:scale-95"
               >
-                ✏️ Edit
+                ✏️ Edit Filters
               </button>
             )}
             {isQueuePaused ? (
               onResumeQueue && (
                 <button
                   type="button"
-                  onClick={onResumeQueue}
-                  className="py-2 px-2.5 rounded-lg bg-green-600 hover:bg-green-500 text-white font-bold text-[10px] transition-all active:scale-95 flex items-center justify-center gap-1 cursor-pointer"
+                  onClick={() => { setExpandedMobile(false); onResumeQueue(); }}
+                  className="py-3 px-3 rounded-xl bg-green-600 hover:bg-green-500 text-white font-bold text-xs flex items-center justify-center gap-1.5 active:scale-95"
                 >
                   ▶️ Resume
                 </button>
@@ -159,40 +162,96 @@ export function QueueCard({
               onPauseQueue && (
                 <button
                   type="button"
-                  onClick={onPauseQueue}
-                  className="py-2 px-2.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-stone-950 font-bold text-[10px] transition-all active:scale-95 flex items-center justify-center gap-1 cursor-pointer"
+                  onClick={() => { setExpandedMobile(false); onPauseQueue(); }}
+                  className="py-3 px-3 rounded-xl bg-amber-500 hover:bg-amber-600 text-stone-950 font-bold text-xs flex items-center justify-center gap-1.5 active:scale-95"
                 >
                   ⏸️ Pause
                 </button>
               )
             )}
           </div>
-
           {onLeaveQueue && (
             <button
               type="button"
-              onClick={onLeaveQueue}
-              className="w-full py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 font-bold text-[10px] border border-red-500/25 transition-all active:scale-95 flex items-center justify-center gap-1 cursor-pointer"
+              onClick={() => { setExpandedMobile(false); onLeaveQueue(); }}
+              className="w-full py-3 px-3 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 font-bold text-xs border border-red-500/25 flex items-center justify-center gap-1.5 active:scale-95"
             >
               🚪 Leave Queue
             </button>
           )}
         </div>
       </div>
+    </div>
+  );
+
+  /* ── MODE 0: MOBILE-XS — Minimal single-line persistent bar (<420px) ── */
+  if (queueCardMode === 'mobile-xs') {
+    return (
+      <>
+        <div
+          onClick={() => setExpandedMobile(true)}
+          className="w-full bg-black/80 backdrop-blur-2xl border border-white/10 rounded-2xl px-3 py-2.5 flex items-center justify-between cursor-pointer active:scale-[0.98] select-none pointer-events-auto transition-all"
+        >
+          <div className="flex items-center gap-2 overflow-hidden">
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse shrink-0" />
+            <span className="text-[10px] font-bold text-stone-200 truncate max-w-[90px]">{displayName}</span>
+            <span className="text-[9px] text-stone-500 shrink-0">·</span>
+            <span className="text-[10px] text-stone-400 font-semibold shrink-0">{getModeLabelShort(matchMode)}</span>
+            {isQueuePaused && <span className="text-[9px] text-amber-500 font-bold shrink-0">⏸</span>}
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="text-[10px] text-amber-400 font-mono font-bold">{formatTimer(elapsed)}</span>
+            <span className="text-[9px] text-amber-500 font-bold">▲</span>
+          </div>
+        </div>
+        {expandedMobile && <ExpandedSheet />}
+      </>
     );
   }
 
-  /* ────────── 3: TABLET CARD LAYOUT (Floating Compact Card) ────────── */
+  /* ── MODE 1: MOBILE — Collapsed pill with expand to bottom sheet (<560px) ── */
+  if (queueCardMode === 'mobile') {
+    return (
+      <>
+        <div
+          onClick={() => setExpandedMobile(true)}
+          className="w-full bg-black/75 border border-white/10 rounded-2xl p-4 flex items-center justify-between text-left glass cursor-pointer hover:bg-white/5 transition-all active:scale-[0.98] select-none pointer-events-auto"
+        >
+          <div className="flex items-center gap-2.5 text-xs font-bold text-stone-200 overflow-hidden">
+            <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse shrink-0" />
+            <span className="truncate max-w-[80px]">{displayName}</span>
+            <span className="w-1 h-1 rounded-full bg-stone-700 shrink-0" />
+            <span className="shrink-0">🎯 {getModeLabelShort(matchMode)}</span>
+            {university && (
+              <>
+                <span className="w-1 h-1 rounded-full bg-stone-700 shrink-0" />
+                <span className="truncate max-w-[90px]">🎓 {university}</span>
+              </>
+            )}
+            {isQueuePaused && <span className="text-amber-500 shrink-0">⏸</span>}
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="text-[10px] text-amber-400 font-mono font-bold">{formatTimer(elapsed)}</span>
+            <span className="text-amber-500 font-bold text-xs animate-bounce">▲</span>
+          </div>
+        </div>
+        {expandedMobile && <ExpandedSheet />}
+      </>
+    );
+  }
+
+  /* ── MODE 2: TABLET — Compact inline card (<720px) ── */
   if (queueCardMode === 'tablet') {
     return (
-      <div className="w-full max-w-[440px] bg-black/75 backdrop-blur-2xl border border-white/10 rounded-2xl p-3.5 shadow-2xl text-left flex flex-col gap-2.5 pointer-events-auto">
+      <div className="w-full bg-black/75 backdrop-blur-2xl border border-white/10 rounded-2xl p-3.5 shadow-2xl text-left flex flex-col gap-2.5 pointer-events-auto">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
-            <span className="text-xs font-black text-white">{displayName}</span>
-            <span className="text-[10px] text-stone-400 font-bold">({getModeLabel(matchMode)})</span>
+          <div className="flex items-center gap-2 overflow-hidden">
+            <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse shrink-0" />
+            <span className="text-xs font-black text-white truncate max-w-[140px]">{displayName}</span>
+            <span className="text-[10px] text-stone-400 font-bold shrink-0">{getModeLabel(matchMode)}</span>
+            {isQueuePaused && <span className="text-[9px] text-amber-500 font-bold">⏸ Paused</span>}
           </div>
-          <span className="text-[10px] text-amber-400 font-bold font-mono">
+          <span className="text-[10px] text-amber-400 font-bold font-mono shrink-0">
             ⏱️ {formatTimer(elapsed)}
           </span>
         </div>
@@ -205,6 +264,7 @@ export function QueueCard({
             <span key={tag} className="text-[9px] px-1.5 py-0.5 bg-white/5 rounded-full text-stone-300 border border-white/5">#{tag}</span>
           ))}
           {interests.length > 3 && <span className="text-[9px] px-1.5 py-0.5 bg-white/5 rounded-full text-stone-400">+{interests.length - 3} more</span>}
+          {!hasFilters && <span className="text-[9px] text-stone-500 italic">Matching anyone!</span>}
         </div>
 
         {/* Buttons and Stats combined in single row */}
@@ -216,7 +276,7 @@ export function QueueCard({
                 onClick={onOpenPreferences}
                 className="py-1 px-2.5 rounded-lg bg-white/5 text-stone-300 text-[10px] border border-white/10 hover:bg-white/10 active:scale-95 transition-all"
               >
-                Filters
+                ✏️ Filters
               </button>
             )}
             {isQueuePaused ? (
@@ -226,7 +286,7 @@ export function QueueCard({
                   onClick={onResumeQueue}
                   className="py-1 px-2.5 rounded-lg bg-green-600 text-white text-[10px] hover:bg-green-500 active:scale-95 transition-all"
                 >
-                  Resume
+                  ▶️ Resume
                 </button>
               )
             ) : (
@@ -236,7 +296,7 @@ export function QueueCard({
                   onClick={onPauseQueue}
                   className="py-1 px-2.5 rounded-lg bg-amber-500 text-stone-950 text-[10px] hover:bg-amber-600 active:scale-95 transition-all"
                 >
-                  Pause
+                  ⏸ Pause
                 </button>
               )
             )}
@@ -246,13 +306,14 @@ export function QueueCard({
                 onClick={onLeaveQueue}
                 className="py-1 px-2.5 rounded-lg bg-red-600/20 text-red-400 text-[10px] hover:bg-red-600/30 border border-red-500/20 active:scale-95 transition-all"
               >
-                Leave
+                🚪 Leave
               </button>
             )}
           </div>
 
-          <div className="text-[9px] text-stone-400 font-bold uppercase flex gap-2">
+          <div className="text-[9px] text-stone-400 font-bold uppercase flex gap-2 shrink-0">
             <span>Online: {stats.online}</span>
+            <span>·</span>
             <span>Queue: {stats.searching}</span>
           </div>
         </div>
@@ -260,149 +321,127 @@ export function QueueCard({
     );
   }
 
-  /* ────────── 4: MOBILE CARD LAYOUT (Collapsed Bottom Sheet) ────────── */
+  /* ── MODES 3–5: DESKTOP/COMPACT/SMALL-LAPTOP — Full card layouts ── */
+  const isCompact = queueCardMode === 'compact';
+  const isSmallLaptop = queueCardMode === 'small-laptop';
+
   return (
-    <>
-      <div 
-        onClick={() => setExpandedMobile(true)}
-        className="w-full bg-black/75 border border-white/10 rounded-2xl p-4 flex items-center justify-between text-left glass cursor-pointer hover:bg-white/5 transition-all active:scale-[0.98] select-none pointer-events-auto"
-      >
-        <div className="flex items-center gap-3 text-xs font-bold text-stone-200 overflow-hidden">
-          <span className="truncate max-w-[70px]">👤 {displayName}</span>
-          <span className="w-1 h-1 rounded-full bg-stone-700 shrink-0" />
-          <span className="shrink-0">🎯 {matchMode === 'STRICT' ? 'Exact' : matchMode === 'PREFER' ? 'Smart' : 'Random'}</span>
-          {university && (
-            <>
-              <span className="w-1 h-1 rounded-full bg-stone-700 shrink-0" />
-              <span className="truncate max-w-[80px]">🎓 {university}</span>
-            </>
-          )}
+    <div
+      className={cn(
+        "w-full bg-white/[0.02] border border-white/10 rounded-2xl backdrop-blur-xl shadow-2xl flex flex-col text-left glass transition-all duration-300 pointer-events-auto",
+        isSmallLaptop ? "p-3 gap-2 text-[11px]" : isCompact ? "p-4 gap-3 text-xs" : "p-5 gap-4 text-sm"
+      )}
+      style={{ maxWidth: 'var(--queue-card-width)' }}
+    >
+      {/* Header */}
+      <div className="flex items-center justify-between border-b border-white/5 pb-2.5">
+        <div>
+          <span className="text-[9px] text-stone-500 font-bold uppercase tracking-wider block">Searching As</span>
+          <h4 className={cn("font-black text-white truncate", isSmallLaptop ? "max-w-[120px] text-xs" : "max-w-[160px] text-sm")}>
+            {displayName}
+          </h4>
         </div>
-        <div className="flex items-center gap-2 shrink-0">
-          <span className="text-[10px] text-amber-400 font-mono font-bold">{formatTimer(elapsed)}</span>
-          <span className="text-amber-500 font-bold text-xs animate-bounce">▲</span>
+        <div className="flex flex-col items-end gap-1">
+          <span className="px-2 py-0.5 rounded bg-purple-500/10 border border-purple-500/20 text-purple-300 font-bold text-[9px] shrink-0">
+            {getModeLabel(matchMode)}
+          </span>
+          {isQueuePaused && (
+            <span className="text-[9px] text-amber-500 font-bold">⏸ Paused</span>
+          )}
         </div>
       </div>
 
-      {expandedMobile && (
-        <div className="fixed inset-0 bg-black/75 z-[100] flex flex-col justify-end animate-fade-in select-none pointer-events-auto">
-          <div 
-            className="w-full bg-stone-900 border-t border-white/10 rounded-t-3xl p-6 text-left flex flex-col gap-4 max-h-[85vh] overflow-y-auto animate-slide-up"
-            style={{ paddingBottom: `calc(${safeArea.bottom}px + 24px)` }}
-          >
-            <div className="flex items-center justify-between pb-3 border-b border-white/5">
-              <div>
-                <span className="text-[9px] text-stone-500 font-bold uppercase tracking-wider block">Searching As</span>
-                <h4 className="text-base font-black text-white">{displayName}</h4>
-              </div>
-              <button 
-                onClick={() => setExpandedMobile(false)}
-                className="w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-center text-stone-400 hover:text-white"
-              >
-                ▼
-              </button>
+      {/* Bio (desktop only) */}
+      {bio && !isSmallLaptop && !isCompact && (
+        <div className="text-[10px] text-stone-400 italic bg-white/[0.01] p-1.5 rounded-lg border border-white/5">
+          "{bio}"
+        </div>
+      )}
+
+      {/* Info Grid */}
+      <div className={cn("grid gap-2", isCompact || isSmallLaptop ? "grid-cols-2" : "grid-cols-1")}>
+        <div>
+          <span className="text-[9px] text-stone-500 font-bold uppercase tracking-wider block mb-1">Active Criteria</span>
+          <div className="flex flex-wrap gap-1 max-h-[80px] overflow-y-auto pr-1">
+            {country && <span className="text-[9px] px-1.5 py-0.5 bg-white/5 rounded-full text-stone-300 border border-white/5 font-semibold">🌍 {country}</span>}
+            {city && <span className="text-[9px] px-1.5 py-0.5 bg-white/5 rounded-full text-stone-300 border border-white/5 font-semibold">📍 {city}</span>}
+            {university && <span className="text-[9px] px-1.5 py-0.5 bg-white/5 rounded-full text-stone-300 border border-white/5 font-semibold">🎓 {university}</span>}
+            {interests.map((tag) => (
+              <span key={tag} className="text-[9px] px-1.5 py-0.5 bg-white/5 rounded-full text-stone-300 border border-white/5 font-semibold">#{tag}</span>
+            ))}
+            {languages.map((l) => (
+              <span key={l} className="text-[9px] px-1.5 py-0.5 bg-white/5 rounded-full text-stone-300 border border-white/5 font-semibold">🗣️ {l}</span>
+            ))}
+            {!hasFilters && languages.length === 0 && (
+              <span className="text-[10px] text-stone-500 italic">Matching anyone!</span>
+            )}
+          </div>
+        </div>
+
+        <div>
+          <span className="text-[9px] text-stone-500 font-bold uppercase tracking-wider block mb-1">Queue Stats</span>
+          <div className="grid grid-cols-3 gap-1 bg-white/[0.01] border border-white/5 rounded-xl p-2 text-center text-[10px]">
+            <div>
+              <span className="text-[8px] text-stone-500 block">Online</span>
+              <span className="font-bold text-white font-mono">{stats.online}</span>
             </div>
-
-            <div className="space-y-4">
-              {bio && (
-                <div>
-                  <span className="text-[9px] text-stone-500 font-bold uppercase tracking-wider block mb-1">Bio</span>
-                  <p className="text-xs text-stone-300 italic">"{bio}"</p>
-                </div>
-              )}
-
-              <div>
-                <span className="text-[9px] text-stone-500 font-bold uppercase tracking-wider block mb-2">Search Criteria</span>
-                <div className="flex flex-wrap gap-2">
-                  <span className="text-[9px] px-2.5 py-1 bg-purple-500/10 border border-purple-500/20 text-purple-300 font-bold rounded-full">
-                    🎯 Mode: {matchMode === 'STRICT' ? 'Exact' : matchMode === 'PREFER' ? 'Smart' : 'Random'}
-                  </span>
-                  {university && <span className="text-[9px] px-2.5 py-1 bg-white/5 border border-white/5 text-stone-300 font-semibold rounded-full">🎓 {university}</span>}
-                  {country && <span className="text-[9px] px-2.5 py-1 bg-white/5 border border-white/5 text-stone-300 font-semibold rounded-full">🌍 {country}</span>}
-                  {city && <span className="text-[9px] px-2.5 py-1 bg-white/5 border border-white/5 text-stone-300 font-semibold rounded-full">📍 {city}</span>}
-                  {interests.map((tag) => (
-                    <span key={tag} className="text-[9px] px-2.5 py-1 bg-white/5 border border-white/5 text-stone-300 font-semibold rounded-full">#{tag}</span>
-                  ))}
-                  {languages.map((l) => (
-                    <span key={l} className="text-[9px] px-2.5 py-1 bg-white/5 border border-white/5 text-stone-300 font-semibold rounded-full">🗣️ {l}</span>
-                  ))}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-3 gap-3 bg-white/[0.02] border border-white/5 rounded-2xl p-4 text-center">
-                <div>
-                  <span className="text-[8px] text-stone-500 font-bold uppercase tracking-wider block mb-1">Online</span>
-                  <span className="text-xs font-black text-white font-mono">{stats.online}</span>
-                </div>
-                <div>
-                  <span className="text-[8px] text-stone-500 font-bold uppercase tracking-wider block mb-1">In Queue</span>
-                  <span className="text-xs font-black text-white font-mono">{stats.searching}</span>
-                </div>
-                <div>
-                  <span className="text-[8px] text-stone-500 font-bold uppercase tracking-wider block mb-1">Wait Time</span>
-                  <span className="text-xs font-black text-white font-mono">{elapsed}s</span>
-                </div>
-              </div>
+            <div>
+              <span className="text-[8px] text-stone-500 block">Queue</span>
+              <span className="font-bold text-white font-mono">{stats.searching}</span>
             </div>
-
-            <div className="flex flex-col gap-2 mt-2">
-              <div className="grid grid-cols-2 gap-2">
-                {onOpenPreferences && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setExpandedMobile(false);
-                      onOpenPreferences();
-                    }}
-                    className="py-3 px-3 rounded-xl bg-white/5 hover:bg-white/10 text-stone-200 hover:text-white font-bold text-xs border border-white/10 flex items-center justify-center gap-1.5 active:scale-95"
-                  >
-                    ✏️ Edit Filters
-                  </button>
-                )}
-                {isQueuePaused ? (
-                  onResumeQueue && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setExpandedMobile(false);
-                        onResumeQueue();
-                      }}
-                      className="py-3 px-3 rounded-xl bg-green-600 hover:bg-green-500 text-white font-bold text-xs flex items-center justify-center gap-1.5 active:scale-95"
-                    >
-                      ▶️ Resume
-                    </button>
-                  )
-                ) : (
-                  onPauseQueue && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setExpandedMobile(false);
-                        onPauseQueue();
-                      }}
-                      className="py-3 px-3 rounded-xl bg-amber-500 hover:bg-amber-600 text-stone-950 font-bold text-xs flex items-center justify-center gap-1.5 active:scale-95"
-                    >
-                      ⏸️ Pause
-                    </button>
-                  )
-                )}
-              </div>
-              {onLeaveQueue && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setExpandedMobile(false);
-                    onLeaveQueue();
-                  }}
-                  className="w-full py-3 px-3 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 font-bold text-xs border border-red-500/25 flex items-center justify-center gap-1.5 active:scale-95"
-                >
-                  🚪 Leave Queue
-                </button>
-              )}
+            <div>
+              <span className="text-[8px] text-stone-500 block">Time</span>
+              <span className="font-bold text-amber-400 font-mono">{formatTimer(elapsed)}</span>
             </div>
           </div>
         </div>
-      )}
-    </>
+      </div>
+
+      {/* Actions Row */}
+      <div className="flex flex-col gap-1.5 pt-2 border-t border-white/5">
+        <div className="grid grid-cols-2 gap-1.5">
+          {onOpenPreferences && (
+            <button
+              type="button"
+              onClick={onOpenPreferences}
+              className="py-2 px-2.5 rounded-lg bg-white/5 hover:bg-white/10 text-stone-200 hover:text-white font-bold text-[10px] border border-white/10 transition-all active:scale-95 flex items-center justify-center gap-1 cursor-pointer"
+            >
+              ✏️ Edit Filters
+            </button>
+          )}
+          {isQueuePaused ? (
+            onResumeQueue && (
+              <button
+                type="button"
+                onClick={onResumeQueue}
+                className="py-2 px-2.5 rounded-lg bg-green-600 hover:bg-green-500 text-white font-bold text-[10px] transition-all active:scale-95 flex items-center justify-center gap-1 cursor-pointer"
+              >
+                ▶️ Resume
+              </button>
+            )
+          ) : (
+            onPauseQueue && (
+              <button
+                type="button"
+                onClick={onPauseQueue}
+                className="py-2 px-2.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-stone-950 font-bold text-[10px] transition-all active:scale-95 flex items-center justify-center gap-1 cursor-pointer"
+              >
+                ⏸️ Pause
+              </button>
+            )
+          )}
+        </div>
+
+        {onLeaveQueue && (
+          <button
+            type="button"
+            onClick={onLeaveQueue}
+            className="w-full py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 font-bold text-[10px] border border-red-500/25 transition-all active:scale-95 flex items-center justify-center gap-1 cursor-pointer"
+          >
+            🚪 Leave Queue
+          </button>
+        )}
+      </div>
+    </div>
   );
 }
