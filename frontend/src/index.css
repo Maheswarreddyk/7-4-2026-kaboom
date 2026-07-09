@@ -675,3 +675,53 @@
     transition-delay: 0s !important;
   }
 }
+
+/* =====================================================
+   QUEUE CARD CONTAINER QUERIES (Zero Info Loss Reflow)
+   ===================================================== */
+.queue-card-container {
+  container-type: inline-size;
+  container-name: queuecard;
+  width: 100%;
+}
+
+/* Default Comfortable Card Layout */
+.queue-card-card {
+  width: 340px;
+  max-width: 100%;
+  padding: 16px;
+  gap: 12px;
+}
+
+.queue-card-header {
+  padding-bottom: 8px;
+}
+
+/* Narrow Container Reflow (Compact Mode) */
+@container queuecard (max-width: 440px) {
+  .queue-card-card {
+    width: 100% !important;
+    padding: 10px 14px !important;
+    gap: 8px !important;
+    border-radius: 14px !important;
+  }
+
+  /* Hide decorative / secondary details to save vertical height */
+  .queue-card-bio,
+  .queue-card-stats {
+    display: none !important;
+  }
+
+  /* Compact header styling */
+  .queue-card-header {
+    border-bottom: none !important;
+    padding-bottom: 0 !important;
+  }
+
+  /* Flex wrap actions block */
+  .queue-card-actions {
+    margin-top: 2px !important;
+    padding-top: 4px !important;
+  }
+}
+

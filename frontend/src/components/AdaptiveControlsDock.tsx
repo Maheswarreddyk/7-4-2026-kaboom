@@ -279,7 +279,7 @@ function TabletDock({ props, style }: { props: AdaptiveControlsDockProps; style?
 /* ── MOBILE DOCK (FaceTime bottom + Right sidebar split layout) ── */
 function MobileDock({ props }: { props: AdaptiveControlsDockProps }) {
   return (
-    <div className="fixed inset-0 pointer-events-none z-30 select-none">
+    <div className="absolute inset-0 w-full h-full pointer-events-none select-none">
       {/* Permanent Bottom Row: Mic, Camera, Like — always visible */}
       <div
         className="absolute left-[20px] flex items-center gap-3.5 pointer-events-auto"
@@ -372,10 +372,9 @@ export function AdaptiveControlsDock(props: AdaptiveControlsDockProps) {
   const isActive = !props.disabled;
 
   useEffect(() => {
-    const isMobileMode = dockMode === 'mobile';
-    registerComponent('controls-dock', 'BC', 560, 80, isActive && !isMobileMode, 'bottomDock');
+    registerComponent('controls-dock', 'BC', 560, 80, isActive, 'bottomDock', 1);
     return () => unregisterComponent('controls-dock');
-  }, [isActive, dockMode, registerComponent, unregisterComponent]);
+  }, [isActive, registerComponent, unregisterComponent]);
 
   switch (dockMode) {
     case 'mobile':

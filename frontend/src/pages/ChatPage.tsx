@@ -3,6 +3,7 @@ import { useNavigate, useBlocker } from 'react-router-dom';
 import { ConnectionStatusBadge } from '../components/ConnectionStatusBadge.js';
 import { LoadingScreen } from '../components/LoadingScreen.js';
 import { ReportModal } from '../components/ReportModal.js';
+import { QueueCard } from '../components/QueueCard.js';
 import { SearchingAnimation } from '../components/SearchingAnimation.js';
 import { VideoPlayer } from '../components/VideoPlayer.js';
 import { PreferenceModal } from '../components/PreferenceModal.js';
@@ -248,20 +249,55 @@ export function ChatPage() {
   // Register self-preview PiP
   useEffect(() => {
     const screenPos = snapCorner.toUpperCase() as any;
-    registerComponent('self-preview', screenPos, 200, 150, true, 'videoLocal');
+    registerComponent('self-preview', screenPos, 200, 150, true, 'videoLocal', 1);
   }, [snapCorner, registerComponent]);
 
   // Register partner info card
   const showPartnerCard = !!(isConnected && chatState.partnerProfile);
   useEffect(() => {
-    registerComponent('partner-card', 'BL', 240, 140, showPartnerCard, 'partnerCard');
+    registerComponent('partner-card', 'BL', 240, 140, showPartnerCard, 'partnerCard', 1);
   }, [showPartnerCard, registerComponent]);
 
   // Register temporary chat drawer
   const showChatDrawer = !!chatState.isChatOpen;
   useEffect(() => {
-    registerComponent('chat-drawer', 'TR', 360, 400, showChatDrawer, 'chatDrawer');
+    registerComponent('chat-drawer', 'TR', 360, 400, showChatDrawer, 'chatDrawer', 1);
   }, [showChatDrawer, registerComponent]);
+
+  // Register queue card directly at top level
+  useEffect(() => {
+    registerComponent('queue-card', 'BC', 340, 260, isSearching, 'queueCard', 1);
+  }, [isSearching, registerComponent]);
+
+  // Search Elapsed timer state
+  const [searchElapsed, setSearchElapsed] = useState(0);
+  useEffect(() => {
+    if (isSearching) {
+      const timer = setInterval(() => {
+        setSearchElapsed((prev) => prev + 1);
+      }, 1000);
+      return () => clearInterval(timer);
+    } else {
+      setSearchElapsed(0);
+    }
+  }, [isSearching]);
+
+  // Fluctuate queue statistics during searching
+  const [queueStats, setQueueStats] = useState({ online: 127, searching: 41, wait: 8 });
+  useEffect(() => {
+    if (isSearching) {
+      const interval = setInterval(() => {
+        setQueueStats((prev) => ({
+          online: Math.max(90, Math.min(220, prev.online + Math.floor(Math.random() * 9) - 4)),
+          searching: Math.max(15, Math.min(75, prev.searching + Math.floor(Math.random() * 7) - 3)),
+          wait: Math.max(5, Math.min(15, prev.wait + Math.floor(Math.random() * 3) - 1))
+        }));
+      }, 4000);
+      return () => clearInterval(interval);
+    }
+  }, [isSearching]);
+
+  const activeMatchMode = localStorage.getItem('kaboom_match_mode') || 'RANDOM';
 
 
 
@@ -1027,26 +1063,40 @@ export function ChatPage() {
         }}
       />
 
-      {/* ── SEARCHING OVERLAY ─────────────────────────────── */}
+      {/* ── SEARCHING OVERLAY (Decorative & Status messages) ── */}
       {isSearching && (
         <div
           className="absolute inset-0 flex items-center justify-center bg-stone-950"
-          style={{ zIndex: 'calc(var(--z-overlay) + 1)' as any }}
+          style={{ zIndex: 'calc(var(--z-overlay) + 70)' as any }}
         >
           <SearchingAnimation
-            queuePosition={chatState.queuePosition}
-            matchMode={localStorage.getItem('kaboom_match_mode') || 'RANDOM'}
-            onDisableStrict={handleDisableStrict}
+            status={chatState.status}
+            partnerProfile={chatState.partnerProfile}
+            isQueuePaused={isQueuePaused}
+          />
+        </div>
+      )}
+
+      {/* ── QUEUE CARD (Flat Top-Level Floating Item) ── */}
+      {isSearching && (
+        <div 
+          className="pointer-events-auto"
+          style={getStyle('queue-card')}
+          data-layout-id="queue-card"
+        >
+          <QueueCard
+            elapsed={searchElapsed}
+            matchMode={activeMatchMode}
+            isQueuePaused={isQueuePaused}
             onOpenPreferences={async () => {
               await pauseQueue();
               setShowPreferenceModal(true);
             }}
-            status={chatState.status}
-            partnerProfile={chatState.partnerProfile}
-            isQueuePaused={isQueuePaused}
-            onLeaveQueue={handleLeave}
             onResumeQueue={resumeQueue}
             onPauseQueue={pauseQueue}
+            onLeaveQueue={handleLeave}
+            stats={queueStats}
+            onDisableStrict={handleDisableStrict}
           />
         </div>
       )}

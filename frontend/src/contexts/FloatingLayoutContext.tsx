@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { useResponsiveLayout, LayoutMode } from '../hooks/useResponsiveLayout.js';
+import { useResponsiveLayout } from '../hooks/useResponsiveLayout.js';
 
 export type ScreenPosition = 'TL' | 'TC' | 'TR' | 'BL' | 'BC' | 'BR';
 
@@ -10,7 +10,7 @@ export interface FloatingComponent {
   height: number;
   isActive: boolean;
   zIndexKey: string;
-  priority: number; // 1 = Never Hide, 2 = Medium, 3 = Decorative
+  priority: number; // 1 = High, 2 = Medium, 3 = Decorative
   minSize?: { w: number; h: number };
   maxSize?: { w: number; h: number };
 }
@@ -31,8 +31,6 @@ interface FloatingLayoutContextType {
   setComponentActive: (id: string, isActive: boolean) => void;
   setComponentSize: (id: string, width: number, height: number) => void;
   getStyle: (id: string) => React.CSSProperties;
-  isMobile: boolean;
-  layoutMode: LayoutMode;
   safeInsets: { top: number; bottom: number; left: number; right: number };
   collisionCount: number;
 }
@@ -58,7 +56,7 @@ export const Z_INDEX_SYSTEM: Record<string, number> = {
 };
 
 export function FloatingLayoutProvider({ children }: { children: React.ReactNode }) {
-  const { width, height, isMobile, layoutMode } = useResponsiveLayout();
+  const { width, height } = useResponsiveLayout();
   const [components, setComponents] = useState<Record<string, FloatingComponent>>({});
   const [collisionCount, setCollisionCount] = useState(0);
 
@@ -150,85 +148,87 @@ export function FloatingLayoutProvider({ children }: { children: React.ReactNode
     const comp = components[id];
     if (!comp || !comp.isActive) return { display: 'none' };
 
-    let pos = comp.preferredPosition;
-    
+    const activeComponents = Object.values(components).filter(c => c.isActive);
     const isChatOpen = components['chat-drawer']?.isActive;
-    const isPartnerCardVisible = components['partner-card']?.isActive;
-    const isDockActive = components['controls-dock']?.isActive;
-    const chatDrawerW = isMobile ? width : 360;
+    const chatDrawerW = width < 560 ? width : 360;
 
-    // RULE 1: If Chat Drawer is open:
-    // It occupies the entire right side of the screen (TR + BR slots).
-    // Relocate any other TR/BR components to prevent overlapping.
+    // 1. Resolve slot target based on open regions (e.g. Chat Drawer pushes elements left)
+    let pos = comp.preferredPosition;
     if (isChatOpen && id !== 'chat-drawer') {
-      if (pos === 'TR') pos = isMobile ? 'TL' : 'TC';
-      if (pos === 'BR') pos = isMobile ? 'BL' : 'BC';
+      if (pos === 'TR') pos = width < 560 ? 'TL' : 'TC';
+      if (pos === 'BR') pos = width < 560 ? 'BL' : 'BC';
     }
 
-    // Set up safe positioning offsets
-    // Header height changes dynamically with layoutMode
-    let headerHeight = 72;
-    if (layoutMode === 'Minimal') headerHeight = 56;
-    else if (layoutMode === 'Compact') headerHeight = 60;
-    else if (layoutMode === 'Medium') headerHeight = 64;
+    // Special snap corners for self-preview on mobile
+    if (id === 'self-preview' && width < 560) {
+      if (pos === 'BR' || pos === 'BL') {
+        pos = 'TR'; // Reflow up to avoid mobile keyboard / skip deck overlapping
+      }
+    }
 
+    // 2. Set up layout margins
+    const headerHeight = height < 500 ? 56 : height < 600 ? 60 : 64;
     const sTop = Math.max(headerHeight + 12, safeInsets.top);
     const sBottom = safeInsets.bottom;
     const sLeft = safeInsets.left;
     const sRight = safeInsets.right;
 
-    let style: React.CSSProperties = {
+    // 3. Stacking calculation
+    // Collect all components sitting at this resolved slot
+    const slotElements = activeComponents.filter(c => {
+      let resolvedPos = c.preferredPosition;
+      if (isChatOpen && c.id !== 'chat-drawer') {
+        if (resolvedPos === 'TR') resolvedPos = width < 560 ? 'TL' : 'TC';
+        if (resolvedPos === 'BR') resolvedPos = width < 560 ? 'BL' : 'BC';
+      }
+      if (c.id === 'self-preview' && width < 560) {
+        if (resolvedPos === 'BR' || resolvedPos === 'BL') {
+          resolvedPos = 'TR';
+        }
+      }
+      return resolvedPos === pos;
+    });
+
+    // Sort by priority (Priority 1 first), then alphabetically by id as a consistent tie-breaker
+    slotElements.sort((a, b) => {
+      if (a.priority !== b.priority) {
+        return a.priority - b.priority;
+      }
+      return a.id.localeCompare(b.id);
+    });
+
+    // Calculate coordinate stacking offset
+    let yOffset = pos.startsWith('T') ? sTop : sBottom;
+    for (const item of slotElements) {
+      if (item.id === id) {
+        break;
+      }
+      yOffset += item.height + 12; // element height + spacing gap
+    }
+
+    // 4. Build return styles
+    const style: React.CSSProperties = {
       position: 'absolute',
       zIndex: Z_INDEX_SYSTEM[comp.zIndexKey] || 10,
       transition: 'all 0.35s cubic-bezier(0.25, 0.8, 0.25, 1)',
     };
 
-    // RULE 2: If both controls-dock ('controls-dock') and queue-card ('queue-card') are at BC:
-    // Stack the queue-card directly ABOVE the controls-dock.
-    let bottomDockOffset = sBottom;
-    if (isDockActive && id === 'queue-card' && pos === 'BC') {
-      const dockHeight = components['controls-dock']?.height || 80;
-      bottomDockOffset += dockHeight + 12;
-    }
+    const isSmallWidth = width < 560;
 
-    // RULE 3: Snapping corners for self-preview PiP:
-    // If self-preview snaps to BL and partner-card is visible at BL:
-    // Stack self-preview above partner-card.
-    let blOffset = sBottom;
-    if (isPartnerCardVisible) {
-      const partnerCardHeight = components['partner-card']?.height || 140;
-      blOffset += partnerCardHeight + 12;
-    }
-
-    // If controls-dock is active in Minimal/Compact mode:
-    // The mobile bottom stack sits at BL, so stack self-preview above it.
-    const isMobileMode = layoutMode === 'Minimal' || layoutMode === 'Compact';
-    if (isMobileMode && isDockActive && id === 'self-preview' && pos === 'BL') {
-      blOffset += 70; // stack above mobile buttons
-    }
-
-    // If self-preview snaps to BR in Minimal/Compact mode:
-    // Reflow/snap it to TR to prevent covering the large Swipe Next/Leave stack.
-    let brOffset = sBottom;
-    if (isMobileMode && isDockActive && id === 'self-preview' && pos === 'BR') {
-      pos = 'TR'; // Reflow
-    }
-
-    // Apply resolved position styles
     switch (pos) {
       case 'TL':
-        style.top = `${sTop}px`;
+        style.top = `${yOffset}px`;
         style.left = `${sLeft}px`;
         break;
 
       case 'TC':
-        style.top = `${sTop}px`;
+        style.top = `${yOffset}px`;
         style.left = '50%';
         style.transform = 'translateX(-50%)';
         break;
 
       case 'TR':
-        style.top = `${sTop}px`;
+        style.top = `${yOffset}px`;
         if (isChatOpen && id !== 'chat-drawer') {
           style.right = `${sRight + chatDrawerW + 12}px`;
         } else {
@@ -237,18 +237,24 @@ export function FloatingLayoutProvider({ children }: { children: React.ReactNode
         break;
 
       case 'BL':
-        style.bottom = id === 'self-preview' ? `${blOffset}px` : `${sBottom}px`;
+        style.bottom = `${yOffset}px`;
         style.left = `${sLeft}px`;
         break;
 
       case 'BC':
-        style.bottom = id === 'queue-card' ? `${bottomDockOffset}px` : `${sBottom}px`;
-        style.left = '50%';
-        style.transform = 'translateX(-50%)';
+        style.bottom = `${yOffset}px`;
+        if (isSmallWidth) {
+          style.left = '0px';
+          style.width = '100%';
+          style.transform = 'none';
+        } else {
+          style.left = '50%';
+          style.transform = 'translateX(-50%)';
+        }
         break;
 
       case 'BR':
-        style.bottom = `${brOffset}px`;
+        style.bottom = `${yOffset}px`;
         if (isChatOpen && id !== 'chat-drawer') {
           style.right = `${sRight + chatDrawerW + 12}px`;
         } else {
@@ -258,7 +264,7 @@ export function FloatingLayoutProvider({ children }: { children: React.ReactNode
     }
 
     return style;
-  }, [components, isMobile, safeInsets, width, layoutMode]);
+  }, [components, safeInsets, width, height]);
 
   return (
     <FloatingLayoutContext.Provider value={{
@@ -267,8 +273,6 @@ export function FloatingLayoutProvider({ children }: { children: React.ReactNode
       setComponentActive,
       setComponentSize,
       getStyle,
-      isMobile,
-      layoutMode,
       safeInsets,
       collisionCount,
     }}>
