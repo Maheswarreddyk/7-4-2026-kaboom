@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { cn } from '../utils/index.js';
 
 interface MatchIntroCardProps {
@@ -16,33 +16,151 @@ interface MatchIntroCardProps {
     };
     languages?: string[];
     interestTags?: string[];
-  };
+  } | null;
   matchReasonMetadata?: {
     reason: 'strict_filters' | 'prefer_filters' | 'random';
     confidence: number;
     matchedBy: string[];
   } | null;
+  status: string; // chatState.status
+  isChatOpen: boolean;
   onDismiss: () => void;
 }
 
-export function MatchIntroCard({ partnerProfile, matchReasonMetadata, onDismiss }: MatchIntroCardProps) {
-  const [isVisible, setIsVisible] = useState(false);
+const CHECKLIST_ITEMS = [
+  '✓ Match Found',
+  '✓ Preferences Compared',
+  '✓ Secure Channel Created',
+  '✓ Camera Connected',
+  '✓ Microphone Connected',
+  '🟢 Ready!'
+];
 
+export function MatchIntroCard({
+  partnerProfile,
+  matchReasonMetadata,
+  status,
+  isChatOpen,
+  onDismiss
+}: MatchIntroCardProps) {
+  const [isVisible, setIsVisible] = useState(false);
+  const [isFadingOut, setIsFadingOut] = useState(false);
+  const [allowInteraction, setAllowInteraction] = useState(false);
+  const [checklistIndex, setChecklistIndex] = useState(0);
+
+  const onDismissRef = useRef(onDismiss);
+  onDismissRef.current = onDismiss;
+
+  const hasDismissedRef = useRef(false);
+
+  const triggerDismiss = (reason: 'normal' | 'force' | 'timeout' | 'interrupted') => {
+    if (hasDismissedRef.current) return;
+    hasDismissedRef.current = true;
+
+    if (reason === 'timeout') {
+      console.warn('[PartnerIntro] PartnerIntro Force Closed (Timeout)');
+    } else if (reason === 'interrupted') {
+      console.log('[PartnerIntro] PartnerIntro Interrupted');
+    } else if (reason === 'force') {
+      console.log('[PartnerIntro] PartnerIntro Force Closed');
+    } else {
+      console.log('[PartnerIntro] PartnerIntro Closed');
+    }
+
+    setIsFadingOut(true);
+    setIsVisible(false);
+    
+    // Unmount overlay after transition duration
+    setTimeout(() => {
+      onDismissRef.current();
+    }, 350);
+  };
+
+  // 1. Mount & Entrance Log
   useEffect(() => {
-    // Small timeout for entering slide-up animation
+    console.log('[PartnerIntro] PartnerIntro Opened');
     const enterTimer = setTimeout(() => setIsVisible(true), 50);
     
-    // Auto-dismiss after 3 seconds
-    const dismissTimer = setTimeout(() => {
-      setIsVisible(false);
-      setTimeout(onDismiss, 400); // Wait for transition out
-    }, 3200);
+    // Allow pointer events through after 2 seconds
+    const interactionTimer = setTimeout(() => {
+      setAllowInteraction(true);
+    }, 2000);
 
     return () => {
       clearTimeout(enterTimer);
-      clearTimeout(dismissTimer);
+      clearTimeout(interactionTimer);
     };
-  }, [onDismiss]);
+  }, []);
+
+  // 2. Checklist Animation Loop
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setChecklistIndex((prev) => {
+        if (prev < CHECKLIST_ITEMS.length - 1) {
+          return prev + 1;
+        }
+        clearInterval(interval);
+        return prev;
+      });
+    }, 300);
+    return () => clearInterval(interval);
+  }, []);
+
+  // 3. Status-based auto close (CONNECTED state for 3 seconds)
+  useEffect(() => {
+    if (status === 'CONNECTED') {
+      const timer = setTimeout(() => {
+        triggerDismiss('normal');
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [status]);
+
+  // 4. Safety Failsafe Timeout (5 seconds max lifetime)
+  useEffect(() => {
+    const failsafeTimer = setTimeout(() => {
+      triggerDismiss('timeout');
+    }, 5000);
+    return () => clearTimeout(failsafeTimer);
+  }, []);
+
+  // 5. Drawer Opened check
+  useEffect(() => {
+    if (isChatOpen) {
+      triggerDismiss('force');
+    }
+  }, [isChatOpen]);
+
+  // 6. Partner Disconnected / Next / Left state check
+  useEffect(() => {
+    const activeStates = ['CONNECTED', 'SIGNALING', 'MATCHED', 'NEGOTIATING', 'READY', 'ICE_CONNECTING', 'MEDIA_READY', 'REQUESTING_MEDIA'];
+    if (!activeStates.includes(status) || !partnerProfile) {
+      triggerDismiss('interrupted');
+    }
+  }, [status, partnerProfile]);
+
+  // 7. Click Anywhere & Escape key down close handlers
+  useEffect(() => {
+    const handleWindowClick = () => {
+      triggerDismiss('force');
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        triggerDismiss('force');
+      }
+    };
+
+    window.addEventListener('click', handleWindowClick);
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      window.removeEventListener('click', handleWindowClick);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
+
+  if (!partnerProfile) return null;
 
   const university = partnerProfile.matchAttributes?.university?.[0] || (partnerProfile as any).university || '';
   const city = partnerProfile.city || partnerProfile.matchAttributes?.city?.[0] || '';
@@ -52,9 +170,13 @@ export function MatchIntroCard({ partnerProfile, matchReasonMetadata, onDismiss 
   const matchedBy = matchReasonMetadata?.matchedBy || [];
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md z-[80] select-none pointer-events-none transition-opacity duration-300">
+    <div className={cn(
+      "fixed inset-0 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md z-[80] select-none transition-opacity duration-300",
+      isFadingOut ? "opacity-0" : "opacity-100",
+      (allowInteraction || isFadingOut) ? "pointer-events-none" : "pointer-events-auto"
+    )}>
       <div className={cn(
-        "w-full max-w-sm bg-stone-900/90 border border-amber-500/30 rounded-3xl p-6 shadow-2xl transition-all duration-500 ease-out transform",
+        "w-full max-w-sm bg-stone-900/95 border border-amber-500/30 rounded-3xl p-6 shadow-2xl transition-all duration-500 ease-out transform",
         isVisible 
           ? "opacity-100 translate-y-0 scale-100 rotate-0 shadow-[0_0_50px_rgba(245,158,11,0.15)]" 
           : "opacity-0 translate-y-12 scale-90 rotate-1 pointer-events-none"
@@ -102,7 +224,7 @@ export function MatchIntroCard({ partnerProfile, matchReasonMetadata, onDismiss 
 
         {/* Match Reasons List */}
         {matchedBy.length > 0 && (
-          <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-4 space-y-2.5">
+          <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-4 space-y-2.5 mb-6">
             <span className="text-[9px] uppercase font-black tracking-wider text-stone-500 block mb-1">
               Matched because:
             </span>
@@ -115,10 +237,19 @@ export function MatchIntroCard({ partnerProfile, matchReasonMetadata, onDismiss 
           </div>
         )}
 
-        {/* Bottom Connecting status */}
-        <div className="mt-6 flex items-center justify-center gap-2 text-stone-500 text-[10px] font-black uppercase tracking-wider">
-          <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping" />
-          <span>Setting up video tunnel...</span>
+        {/* Connection Checklist */}
+        <div className="bg-stone-950/40 border border-white/5 rounded-2xl p-4 space-y-2 text-left">
+          <span className="text-[9px] uppercase font-black tracking-wider text-stone-500 block mb-1.5">
+            Connection Checklist
+          </span>
+          {CHECKLIST_ITEMS.slice(0, checklistIndex + 1).map((item, idx) => (
+            <div
+              key={idx}
+              className="text-xs font-bold text-stone-300 flex items-center gap-2 animate-fade-in"
+            >
+              <span>{item}</span>
+            </div>
+          ))}
         </div>
 
       </div>
