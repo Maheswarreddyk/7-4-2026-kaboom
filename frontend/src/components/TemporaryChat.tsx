@@ -256,24 +256,57 @@ export function TemporaryChat({
         </div>
 
         {/* Drawer Header */}
-        <div className="px-5 pb-3 border-b border-white/5 flex items-center justify-between">
-          <div className="flex flex-col">
-            <div className="flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-              <h3 className="text-sm font-black text-white tracking-wide">
-                {partnerProfile?.displayName || 'Guest'}
-              </h3>
+        <div className="px-5 pb-3 border-b border-white/5 flex flex-col gap-1.5">
+          <div className="flex items-center justify-between">
+            <div className="flex flex-col">
+              <div className="flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                <h3 className="text-sm font-black text-white tracking-wide">
+                  {partnerProfile?.displayName || 'Guest'}
+                </h3>
+              </div>
+              <span className="text-[9px] text-stone-500 font-extrabold ml-3 uppercase tracking-wider">
+                {partnerTyping ? 'Typing...' : 'Active now'}
+              </span>
             </div>
-            <span className="text-[9px] text-stone-500 font-extrabold ml-3 uppercase tracking-wider">
-              {partnerTyping ? 'Typing...' : 'Active now'}
-            </span>
+            <button 
+              onClick={onClose}
+              className="w-7 h-7 rounded-full bg-white/5 flex items-center justify-center text-white/50 hover:text-white hover:bg-white/10 transition-colors"
+            >
+              ✕
+            </button>
           </div>
-          <button 
-            onClick={onClose}
-            className="w-7 h-7 rounded-full bg-white/5 flex items-center justify-center text-white/50 hover:text-white hover:bg-white/10 transition-colors"
-          >
-            ✕
-          </button>
+
+          {/* Partner bio / status */}
+          {partnerProfile?.bio && (
+            <p className="text-[10px] text-stone-400 font-medium italic leading-relaxed ml-3">
+              💬 "{partnerProfile.bio}"
+            </p>
+          )}
+
+          {/* University */}
+          {(partnerProfile?.matchAttributes?.university?.[0] || (partnerProfile as any)?.university) && (
+            <p className="text-[10px] text-stone-300 font-extrabold leading-normal ml-3">
+              🎓 {partnerProfile?.matchAttributes?.university?.[0] || (partnerProfile as any)?.university}
+            </p>
+          )}
+
+          {/* Match Reason tags */}
+          {matchReasonMetadata?.matchedBy && matchReasonMetadata.matchedBy.length > 0 && (
+            <div className="flex flex-wrap gap-1 items-center mt-1 ml-3 select-none pointer-events-none">
+              <span className="text-[8px] text-stone-500 font-black uppercase tracking-wider mr-1">
+                Matched by
+              </span>
+              {matchReasonMetadata.matchedBy.map((reason: string, idx: number) => (
+                <span
+                  key={idx}
+                  className="inline-flex items-center px-1.5 py-0.5 rounded-full bg-white/5 border border-white/10 text-[8px] text-stone-300 font-bold"
+                >
+                  ✓ {reason}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Messages List Area */}

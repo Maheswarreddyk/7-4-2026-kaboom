@@ -440,6 +440,45 @@ export function LandingPage() {
   const [showPreferenceModal, setShowPreferenceModal] = useState(false);
   const [showTutorial, setShowTutorial] = useState(false);
 
+  // V7: Active filters state for returning users
+  const [activeFilters, setActiveFilters] = useState<string[]>([]);
+  const [displayName, setDisplayName] = useState<string | null>(null);
+
+  useEffect(() => {
+    const name = localStorage.getItem('kaboom_display_name');
+    if (name) {
+      setDisplayName(name);
+      const chips: string[] = [];
+      const mode = localStorage.getItem('kaboom_match_mode') || 'RANDOM';
+      chips.push(`Mode: ${mode}`);
+
+      const uni = localStorage.getItem('kaboom_university');
+      if (uni) chips.push(`🎓 ${uni}`);
+
+      const city = localStorage.getItem('kaboom_city');
+      const country = localStorage.getItem('kaboom_country');
+      if (city || country) {
+        chips.push(`📍 ${[city, country].filter(Boolean).join(', ')}`);
+      }
+
+      try {
+        const langs = JSON.parse(localStorage.getItem('kaboom_languages') || '[]');
+        if (langs.length > 0) {
+          chips.push(`🗣️ ${langs.slice(0, 2).join(', ')}${langs.length > 2 ? '...' : ''}`);
+        }
+      } catch {}
+
+      try {
+        const tags = JSON.parse(localStorage.getItem('kaboom_interest_tags') || '[]');
+        if (tags.length > 0) {
+          chips.push(`✨ ${tags.slice(0, 2).map((t: string) => `#${t}`).join(' ')}${tags.length > 2 ? '...' : ''}`);
+        }
+      } catch {}
+
+      setActiveFilters(chips);
+    }
+  }, []);
+
   // V4.1 Auto-Restoration Redirect (Requirement 6 & 17)
   useEffect(() => {
     if (!isLoading && session) {
@@ -892,6 +931,42 @@ export function LandingPage() {
               <span className="text-[9px] font-bold tracking-[0.2em] text-amber-400/80 uppercase">One Click Connection</span>
             </button>
           </div>
+
+          {/* V7 Active Filters chip preview block for returning users */}
+          {displayName && activeFilters.length > 0 && (
+            <div className="mt-6 flex flex-col items-center gap-2 relative z-10 max-w-sm px-4">
+              <span className="text-[10px] text-stone-400 uppercase font-black tracking-wider text-center">
+                Matching as <span className="text-amber-500 font-black">{displayName}</span> using:
+              </span>
+              <div className="flex flex-wrap gap-1.5 justify-center">
+                {activeFilters.map((chip, idx) => (
+                  <span
+                    key={idx}
+                    className="inline-flex items-center px-2.5 py-1 rounded-full bg-stone-900/50 border border-stone-800/85 text-[10px] text-stone-300 font-bold"
+                  >
+                    {chip}
+                  </span>
+                ))}
+              </div>
+              <button
+                onClick={() => {
+                  localStorage.removeItem('kaboom_display_name');
+                  localStorage.removeItem('kaboom_bio');
+                  localStorage.removeItem('kaboom_university');
+                  localStorage.removeItem('kaboom_education_tags');
+                  localStorage.removeItem('kaboom_interest_tags');
+                  localStorage.removeItem('kaboom_languages');
+                  localStorage.removeItem('kaboom_country');
+                  localStorage.removeItem('kaboom_city');
+                  setDisplayName(null);
+                  setActiveFilters([]);
+                }}
+                className="text-[10px] text-amber-500 hover:text-amber-400 underline font-bold mt-1"
+              >
+                Reset & Create New Profile
+              </button>
+            </div>
+          )}
 
           {/* Playful CTA helper message sliding transition */}
           <div className="h-6 overflow-hidden mt-6 mb-10 flex items-center justify-center">

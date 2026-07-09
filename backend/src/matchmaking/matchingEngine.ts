@@ -635,6 +635,13 @@ export async function runGlobalMatchCycle(supabase: SupabaseClient): Promise<voi
             matchMode: pB?.match_mode || 'RANDOM',
             matchConstraints: pB?.match_constraints || {},
             matchAttributes: pB?.match_attributes || {},
+            city: pB?.city || null,
+            state: pB?.state || null,
+            country: pB?.country || null,
+            gender: pB?.gender || null,
+            lookingFor: pB?.looking_for || [],
+            languages: pB?.languages || [],
+            interestTags: pB?.interest_tags || [],
           },
         }),
         broadcastToSession(userB, 'matched', {
@@ -649,6 +656,13 @@ export async function runGlobalMatchCycle(supabase: SupabaseClient): Promise<voi
             matchMode: pA?.match_mode || 'RANDOM',
             matchConstraints: pA?.match_constraints || {},
             matchAttributes: pA?.match_attributes || {},
+            city: pA?.city || null,
+            state: pA?.state || null,
+            country: pA?.country || null,
+            gender: pA?.gender || null,
+            lookingFor: pA?.looking_for || [],
+            languages: pA?.languages || [],
+            interestTags: pA?.interest_tags || [],
           },
         }),
       ]);
@@ -700,19 +714,45 @@ export async function runMatchCycle(
   const queueResult = await joinQueueEntry(supabase, sessionId);
   const waitingSeconds = queueResult.waitingSeconds;
 
-  // 2. If they already have an active match, return it
-  const existingMatch = await findActiveMatch(supabase, sessionId);
-  if (existingMatch) {
-    const partnerId = existingMatch.user_a === sessionId ? existingMatch.user_b : existingMatch.user_a;
+  // Helper to load partner details and return full matched state
+  const getMatchedReturnPayload = async (matchObj: any) => {
+    const partnerId = matchObj.user_a === sessionId ? matchObj.user_b : matchObj.user_a;
+    const { data: partnerSession } = await supabase
+      .from('visitor_sessions')
+      .select('display_name, bio, match_mode, match_constraints, match_attributes, city, state, country, gender, looking_for, languages, interest_tags')
+      .eq('id', partnerId)
+      .maybeSingle();
+
     return {
-      status: 'matched',
-      matchId: existingMatch.id,
+      status: 'matched' as const,
+      matchId: matchObj.id,
       partnerSessionId: partnerId,
-      isInitiator: existingMatch.user_a === sessionId,
+      isInitiator: matchObj.user_a === sessionId,
       iceServers: getIceServers(),
       queuePosition: 0,
       waitingSeconds,
+      matchReasonMetadata: matchObj.match_reason_metadata,
+      partnerProfile: partnerSession ? {
+        displayName: partnerSession.display_name || 'Guest',
+        bio: partnerSession.bio || '',
+        matchMode: partnerSession.match_mode || 'RANDOM',
+        matchConstraints: partnerSession.match_constraints || {},
+        matchAttributes: partnerSession.match_attributes || {},
+        city: partnerSession.city || null,
+        state: partnerSession.state || null,
+        country: partnerSession.country || null,
+        gender: partnerSession.gender || null,
+        lookingFor: partnerSession.looking_for || [],
+        languages: partnerSession.languages || [],
+        interestTags: partnerSession.interest_tags || [],
+      } : null,
     };
+  };
+
+  // 2. If they already have an active match, return it
+  const existingMatch = await findActiveMatch(supabase, sessionId);
+  if (existingMatch) {
+    return await getMatchedReturnPayload(existingMatch);
   }
 
   // 3. Run the global matching cycle to try matching users
@@ -721,16 +761,7 @@ export async function runMatchCycle(
   // 4. Re-check if this user got matched during the global matching cycle
   const newMatch = await findActiveMatch(supabase, sessionId);
   if (newMatch) {
-    const partnerId = newMatch.user_a === sessionId ? newMatch.user_b : newMatch.user_a;
-    return {
-      status: 'matched',
-      matchId: newMatch.id,
-      partnerSessionId: partnerId,
-      isInitiator: newMatch.user_a === sessionId,
-      iceServers: getIceServers(),
-      queuePosition: 0,
-      waitingSeconds,
-    };
+    return await getMatchedReturnPayload(newMatch);
   }
 
   // 5. Still waiting
@@ -778,7 +809,7 @@ export async function markUserReady(
   // 2. Load match
   const { data: match, error: matchErr } = await supabase
     .from('matches')
-    .select('id, user_a, user_b, user_a_ready, user_b_ready, negotiation_started')
+    .select('id, user_a, user_b, user_a_ready, user_b_ready, negotiation_started, match_reason_metadata')
     .eq('id', matchId)
     .is('ended_at', null)
     .maybeSingle();
@@ -837,18 +868,65 @@ export async function markUserReady(
 
     console.log(`[/ready] [${requestId}] Both ready — broadcasting start_negotiation to ${sessionId} and ${partnerId}`);
 
+    // Fetch profile details for both sessions
+    const [sessSelfQuery, sessPartnerQuery] = await Promise.all([
+      supabase
+        .from('visitor_sessions')
+        .select('display_name, bio, match_mode, match_constraints, match_attributes, city, state, country, gender, looking_for, languages, interest_tags')
+        .eq('id', sessionId)
+        .maybeSingle(),
+      supabase
+        .from('visitor_sessions')
+        .select('display_name, bio, match_mode, match_constraints, match_attributes, city, state, country, gender, looking_for, languages, interest_tags')
+        .eq('id', partnerId)
+        .maybeSingle(),
+    ]);
+
+    const pSelf = sessSelfQuery.data;
+    const pPartner = sessPartnerQuery.data;
+
     await Promise.all([
       broadcastToSession(sessionId, 'start_negotiation', {
         matchId,
         partnerSessionId: partnerId,
         isInitiator: isUserA,
         iceServers,
+        matchReasonMetadata: match.match_reason_metadata,
+        partnerProfile: pPartner ? {
+          displayName: pPartner.display_name || 'Guest',
+          bio: pPartner.bio || '',
+          matchMode: pPartner.match_mode || 'RANDOM',
+          matchConstraints: pPartner.match_constraints || {},
+          matchAttributes: pPartner.match_attributes || {},
+          city: pPartner.city || null,
+          state: pPartner.state || null,
+          country: pPartner.country || null,
+          gender: pPartner.gender || null,
+          lookingFor: pPartner.looking_for || [],
+          languages: pPartner.languages || [],
+          interestTags: pPartner.interest_tags || [],
+        } : null,
       }).catch(e => console.warn(`[/ready] Broadcast to ${sessionId} failed:`, e?.message)),
       broadcastToSession(partnerId, 'start_negotiation', {
         matchId,
         partnerSessionId: sessionId,
         isInitiator: !isUserA,
         iceServers,
+        matchReasonMetadata: match.match_reason_metadata,
+        partnerProfile: pSelf ? {
+          displayName: pSelf.display_name || 'Guest',
+          bio: pSelf.bio || '',
+          matchMode: pSelf.match_mode || 'RANDOM',
+          matchConstraints: pSelf.match_constraints || {},
+          matchAttributes: pSelf.match_attributes || {},
+          city: pSelf.city || null,
+          state: pSelf.state || null,
+          country: pSelf.country || null,
+          gender: pSelf.gender || null,
+          lookingFor: pSelf.looking_for || [],
+          languages: pSelf.languages || [],
+          interestTags: pSelf.interest_tags || [],
+        } : null,
       }).catch(e => console.warn(`[/ready] Broadcast to ${partnerId} failed:`, e?.message)),
     ]);
 

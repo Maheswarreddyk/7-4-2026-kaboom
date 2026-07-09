@@ -9,6 +9,8 @@ import { SearchingAnimation } from '../components/SearchingAnimation.js';
 import { VideoPlayer } from '../components/VideoPlayer.js';
 import { PreferenceModal } from '../components/PreferenceModal.js';
 import { TemporaryChat } from '../components/TemporaryChat.js';
+import { OnboardingModal } from '../components/OnboardingModal.js';
+import { MatchIntroCard } from '../components/MatchIntroCard.js';
 import { useSession } from '../contexts/SessionContext.js';
 import { useToast } from '../contexts/ToastContext.js';
 import { useVideoChat } from '../hooks/useVideoChat.js';
@@ -43,6 +45,10 @@ export function ChatPage() {
   const pendingLeaveRef = useRef(false);
   const hintHideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // V7 Match Intro Card state & tracking
+  const [showMatchIntro, setShowMatchIntro] = useState(false);
+  const lastPartnerIdRef = useRef<string | null>(null);
+
   // V5.1 Tutorial / theme setup
   const [showTutorial, setShowTutorial] = useState(() => {
     return localStorage.getItem('kaboom_tutorial_dismissed') !== 'true';
@@ -57,6 +63,8 @@ export function ChatPage() {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+
 
   useEffect(() => {
     const activeTheme = localStorage.getItem('kaboom_theme') || 'ember';
@@ -129,6 +137,19 @@ export function ChatPage() {
     broadcastSkipPending,
     broadcastSkipCancelled,
   } = useVideoChat(session?.sessionId ?? null, session?.sessionToken ?? null, triggerReaction);
+
+  // V7: Trigger Match Reveal card on new match connection
+  useEffect(() => {
+    if (chatState.partnerSessionId && chatState.partnerSessionId !== lastPartnerIdRef.current) {
+      lastPartnerIdRef.current = chatState.partnerSessionId;
+      if (chatState.partnerProfile) {
+        setShowMatchIntro(true);
+      }
+    } else if (!chatState.partnerSessionId) {
+      lastPartnerIdRef.current = null;
+      setShowMatchIntro(false);
+    }
+  }, [chatState.partnerSessionId, chatState.partnerProfile]);
 
   const [isSkipPending, setIsSkipPending] = useState(false);
   const [skipCountdown, setSkipCountdown] = useState(5);
@@ -404,11 +425,35 @@ export function ChatPage() {
               </p>
             )}
 
+            {/* Location (City / Country) */}
+            {(chatState.partnerProfile.city || chatState.partnerProfile.country || chatState.partnerProfile.matchAttributes?.city?.[0] || chatState.partnerProfile.matchAttributes?.country?.[0]) && (
+              <p className="text-[10px] text-stone-300 font-extrabold leading-normal mt-0.5">
+                📍 {[
+                  chatState.partnerProfile.city || chatState.partnerProfile.matchAttributes?.city?.[0],
+                  chatState.partnerProfile.country || chatState.partnerProfile.matchAttributes?.country?.[0]
+                ].filter(Boolean).join(', ')}
+              </p>
+            )}
+
             {/* Bio / Status */}
             {chatState.partnerProfile.bio && (
               <p className="text-[10px] text-stone-400 font-medium leading-relaxed italic mt-0.5">
                 💬 {chatState.partnerProfile.bio}
               </p>
+            )}
+
+            {/* Match Reason tags */}
+            {chatState.matchReasonMetadata?.matchedBy && chatState.matchReasonMetadata.matchedBy.length > 0 && (
+              <div className="flex flex-wrap gap-1 mt-1.5 pt-1.5 border-t border-white/5">
+                {chatState.matchReasonMetadata.matchedBy.slice(0, 2).map((reason: string, idx: number) => (
+                  <span
+                    key={idx}
+                    className="inline-flex items-center px-1.5 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-[8px] font-bold text-amber-400"
+                  >
+                    ✓ {reason}
+                  </span>
+                ))}
+              </div>
             )}
           </div>
         )}
@@ -1179,19 +1224,25 @@ export function ChatPage() {
       />
 
       {/* ── PREFERENCES MODAL ─────────────────────────────── */}
+      {/* ── PREFERENCES MODAL ─────────────────────────────── */}
+      {showWelcomeGate && (
+        <OnboardingModal
+          onSave={async (prefs) => {
+            await updatePreferences(prefs);
+            setShowWelcomeGate(false);
+          }}
+          onClose={() => navigate('/')}
+        />
+      )}
+
       <PreferenceModal
-        isOpen={showPreferenceModal || showWelcomeGate}
+        isOpen={showPreferenceModal && !showWelcomeGate}
         onClose={async () => {
-          if (showWelcomeGate) {
-            navigate('/');
-          } else {
-            setShowPreferenceModal(false);
-            await resumeQueue();
-          }
+          setShowPreferenceModal(false);
+          await resumeQueue();
         }}
         onSave={async (prefs) => {
           await updatePreferences(prefs);
-          setShowWelcomeGate(false);
           setShowPreferenceModal(false);
           await resumeQueue();
         }}
@@ -1231,6 +1282,15 @@ export function ChatPage() {
           }
         }}
       />
+
+      {/* ── MATCH INTRO REVEAL ────────────────────────────── */}
+      {showMatchIntro && chatState.partnerProfile && (
+        <MatchIntroCard
+          partnerProfile={chatState.partnerProfile}
+          matchReasonMetadata={chatState.matchReasonMetadata}
+          onDismiss={() => setShowMatchIntro(false)}
+        />
+      )}
 
       {/* ── MUTUAL MATCH OVERLAY ──────────────────────────── */}
       {showMutualMatchPopup && (

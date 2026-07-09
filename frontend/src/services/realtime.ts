@@ -10,6 +10,8 @@ export interface RealtimeCallbacks {
     partnerSessionId: string;
     isInitiator: boolean;
     iceServers: IceServerConfig[];
+    partnerProfile?: any;
+    matchReasonMetadata?: any;
   }) => void;
   onStartNegotiation?: (data: {
     matchId: string;
@@ -189,6 +191,8 @@ export function connectRealtime(
         partnerSessionId: string;
         isInitiator: boolean;
         iceServers: IceServerConfig[];
+        partnerProfile?: any;
+        matchReasonMetadata?: any;
       };
       void (async () => {
         await subscribeToMatchChannel(data.matchId, callbacks);
@@ -273,6 +277,8 @@ export async function joinQueue(sessionId: string, sessionToken: string, callbac
       partnerSessionId: data.partnerSessionId as string,
       isInitiator: data.isInitiator as boolean,
       iceServers: data.iceServers as IceServerConfig[],
+      partnerProfile: data.partnerProfile,
+      matchReasonMetadata: data.matchReasonMetadata,
     });
     await markReady(sessionId, sessionToken, matchId);
   }
@@ -312,6 +318,8 @@ export async function nextPartner(sessionId: string, sessionToken: string, callb
       partnerSessionId: data.partnerSessionId as string,
       isInitiator: data.isInitiator as boolean,
       iceServers: data.iceServers as IceServerConfig[],
+      partnerProfile: data.partnerProfile,
+      matchReasonMetadata: data.matchReasonMetadata,
     });
     await markReady(sessionId, sessionToken, matchId);
   }

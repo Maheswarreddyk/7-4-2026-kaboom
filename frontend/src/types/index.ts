@@ -40,6 +40,8 @@ export interface MatchedPayload {
   partnerSessionId: string;
   isInitiator: boolean;
   iceServers: IceServerConfig[];
+  partnerProfile?: any;
+  matchReasonMetadata?: any;
 }
 
 export interface ToastMessage {
@@ -81,6 +83,13 @@ export interface ChatState {
     matchMode?: 'RANDOM' | 'PREFER' | 'STRICT';
     matchConstraints?: Record<string, boolean>;
     matchAttributes?: Record<string, string[]>;
+    city?: string | null;
+    state?: string | null;
+    country?: string | null;
+    gender?: string | null;
+    lookingFor?: string[];
+    languages?: string[];
+    interestTags?: string[];
   } | null;
   matchReasonMetadata?: {
     reason: 'strict_filters' | 'prefer_filters' | 'random';
