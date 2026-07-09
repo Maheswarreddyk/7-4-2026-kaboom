@@ -509,6 +509,7 @@ export function useVideoChat(
     try {
       await joinQueue(sessionIdRef.current, sessionTokenRef.current, callbacksRef.current);
       setSignalingState('SEARCHING');
+      console.log('[Lifecycle] Queue Joined');
     } catch (error) {
       console.error('[Queue] Auto-rejoin failed:', error);
       // Retry in 3 seconds if failed
@@ -779,6 +780,7 @@ export function useVideoChat(
 
       await joinQueue(sessionId, sessionToken, callbacks);
       setSignalingState('SEARCHING');
+      console.log('[Lifecycle] Queue Joined');
     } catch (error) {
       const message =
         error instanceof DOMException && error.name === 'NotAllowedError'
@@ -799,6 +801,7 @@ export function useVideoChat(
       await notifyDisconnect(sessionIdRef.current, sessionTokenRef.current, 'leave');
     }
     await leaveQueue(sessionIdRef.current ?? '', sessionTokenRef.current ?? '').catch(() => {});
+    console.log('[Lifecycle] Queue Left');
     disconnectRealtime();
     webrtcManager.cleanup();
     setLocalStream(null);

@@ -24,6 +24,7 @@ interface SessionContextValue {
   isLoading: boolean;
   startSession: () => Promise<SessionData>;
   endSession: () => Promise<void>;
+  cleanupSearchSession: () => void;
   refreshStats: () => Promise<void>;
   updateSessionLifecycleState: (state: SessionLifecycle['state'], matchId?: string | null, partnerSessionId?: string | null) => void;
 }
@@ -64,17 +65,72 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     localStorage.setItem('kaboom_session_lifecycle', JSON.stringify(data));
   }, []);
 
+  const cleanupSearchSession = useCallback(() => {
+    console.log('[Lifecycle] Cleanup Complete');
+    const storedId = localStorage.getItem(STORAGE_KEYS.SESSION_ID);
+    if (storedId) {
+      apiService.endSession(storedId).catch(() => {});
+    }
+    setSession(null);
+
+    // Clear all temporary matchmaking/queue states and search filters
+    const keysToRemove = [
+      STORAGE_KEYS.SESSION_ID,
+      STORAGE_KEYS.SESSION_TOKEN,
+      'kaboom_session_lifecycle',
+      'kaboom_gender',
+      'kaboom_looking',
+      'kaboom_match_mode',
+      'kaboom_match_constraints',
+      'kaboom_university',
+      'kaboom_education_tags',
+      'kaboom_interest_tags',
+      'kaboom_country',
+      'kaboom_city',
+      'kaboom_languages',
+      'kaboom_session',
+      'kaboom_queue',
+      'kaboom_match',
+      'kaboom_partner',
+      'kaboom_search_preferences',
+      'kaboom_waiting',
+      'kaboom_filters',
+      'kaboom_match_policy',
+      'kaboom_current_state'
+    ];
+    keysToRemove.forEach(key => localStorage.removeItem(key));
+  }, []);
+
   useEffect(() => {
     const storedId = localStorage.getItem(STORAGE_KEYS.SESSION_ID);
     const storedToken = localStorage.getItem(STORAGE_KEYS.SESSION_TOKEN);
     const lifecycleRaw = localStorage.getItem('kaboom_session_lifecycle');
 
+    // Differentiate Page Refresh / Crash Recovery vs New Visit / Cold Start
+    const isReload = (() => {
+      try {
+        const navs = window.performance.getEntriesByType('navigation');
+        if (navs.length > 0) {
+          const navType = (navs[0] as PerformanceNavigationTiming).type;
+          return navType === 'reload';
+        }
+      } catch {}
+      return window.performance.navigation?.type === 1; // Fallback
+    })();
+
+    const isChatPage = window.location.pathname === '/chat';
+
     let shouldRestore = false;
+    let lifecycleState: string | undefined;
+    let ageSecs = 999999;
     if (lifecycleRaw) {
       try {
         const lifecycle: SessionLifecycle = JSON.parse(lifecycleRaw);
-        const ageSecs = (Date.now() - lifecycle.timestamp) / 1000;
-        if (lifecycle.state === 'CONNECTED' && ageSecs < 15) {
+        lifecycleState = lifecycle.state;
+        ageSecs = (Date.now() - lifecycle.timestamp) / 1000;
+        
+        // Restore ONLY if reload/refresh on the /chat page, state was CONNECTED or QUEUE, and under 15s
+        if (isReload && isChatPage && (lifecycle.state === 'CONNECTED' || lifecycle.state === 'QUEUE') && ageSecs < 15) {
           shouldRestore = true;
         }
       } catch {}
@@ -86,32 +142,43 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     if (storedId && storedToken) {
       if (shouldRestore) {
         setIsLoading(true);
+        console.log('[Lifecycle] Refresh Detected. State:', lifecycleState);
+        console.log('[Lifecycle] Session Restored');
         apiService.restoreSession(storedId, storedToken)
           .then((data) => {
             setSession(data);
           })
           .catch(() => {
-            localStorage.removeItem(STORAGE_KEYS.SESSION_ID);
-            localStorage.removeItem(STORAGE_KEYS.SESSION_TOKEN);
+            console.log('[Lifecycle] Session Destroyed (restore failed)');
+            cleanupSearchSession();
           })
           .finally(() => {
             setIsLoading(false);
           });
       } else {
-        localStorage.removeItem(STORAGE_KEYS.SESSION_ID);
-        localStorage.removeItem(STORAGE_KEYS.SESSION_TOKEN);
+        console.log('[Lifecycle] Cold Start Detected. Destroying stale session.');
+        cleanupSearchSession();
       }
+    } else {
+      console.log('[Lifecycle] Cold Start Detected (no session).');
+      cleanupSearchSession();
     }
-  }, []);
+  }, [cleanupSearchSession]);
 
   const startSession = useCallback(async (): Promise<SessionData> => {
     setIsLoading(true);
+    console.log('[Lifecycle] Fresh Session Started');
     try {
+      // Clear previous credentials only (filters were already wiped on exit/load)
+      localStorage.removeItem(STORAGE_KEYS.SESSION_ID);
+      localStorage.removeItem(STORAGE_KEYS.SESSION_TOKEN);
+
       const data = await apiService.startSession();
       setSession(data);
       localStorage.setItem(STORAGE_KEYS.SESSION_ID, data.sessionId);
       localStorage.setItem(STORAGE_KEYS.SESSION_TOKEN, data.sessionToken);
       updateSessionLifecycleState('IDLE');
+      console.log('[Lifecycle] Session Created. sessionId:', data.sessionId);
       return data;
     } finally {
       setIsLoading(false);
@@ -120,15 +187,14 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   const endSession = useCallback(async () => {
     if (!session) return;
+    console.log('[Lifecycle] Session Destroyed via endSession');
     try {
       updateSessionLifecycleState('DESTROYED');
       await apiService.endSession(session.sessionId);
     } finally {
-      setSession(null);
-      localStorage.removeItem(STORAGE_KEYS.SESSION_ID);
-      localStorage.removeItem(STORAGE_KEYS.SESSION_TOKEN);
+      cleanupSearchSession();
     }
-  }, [session, updateSessionLifecycleState]);
+  }, [session, updateSessionLifecycleState, cleanupSearchSession]);
 
   const value = useMemo(
     () => ({
@@ -137,10 +203,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       isLoading,
       startSession,
       endSession,
+      cleanupSearchSession,
       refreshStats,
       updateSessionLifecycleState,
     }),
-    [session, stats, isLoading, startSession, endSession, refreshStats, updateSessionLifecycleState]
+    [session, stats, isLoading, startSession, endSession, cleanupSearchSession, refreshStats, updateSessionLifecycleState]
   );
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
