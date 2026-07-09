@@ -83,32 +83,32 @@ export function QueueCard({
     <div className="queue-card-container select-none text-left w-full h-full pointer-events-auto">
       <div
         className={cn(
-          "queue-card-card bg-stone-900/90 border border-white/10 rounded-2xl transition-all duration-300 shadow-2xl glass flex flex-col",
+          "queue-card-card queue-card-entrance flex flex-col gap-4",
           isQueuePaused && "border-amber-500/25 bg-amber-950/10"
         )}
       >
         {/* Row 1: Header (Always visible) */}
-        <div className="queue-card-header flex items-center justify-between border-b border-white/5">
-          <div className="flex items-center gap-1.5 overflow-hidden">
-            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse shrink-0" />
-            <h4 className="font-extrabold text-white truncate max-w-[120px] m-0">
+        <div className="queue-card-header flex items-center justify-between border-b border-white/5 pb-3">
+          <div className="flex items-center gap-2 overflow-hidden">
+            <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse shrink-0" />
+            <h4 className="fluid-username font-extrabold text-white truncate max-w-[140px] m-0">
               {displayName}
             </h4>
-            <span className="text-stone-500 shrink-0">·</span>
-            <span className="px-1.5 py-0.5 rounded bg-purple-500/10 border border-purple-500/20 text-purple-300 font-extrabold text-[8px] shrink-0">
+            <span className="text-stone-600 shrink-0">·</span>
+            <span className="px-2 py-0.5 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-300 font-extrabold text-[9px] tracking-wide shrink-0">
               {matchMode === 'STRICT' ? 'Exact' : matchMode === 'PREFER' ? 'Smart' : 'Random'}
             </span>
             {isQueuePaused && (
-              <span className="text-[8px] text-amber-500 font-black shrink-0">PAUSED</span>
+              <span className="text-[9px] text-amber-500 font-black tracking-wider shrink-0 animate-pulse">PAUSED</span>
             )}
           </div>
-          <div className="flex items-center gap-1.5 shrink-0">
-            <span className="text-amber-400 font-bold font-mono text-[11px] shrink-0">
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="text-amber-400 font-black font-mono fluid-timer shrink-0">
               ⏱️ {formatTimer(elapsed)}
             </span>
             <button
               onClick={handleToggleExpand}
-              className="text-[9px] text-amber-500 font-bold cursor-pointer p-0.5"
+              className="text-[10px] text-amber-500 hover:text-amber-400 font-black cursor-pointer p-1 transition-colors"
               aria-label="Expand detailed statistics sheet"
             >
               ▲
@@ -118,45 +118,45 @@ export function QueueCard({
 
         {/* Row 2: Bio (Priority 2, hidden on small container sizes via query) */}
         {bio && (
-          <div className="queue-card-bio text-[10px] text-stone-400 italic bg-white/[0.01] p-1.5 rounded-lg border border-white/5">
+          <div className="queue-card-bio text-stone-400 font-medium fluid-small italic bg-white/[0.02] p-2.5 rounded-xl border border-white/5">
             "{bio}"
           </div>
         )}
 
         {/* Row 3: Filters Row (Collapses spacing dynamically) */}
-        <div className="queue-card-filters flex items-center gap-1 overflow-x-auto pr-1 scrollbar-none py-1 border-t border-white/5">
-          <span className="text-stone-500 font-bold text-[8px] uppercase tracking-wider shrink-0 mr-1">Filters:</span>
+        <div className="queue-card-filters flex items-center gap-1.5 overflow-x-auto pr-1 scrollbar-none py-1 border-t border-white/5">
+          <span className="text-stone-500 font-bold uppercase tracking-wider fluid-label shrink-0 mr-1">Filters:</span>
           {visibleFilters.map((filter, idx) => (
-            <span key={idx} className="text-[8px] px-1.5 py-0.5 bg-white/5 rounded-full text-stone-300 border border-white/5 shrink-0 font-medium">
+            <span key={idx} className="px-2 py-0.5 bg-white/5 rounded-full text-stone-300 border border-white/10 text-[9px] font-semibold tracking-wide shrink-0">
               {filter}
             </span>
           ))}
           {remainingFiltersCount > 0 && (
             <button
               onClick={handleToggleExpand}
-              className="text-[8px] px-1.5 py-0.5 bg-amber-500/10 border border-amber-500/20 text-amber-400 font-bold rounded-full shrink-0 cursor-pointer"
+              className="text-[9px] px-2 py-0.5 bg-amber-500/10 border border-amber-500/20 text-amber-400 font-bold rounded-full shrink-0 cursor-pointer hover:bg-amber-500/20 transition-colors"
             >
               +{remainingFiltersCount}
             </button>
           )}
           {!hasFilters && (
-            <span className="text-[8px] text-stone-500 italic shrink-0">Matching anyone!</span>
+            <span className="text-[9px] text-stone-500 italic shrink-0">Matching anyone!</span>
           )}
         </div>
 
         {/* Row 4: Stats Grid (Priority 2, hidden on small containers) */}
-        <div className="queue-card-stats grid grid-cols-3 gap-1 bg-white/[0.01] border border-white/5 rounded-xl p-2 text-center text-[10px] border-t pt-1.5">
+        <div className="queue-card-stats grid grid-cols-3 gap-1.5 bg-white/[0.02] border border-white/5 rounded-xl p-2.5 text-center border-t">
           <div>
-            <span className="text-[8px] text-stone-500 block">Online</span>
-            <span className="font-bold text-white font-mono">{stats.online}</span>
+            <span className="text-[9px] text-stone-500 uppercase tracking-widest block mb-0.5">Online</span>
+            <span className="font-bold text-white font-mono fluid-stats-val">{stats.online}</span>
           </div>
           <div>
-            <span className="text-[8px] text-stone-500 block">Queue</span>
-            <span className="font-bold text-white font-mono">{stats.searching}</span>
+            <span className="text-[9px] text-stone-500 uppercase tracking-widest block mb-0.5">Queue</span>
+            <span className="font-bold text-white font-mono fluid-stats-val">{stats.searching}</span>
           </div>
           <div>
-            <span className="text-[8px] text-stone-500 block">Avg Wait</span>
-            <span className="font-bold text-amber-400 font-mono">{stats.wait}s</span>
+            <span className="text-[9px] text-stone-500 uppercase tracking-widest block mb-0.5">Avg Wait</span>
+            <span className="font-bold text-amber-400 font-mono fluid-stats-val">{stats.wait}s</span>
           </div>
         </div>
 
@@ -176,12 +176,12 @@ export function QueueCard({
 
         {/* Row 5: Actions (Exposes compact buttons) */}
         <div className="queue-card-actions flex flex-col gap-1.5 pt-2 border-t border-white/5 w-full">
-          <div className="flex gap-1.5 w-full">
+          <div className="flex gap-2 w-full">
             {onOpenPreferences && (
               <button
                 type="button"
                 onClick={(e) => { e.stopPropagation(); onOpenPreferences(); }}
-                className="flex-1 py-1 px-2.5 rounded-lg bg-white/5 hover:bg-white/10 text-stone-300 text-[9px] border border-white/10 active:scale-95 transition-all cursor-pointer font-bold"
+                className="btn-action-edit flex-1 flex items-center justify-center gap-1 rounded-xl text-[11px] font-extrabold tracking-wide active:scale-95 transition-all cursor-pointer h-11"
                 title="Edit Search Filters"
               >
                 ✏️ Edit
@@ -192,7 +192,7 @@ export function QueueCard({
                 <button
                   type="button"
                   onClick={(e) => { e.stopPropagation(); onResumeQueue(); }}
-                  className="flex-1 py-1 px-2.5 rounded-lg bg-green-600 text-white text-[9px] hover:bg-green-500 active:scale-95 transition-all cursor-pointer font-bold"
+                  className="btn-action-pause flex-1 flex items-center justify-center gap-1 rounded-xl text-[11px] font-extrabold tracking-wide active:scale-95 transition-all cursor-pointer h-11"
                 >
                   ▶️ Resume
                 </button>
@@ -202,7 +202,7 @@ export function QueueCard({
                 <button
                   type="button"
                   onClick={(e) => { e.stopPropagation(); onPauseQueue(); }}
-                  className="flex-1 py-1 px-2.5 rounded-lg bg-amber-500 text-stone-950 text-[9px] hover:bg-amber-600 active:scale-95 transition-all cursor-pointer font-bold"
+                  className="btn-action-pause flex-1 flex items-center justify-center gap-1 rounded-xl text-[11px] font-extrabold tracking-wide active:scale-95 transition-all cursor-pointer h-11"
                 >
                   ⏸ Pause
                 </button>
@@ -213,7 +213,7 @@ export function QueueCard({
               <button
                 type="button"
                 onClick={(e) => { e.stopPropagation(); onLeaveQueue(); }}
-                className="flex-1 py-1 px-2.5 rounded-lg bg-red-600/20 text-red-400 text-[9px] hover:bg-red-600/30 border border-red-500/20 active:scale-95 transition-all cursor-pointer font-bold"
+                className="btn-action-cancel flex-1 flex items-center justify-center gap-1 rounded-xl text-[11px] font-extrabold tracking-wide active:scale-95 transition-all cursor-pointer h-11"
                 title="Cancel Queue"
               >
                 🚪 Cancel

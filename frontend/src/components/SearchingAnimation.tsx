@@ -1,17 +1,34 @@
 import { useEffect, useState, useRef } from 'react';
 import { useResponsiveLayout } from '../hooks/useResponsiveLayout.js';
 import { cn } from '../utils/index.js';
+import { QueueCard } from './QueueCard.js';
 
 interface SearchingAnimationProps {
   status?: string;
   partnerProfile?: any;
   isQueuePaused?: boolean;
+  elapsed: number;
+  matchMode: string;
+  onOpenPreferences?: () => void;
+  onResumeQueue?: () => void;
+  onPauseQueue?: () => void;
+  onLeaveQueue?: () => void;
+  stats: { online: number; searching: number; wait: number };
+  onDisableStrict?: () => void;
 }
 
 export function SearchingAnimation({
   status,
   partnerProfile,
-  isQueuePaused
+  isQueuePaused = false,
+  elapsed,
+  matchMode,
+  onOpenPreferences,
+  onResumeQueue,
+  onPauseQueue,
+  onLeaveQueue,
+  stats,
+  onDisableStrict
 }: SearchingAnimationProps) {
   const { width, height } = useResponsiveLayout();
   const isMinimalLayout = width < 560 || height < 500;
@@ -21,17 +38,71 @@ export function SearchingAnimation({
 
   const [animationStep, setAnimationStep] = useState(0);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const isTabVisible = useRef(true);
 
-  // Matching stage text rotation (every 1.5 seconds)
+  // Fading text transitions
+  const [fadingText, setFadingText] = useState('Starting search...');
+  const [fadeOpacity, setFadeOpacity] = useState(1);
+
+  // Rotating messages during search stages
   useEffect(() => {
     if (status === 'PARTNER_LEFT' || isQueuePaused) return;
     const interval = setInterval(() => {
       setAnimationStep((prev) => prev + 1);
-    }, 1500);
+    }, 2000);
     return () => clearInterval(interval);
   }, [status, isQueuePaused]);
 
-  // HTML5 Canvas Ambient Particle Network & Nodes
+  const randomMessages = [
+    "Searching worldwide...",
+    "Checking active users...",
+    "Finding someone online...",
+    "Finding your next conversation..."
+  ];
+
+  const smartMessages = [
+    "Looking for shared interests...",
+    "Checking university networks...",
+    "Searching nearby regions...",
+    "Matching profile attributes..."
+  ];
+
+  const strictMessages = [
+    "Searching exact criteria...",
+    "Analyzing selected filters...",
+    university ? `Waiting for another ${university} student...` : "Searching selected campus network...",
+    "Exact matching takes slightly longer..."
+  ];
+
+  const getRotatingMessages = () => {
+    if (activeMatchMode === 'STRICT') return strictMessages;
+    if (activeMatchMode === 'PREFER') return smartMessages;
+    return randomMessages;
+  };
+
+  const currentMessages = getRotatingMessages();
+  const currentStageText = currentMessages[animationStep % currentMessages.length];
+
+  // Apply smooth fade state transition
+  useEffect(() => {
+    setFadeOpacity(0);
+    const t = setTimeout(() => {
+      setFadingText(currentStageText);
+      setFadeOpacity(1);
+    }, 150);
+    return () => clearTimeout(t);
+  }, [currentStageText]);
+
+  // Tab visibility event listeners
+  useEffect(() => {
+    const handleVisibility = () => {
+      isTabVisible.current = document.visibilityState === 'visible';
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, []);
+
+  // 3D Perspective Network Globe Projection Loop
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -40,86 +111,180 @@ export function SearchingAnimation({
     if (!ctx) return;
 
     let animationFrameId: number;
-    let width = (canvas.width = window.innerWidth);
-    let height = (canvas.height = window.innerHeight);
+    let canvasW = (canvas.width = window.innerWidth);
+    let canvasH = (canvas.height = window.innerHeight);
 
     const handleResize = () => {
-      width = canvas.width = window.innerWidth;
-      height = canvas.height = window.innerHeight;
+      canvasW = canvas.width = window.innerWidth;
+      canvasH = canvas.height = window.innerHeight;
     };
     window.addEventListener('resize', handleResize);
 
-    class Particle {
+    // 1. Generate 3D Globe Nodes (Fibonacci sphere distribution)
+    interface Node3D {
       x: number;
       y: number;
-      size: number;
-      speedY: number;
-      speedX: number;
-      opacity: number;
+      z: number;
+    }
+    const NODES_COUNT = 55;
+    const GLOBE_RADIUS = Math.min(220, Math.min(canvasW, canvasH) * 0.35);
+    const globeNodes: Node3D[] = [];
+    const phi = Math.PI * (3 - Math.sqrt(5)); // Golden angle
 
-      constructor() {
-        this.x = Math.random() * width;
-        this.y = Math.random() * height;
-        this.size = Math.random() * 2.5 + 1.0;
-        this.speedY = Math.random() * 0.4 - 0.2;
-        this.speedX = Math.random() * 0.4 - 0.2;
-        this.opacity = Math.random() * 0.6 + 0.2;
-      }
+    for (let i = 0; i < NODES_COUNT; i++) {
+      const nodeY = 1 - (i / (NODES_COUNT - 1)) * 2;
+      const radiusAtY = Math.sqrt(1 - nodeY * nodeY);
+      const theta = phi * i;
 
-      update() {
-        this.y += this.speedY;
-        this.x += this.speedX;
+      const nodeX = Math.cos(theta) * radiusAtY;
+      const nodeZ = Math.sin(theta) * radiusAtY;
 
-        if (this.x < 0 || this.x > width) this.speedX *= -1;
-        if (this.y < 0 || this.y > height) this.speedY *= -1;
-      }
-
-      draw() {
-        if (!ctx) return;
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(245, 158, 11, ${this.opacity})`;
-        ctx.fill();
-      }
+      globeNodes.push({
+        x: nodeX * GLOBE_RADIUS,
+        y: nodeY * GLOBE_RADIUS,
+        z: nodeZ * GLOBE_RADIUS
+      });
     }
 
-    const particlesArray: Particle[] = Array.from({ length: 40 }).map(() => new Particle());
+    // 2. Generate background floating particles
+    interface Particle {
+      x: number;
+      y: number;
+      z: number;
+      size: number;
+      driftSpeed: number;
+    }
+    const PARTICLES_COUNT = 30;
+    const backgroundParticles: Particle[] = Array.from({ length: PARTICLES_COUNT }).map(() => ({
+      x: (Math.random() - 0.5) * canvasW * 1.5,
+      y: (Math.random() - 0.5) * canvasH * 1.5,
+      z: Math.random() * 300 - 150,
+      size: Math.random() * 1.5 + 0.8,
+      driftSpeed: Math.random() * 0.15 + 0.05
+    }));
+
+    // Local rotation values
+    let angleY = 0;
+    let angleX = 0;
 
     const animate = () => {
-      ctx.clearRect(0, 0, width, height);
+      if (!isTabVisible.current) {
+        animationFrameId = requestAnimationFrame(animate);
+        return;
+      }
 
-      const time = Date.now() * 0.001;
-      const glowX = width / 2 + Math.sin(time) * 100;
-      const glowY = height / 2.5 + Math.cos(time * 0.8) * 80;
+      ctx.clearRect(0, 0, canvasW, canvasH);
 
-      const gradient = ctx.createRadialGradient(glowX, glowY, 50, glowX, glowY, 400);
-      gradient.addColorStop(0, 'rgba(255, 91, 53, 0.05)');
-      gradient.addColorStop(0.5, 'rgba(245, 166, 35, 0.03)');
-      gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
-      ctx.fillStyle = gradient;
-      ctx.fillRect(0, 0, width, height);
+      // A. Ambient Volumetric glowing lights behind the globe
+      const ambientGlow = ctx.createRadialGradient(
+        canvasW / 2,
+        canvasH / 2.3,
+        50,
+        canvasW / 2,
+        canvasH / 2.3,
+        GLOBE_RADIUS * 1.8
+      );
+      ambientGlow.addColorStop(0, 'rgba(255, 193, 7, 0.05)');
+      ambientGlow.addColorStop(0.5, 'rgba(255, 91, 53, 0.02)');
+      ambientGlow.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      ctx.fillStyle = ambientGlow;
+      ctx.fillRect(0, 0, canvasW, canvasH);
 
-      for (let a = 0; a < particlesArray.length; a++) {
-        for (let b = a + 1; b < particlesArray.length; b++) {
-          const dx = particlesArray[a].x - particlesArray[b].x;
-          const dy = particlesArray[a].y - particlesArray[b].y;
-          const dist = Math.hypot(dx, dy);
-          if (dist < 130) {
+      // Slowly increment rotation angles
+      angleY += 0.0025;
+      angleX = Math.sin(angleY * 0.5) * 0.15; // Slow breathing pitch oscillation
+
+      const cosY = Math.cos(angleY);
+      const sinY = Math.sin(angleY);
+      const cosX = Math.cos(angleX);
+      const sinX = Math.sin(angleX);
+
+      // Camera focal config
+      const fov = 400;
+      const camCenterY = canvasH / 2.3;
+
+      // Projected coordinates storage
+      const projectedNodes: { px: number; py: number; pz: number; depthOpacity: number }[] = [];
+
+      // B. Rotate and project globe nodes
+      for (const node of globeNodes) {
+        // Rotate around Y-axis
+        let rx = node.x * cosY - node.z * sinY;
+        let rz = node.z * cosY + node.x * sinY;
+
+        // Rotate around X-axis
+        let ry = node.y * cosX - rz * sinX;
+        let rz2 = rz * cosX + node.y * sinX;
+
+        // Depth perspective calculation
+        const perspective = fov / (fov + rz2);
+        const px = canvasW / 2 + rx * perspective;
+        const py = camCenterY + ry * perspective;
+
+        // Normalize depth scale for opacity (front nodes brighter, back nodes fainter)
+        const depthOpacity = (fov - rz2) / (fov * 1.5);
+
+        projectedNodes.push({ px, py, pz: rz2, depthOpacity });
+      }
+
+      // C. Draw connections (lines between nodes)
+      ctx.lineWidth = 0.5;
+      for (let i = 0; i < NODES_COUNT; i++) {
+        for (let j = i + 1; j < NODES_COUNT; j++) {
+          const dx = globeNodes[i].x - globeNodes[j].x;
+          const dy = globeNodes[i].y - globeNodes[j].y;
+          const dz = globeNodes[i].z - globeNodes[j].z;
+          const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
+
+          // Connection limit threshold
+          if (dist < GLOBE_RADIUS * 0.72) {
+            const nodeA = projectedNodes[i];
+            const nodeB = projectedNodes[j];
+
             ctx.beginPath();
-            ctx.moveTo(particlesArray[a].x, particlesArray[a].y);
-            ctx.lineTo(particlesArray[b].x, particlesArray[b].y);
-            const lineOpacity = (1 - dist / 130) * 0.15;
-            ctx.strokeStyle = `rgba(245, 158, 11, ${lineOpacity})`;
-            ctx.lineWidth = 0.6;
+            ctx.moveTo(nodeA.px, nodeA.py);
+            ctx.lineTo(nodeB.px, nodeB.py);
+
+            // Compute connection line opacity based on depth and distance
+            const scaleFactor = (1 - dist / (GLOBE_RADIUS * 0.72));
+            const lineOpacity = Math.max(0, scaleFactor * nodeA.depthOpacity * nodeB.depthOpacity * 0.18);
+
+            ctx.strokeStyle = `rgba(255, 193, 7, ${lineOpacity})`;
             ctx.stroke();
           }
         }
       }
 
-      particlesArray.forEach((p) => {
-        p.update();
-        p.draw();
-      });
+      // D. Draw projected nodes
+      for (const p of projectedNodes) {
+        ctx.beginPath();
+        const nodeRadius = Math.max(0.8, p.depthOpacity * 2.2);
+        ctx.arc(p.px, p.py, nodeRadius, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(255, 138, 0, ${p.depthOpacity * 0.7})`;
+        ctx.fill();
+      }
+
+      // E. Draw floating background stars/particles with parallax
+      for (const part of backgroundParticles) {
+        part.y -= part.driftSpeed;
+        // Reset floating particles if they drift off canvas
+        if (part.y < -canvasH / 2) {
+          part.y = canvasH / 2;
+          part.x = (Math.random() - 0.5) * canvasW * 1.5;
+        }
+
+        const perspective = fov / (fov + part.z);
+        const px = canvasW / 2 + part.x * perspective;
+        const py = camCenterY + part.y * perspective;
+
+        if (px >= 0 && px <= canvasW && py >= 0 && py <= canvasH) {
+          const depthOpacity = (fov - part.z) / (fov * 1.8);
+          ctx.beginPath();
+          ctx.arc(px, py, part.size * perspective, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(255, 193, 7, ${depthOpacity * 0.35})`;
+          ctx.fill();
+        }
+      }
 
       animationFrameId = requestAnimationFrame(animate);
     };
@@ -132,108 +297,80 @@ export function SearchingAnimation({
     };
   }, []);
 
-  // Mode-Specific rotating messages
-  const randomMessages = [
-    "🌍 Searching worldwide...",
-    "👥 Checking active users...",
-    "⚡ Finding someone online...",
-    "✨ Finding your next conversation..."
-  ];
-
-  const smartMessages = [
-    "🎵 Looking for shared interests...",
-    "🎓 Checking universities...",
-    "📍 Searching nearby...",
-    "🤝 Matching shared preferences..."
-  ];
-
-  const strictMessages = [
-    "🔒 Searching exact matches...",
-    "📝 Checking your selected filters...",
-    university ? `🏫 Waiting for another ${university} student...` : "🏫 Searching selected campus network...",
-    "⚠️ Exact matching takes slightly longer..."
-  ];
-
-  const getRotatingMessages = () => {
-    if (activeMatchMode === 'STRICT') return strictMessages;
-    if (activeMatchMode === 'PREFER') return smartMessages;
-    return randomMessages;
-  };
-
-  const currentMessages = getRotatingMessages();
-  const currentStageText = currentMessages[animationStep % currentMessages.length];
-
-  // Dynamic colors for matching stages
-  const getStageColor = (step: number) => {
-    const stage = step % 4;
-    switch (stage) {
-      case 0: return { border: 'border-amber-500/30', text: 'text-amber-400', bg: 'bg-amber-500/10', ping: 'border-amber-500/10' };
-      case 1: return { border: 'border-purple-500/30', text: 'text-purple-400', bg: 'bg-purple-500/10', ping: 'border-purple-500/10' };
-      case 2: return { border: 'border-cyan-500/30', text: 'text-cyan-400', bg: 'bg-cyan-500/10', ping: 'border-cyan-500/10' };
-      default: return { border: 'border-emerald-500/30', text: 'text-emerald-400', bg: 'bg-emerald-500/10', ping: 'border-emerald-500/10' };
-    }
-  };
-
-  const colors = getStageColor(animationStep);
-
   return (
-    /* 
-     * ROOT: Full screen flex column — decoration only.
-     * Keeps particles, ambient glows, radar pulses, and rotating match stage texts visible.
-     */
-    <div className="relative w-full h-full flex flex-col items-center justify-center bg-stone-950 overflow-hidden select-none">
-      {/* Background Particle Canvas — purely decorative, lowest priority */}
+    <div className="absolute inset-0 w-full h-full bg-stone-950 overflow-hidden select-none z-0 flex flex-col items-center justify-center">
+      {/* 3D Global connectivity canvas network */}
       <canvas ref={canvasRef} className="absolute inset-0 w-full h-full pointer-events-none" />
 
-      {/* Center status container */}
-      <div className="relative z-10 flex flex-col items-center justify-center text-center px-4 max-w-sm">
+      {/* Unified Waiting Room Content Layer */}
+      <div className={cn(
+        "relative z-10 flex flex-col items-center w-full max-w-[380px] sm:max-w-[420px] mx-auto px-4 text-center transition-all duration-500",
+        isMinimalLayout ? "gap-2" : "gap-6"
+      )}>
         {status === 'PARTNER_LEFT' ? (
-          /* Partner Left State */
-          <div className="flex flex-col items-center animate-fade-in">
-            <div className="w-24 h-24 rounded-full border border-red-500/25 bg-red-500/5 flex items-center justify-center relative shadow-2xl mb-8">
-              <span className="text-3xl animate-bounce">👋</span>
+          /* Case A: Partner Left */
+          <div className="flex flex-col items-center animate-fade-in w-full">
+            <div className="w-16 h-16 rounded-full border border-red-500/25 bg-red-500/5 flex items-center justify-center relative shadow-2xl mb-4">
+              <span className="text-2xl animate-bounce">👋</span>
             </div>
-            <p className="text-red-400 font-extrabold text-lg tracking-tight mb-2">
+            <p className="text-red-400 font-extrabold text-base tracking-tight mb-1">
               {partnerProfile?.displayName || 'Partner'} left.
             </p>
-            <p className="text-stone-400 text-xs font-semibold tracking-wide animate-pulse">
+            <p className="text-stone-400 text-xs font-semibold tracking-wide animate-pulse mb-4">
               Finding another person...
             </p>
           </div>
         ) : isQueuePaused ? (
-          /* Paused State */
-          <div className="flex flex-col items-center animate-fade-in">
-            <div className="w-24 h-24 rounded-full border border-amber-500/20 bg-amber-500/5 flex items-center justify-center relative shadow-2xl mb-8">
-              <span className="text-3xl">⏸️</span>
+          /* Case B: Queue Paused */
+          <div className="flex flex-col items-center animate-fade-in w-full">
+            <div className="w-16 h-16 rounded-full border border-amber-500/20 bg-amber-500/5 flex items-center justify-center relative shadow-2xl mb-4">
+              <span className="text-2xl">⏸️</span>
             </div>
-            <p className="text-amber-500 font-extrabold text-lg tracking-tight mb-2">
+            <p className="text-amber-500 font-extrabold text-base tracking-tight mb-1">
               Matchmaking Paused
             </p>
-            <p className="text-stone-400 text-xs font-semibold tracking-wide">
+            <p className="text-stone-400 text-xs font-semibold tracking-wide mb-4">
               Resume matching when you are ready
             </p>
           </div>
         ) : (
-          /* Standard Searching State */
-          <>
-            {/* Apple/Nothing Radar Pulse (Decorative) */}
-            <div className={cn("relative animate-fade-in shrink-0", isMinimalLayout ? "mb-2" : "mb-6")}>
-              <div className={`absolute inset-0 rounded-full border ${colors.ping} animate-ping`} style={{ animationDuration: '3s' }} />
-              <div className={cn("rounded-full border border-white/5 bg-white/[0.01] flex items-center justify-center relative shadow-2xl glass", isMinimalLayout ? "w-14 h-14" : "w-20 h-20")}>
-                <div className={cn("absolute rounded-full border", colors.border, colors.bg, "animate-pulse", isMinimalLayout ? "w-10 h-10" : "w-14 h-14")} />
-                <div className={cn("rounded-xl border flex items-center justify-center font-bold animate-spin", colors.bg, colors.border, colors.text, isMinimalLayout ? "w-6 h-6 text-xs" : "w-8 h-8 text-base")} style={{ animationDuration: '8s' }}>
-                  ✦
-                </div>
+          /* Case C: Standard Active Matchmaking */
+          <div className="flex flex-col items-center w-full">
+            {/* Center Breathing Radar (No spinning, calm breathing animation) */}
+            <div className={cn("relative shrink-0 flex items-center justify-center", isMinimalLayout ? "mb-2" : "mb-5")}>
+              {/* Outer pulsing expanding rings */}
+              <div className="absolute rounded-full border border-amber-500/20 ring-expand-glow w-16 h-16 sm:w-20 sm:h-20" />
+              <div className="absolute rounded-full border border-amber-500/10 ring-expand-glow w-24 h-24 sm:w-28 sm:h-28" style={{ animationDelay: '1.2s' }} />
+
+              {/* Central glowing core badge */}
+              <div className="rounded-full border border-white/5 bg-white/[0.01] flex items-center justify-center relative shadow-2xl glass w-16 h-16 sm:w-20 sm:h-20">
+                <div className="absolute rounded-full border border-amber-500/20 bg-amber-500/10 radar-breathing w-12 h-12 sm:w-14 sm:h-14" />
+                <svg
+                  className="w-6 h-6 text-amber-400 relative z-10"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={1.5}
+                    d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"
+                  />
+                </svg>
               </div>
             </div>
 
-            {/* Interactive Matching animation text */}
-            <p className="text-stone-100 font-extrabold text-sm tracking-tight mb-3 h-6 overflow-hidden transition-all duration-300 shrink-0">
-              {currentStageText}
+            {/* Fading matched stages text */}
+            <p
+              className="text-stone-100 font-bold text-xs tracking-tight mb-2.5 h-5 overflow-hidden transition-opacity duration-150 shrink-0 select-none"
+              style={{ opacity: fadeOpacity }}
+            >
+              {fadingText}
             </p>
 
-            {/* Nothing Phone dot-jump loader */}
-            <div className="flex items-center justify-center gap-1.5 shrink-0">
+            {/* Jump loader dots */}
+            <div className="flex items-center justify-center gap-1.5 shrink-0 mb-4">
               {[0, 1, 2].map((i) => (
                 <div
                   key={i}
@@ -242,8 +379,23 @@ export function SearchingAnimation({
                 />
               ))}
             </div>
-          </>
+          </div>
         )}
+
+        {/* Cohesive Queue Dashboard panel */}
+        <div className="w-full shrink-0">
+          <QueueCard
+            elapsed={elapsed}
+            matchMode={matchMode}
+            isQueuePaused={isQueuePaused}
+            onOpenPreferences={onOpenPreferences}
+            onResumeQueue={onResumeQueue}
+            onPauseQueue={onPauseQueue}
+            onLeaveQueue={onLeaveQueue}
+            stats={stats}
+            onDisableStrict={onDisableStrict}
+          />
+        </div>
       </div>
     </div>
   );

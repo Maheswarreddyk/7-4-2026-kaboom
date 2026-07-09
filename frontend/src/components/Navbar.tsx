@@ -19,6 +19,7 @@ interface NavbarProps {
 
 export function Navbar({ isTransparent = false }: NavbarProps) {
   const location = useLocation();
+  const isChatPage = location.pathname === '/chat';
   const [drawerOpen, setDrawerOpen] = useState(false);
   const { layoutMode } = useResponsiveLayout();
 
@@ -78,7 +79,7 @@ export function Navbar({ isTransparent = false }: NavbarProps) {
           {/* Desktop Nav links (FULL, COMPACT, CONDENSED, STACKED) */}
           {showNavLinks && (
             <nav className="flex items-center gap-1.5" aria-label="Main navigation">
-              {NAV_LINKS.map((link) => (
+              {!isChatPage && NAV_LINKS.map((link) => (
                 <Link
                   key={link.to}
                   to={link.to}
@@ -92,36 +93,50 @@ export function Navbar({ isTransparent = false }: NavbarProps) {
                   {link.label}
                 </Link>
               ))}
-              <Link
-                to="/chat"
-                className="btn-primary text-sm px-4 py-2 ml-2 rounded-xl"
-                id="nav-start-chat"
-              >
-                Start Chat
-              </Link>
+              {isChatPage ? (
+                <span className="px-3.5 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-black tracking-wide animate-pulse">
+                  ⚡ Searching...
+                </span>
+              ) : (
+                <Link
+                  to="/chat"
+                  className="btn-primary text-sm px-4 py-2 ml-2 rounded-xl"
+                  id="nav-start-chat"
+                >
+                  Start Chat
+                </Link>
+              )}
             </nav>
           )}
 
           {/* Mobile/Hamburger Nav Segment (MINIMAL, MOBILE) */}
           {showHamburger && (
             <div className="flex items-center gap-2">
-              <Link
-                to="/chat"
-                className="btn-primary text-xs px-3 py-2 rounded-xl"
-                id="nav-start-chat-mobile"
-              >
-                Start Chat
-              </Link>
-              <button
-                aria-label="Open menu"
-                aria-expanded={drawerOpen}
-                onClick={() => setDrawerOpen(true)}
-                className="flex flex-col gap-[5px] p-2 rounded-lg hover:bg-white/10 transition-colors"
-              >
-                <span className="w-5 h-0.5 bg-white/80 rounded-full block" />
-                <span className="w-5 h-0.5 bg-white/80 rounded-full block" />
-                <span className="w-5 h-0.5 bg-white/80 rounded-full block" />
-              </button>
+              {isChatPage ? (
+                <span className="px-3 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 text-[10px] font-black tracking-wide animate-pulse">
+                  ⚡ Searching...
+                </span>
+              ) : (
+                <>
+                  <Link
+                    to="/chat"
+                    className="btn-primary text-xs px-3 py-2 rounded-xl"
+                    id="nav-start-chat-mobile"
+                  >
+                    Start Chat
+                  </Link>
+                  <button
+                    aria-label="Open menu"
+                    aria-expanded={drawerOpen}
+                    onClick={() => setDrawerOpen(true)}
+                    className="flex flex-col gap-[5px] p-2 rounded-lg hover:bg-white/10 transition-colors"
+                  >
+                    <span className="w-5 h-0.5 bg-white/80 rounded-full block" />
+                    <span className="w-5 h-0.5 bg-white/80 rounded-full block" />
+                    <span className="w-5 h-0.5 bg-white/80 rounded-full block" />
+                  </button>
+                </>
+              )}
             </div>
           )}
 

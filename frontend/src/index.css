@@ -679,6 +679,9 @@
 /* =====================================================
    QUEUE CARD CONTAINER QUERIES (Zero Info Loss Reflow)
    ===================================================== */
+/* =====================================================
+   QUEUE CARD CONTAINER QUERIES (Zero Info Loss Reflow)
+   ===================================================== */
 .queue-card-container {
   container-type: inline-size;
   container-name: queuecard;
@@ -687,52 +690,191 @@
 
 /* Premium Glassmorphic Card Layout */
 .queue-card-card {
-  width: 340px;
-  max-width: 100%;
-  padding: 20px;
-  gap: 16px;
-  background: rgba(28, 25, 23, 0.45) !important;
-  backdrop-filter: blur(24px) saturate(180%) !important;
-  -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
-  border: 1px solid rgba(255, 255, 255, 0.08) !important;
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5) !important;
-  border-radius: 24px !important;
+  width: 100%;
+  max-width: 420px;
+  margin: 0 auto;
+  padding: clamp(14px, 1.5vw, 20px) !important;
+  gap: clamp(10px, 1.2vw, 16px) !important;
+  background: rgba(20, 20, 20, 0.75) !important;
+  backdrop-filter: blur(20px) saturate(140%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(140%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37) !important;
+  border-radius: 16px !important;
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 
 .queue-card-header {
   padding-bottom: 10px;
 }
 
-/* Narrow Container Reflow (Preserving Information Parity) */
+/* Premium Entrance Transitions */
+@keyframes queue-card-entrance {
+  0% {
+    opacity: 0;
+    transform: translateY(24px) scale(0.96);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.queue-card-entrance {
+  animation: queue-card-entrance 0.45s cubic-bezier(0.25, 0.8, 0.25, 1) forwards;
+}
+
+/* FaceTime-style Self Preview snapping & sizing during search */
+.searching-self-preview {
+  width: clamp(72px, 10vw, 110px) !important;
+  height: clamp(72px, 10vw, 110px) !important;
+  border-radius: 14px !important;
+  border: 1.5px solid rgba(255, 255, 255, 0.15) !important;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37) !important;
+  backdrop-filter: blur(12px) !important;
+  cursor: default !important;
+  overflow: hidden;
+  transition: all 0.35s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.searching-self-preview .video-player-label {
+  bottom: 6px !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  width: 88% !important;
+  text-align: center !important;
+  padding: 2px 4px !important;
+  font-size: clamp(8px, 0.7vw, 10px) !important;
+  font-weight: 700 !important;
+  border-radius: 4px !important;
+  background: rgba(0, 0, 0, 0.6) !important;
+  backdrop-filter: blur(4px) !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+/* Fluid Typography Helpers */
+.fluid-username {
+  font-size: clamp(14px, 1.2vw, 18px) !important;
+}
+.fluid-timer {
+  font-size: clamp(12px, 1.1vw, 15px) !important;
+}
+.fluid-stats-val {
+  font-size: clamp(13px, 1.2vw, 16px) !important;
+}
+.fluid-label {
+  font-size: clamp(10px, 0.8vw, 12px) !important;
+}
+
+/* Button complete states & interactions */
+.btn-action-edit {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  color: #e2e8f0 !important;
+}
+.btn-action-edit:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.14) !important;
+}
+.btn-action-edit:active:not(:disabled) {
+  transform: scale(0.95);
+  background: rgba(255, 255, 255, 0.04) !important;
+}
+.btn-action-edit:focus {
+  outline: 2px solid rgba(255, 255, 255, 0.25);
+  outline-offset: 1px;
+}
+
+.btn-action-pause {
+  background: #FFC107 !important;
+  color: #0b0b0c !important;
+}
+.btn-action-pause:hover:not(:disabled) {
+  background: #ffb300 !important;
+}
+.btn-action-pause:active:not(:disabled) {
+  transform: scale(0.95);
+  background: #e6a100 !important;
+}
+.btn-action-pause:focus {
+  outline: 2px solid rgba(255, 193, 7, 0.4);
+  outline-offset: 1px;
+}
+
+.btn-action-cancel {
+  background: rgba(239, 68, 68, 0.15) !important;
+  border: 1px solid rgba(239, 68, 68, 0.25) !important;
+  color: #fca5a5 !important;
+}
+.btn-action-cancel:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.25) !important;
+}
+.btn-action-cancel:active:not(:disabled) {
+  transform: scale(0.95);
+  background: rgba(239, 68, 68, 0.08) !important;
+}
+.btn-action-cancel:focus {
+  outline: 2px solid rgba(239, 68, 68, 0.4);
+  outline-offset: 1px;
+}
+
+/* Radar Breathing ring pulse & glow animation */
+@keyframes radar-pulse-breathing {
+  0% {
+    transform: scale(0.92);
+    opacity: 0.12;
+  }
+  50% {
+    transform: scale(1.08);
+    opacity: 0.24;
+  }
+  100% {
+    transform: scale(0.92);
+    opacity: 0.12;
+  }
+}
+@keyframes ring-expand-pulse {
+  0% {
+    transform: scale(0.9);
+    opacity: 0.45;
+  }
+  100% {
+    transform: scale(2.0);
+    opacity: 0;
+  }
+}
+
+.radar-breathing {
+  animation: radar-pulse-breathing 4s ease-in-out infinite;
+}
+.ring-expand-glow {
+  animation: ring-expand-pulse 3s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+}
+
+/* Narrow Container Reflow */
 @container queuecard (max-width: 440px) {
   .queue-card-card {
     width: 100% !important;
     padding: 12px 14px !important;
     gap: 10px !important;
-    border-radius: 16px !important;
-    background: rgba(28, 25, 23, 0.6) !important;
+    border-radius: 12px !important;
   }
-
   .queue-card-bio {
     font-size: 9px !important;
     padding: 4px 8px !important;
     border-radius: 6px !important;
   }
-
   .queue-card-stats {
     padding: 4px 6px !important;
     font-size: 9px !important;
     gap: 4px !important;
     border-radius: 8px !important;
   }
-
-  /* Compact header styling */
   .queue-card-header {
     border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
     padding-bottom: 6px !important;
   }
-
-  /* Flex wrap actions block */
   .queue-card-actions {
     margin-top: 2px !important;
     padding-top: 6px !important;

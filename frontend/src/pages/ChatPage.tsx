@@ -3,8 +3,7 @@ import { useNavigate, useBlocker } from 'react-router-dom';
 import { ConnectionStatusBadge } from '../components/ConnectionStatusBadge.js';
 import { LoadingScreen } from '../components/LoadingScreen.js';
 import { ReportModal } from '../components/ReportModal.js';
-import { SearchingBackground } from '../components/SearchingBackground.js';
-import { SearchingExperience } from '../components/SearchingExperience.js';
+import { SearchingAnimation } from '../components/SearchingAnimation.js';
 import { VideoPlayer } from '../components/VideoPlayer.js';
 import { PreferenceModal } from '../components/PreferenceModal.js';
 import { TemporaryChat } from '../components/TemporaryChat.js';
@@ -246,11 +245,19 @@ export function ChatPage() {
   // Central Responsive Layout Manager hooks
   const { registerComponent, getStyle } = useFloatingLayout();
 
+  // Register searching header indicator
+  useEffect(() => {
+    registerComponent('searching-header', 'TL', 110, 32, isSearching, 'statusBadges', 1);
+  }, [isSearching, registerComponent]);
+
   // Register self-preview PiP
   useEffect(() => {
-    const screenPos = snapCorner.toUpperCase() as any;
-    registerComponent('self-preview', screenPos, 200, 150, true, 'videoLocal', 1);
-  }, [snapCorner, registerComponent]);
+    const screenPos = isSearching ? 'TL' : (snapCorner.toUpperCase() as any);
+    const pipW = isSearching ? 100 : (isMobile ? 112 : 200);
+    const pipH = isSearching ? 100 : (isMobile ? 84 : 150);
+    const priority = isSearching ? 2 : 1;
+    registerComponent('self-preview', screenPos, pipW, pipH, true, 'videoLocal', priority);
+  }, [snapCorner, registerComponent, isSearching, isMobile]);
 
   // Register partner info card
   const showPartnerCard = !!(isConnected && chatState.partnerProfile);
@@ -263,11 +270,6 @@ export function ChatPage() {
   useEffect(() => {
     registerComponent('chat-drawer', 'TR', 360, 400, showChatDrawer, 'chatDrawer', 1);
   }, [showChatDrawer, registerComponent]);
-
-  // Register searching experience container directly at CC (Center-Center) slot
-  useEffect(() => {
-    registerComponent('searching-experience', 'CC', 380, 520, isSearching, 'queueCard', 1);
-  }, [isSearching, registerComponent]);
 
   // Search Elapsed timer state
   const [searchElapsed, setSearchElapsed] = useState(0);
@@ -608,16 +610,19 @@ export function ChatPage() {
   }, [chatState.partnerLiked, chatState.mutualLike, triggerReaction]);
 
   const handleDoubleTapSwap = () => {
+    if (isSearching) return;
     setIsPlacementsSwapped((prev) => !prev);
   };
 
   // Draggable & Pinch Zoom handlers
   const handleMouseDown = (e: React.MouseEvent) => {
+    if (isSearching) return;
     setIsDragging(true);
     dragStart.current = { x: e.clientX - dragOffset.x, y: e.clientY - dragOffset.y };
   };
 
   const handleTouchStart = (e: React.TouchEvent) => {
+    if (isSearching) return;
     if (e.touches.length === 2) {
       setIsDragging(false);
       const dist = Math.hypot(
@@ -1050,33 +1055,35 @@ export function ChatPage() {
         }}
       />
 
-      {/* ── SEARCHING BACKGROUND (Canvas / Particles) ── */}
-      {isSearching && <SearchingBackground />}
+      {/* ── SEARCHING HEADER INDICATOR PILL (Top-Left Stacked) ── */}
+      {isSearching && (
+        <div
+          style={getStyle('searching-header')}
+          className="flex items-center gap-2 px-3.5 py-1.5 bg-stone-900/80 border border-white/10 rounded-full shadow-lg backdrop-blur-md pointer-events-auto"
+        >
+          <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+          <span className="text-[10px] font-black text-amber-400 uppercase tracking-widest">Searching</span>
+        </div>
+      )}
 
       {/* ── UNIFIED SEARCHING EXPERIENCE (Radar, Status, Queue, Actions) ── */}
       {isSearching && (
-        <div 
-          className="pointer-events-auto"
-          style={getStyle('searching-experience')}
-          data-layout-id="searching-experience"
-        >
-          <SearchingExperience
-            status={chatState.status}
-            partnerProfile={chatState.partnerProfile}
-            isQueuePaused={isQueuePaused}
-            elapsed={searchElapsed}
-            matchMode={activeMatchMode}
-            onOpenPreferences={async () => {
-              await pauseQueue();
-              setShowPreferenceModal(true);
-            }}
-            onResumeQueue={resumeQueue}
-            onPauseQueue={pauseQueue}
-            onLeaveQueue={handleLeave}
-            stats={queueStats}
-            onDisableStrict={handleDisableStrict}
-          />
-        </div>
+        <SearchingAnimation
+          status={chatState.status}
+          partnerProfile={chatState.partnerProfile}
+          isQueuePaused={isQueuePaused}
+          elapsed={searchElapsed}
+          matchMode={activeMatchMode}
+          onOpenPreferences={async () => {
+            await pauseQueue();
+            setShowPreferenceModal(true);
+          }}
+          onResumeQueue={resumeQueue}
+          onPauseQueue={pauseQueue}
+          onLeaveQueue={handleLeave}
+          stats={queueStats}
+          onDisableStrict={handleDisableStrict}
+        />
       )}
 
       {/* ── MOBILE HEADER (top layout) ── */}
@@ -1129,11 +1136,14 @@ export function ChatPage() {
 
       {/* ── SELF-PREVIEW PiP (corner-snapping) ─────────────── */}
       <div
-        className={cn('self-preview transition-transform', isDragging && 'shadow-2xl border-amber-500/30')}
+        className={cn(
+          isSearching ? 'searching-self-preview' : 'self-preview transition-transform',
+          isDragging && 'shadow-2xl border-amber-500/30'
+        )}
         style={{
-          width: isMobile ? '28vw' : '200px',
-          height: isMobile ? `calc(28vw / ${pipAspectRatio || 1.33})` : `calc(200px / ${pipAspectRatio || 1.33})`,
-          transform: `translate(${dragOffset.x}px, ${dragOffset.y}px) scale(${isDragging ? pipScale * 1.03 : pipScale})`,
+          width: isSearching ? 'clamp(72px, 10vw, 110px)' : (isMobile ? '28vw' : '200px'),
+          height: isSearching ? 'clamp(72px, 10vw, 110px)' : (isMobile ? `calc(28vw / ${pipAspectRatio || 1.33})` : `calc(200px / ${pipAspectRatio || 1.33})`),
+          transform: isSearching ? 'none' : `translate(${dragOffset.x}px, ${dragOffset.y}px) scale(${isDragging ? pipScale * 1.03 : pipScale})`,
           ...getStyle('self-preview'),
         }}
         onMouseDown={handleMouseDown}
@@ -1146,10 +1156,13 @@ export function ChatPage() {
           mirrored={!isPlacementsSwapped}
           onAspectRatioChange={isPlacementsSwapped ? handleRemoteAspectRatioChange : handleLocalAspectRatioChange}
           className="w-full h-full pointer-events-none"
+          fullscreen={isSearching || isPlacementsSwapped}
           label={
             isPlacementsSwapped 
               ? (chatState.partnerProfile?.displayName || 'Partner') 
-              : `You • ${localStorage.getItem('kaboom_display_name')?.split(' ')[0] || 'Guest'}`
+              : isSearching 
+                ? (localStorage.getItem('kaboom_display_name')?.split(' ')[0] || 'You')
+                : `You • ${localStorage.getItem('kaboom_display_name')?.split(' ')[0] || 'Guest'}`
           }
           frozen={isPlacementsSwapped ? false : isSkipPending}
         />
