@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useResponsiveLayout } from '../hooks/useResponsiveLayout.js';
 
-export type ScreenPosition = 'TL' | 'TC' | 'TR' | 'BL' | 'BC' | 'BR';
+export type ScreenPosition = 'TL' | 'TC' | 'TR' | 'BL' | 'BC' | 'BR' | 'CC';
 
 export interface FloatingComponent {
   id: string;
@@ -216,6 +216,22 @@ export function FloatingLayoutProvider({ children }: { children: React.ReactNode
     const isSmallWidth = width < 560;
 
     switch (pos) {
+      case 'CC': {
+        const totalSlotHeight = slotElements.reduce((sum, item) => sum + item.height + 12, 0) - 12;
+        const startY = height / 2 - totalSlotHeight / 2;
+        let currentYOffset = 0;
+        for (const item of slotElements) {
+          if (item.id === id) {
+            break;
+          }
+          currentYOffset += item.height + 12;
+        }
+        style.top = `${startY + currentYOffset}px`;
+        style.left = '50%';
+        style.transform = 'translateX(-50%)';
+        break;
+      }
+
       case 'TL':
         style.top = `${yOffset}px`;
         style.left = `${sLeft}px`;

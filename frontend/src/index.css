@@ -685,43 +685,57 @@
   width: 100%;
 }
 
-/* Default Comfortable Card Layout */
+/* Premium Glassmorphic Card Layout */
 .queue-card-card {
   width: 340px;
   max-width: 100%;
-  padding: 16px;
-  gap: 12px;
+  padding: 20px;
+  gap: 16px;
+  background: rgba(28, 25, 23, 0.45) !important;
+  backdrop-filter: blur(24px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5) !important;
+  border-radius: 24px !important;
 }
 
 .queue-card-header {
-  padding-bottom: 8px;
+  padding-bottom: 10px;
 }
 
-/* Narrow Container Reflow (Compact Mode) */
+/* Narrow Container Reflow (Preserving Information Parity) */
 @container queuecard (max-width: 440px) {
   .queue-card-card {
     width: 100% !important;
-    padding: 10px 14px !important;
-    gap: 8px !important;
-    border-radius: 14px !important;
+    padding: 12px 14px !important;
+    gap: 10px !important;
+    border-radius: 16px !important;
+    background: rgba(28, 25, 23, 0.6) !important;
   }
 
-  /* Hide decorative / secondary details to save vertical height */
-  .queue-card-bio,
+  .queue-card-bio {
+    font-size: 9px !important;
+    padding: 4px 8px !important;
+    border-radius: 6px !important;
+  }
+
   .queue-card-stats {
-    display: none !important;
+    padding: 4px 6px !important;
+    font-size: 9px !important;
+    gap: 4px !important;
+    border-radius: 8px !important;
   }
 
   /* Compact header styling */
   .queue-card-header {
-    border-bottom: none !important;
-    padding-bottom: 0 !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+    padding-bottom: 6px !important;
   }
 
   /* Flex wrap actions block */
   .queue-card-actions {
     margin-top: 2px !important;
-    padding-top: 4px !important;
+    padding-top: 6px !important;
   }
 }
 

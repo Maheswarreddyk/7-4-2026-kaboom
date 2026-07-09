@@ -319,7 +319,7 @@ export function PreferenceModal({ isOpen, onClose, onSave, currentPreferences = 
 
   return (
     <div className={cn(
-      "fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/75 backdrop-blur-md transition-all duration-300",
+      "fixed inset-0 z-[999] flex items-end sm:items-center justify-center bg-black/75 backdrop-blur-md transition-all duration-300",
       isFadingOut ? "opacity-0 pointer-events-none scale-95" : "opacity-100 scale-100"
     )}>
       <div className="relative w-full max-w-2xl bg-slate-900 border border-white/10 rounded-t-3xl sm:rounded-3xl overflow-hidden shadow-2xl flex flex-col max-h-[85vh] sm:max-h-[90vh] transition-transform duration-300">

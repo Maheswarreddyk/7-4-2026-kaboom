@@ -3,8 +3,8 @@ import { useNavigate, useBlocker } from 'react-router-dom';
 import { ConnectionStatusBadge } from '../components/ConnectionStatusBadge.js';
 import { LoadingScreen } from '../components/LoadingScreen.js';
 import { ReportModal } from '../components/ReportModal.js';
-import { QueueCard } from '../components/QueueCard.js';
-import { SearchingAnimation } from '../components/SearchingAnimation.js';
+import { SearchingBackground } from '../components/SearchingBackground.js';
+import { SearchingExperience } from '../components/SearchingExperience.js';
 import { VideoPlayer } from '../components/VideoPlayer.js';
 import { PreferenceModal } from '../components/PreferenceModal.js';
 import { TemporaryChat } from '../components/TemporaryChat.js';
@@ -264,9 +264,9 @@ export function ChatPage() {
     registerComponent('chat-drawer', 'TR', 360, 400, showChatDrawer, 'chatDrawer', 1);
   }, [showChatDrawer, registerComponent]);
 
-  // Register queue card directly at top level
+  // Register searching experience container directly at CC (Center-Center) slot
   useEffect(() => {
-    registerComponent('queue-card', 'BC', 340, 260, isSearching, 'queueCard', 1);
+    registerComponent('searching-experience', 'CC', 380, 520, isSearching, 'queueCard', 1);
   }, [isSearching, registerComponent]);
 
   // Search Elapsed timer state
@@ -301,16 +301,7 @@ export function ChatPage() {
 
 
 
-  // Automatically open the chat drawer for 3 seconds when connected
-  useEffect(() => {
-    if (isConnected && chatState.partnerProfile) {
-      setChatOpen(true);
-      const timer = setTimeout(() => {
-        setChatOpen(false);
-      }, 3000);
-      return () => clearTimeout(timer);
-    }
-  }, [isConnected, chatState.partnerProfile, setChatOpen]);
+
 
   const [remoteAspectRatio, setRemoteAspectRatio] = useState<number | null>(null);
   const [localAspectRatio, setLocalAspectRatio] = useState<number | null>(null);
@@ -570,10 +561,6 @@ export function ChatPage() {
     if (Math.abs(diffX) > Math.abs(diffY)) {
       if (diffX < -90) {
         handleNext();
-      }
-    } else {
-      if (diffY > 90) {
-        handleLeave();
       }
     }
 
@@ -1063,31 +1050,22 @@ export function ChatPage() {
         }}
       />
 
-      {/* ── SEARCHING OVERLAY (Decorative & Status messages) ── */}
-      {isSearching && (
-        <div
-          className="absolute inset-0 flex items-center justify-center bg-stone-950"
-          style={{ zIndex: 'calc(var(--z-overlay) + 70)' as any }}
-        >
-          <SearchingAnimation
-            status={chatState.status}
-            partnerProfile={chatState.partnerProfile}
-            isQueuePaused={isQueuePaused}
-          />
-        </div>
-      )}
+      {/* ── SEARCHING BACKGROUND (Canvas / Particles) ── */}
+      {isSearching && <SearchingBackground />}
 
-      {/* ── QUEUE CARD (Flat Top-Level Floating Item) ── */}
+      {/* ── UNIFIED SEARCHING EXPERIENCE (Radar, Status, Queue, Actions) ── */}
       {isSearching && (
         <div 
           className="pointer-events-auto"
-          style={getStyle('queue-card')}
-          data-layout-id="queue-card"
+          style={getStyle('searching-experience')}
+          data-layout-id="searching-experience"
         >
-          <QueueCard
+          <SearchingExperience
+            status={chatState.status}
+            partnerProfile={chatState.partnerProfile}
+            isQueuePaused={isQueuePaused}
             elapsed={searchElapsed}
             matchMode={activeMatchMode}
-            isQueuePaused={isQueuePaused}
             onOpenPreferences={async () => {
               await pauseQueue();
               setShowPreferenceModal(true);
