@@ -131,8 +131,8 @@ export function ChatControls({
       </svg>
     ),
     Leave: () => (
-      <svg className="w-5 h-5 text-red-400 transition-transform duration-300 group-hover:translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+      <svg className="w-5 h-5 text-white rotate-[135deg]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.94.725l.548 2.2a1 1 0 01-.321.988l-1.305.98a10.582 10.582 0 004.872 4.872l.98-1.305a1 1 0 01.988-.321l2.2.548a1 1 0 01.725.94V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
       </svg>
     ),
   };
@@ -259,8 +259,8 @@ export function ChatControls({
 
         <button
           onPointerDown={handlePress(onLeave)}
-          className={cn(btnSpring, "w-12 h-12 bg-red-500/10 border-red-500/20 text-red-500 hover:bg-red-500/20 hover:border-red-500/30 hover:shadow-[0_4px_16px_rgba(239,68,68,0.2)]")}
-          title="Leave Room"
+          className={cn(btnSpring, "w-12 h-12 bg-red-600 border-red-500 text-white hover:bg-red-500 hover:shadow-[0_0_20px_rgba(220,38,38,0.45)]")}
+          title="End Call"
         >
           <Icons.Leave />
         </button>
@@ -368,7 +368,7 @@ export function ChatControls({
           {/* Exit Room */}
           <button
             onPointerDown={handlePress(onLeave)}
-            className={cn(btnSpring, "w-[46px] h-[46px] bg-red-500/10 border-red-500/20 text-red-500")}
+            className={cn(btnSpring, "w-[46px] h-[46px] bg-red-600 border-red-500 text-white hover:bg-red-500 hover:shadow-[0_0_15px_rgba(220,38,38,0.4)]")}
             title="Leave"
           >
             <Icons.Leave />

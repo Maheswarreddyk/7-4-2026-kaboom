@@ -9,6 +9,8 @@ interface SearchingAnimationProps {
   partnerProfile?: any;
   isQueuePaused?: boolean;
   onLeaveQueue?: () => void;
+  onResumeQueue?: () => void;
+  onPauseQueue?: () => void;
 }
 
 export function SearchingAnimation({
@@ -18,11 +20,12 @@ export function SearchingAnimation({
   status,
   partnerProfile,
   isQueuePaused,
-  onLeaveQueue
+  onLeaveQueue,
+  onResumeQueue,
+  onPauseQueue
 }: SearchingAnimationProps) {
   const [elapsed, setElapsed] = useState(0);
   const [animationStep, setAnimationStep] = useState(0);
-  const [mobileExpanded, setMobileExpanded] = useState(false);
   const [stats, setStats] = useState({ online: 127, searching: 41, wait: 8 });
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
@@ -249,139 +252,21 @@ export function SearchingAnimation({
 
   const colors = getStageColor(animationStep);
 
-  // Renamed mode formatting
   const getModeLabel = (mode: string) => {
     switch (mode) {
       case 'STRICT': return '🔒 Exact Match';
       case 'PREFER': return '🎯 Smart Match';
-      default: return '🌍 Random';
+      default: return '🌍 Random Match';
     }
   };
 
   return (
-    <div className="relative w-full h-full flex flex-col items-center justify-center overflow-hidden bg-stone-950 px-4">
+    <div className="relative w-full h-full flex flex-col items-center justify-center overflow-y-auto bg-stone-950 px-4 py-8">
       {/* Background Particle Canvas */}
       <canvas ref={canvasRef} className="absolute inset-0 w-full h-full pointer-events-none" />
 
-      {/* ── DESKTOP "SEARCHING AS" CARD ─────────────────── */}
-      {status !== 'PARTNER_LEFT' && (
-        <div className="hidden sm:flex absolute top-16 left-1/2 -translate-x-1/2 w-full max-w-sm bg-white/[0.02] border border-white/10 rounded-2xl p-4 backdrop-blur-xl z-20 shadow-2xl flex-col gap-2">
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] text-stone-500 font-bold uppercase tracking-wider">Searching As</span>
-            <div className="flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-              <span className="text-[10px] text-green-400 font-bold uppercase tracking-wider">Queue Active</span>
-            </div>
-          </div>
-          
-          <div className="flex items-center justify-between">
-            <h4 className="text-sm font-black text-white">{prefData.displayName}</h4>
-            <span className="text-[10px] px-2 py-0.5 rounded bg-purple-500/10 border border-purple-500/20 text-purple-300 font-bold">
-              {getModeLabel(activeMatchMode)}
-            </span>
-          </div>
-
-          {/* Active preference chips */}
-          <div className="flex flex-wrap gap-1.5 mt-1">
-            {prefData.country && <span className="text-[9px] px-2 py-0.5 bg-white/5 rounded-full text-stone-300 border border-white/5 font-semibold">🌍 {prefData.country}</span>}
-            {prefData.city && <span className="text-[9px] px-2 py-0.5 bg-white/5 rounded-full text-stone-300 border border-white/5 font-semibold">📍 {prefData.city}</span>}
-            {prefData.university && <span className="text-[9px] px-2 py-0.5 bg-white/5 rounded-full text-stone-300 border border-white/5 font-semibold">🎓 {prefData.university}</span>}
-            {prefData.interests.slice(0, 2).map((item: string) => (
-              <span key={item} className="text-[9px] px-2 py-0.5 bg-white/5 rounded-full text-stone-300 border border-white/5 font-semibold">#{item}</span>
-            ))}
-          </div>
-
-          {onOpenPreferences && (
-            <button
-              onClick={onOpenPreferences}
-              className="mt-2 text-center text-[10px] py-1.5 hover:bg-white/5 text-amber-400 font-extrabold border border-amber-500/20 bg-amber-500/5 rounded-xl transition-all"
-            >
-              ✏️ Edit Filters
-            </button>
-          )}
-        </div>
-      )}
-
-      {/* ── MOBILE COLLAPSIBLE "SEARCHING AS" CARD ────────── */}
-      {status !== 'PARTNER_LEFT' && (
-        <div 
-          onClick={() => setMobileExpanded(!mobileExpanded)}
-          className="absolute top-20 left-1/2 -translate-x-1/2 w-[92%] bg-stone-900/80 border border-white/10 rounded-2xl p-3 backdrop-blur-xl z-20 shadow-2xl flex sm:hidden flex-col gap-2 cursor-pointer transition-all duration-300"
-        >
-          {!mobileExpanded ? (
-            /* Collapsed view */
-            <div className="flex items-center justify-between text-xs">
-              <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                <span className="font-extrabold text-stone-100">{prefData.displayName}</span>
-                <span className="text-[10px] text-stone-500 font-bold uppercase tracking-wider">
-                  ({getModeLabel(activeMatchMode).split(' ').pop()})
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] bg-white/5 border border-white/10 px-2 py-0.5 rounded text-amber-400 font-black font-mono">
-                  ⏱ {elapsed}s
-                </span>
-                <svg className="w-4 h-4 text-stone-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
-              </div>
-            </div>
-          ) : (
-            /* Expanded view */
-            <div className="flex flex-col gap-2 animate-fade-in">
-              <div className="flex items-center justify-between">
-                <span className="text-[9px] text-stone-500 font-bold uppercase tracking-wider">Searching As</span>
-                <div className="flex items-center gap-2">
-                  <span className="text-[9px] bg-white/5 border border-white/10 px-2 py-0.5 rounded text-amber-400 font-black font-mono">
-                    ⏱ Waiting {elapsed}s
-                  </span>
-                  <svg className="w-4 h-4 text-stone-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-                  </svg>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between border-b border-white/5 pb-2">
-                <h4 className="text-sm font-black text-white">{prefData.displayName}</h4>
-                <span className="text-[9px] px-2 py-0.5 rounded bg-purple-500/10 border border-purple-500/20 text-purple-300 font-bold">
-                  {getModeLabel(activeMatchMode)}
-                </span>
-              </div>
-
-              {prefData.university && (
-                <div className="text-xs text-stone-300 font-semibold flex items-center gap-1">
-                  🎓 {prefData.university}
-                </div>
-              )}
-
-              {/* Active preference chips */}
-              <div className="flex flex-wrap gap-1.5 mt-1 border-t border-white/5 pt-2">
-                {prefData.country && <span className="text-[9px] px-2 py-0.5 bg-white/5 rounded-full text-stone-300 border border-white/5 font-semibold">🌍 {prefData.country}</span>}
-                {prefData.city && <span className="text-[9px] px-2 py-0.5 bg-white/5 rounded-full text-stone-300 border border-white/5 font-semibold">📍 {prefData.city}</span>}
-                {prefData.interests.slice(0, 2).map((item: string) => (
-                  <span key={item} className="text-[9px] px-2 py-0.5 bg-white/5 rounded-full text-stone-300 border border-white/5 font-semibold">#{item}</span>
-                ))}
-              </div>
-
-              {onOpenPreferences && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onOpenPreferences();
-                  }}
-                  className="mt-1 text-center text-[10px] py-1.5 bg-amber-500/10 hover:bg-amber-500/15 border border-amber-500/25 text-amber-400 font-extrabold rounded-xl transition-all animate-fade-in"
-                >
-                  ✏️ Edit Filters
-                </button>
-              )}
-            </div>
-          )}
-        </div>
-      )}
-
       {/* Main Searching Panel */}
-      <div className="relative z-10 text-center flex flex-col items-center max-w-sm w-full mt-24 animate-fade-in">
+      <div className="relative z-10 text-center flex flex-col items-center max-w-sm w-full animate-fade-in my-auto">
         {status === 'PARTNER_LEFT' ? (
           /* Partner Left State */
           <div className="flex flex-col items-center animate-fade-in">
@@ -405,14 +290,14 @@ export function SearchingAnimation({
               Matchmaking Paused
             </p>
             <p className="text-stone-400 text-xs font-semibold tracking-wide">
-              Save preferences to resume matching...
+              Resume matching when you are ready
             </p>
           </div>
         ) : (
           /* Standard Searching State */
           <>
             {/* Apple/Nothing Radar Pulse (Visually changes color per stage) */}
-            <div className="relative mb-8 animate-fade-in">
+            <div className="relative mb-6 animate-fade-in">
               <div className={`absolute inset-0 rounded-full border ${colors.ping} animate-ping`} style={{ animationDuration: '3s' }} />
               <div className="w-24 h-24 rounded-full border border-white/5 bg-white/[0.01] flex items-center justify-center relative shadow-2xl glass">
                 <div className={`absolute w-16 h-16 rounded-full border ${colors.border} ${colors.bg} animate-pulse`} />
@@ -423,12 +308,12 @@ export function SearchingAnimation({
             </div>
 
             {/* Interactive Matching animation digits / words */}
-            <p className="text-stone-100 font-extrabold text-lg tracking-tight mb-1 h-7 overflow-hidden transition-all duration-300">
+            <p className="text-stone-100 font-extrabold text-base tracking-tight mb-1 h-7 overflow-hidden transition-all duration-300">
               {currentStageText}
             </p>
 
             {/* Queue statistics row */}
-            <div className="flex items-center justify-center gap-3 mt-4 text-[10px] text-stone-500 font-semibold uppercase tracking-wider border-t border-white/5 pt-4 w-full max-w-[280px]">
+            <div className="flex items-center justify-center gap-3 mt-2 text-[10px] text-stone-500 font-semibold uppercase tracking-wider border-t border-white/5 pt-3 w-full max-w-[280px] mx-auto">
               <div>Online: <span className="text-stone-300 font-bold font-mono">{stats.online}</span></div>
               <div className="w-1 h-1 rounded-full bg-stone-700" />
               <div>Queue: <span className="text-stone-300 font-bold font-mono">{stats.searching}</span></div>
@@ -438,12 +323,12 @@ export function SearchingAnimation({
 
             {/* Strict countdown / expand search suggest */}
             {activeMatchMode === 'STRICT' && elapsed >= 15 && (
-              <div className="mt-8 p-5 rounded-2xl border border-purple-500/20 bg-purple-950/20 backdrop-blur-xl animate-fade-in text-center flex flex-col items-center w-full">
+              <div className="mt-4 p-4 rounded-2xl border border-purple-500/20 bg-purple-950/20 backdrop-blur-xl animate-fade-in text-center flex flex-col items-center w-full">
                 <div className="text-xs text-purple-300 font-extrabold mb-1">
                   ⏱️ SEARCH TIME: {formatTimer(elapsed)}
                 </div>
                 <h4 className="text-xs font-bold text-purple-300 uppercase tracking-wider mb-1">Still searching...</h4>
-                <p className="text-[11px] text-stone-300 leading-relaxed max-w-[280px] mb-3.5">
+                <p className="text-[11px] text-stone-300 leading-relaxed max-w-[280px] mb-3">
                   Exact match not found yet. You can keep waiting or expand your search to Smart Match.
                 </p>
                 <div className="flex gap-2">
@@ -469,7 +354,7 @@ export function SearchingAnimation({
 
             {/* Long wait time invite suggest (elapsed >= 30 seconds) */}
             {elapsed >= 30 && (
-              <div className="mt-6 p-4 rounded-xl border border-white/5 bg-white/[0.01] animate-fade-in text-center flex flex-col items-center animate-fade-in">
+              <div className="mt-4 p-3 rounded-xl border border-white/5 bg-white/[0.01] animate-fade-in text-center flex flex-col items-center">
                 <p className="text-[11px] text-stone-400 leading-relaxed max-w-[260px]">
                   No compatible users yet. Invite friends to Kaboom TV or keep searching!
                 </p>
@@ -477,7 +362,7 @@ export function SearchingAnimation({
             )}
 
             {/* Nothing Phone dot-jump loader */}
-            <div className="flex items-center justify-center gap-1.5 pt-6">
+            <div className="flex items-center justify-center gap-1.5 pt-4">
               {[0, 1, 2].map((i) => (
                 <div
                   key={i}
@@ -525,6 +410,84 @@ export function SearchingAnimation({
             )}
           </>
         )}
+
+        {/* ── PROFILE INFO CARD & SEARCH CONTROLS ── */}
+        <div className="w-full bg-white/[0.02] border border-white/10 rounded-2xl p-4 md:p-5 backdrop-blur-xl shadow-2xl flex flex-col gap-4 text-left glass mt-6">
+          <div className="flex items-center justify-between border-b border-white/5 pb-3">
+            <div>
+              <span className="text-[10px] text-stone-500 font-bold uppercase tracking-wider block">Searching As</span>
+              <h4 className="text-sm font-black text-white">{prefData.displayName}</h4>
+            </div>
+            
+            <span className="text-[10px] px-2.5 py-1 rounded bg-purple-500/10 border border-purple-500/20 text-purple-300 font-bold self-start">
+              {getModeLabel(activeMatchMode)}
+            </span>
+          </div>
+
+          <div>
+            <span className="text-[10px] text-stone-500 font-bold uppercase tracking-wider block mb-2">Active Filters</span>
+            {/* List of active preferences */}
+            <div className="flex flex-wrap gap-1.5 max-h-[88px] overflow-y-auto pr-1">
+              {prefData.country && <span className="text-[10px] px-2 py-0.5 bg-white/5 rounded-full text-stone-300 border border-white/5 font-semibold">🌍 {prefData.country}</span>}
+              {prefData.city && <span className="text-[10px] px-2 py-0.5 bg-white/5 rounded-full text-stone-300 border border-white/5 font-semibold">📍 {prefData.city}</span>}
+              {prefData.university && <span className="text-[10px] px-2 py-0.5 bg-white/5 rounded-full text-stone-300 border border-white/5 font-semibold">🎓 {prefData.university}</span>}
+              {prefData.interests.length > 0 ? (
+                prefData.interests.map((item: string) => (
+                  <span key={item} className="text-[10px] px-2 py-0.5 bg-white/5 rounded-full text-stone-300 border border-white/5 font-semibold">#{item}</span>
+                ))
+              ) : null}
+              {!prefData.country && !prefData.city && !prefData.university && prefData.interests.length === 0 && (
+                <span className="text-xs text-stone-500 italic">No search filters active. Matching anyone!</span>
+              )}
+            </div>
+          </div>
+
+          {/* Controls */}
+          <div className="flex flex-col gap-2">
+            <div className="grid grid-cols-2 gap-2">
+              {onOpenPreferences && (
+                <button
+                  type="button"
+                  onClick={onOpenPreferences}
+                  className="py-2.5 px-3 rounded-xl bg-white/5 hover:bg-white/10 text-stone-200 hover:text-white font-bold text-xs border border-white/10 transition-all active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  ✏️ Edit Filters
+                </button>
+              )}
+              {isQueuePaused ? (
+                onResumeQueue && (
+                  <button
+                    type="button"
+                    onClick={onResumeQueue}
+                    className="py-2.5 px-3 rounded-xl bg-green-600 hover:bg-green-500 text-white font-bold text-xs transition-all active:scale-95 flex items-center justify-center gap-1.5 shadow-lg shadow-green-600/10 cursor-pointer"
+                  >
+                    ▶️ Resume
+                  </button>
+                )
+              ) : (
+                onPauseQueue && (
+                  <button
+                    type="button"
+                    onClick={onPauseQueue}
+                    className="py-2.5 px-3 rounded-xl bg-amber-500 hover:bg-amber-600 text-stone-950 font-bold text-xs transition-all active:scale-95 flex items-center justify-center gap-1.5 shadow-lg shadow-amber-500/15 cursor-pointer"
+                  >
+                    ⏸️ Pause
+                  </button>
+                )
+              )}
+            </div>
+
+            {onLeaveQueue && (
+              <button
+                type="button"
+                onClick={onLeaveQueue}
+                className="w-full py-2.5 px-3 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 font-bold text-xs border border-red-500/25 transition-all active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer"
+              >
+                🚪 Leave Queue
+              </button>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );

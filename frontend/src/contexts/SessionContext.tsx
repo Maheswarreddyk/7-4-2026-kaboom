@@ -147,6 +147,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         apiService.restoreSession(storedId, storedToken)
           .then((data) => {
             setSession(data);
+            localStorage.setItem('kaboom_session_restored', 'true');
           })
           .catch(() => {
             console.log('[Lifecycle] Session Destroyed (restore failed)');

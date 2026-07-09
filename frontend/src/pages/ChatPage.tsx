@@ -2,7 +2,6 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { useNavigate, useBlocker } from 'react-router-dom';
 import { ChatControls } from '../components/ChatControls.js';
 import { ConnectionStatusBadge } from '../components/ConnectionStatusBadge.js';
-import { FeedbackModal } from '../components/FeedbackModal.js';
 import { LoadingScreen } from '../components/LoadingScreen.js';
 import { ReportModal } from '../components/ReportModal.js';
 import { SearchingAnimation } from '../components/SearchingAnimation.js';
@@ -33,8 +32,11 @@ export function ChatPage() {
   const { session, endSession, startSession, isLoading } = useSession();
   const { showToast } = useToast();
   const [showReportModal, setShowReportModal] = useState(false);
-  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [showPreferenceModal, setShowPreferenceModal] = useState(false);
+  const [showEndCallConfirm, setShowEndCallConfirm] = useState(false);
+  const [showResumeQueueCard, setShowResumeQueueCard] = useState(() => {
+    return localStorage.getItem('kaboom_session_restored') === 'true';
+  });
   const [showWelcomeGate, setShowWelcomeGate] = useState(() => {
     return !localStorage.getItem('kaboom_display_name');
   });
@@ -850,47 +852,57 @@ export function ChatPage() {
     }
   };
 
-  const handleLeave = async () => {
-    pendingLeaveRef.current = true;
-    stopChat();
-    setShowFeedbackModal(true);
+  const getActiveFilters = () => {
+    const list: string[] = [];
+    const uni = localStorage.getItem('kaboom_university');
+    if (uni) list.push(`🎓 ${uni}`);
+
+    const city = localStorage.getItem('kaboom_city');
+    if (city) list.push(`📍 ${city}`);
+
+    const country = localStorage.getItem('kaboom_country');
+    if (country) list.push(`🌍 ${country}`);
+
+    try {
+      const interests = JSON.parse(localStorage.getItem('kaboom_interest_tags') || '[]');
+      interests.forEach((item: string) => list.push(`🎵 ${item}`));
+    } catch {}
+
+    try {
+      const langs = JSON.parse(localStorage.getItem('kaboom_languages') || '[]');
+      langs.forEach((item: string) => list.push(`💬 ${item}`));
+    } catch {}
+
+    return list;
   };
 
-  const finishLeave = async () => {
+  const leaveCurrentExperience = useCallback(async () => {
+    pendingLeaveRef.current = true;
     try {
       setGoodbyePhase('leaving');
-      await new Promise(r => setTimeout(r, 200));
+      await stopChat();
+      await new Promise(r => setTimeout(r, 100));
       setGoodbyePhase('cleaning');
       await endSession();
       setGoodbyePhase('goodbye');
-      await new Promise(r => setTimeout(r, 250));
-    } catch {
-      // Ignore
+      await new Promise(r => setTimeout(r, 150));
+    } catch (e) {
+      console.warn('Error during exit cleanup:', e);
     } finally {
+      localStorage.removeItem('kaboom_session_restored');
+      setElapsedSeconds(0);
+      setGoodbyePhase(null);
+      pendingLeaveRef.current = false;
       navigate('/');
       showToast('info', 'You left the chat');
-      pendingLeaveRef.current = false;
-      setGoodbyePhase(null);
     }
-  };
+  }, [stopChat, endSession, navigate, showToast]);
 
-  const handleFeedbackSubmit = async (rating: number, feedback: string) => {
-    if (session) {
-      try {
-        await apiService.submitFeedback(session.sessionId, rating, feedback || undefined);
-        showToast('success', 'Thanks for your feedback!');
-      } catch {
-        // Ignore
-      }
-    }
-    setShowFeedbackModal(false);
-    await finishLeave();
-  };
-
-  const handleFeedbackClose = async () => {
-    setShowFeedbackModal(false);
-    if (pendingLeaveRef.current) {
-      await finishLeave();
+  const handleLeave = async () => {
+    if (chatState.status === 'CONNECTED' || chatState.partnerSessionId) {
+      setShowEndCallConfirm(true);
+    } else {
+      await leaveCurrentExperience();
     }
   };
 
@@ -1019,6 +1031,8 @@ export function ChatPage() {
             partnerProfile={chatState.partnerProfile}
             isQueuePaused={isQueuePaused}
             onLeaveQueue={handleLeave}
+            onResumeQueue={resumeQueue}
+            onPauseQueue={pauseQueue}
           />
         </div>
       )}
@@ -1127,6 +1141,7 @@ export function ChatPage() {
             onToggleMute={toggleMute}
             onToggleCamera={toggleCamera}
             onLike={handleLike}
+            onLeave={handleLeave}
             disabled={isSearching}
           />
         </div>
@@ -1365,11 +1380,131 @@ export function ChatPage() {
         onClose={() => setShowReportModal(false)}
         onSubmit={handleReport}
       />
-      <FeedbackModal
-        isOpen={showFeedbackModal}
-        onClose={handleFeedbackClose}
-        onSubmit={handleFeedbackSubmit}
-      />
+      {/* ── QUEUE RESUME CARD ───────────────────────────── */}
+      {showResumeQueueCard && (
+        <div 
+          className="absolute inset-0 flex items-center justify-center bg-black/85 backdrop-blur-3xl p-6 text-center animate-fade-in animate-fade-in"
+          style={{ zIndex: 'calc(var(--z-overlay) + 10)' as any }}
+        >
+          <div className="max-w-md w-full bg-stone-900/90 border border-white/10 rounded-3xl p-6 md:p-8 shadow-2xl space-y-6 glass text-left relative animate-spring-in">
+            <div className="flex items-center gap-3 border-b border-white/5 pb-4">
+              <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-xl">
+                🔄
+              </div>
+              <div>
+                <h3 className="text-lg font-black text-white">Search Restored</h3>
+                <p className="text-xs text-stone-400">Previous matchmaking session resumed</p>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <span className="text-[10px] text-stone-500 font-bold uppercase tracking-wider block mb-1">Searching As</span>
+                <span className="text-base font-black text-white">
+                  {localStorage.getItem('kaboom_display_name') || 'Guest'}
+                </span>
+              </div>
+
+              <div>
+                <span className="text-[10px] text-stone-500 font-bold uppercase tracking-wider block mb-1">Mode</span>
+                <span className="text-xs px-2.5 py-1 rounded bg-amber-500/10 border border-amber-500/20 text-amber-400 font-bold">
+                  {(() => {
+                    const m = localStorage.getItem('kaboom_match_mode') || 'RANDOM';
+                    return m === 'STRICT' ? 'Exact Match' : m === 'SMART' ? 'Smart Match' : 'Random Match';
+                  })()}
+                </span>
+              </div>
+
+              <div>
+                <span className="text-[10px] text-stone-500 font-bold uppercase tracking-wider block mb-2">Active Filters</span>
+                {getActiveFilters().length > 0 ? (
+                  <div className="flex flex-wrap gap-2 max-h-[140px] overflow-y-auto pr-1">
+                    {getActiveFilters().map((filter, idx) => (
+                      <span key={idx} className="text-xs px-3 py-1 rounded-full bg-white/5 border border-white/10 text-stone-200 font-medium">
+                        {filter}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-stone-500 italic">No search filters active. Matching anyone!</p>
+                )}
+              </div>
+            </div>
+
+            <div className="pt-2 flex flex-col gap-2">
+              <button
+                onClick={() => {
+                  localStorage.removeItem('kaboom_session_restored');
+                  setShowResumeQueueCard(false);
+                  showToast('success', 'Resumed searching');
+                }}
+                className="w-full py-3 rounded-xl bg-amber-500 hover:bg-amber-600 text-stone-950 font-black text-sm transition-all active:scale-95 text-center shadow-lg shadow-amber-500/10"
+              >
+                Continue Searching
+              </button>
+              <button
+                onClick={async () => {
+                  localStorage.removeItem('kaboom_session_restored');
+                  setShowResumeQueueCard(false);
+                  await pauseQueue();
+                  setShowPreferenceModal(true);
+                }}
+                className="w-full py-3 rounded-xl bg-white/5 hover:bg-white/10 text-white font-bold text-sm border border-white/10 transition-all active:scale-95 text-center"
+              >
+                Edit Filters
+              </button>
+              <button
+                onClick={async () => {
+                  localStorage.removeItem('kaboom_session_restored');
+                  setShowResumeQueueCard(false);
+                  await leaveCurrentExperience();
+                }}
+                className="w-full py-3 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 font-bold text-sm border border-red-500/25 transition-all active:scale-95 text-center"
+              >
+                Leave Queue
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── END CALL CONFIRMATION DIALOG ───────────────── */}
+      {showEndCallConfirm && (
+        <div 
+          className="absolute inset-0 flex items-center justify-center bg-black/80 backdrop-blur-md p-6 text-center animate-fade-in"
+          style={{ zIndex: 'calc(var(--z-overlay) + 20)' as any }}
+        >
+          <div className="max-w-xs w-full bg-stone-900 border border-white/10 rounded-3xl p-6 shadow-2xl space-y-6 text-center animate-spring-in">
+            <div className="space-y-2">
+              <div className="w-12 h-12 rounded-full bg-red-500/10 border border-red-500/20 text-red-500 flex items-center justify-center text-xl mx-auto">
+                📞
+              </div>
+              <h3 className="text-lg font-black text-white">Leave Conversation?</h3>
+              <p className="text-stone-400 text-xs leading-relaxed">
+                You will leave this chat and return to the home screen.
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-2 pt-2">
+              <button
+                onClick={async () => {
+                  setShowEndCallConfirm(false);
+                  await leaveCurrentExperience();
+                }}
+                className="w-full py-3 rounded-xl bg-red-600 hover:bg-red-500 text-white font-black text-xs transition-all active:scale-95"
+              >
+                End Call
+              </button>
+              <button
+                onClick={() => setShowEndCallConfirm(false)}
+                className="w-full py-3 rounded-xl bg-white/5 hover:bg-white/10 text-white font-bold text-xs border border-white/10 transition-all active:scale-95"
+              >
+                Stay
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── SAFE SKIP FLOW OVERLAY ───────────────────────── */}
       {isSkipPending && (
