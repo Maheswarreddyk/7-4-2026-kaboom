@@ -181,10 +181,13 @@ export function QueueCard({
               <button
                 type="button"
                 onClick={(e) => { e.stopPropagation(); onOpenPreferences(); }}
-                className="btn-action-edit flex-1 flex items-center justify-center gap-1 rounded-xl text-[11px] font-extrabold tracking-wide active:scale-95 transition-all cursor-pointer h-11"
+                className="btn-action-edit flex-1 flex items-center justify-center gap-1.5 rounded-xl text-[11px] font-extrabold tracking-wide active:scale-95 transition-all cursor-pointer h-11"
                 title="Edit Search Filters"
               >
-                ✏️ Edit
+                <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                </svg>
+                <span>Edit</span>
               </button>
             )}
             {isQueuePaused ? (
@@ -192,9 +195,12 @@ export function QueueCard({
                 <button
                   type="button"
                   onClick={(e) => { e.stopPropagation(); onResumeQueue(); }}
-                  className="btn-action-pause flex-1 flex items-center justify-center gap-1 rounded-xl text-[11px] font-extrabold tracking-wide active:scale-95 transition-all cursor-pointer h-11"
+                  className="btn-action-pause flex-1 flex items-center justify-center gap-1.5 rounded-xl text-[11px] font-extrabold tracking-wide active:scale-95 transition-all cursor-pointer h-11"
                 >
-                  ▶️ Resume
+                  <svg className="w-3.5 h-3.5 fill-current shrink-0" viewBox="0 0 24 24">
+                    <path d="M8 5v14l11-7z" />
+                  </svg>
+                  <span>Resume</span>
                 </button>
               )
             ) : (
@@ -202,9 +208,12 @@ export function QueueCard({
                 <button
                   type="button"
                   onClick={(e) => { e.stopPropagation(); onPauseQueue(); }}
-                  className="btn-action-pause flex-1 flex items-center justify-center gap-1 rounded-xl text-[11px] font-extrabold tracking-wide active:scale-95 transition-all cursor-pointer h-11"
+                  className="btn-action-pause flex-1 flex items-center justify-center gap-1.5 rounded-xl text-[11px] font-extrabold tracking-wide active:scale-95 transition-all cursor-pointer h-11"
                 >
-                  ⏸ Pause
+                  <svg className="w-3.5 h-3.5 fill-current shrink-0" viewBox="0 0 24 24">
+                    <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
+                  </svg>
+                  <span>Pause</span>
                 </button>
               )
             )}
@@ -213,10 +222,13 @@ export function QueueCard({
               <button
                 type="button"
                 onClick={(e) => { e.stopPropagation(); onLeaveQueue(); }}
-                className="btn-action-cancel flex-1 flex items-center justify-center gap-1 rounded-xl text-[11px] font-extrabold tracking-wide active:scale-95 transition-all cursor-pointer h-11"
+                className="btn-action-cancel flex-1 flex items-center justify-center gap-1.5 rounded-xl text-[11px] font-extrabold tracking-wide active:scale-95 transition-all cursor-pointer h-11"
                 title="Cancel Queue"
               >
-                🚪 Cancel
+                <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+                <span>Cancel</span>
               </button>
             )}
           </div>
