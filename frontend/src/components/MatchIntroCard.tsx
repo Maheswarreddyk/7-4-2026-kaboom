@@ -27,15 +27,6 @@ interface MatchIntroCardProps {
   onDismiss: () => void;
 }
 
-const CHECKLIST_ITEMS = [
-  '✓ Match Found',
-  '✓ Preferences Compared',
-  '✓ Secure Channel Created',
-  '✓ Camera Connected',
-  '✓ Microphone Connected',
-  '🟢 Ready!'
-];
-
 export function MatchIntroCard({
   partnerProfile,
   matchReasonMetadata,
@@ -43,122 +34,74 @@ export function MatchIntroCard({
   isChatOpen,
   onDismiss
 }: MatchIntroCardProps) {
-  const [isVisible, setIsVisible] = useState(false);
   const [isFadingOut, setIsFadingOut] = useState(false);
-  const [allowInteraction, setAllowInteraction] = useState(false);
-  const [checklistIndex, setChecklistIndex] = useState(0);
+  const [dragOffset, setDragOffset] = useState(0);
 
+  const dragStartY = useRef(0);
+  const isDragging = useRef(false);
+  const hasDismissedRef = useRef(false);
   const onDismissRef = useRef(onDismiss);
   onDismissRef.current = onDismiss;
 
-  const hasDismissedRef = useRef(false);
-
-  const triggerDismiss = (reason: 'normal' | 'force' | 'timeout' | 'interrupted') => {
+  const triggerDismiss = (reason: string) => {
     if (hasDismissedRef.current) return;
     hasDismissedRef.current = true;
-
-    if (reason === 'timeout') {
-      console.warn('[PartnerIntro] PartnerIntro Force Closed (Timeout)');
-    } else if (reason === 'interrupted') {
-      console.log('[PartnerIntro] PartnerIntro Interrupted');
-    } else if (reason === 'force') {
-      console.log('[PartnerIntro] PartnerIntro Force Closed');
-    } else {
-      console.log('[PartnerIntro] PartnerIntro Closed');
-    }
+    console.log(`[PartnerIntro] Dismissed via: ${reason}`);
 
     setIsFadingOut(true);
-    setIsVisible(false);
     
     // Unmount overlay after transition duration
     setTimeout(() => {
       onDismissRef.current();
-    }, 350);
+    }, 450);
   };
 
-  // 1. Mount & Entrance Log
+  // 1. Auto dismiss after 5 seconds
   useEffect(() => {
-    console.log('[PartnerIntro] PartnerIntro Opened');
-    const enterTimer = setTimeout(() => setIsVisible(true), 50);
-    
-    // Allow pointer events through after 2 seconds
-    const interactionTimer = setTimeout(() => {
-      setAllowInteraction(true);
-    }, 2000);
-
-    return () => {
-      clearTimeout(enterTimer);
-      clearTimeout(interactionTimer);
-    };
-  }, []);
-
-  // 2. Checklist Animation Loop
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setChecklistIndex((prev) => {
-        if (prev < CHECKLIST_ITEMS.length - 1) {
-          return prev + 1;
-        }
-        clearInterval(interval);
-        return prev;
-      });
-    }, 300);
-    return () => clearInterval(interval);
-  }, []);
-
-  // 3. Status-based auto close (CONNECTED state for 3 seconds)
-  useEffect(() => {
-    if (status === 'CONNECTED') {
-      const timer = setTimeout(() => {
-        triggerDismiss('normal');
-      }, 3000);
-      return () => clearTimeout(timer);
-    }
-  }, [status]);
-
-  // 4. Safety Failsafe Timeout (5 seconds max lifetime)
-  useEffect(() => {
-    const failsafeTimer = setTimeout(() => {
+    const timer = setTimeout(() => {
       triggerDismiss('timeout');
     }, 5000);
-    return () => clearTimeout(failsafeTimer);
+    return () => clearTimeout(timer);
   }, []);
 
-  // 5. Drawer Opened check
+  // 2. Chat drawer opened or connection state interrupted check
   useEffect(() => {
     if (isChatOpen) {
-      triggerDismiss('force');
+      triggerDismiss('drawer_open');
     }
   }, [isChatOpen]);
 
-  // 6. Partner Disconnected / Next / Left state check
   useEffect(() => {
     const activeStates = ['CONNECTED', 'SIGNALING', 'MATCHED', 'NEGOTIATING', 'READY', 'ICE_CONNECTING', 'MEDIA_READY', 'REQUESTING_MEDIA'];
     if (!activeStates.includes(status) || !partnerProfile) {
-      triggerDismiss('interrupted');
+      triggerDismiss('disconnected');
     }
   }, [status, partnerProfile]);
 
-  // 7. Click Anywhere & Escape key down close handlers
-  useEffect(() => {
-    const handleWindowClick = () => {
-      triggerDismiss('force');
-    };
+  // Pointer drag/swipe gestures
+  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    dragStartY.current = e.clientY;
+    isDragging.current = true;
+    e.currentTarget.setPointerCapture(e.pointerId);
+  };
 
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        triggerDismiss('force');
+  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!isDragging.current) return;
+    const deltaY = e.clientY - dragStartY.current;
+    if (deltaY < 0) {
+      setDragOffset(deltaY); // Only allow dragging up
+      if (deltaY < -50) {
+        triggerDismiss('swipe');
       }
-    };
+    }
+  };
 
-    window.addEventListener('click', handleWindowClick);
-    window.addEventListener('keydown', handleKeyDown);
-
-    return () => {
-      window.removeEventListener('click', handleWindowClick);
-      window.removeEventListener('keydown', handleKeyDown);
-    };
-  }, []);
+  const handlePointerUp = () => {
+    isDragging.current = false;
+    if (dragOffset >= -50) {
+      setDragOffset(0); // Snap back to center
+    }
+  };
 
   if (!partnerProfile) return null;
 
@@ -170,88 +113,80 @@ export function MatchIntroCard({
   const matchedBy = matchReasonMetadata?.matchedBy || [];
 
   return (
-    <div className={cn(
-      "fixed inset-0 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md z-[80] select-none transition-opacity duration-300",
-      isFadingOut ? "opacity-0" : "opacity-100",
-      (allowInteraction || isFadingOut) ? "pointer-events-none" : "pointer-events-auto"
-    )}>
-      <div className={cn(
-        "w-full max-w-sm bg-stone-900/95 border border-amber-500/30 rounded-3xl p-6 shadow-2xl transition-all duration-500 ease-out transform",
-        isVisible 
-          ? "opacity-100 translate-y-0 scale-100 rotate-0 shadow-[0_0_50px_rgba(245,158,11,0.15)]" 
-          : "opacity-0 translate-y-12 scale-90 rotate-1 pointer-events-none"
-      )}>
-        {/* Card Header Sparkle */}
-        <div className="flex justify-center mb-4">
-          <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-2xl animate-pulse">
-            ✨
-          </div>
+    <div
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+      style={{
+        transform: `translate(-50%, ${dragOffset}px)`,
+        transition: isDragging.current ? 'none' : 'transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.3s ease',
+        zIndex: 9999,
+      }}
+      className={cn(
+        "fixed top-6 left-1/2 w-[calc(100%-2rem)] max-w-[400px] bg-stone-900/85 backdrop-blur-xl border border-white/10 shadow-2xl rounded-2xl p-4 overflow-hidden select-none cursor-grab active:cursor-grabbing text-left",
+        isFadingOut ? "opacity-0 -translate-y-12 scale-95" : "animate-notification-in"
+      )}
+    >
+      {/* Upper row: Sparkle, title, close */}
+      <div className="flex items-center gap-3">
+        <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-lg shrink-0">
+          ✨
         </div>
-
-        {/* Status/Banner */}
-        <div className="text-center mb-6">
-          <span className="text-[10px] uppercase font-black tracking-widest text-amber-500 bg-amber-500/10 px-3 py-1 rounded-full border border-amber-500/20">
+        <div className="flex-1 min-w-0">
+          <p className="text-[9px] uppercase font-black tracking-widest text-amber-500">
             Match Established
-          </span>
-        </div>
-
-        {/* Identity Details */}
-        <div className="text-center space-y-3.5 mb-6">
-          <h3 className="text-2xl font-black tracking-tight text-stone-100">
+          </p>
+          <h4 className="text-sm font-extrabold text-stone-100 truncate">
             {partnerProfile.displayName || 'Guest'}
-          </h3>
-
-          {partnerProfile.bio && (
-            <p className="text-xs text-stone-300 italic px-2 leading-relaxed">
-              "{partnerProfile.bio}"
-            </p>
-          )}
-
-          <div className="space-y-1 pt-1">
-            {university && (
-              <p className="text-xs text-stone-200 font-extrabold flex items-center justify-center gap-1.5">
-                <span>🎓</span> {university}
-              </p>
-            )}
-
-            {locationStr && (
-              <p className="text-xs text-stone-400 font-medium flex items-center justify-center gap-1.5">
-                <span>📍</span> {locationStr}
-              </p>
-            )}
-          </div>
+          </h4>
         </div>
+        <button 
+          onClick={() => triggerDismiss('close_click')}
+          className="w-7 h-7 rounded-lg hover:bg-white/5 flex items-center justify-center text-stone-400 hover:text-stone-100 transition-colors"
+        >
+          ✕
+        </button>
+      </div>
 
-        {/* Match Reasons List */}
-        {matchedBy.length > 0 && (
-          <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-4 space-y-2.5 mb-6">
-            <span className="text-[9px] uppercase font-black tracking-wider text-stone-500 block mb-1">
-              Matched because:
+      {/* Match Criteria */}
+      <div className="mt-3 space-y-2">
+        <p className="text-[9px] font-black text-stone-400 uppercase tracking-widest">
+          Common interests
+        </p>
+        <div className="flex flex-wrap gap-1.5">
+          {matchedBy.length > 0 ? (
+            matchedBy.map((reason, idx) => (
+              <span
+                key={idx}
+                className="text-[10px] font-extrabold px-2.5 py-1 bg-amber-500/10 border border-amber-500/20 text-amber-400 rounded-lg shadow-sm"
+              >
+                {reason}
+              </span>
+            ))
+          ) : (
+            <span className="text-[10px] font-extrabold px-2.5 py-1 bg-stone-800 border border-white/5 text-stone-300 rounded-lg">
+              🎯 Mutual Match
             </span>
-            {matchedBy.map((reason, idx) => (
-              <div key={idx} className="flex items-start gap-2 text-xs font-bold text-stone-200">
-                <span className="text-emerald-400 font-black">✓</span>
-                <span>{reason}</span>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Connection Checklist */}
-        <div className="bg-stone-950/40 border border-white/5 rounded-2xl p-4 space-y-2 text-left">
-          <span className="text-[9px] uppercase font-black tracking-wider text-stone-500 block mb-1.5">
-            Connection Checklist
-          </span>
-          {CHECKLIST_ITEMS.slice(0, checklistIndex + 1).map((item, idx) => (
-            <div
-              key={idx}
-              className="text-xs font-bold text-stone-300 flex items-center gap-2 animate-fade-in"
-            >
-              <span>{item}</span>
-            </div>
-          ))}
+          )}
+          {university && (
+            <span className="text-[10px] font-extrabold px-2.5 py-1 bg-stone-800/80 border border-white/5 text-stone-300 rounded-lg flex items-center gap-1 shadow-sm">
+              🎓 {university}
+            </span>
+          )}
+          {locationStr && (
+            <span className="text-[10px] font-extrabold px-2.5 py-1 bg-stone-800/80 border border-white/5 text-stone-300 rounded-lg flex items-center gap-1 shadow-sm">
+              📍 {locationStr}
+            </span>
+          )}
         </div>
+      </div>
 
+      {/* Swipe handle indicator */}
+      <div className="w-8 h-1 bg-white/10 rounded-full mx-auto mt-4 mb-0.5 opacity-60" />
+
+      {/* Progress timeline bar */}
+      <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-white/5">
+        <div className="progress-bar-shrink h-full bg-amber-500" />
       </div>
     </div>
   );

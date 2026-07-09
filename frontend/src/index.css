@@ -562,12 +562,24 @@
   to   { transform: scale(1);    opacity: 1; }
 }
 
+@keyframes notification-slide-in {
+  0% { transform: translate(-50%, -30px) scale(0.95); opacity: 0; }
+  100% { transform: translate(-50%, 0) scale(1); opacity: 1; }
+}
+
+@keyframes progress-shrink {
+  0% { width: 100%; }
+  100% { width: 0%; }
+}
+
 .animate-heart-burst  { animation: heartBurst 0.75s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
 .animate-heart-pop    { animation: heartPop   0.45s cubic-bezier(0.16, 1, 0.3, 1); }
 .animate-spring-in    { animation: springIn   0.45s cubic-bezier(0.25, 0.8, 0.25, 1.4) forwards; }
 .animate-slide-up     { animation: slideUp    0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
 .animate-fade-in      { animation: fadeIn     0.45s ease-out forwards; }
 .animate-scale-up     { animation: scaleUp    0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+.animate-notification-in { animation: notification-slide-in 0.45s cubic-bezier(0.25, 1, 0.5, 1) forwards; }
+.progress-bar-shrink  { animation: progress-shrink 5s linear forwards; }
 .animate-slide-in     { animation: slideIn    0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
 
 /* Safe area settings */
