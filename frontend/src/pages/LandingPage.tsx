@@ -835,7 +835,7 @@ export function LandingPage() {
           </div>
 
           {/* Heading - Shifted Upwards slightly to allow the button to command the center */}
-          <h1 className="text-3xl sm:text-5xl md:text-7xl font-black tracking-tight leading-[0.95] text-stone-900 mb-14 max-w-3xl">
+          <h1 className="heading-clamp-h1 font-black tracking-tight text-stone-900 mb-14 max-w-3xl">
             {['YOUR', 'NEXT', 'CONVERSATION', 'STARTS'].map((word, i) => (
               <span
                 key={word}

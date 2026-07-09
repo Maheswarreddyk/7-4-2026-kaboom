@@ -6,6 +6,8 @@ interface RightActionDockProps {
   onToggleChat: () => void;
   onOpenPreferences: () => void;
   onReport: () => void;
+  onLike: () => void;
+  liked: boolean;
   unreadCount?: number;
   isChatOpen?: boolean;
   disabled?: boolean;
@@ -16,6 +18,8 @@ export function RightActionDock({
   onToggleChat,
   onOpenPreferences,
   onReport,
+  onLike,
+  liked,
   unreadCount = 0,
   isChatOpen = false,
   disabled = false,
@@ -92,6 +96,24 @@ export function RightActionDock({
             {unreadCount}
           </span>
         )}
+      </button>
+
+
+      {/* Emoji/Like Heart Trigger */}
+      <button
+        onPointerDown={handlePress(onLike, true)}
+        className={cn(
+          btnSpring,
+          "w-[56px] h-[56px]",
+          liked 
+            ? "bg-gradient-to-r from-red-500 to-pink-500 border-red-400 text-white scale-110 shadow-[0_0_20px_rgba(239,68,68,0.45)]" 
+            : "hover:bg-white/10"
+        )}
+        aria-label="Like partner"
+      >
+        <svg className={cn("w-6 h-6", liked ? "fill-current text-white animate-heart-pop" : "text-white/90")} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+        </svg>
       </button>
 
       {/* Next Skip Button (Largest: 72px) */}

@@ -38,11 +38,11 @@ export function Navbar({ isTransparent = false }: NavbarProps) {
               alt="Kaboom TV Icon" 
               className="w-9 h-9 md:w-10 md:h-10 lg:w-11 lg:h-11 object-contain rounded-[10px] md:rounded-[12px] transition-transform duration-300 group-hover:scale-105" 
             />
-            <div className="flex items-center justify-center p-[4px_8px] rounded-[14px] bg-transparent transition-all duration-300 hover:shadow-[0_0_15px_rgba(255,255,255,0.08)] group-hover:scale-[1.02]">
+            <div className="hidden min-[375px]:flex items-center justify-center p-[4px_8px] rounded-[14px] bg-transparent transition-all duration-300 hover:shadow-[0_0_15px_rgba(255,255,255,0.08)] group-hover:scale-[1.02] shrink-0">
               <img 
                 src={logoKaboom} 
                 alt="Kaboom TV Logo" 
-                className="h-[38px] md:h-[44px] lg:h-[48px] w-auto object-contain"
+                className="h-[24px] min-[375px]:h-[26px] sm:h-[30px] md:h-[36px] lg:h-[44px] w-auto object-contain shrink-0"
               />
             </div>
           </Link>

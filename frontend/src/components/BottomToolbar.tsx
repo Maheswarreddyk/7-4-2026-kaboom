@@ -4,10 +4,8 @@ import { playTapSound, playLikeSound } from '../utils/audio.js';
 interface BottomToolbarProps {
   isMuted: boolean;
   isCameraOff: boolean;
-  liked: boolean;
   onToggleMute: () => void;
   onToggleCamera: () => void;
-  onLike: () => void;
   onLeave: () => void;
   disabled?: boolean;
 }
@@ -15,10 +13,8 @@ interface BottomToolbarProps {
 export function BottomToolbar({
   isMuted,
   isCameraOff,
-  liked,
   onToggleMute,
   onToggleCamera,
-  onLike,
   onLeave,
   disabled = false,
 }: BottomToolbarProps) {
@@ -74,21 +70,7 @@ export function BottomToolbar({
         )}
       </button>
 
-      {/* Like Heart Trigger */}
-      <button
-        onPointerDown={handlePress(onLike, true)}
-        className={cn(
-          "w-16 h-16 min-w-[56px] min-h-[56px] rounded-full border flex items-center justify-center transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] active:scale-90",
-          liked 
-            ? "bg-gradient-to-r from-red-500 to-pink-500 border-red-400 text-white scale-110 shadow-[0_0_20px_rgba(239,68,68,0.45)]" 
-            : "bg-white/5 border-white/10 text-white hover:bg-white/10"
-        )}
-        aria-label="Like partner"
-      >
-        <svg className={cn("w-7 h-7", liked ? "fill-current text-white animate-heart-pop" : "text-white/90")} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-        </svg>
-      </button>
+
 
       {/* Camera Trigger */}
       <button

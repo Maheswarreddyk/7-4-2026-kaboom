@@ -13,6 +13,7 @@ import { MatchIntroCard } from '../components/MatchIntroCard.js';
 import { useSession } from '../contexts/SessionContext.js';
 import { useToast } from '../contexts/ToastContext.js';
 import { useVideoChat } from '../hooks/useVideoChat.js';
+import { useFloatingLayout } from '../contexts/FloatingLayoutContext.js';
 import { apiService } from '../services/api.js';
 import type { ReportReason } from '../types/index.js';
 import { formatDuration } from '../utils/index.js';
@@ -90,6 +91,8 @@ export function ChatPage() {
   const [activeHint, setActiveHint] = useState<string | null>(null);
   const [hintDismissed, setHintDismissed] = useState(false);
   const [showMutualMatchPopup, setShowMutualMatchPopup] = useState(false);
+
+
 
 
 
@@ -239,6 +242,27 @@ export function ChatPage() {
     'SEARCHING', 'REQUEUEING', 'PARTNER_LEFT', 'MATCH_FOUND', 'READY', 'NEGOTIATING', 'ICE_CONNECTING'
   ].includes(chatState.status);
 
+  // Central Responsive Layout Manager hooks
+  const { registerComponent, getStyle } = useFloatingLayout();
+
+  // Register self-preview PiP
+  useEffect(() => {
+    const screenPos = snapCorner.toUpperCase() as any;
+    registerComponent('self-preview', screenPos, 200, 150, true, 'videoLocal');
+  }, [snapCorner, registerComponent]);
+
+  // Register partner info card
+  const showPartnerCard = !!(isConnected && chatState.partnerProfile);
+  useEffect(() => {
+    registerComponent('partner-card', 'BL', 240, 140, showPartnerCard, 'partnerCard');
+  }, [showPartnerCard, registerComponent]);
+
+  // Register temporary chat drawer
+  const showChatDrawer = !!chatState.isChatOpen;
+  useEffect(() => {
+    registerComponent('chat-drawer', 'TR', 360, 400, showChatDrawer, 'chatDrawer');
+  }, [showChatDrawer, registerComponent]);
+
 
 
   // Automatically open the chat drawer for 3 seconds when connected
@@ -291,16 +315,7 @@ export function ChatPage() {
     };
 
     if (isMobile) {
-      if (ratio >= 1) {
-        return {
-          ...baseStyles,
-          width: '90vw',
-          height: `calc(90vw / ${ratio})`,
-          maxWidth: '100%',
-          maxHeight: '80vh'
-        };
-      }
-      return { width: '100%', height: '100%', left: 0, top: 0, transform: 'none', borderRadius: 0 };
+      return { width: '100%', height: '100%', left: 0, top: 0, transform: 'none', borderRadius: 0, border: 'none' };
     } else {
       if (ratio < 1) {
         return {
@@ -328,7 +343,7 @@ export function ChatPage() {
           stream={isPlacementsSwapped ? localStream : remoteStream}
           mirrored={isPlacementsSwapped}
           muted={isPlacementsSwapped}
-          fullscreen={chatState.isFullscreen}
+          fullscreen={isMobile || chatState.isFullscreen}
           onAspectRatioChange={isPlacementsSwapped ? handleLocalAspectRatioChange : handleRemoteAspectRatioChange}
           placeholder={isSearching ? 'Looking for a partner...' : 'Partner video will appear here'}
           frozen={isPlacementsSwapped ? isSkipPending : false}
@@ -353,10 +368,9 @@ export function ChatPage() {
         {/* Partner Card overlay inside video borders */}
         {isConnected && chatState.partnerProfile && (
           <div 
-            className="absolute z-20 flex flex-col gap-1 p-3.5 rounded-2xl border border-white/10 bg-black/40 backdrop-blur-xl max-w-[240px] shadow-2xl animate-fade-in pointer-events-none select-none"
+            className="absolute flex flex-col gap-1 p-3.5 rounded-2xl border border-white/10 bg-black/40 backdrop-blur-xl max-w-[240px] shadow-2xl animate-fade-in pointer-events-none select-none"
             style={{
-              left: '16px',
-              bottom: '16px',
+              ...getStyle('partner-card'),
             }}
           >
             <div className="flex items-center gap-1.5 flex-wrap">
@@ -1092,13 +1106,7 @@ export function ChatPage() {
           width: isMobile ? '28vw' : '200px',
           height: isMobile ? `calc(28vw / ${pipAspectRatio || 1.33})` : `calc(200px / ${pipAspectRatio || 1.33})`,
           transform: `translate(${dragOffset.x}px, ${dragOffset.y}px) scale(${isDragging ? pipScale * 1.03 : pipScale})`,
-          bottom: undefined,
-          right: undefined,
-          ...(snapCorner === 'br' ? { bottom: isMobile ? '198px' : '100px', right: '24px' } : {}),
-          ...(snapCorner === 'bl' ? { bottom: isMobile ? '198px' : '100px', left: '24px'  } : {}),
-          ...(snapCorner === 'tr' ? { top: isMobile ? 'calc(var(--header-h) + 54px)' : 'calc(var(--header-h) + 16px)', right: '24px' } : {}),
-          ...(snapCorner === 'tl' ? { top: isMobile ? 'calc(var(--header-h) + 54px)' : 'calc(var(--header-h) + 16px)', left: '24px' } : {}),
-          zIndex: 'var(--z-controls)' as any,
+          ...getStyle('self-preview'),
         }}
         onMouseDown={handleMouseDown}
         onTouchStart={handleTouchStart}
@@ -1130,6 +1138,8 @@ export function ChatPage() {
               setShowPreferenceModal(true);
             }}
             onReport={() => setShowReportModal(true)}
+            onLike={handleLike}
+            liked={chatState.liked || false}
             unreadCount={chatState.unreadCount}
             isChatOpen={chatState.isChatOpen || false}
             disabled={isSearching}
@@ -1137,10 +1147,8 @@ export function ChatPage() {
           <BottomToolbar
             isMuted={chatState.isMuted}
             isCameraOff={chatState.isCameraOff}
-            liked={chatState.liked || false}
             onToggleMute={toggleMute}
             onToggleCamera={toggleCamera}
-            onLike={handleLike}
             onLeave={handleLeave}
             disabled={isSearching}
           />

@@ -2,6 +2,7 @@ import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import { Layout } from './components/Layout.js';
 import { SessionProvider } from './contexts/SessionContext.js';
 import { ToastProvider } from './contexts/ToastContext.js';
+import { FloatingLayoutProvider } from './contexts/FloatingLayoutContext.js';
 import { AboutPage } from './pages/AboutPage.js';
 import { ChatPage } from './pages/ChatPage.js';
 import { ContactPage } from './pages/ContactPage.js';
@@ -38,7 +39,9 @@ export default function App() {
   return (
     <ToastProvider>
       <SessionProvider>
-        <RouterProvider router={router} />
+        <FloatingLayoutProvider>
+          <RouterProvider router={router} />
+        </FloatingLayoutProvider>
       </SessionProvider>
     </ToastProvider>
   );
