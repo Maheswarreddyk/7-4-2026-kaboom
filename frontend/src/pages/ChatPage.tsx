@@ -1125,6 +1125,7 @@ export function ChatPage() {
           "transition-all duration-300 pointer-events-auto",
           !controlsVisible && "opacity-0 scale-95 pointer-events-none"
         )}
+        style={getStyle('controls-dock')}
       >
         <AdaptiveControlsDock
           isMuted={chatState.isMuted}

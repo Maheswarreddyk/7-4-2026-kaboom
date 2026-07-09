@@ -51,122 +51,125 @@
   --safe-area-inset-left: env(safe-area-inset-left, 16px);
   --safe-area-inset-right: env(safe-area-inset-right, 16px);
 
-  /* ── Responsive Design Tokens — 8-step smooth continuous scaling ──
-   * Each step adjusts incrementally so there are no visual jumps.
-   * Desktop (≥1440px) → Large Laptop → Laptop → Tablet-Large →
-   * Tablet → Large Mobile → Mobile → Small Mobile → Tiny Mobile
-   */
-  --control-size: 50px;
-  --dock-gap: 14px;
-  --dock-padding: 18px 24px;
-  --queue-card-width: 360px;
+  /* ── Continuous Responsive Design Tokens ── */
+  --control-size: 60px;
+  --dock-gap: 12px;
+  --dock-padding: 14px 20px;
+  --queue-card-width: 320px;
   --icon-size: 22px;
-  --font-small: 12px;
-  --font-medium: 14px;
-  --font-large: 18px;
+  --spacing-m: 16px;
   --radius-large: 24px;
   --shadow-elevation: 0 24px 64px -12px rgba(0,0,0,0.85);
-  /* Header heights */
+
+  /* Typography tokens */
+  --font-heading: 1.5rem;
+  --font-large: 1.1rem;
+  --font-medium: 0.95rem;
+  --font-small: 0.8rem;
+  --font-tiny: 0.675rem;
+
   --header-h: var(--header-h-desktop);
 }
 
-/* ── Large Laptop (≤1400px) ── */
-@media (max-width: 1400px) {
-  :root {
-    --control-size: 48px;
-    --dock-gap: 12px;
-    --dock-padding: 16px 20px;
-    --queue-card-width: 340px;
-    --icon-size: 20px;
-  }
+/* =====================================================
+   CENTRALIZED LAYOUT MODE DEFINITIONS (Central Source of Truth)
+   ===================================================== */
+.layout-mode-FULL {
+  --control-size: 72px;
+  --dock-gap: 16px;
+  --dock-padding: 20px 28px;
+  --queue-card-width: 360px;
+  --icon-size: 28px;
+  --spacing-m: 20px;
+  --font-heading: 2rem;
+  --font-large: 1.25rem;
+  --font-medium: 1rem;
+  --font-small: 0.875rem;
+  --font-tiny: 0.75rem;
+  --header-h: var(--header-h-desktop);
 }
 
-/* ── Laptop (≤1200px) ── */
-@media (max-width: 1200px) {
-  :root {
-    --control-size: 45px;
-    --dock-gap: 10px;
-    --dock-padding: 14px 18px;
-    --queue-card-width: 310px;
-    --icon-size: 19px;
-    --font-small: 11px;
-    --font-medium: 13px;
-    --font-large: 16px;
-  }
+.layout-mode-COMPACT {
+  --control-size: 68px;
+  --dock-gap: 14px;
+  --dock-padding: 16px 24px;
+  --queue-card-width: 340px;
+  --icon-size: 26px;
+  --spacing-m: 16px;
+  --font-heading: 1.75rem;
+  --font-large: 1.15rem;
+  --font-medium: 0.95rem;
+  --font-small: 0.825rem;
+  --font-tiny: 0.7rem;
+  --header-h: var(--header-h-desktop);
 }
 
-/* ── Small Laptop (≤1024px) ── */
-@media (max-width: 1024px) {
-  :root {
-    --control-size: 43px;
-    --dock-gap: 9px;
-    --dock-padding: 12px 16px;
-    --queue-card-width: 290px;
-    --icon-size: 18px;
-    --header-h: var(--header-h-tablet);
-  }
+.layout-mode-CONDENSED {
+  --control-size: 64px;
+  --dock-gap: 12px;
+  --dock-padding: 14px 20px;
+  --queue-card-width: 320px;
+  --icon-size: 24px;
+  --spacing-m: 14px;
+  --font-heading: 1.5rem;
+  --font-large: 1.05rem;
+  --font-medium: 0.9rem;
+  --font-small: 0.8rem;
+  --font-tiny: 0.675rem;
+  --header-h: var(--header-h-tablet);
 }
 
-/* ── Tablet Large (≤900px) ── */
-@media (max-width: 900px) {
-  :root {
-    --control-size: 42px;
-    --dock-gap: 8px;
-    --dock-padding: 11px 14px;
-    --queue-card-width: 280px;
-    --icon-size: 17px;
-  }
+.layout-mode-STACKED {
+  --control-size: 60px;
+  --dock-gap: 10px;
+  --dock-padding: 12px 16px;
+  --queue-card-width: 300px;
+  --icon-size: 22px;
+  --spacing-m: 12px;
+  --font-heading: 1.35rem;
+  --font-large: 0.95rem;
+  --font-medium: 0.85rem;
+  --font-small: 0.75rem;
+  --font-tiny: 0.65rem;
+  --header-h: var(--header-h-tablet);
 }
 
-/* ── Tablet (≤768px) ── */
-@media (max-width: 768px) {
-  :root {
-    --control-size: 40px;
-    --dock-gap: 7px;
-    --dock-padding: 10px 12px;
-    --queue-card-width: 100%;
-    --icon-size: 16px;
-    --font-small: 10px;
-    --font-medium: 12px;
-    --font-large: 14px;
-    --header-h: var(--header-h-tablet);
-  }
+.layout-mode-MINIMAL {
+  --control-size: 56px;
+  --dock-gap: 8px;
+  --dock-padding: 10px 12px;
+  --queue-card-width: 280px;
+  --icon-size: 20px;
+  --spacing-m: 10px;
+  --font-heading: 1.2rem;
+  --font-large: 0.9rem;
+  --font-medium: 0.8rem;
+  --font-small: 0.7rem;
+  --font-tiny: 0.625rem;
+  --header-h: var(--header-h-mobile);
 }
 
-/* ── Large Mobile (≤640px) ── */
-@media (max-width: 640px) {
-  :root {
-    --control-size: 38px;
-    --dock-gap: 6px;
-    --dock-padding: 9px 10px;
-    --icon-size: 15px;
-    --header-h: var(--header-h-mobile);
-  }
+.layout-mode-MOBILE {
+  --control-size: 48px;
+  --dock-gap: 6px;
+  --dock-padding: 8px;
+  --queue-card-width: 100%;
+  --icon-size: 18px;
+  --spacing-m: 8px;
+  --font-heading: 1.1rem;
+  --font-large: 0.85rem;
+  --font-medium: 0.75rem;
+  --font-small: 0.65rem;
+  --font-tiny: 0.6rem;
+  --header-h: var(--header-h-mobile);
 }
 
-/* ── Mobile (≤480px) ── */
-@media (max-width: 480px) {
-  :root {
-    --control-size: 36px;
-    --dock-gap: 5px;
-    --dock-padding: 8px;
-    --icon-size: 14px;
-    --header-h: var(--header-h-mobile);
-  }
-}
-
-/* ── Small Mobile (≤360px) ── */
-@media (max-width: 360px) {
-  :root {
-    --control-size: 34px;
-    --dock-gap: 4px;
-    --dock-padding: 6px;
-    --icon-size: 13px;
-    --font-small: 9px;
-    --font-medium: 11px;
-    --font-large: 13px;
-  }
-}
+/* Custom typography token classes */
+.text-heading { font-size: var(--font-heading) !important; line-height: 1.2; }
+.text-large { font-size: var(--font-large) !important; line-height: 1.3; }
+.text-medium { font-size: var(--font-medium) !important; line-height: 1.4; }
+.text-small { font-size: var(--font-small) !important; line-height: 1.4; }
+.text-tiny { font-size: var(--font-tiny) !important; line-height: 1.5; }
 
 /* =====================================================
    BASE RESET & LIGHT LEAKS

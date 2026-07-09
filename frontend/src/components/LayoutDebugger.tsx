@@ -1,15 +1,17 @@
 import { useState, useEffect } from 'react';
 import { useResponsiveLayout } from '../hooks/useResponsiveLayout.js';
+import { useFloatingLayout } from '../contexts/FloatingLayoutContext.js';
 
 /**
- * LayoutDebugger — Development HUD
- * Toggle: Ctrl+Alt+D
- * Shows: all responsive state, viewport size, safe areas, layout modes
- * Color codes: green = normal, yellow = compact mode, red = potential collision zones
+ * LayoutDebugger — Toggle with Ctrl+Alt+D
+ * Shows viewport metrics, unified layout mode, sub-modes, safe area,
+ * active layout collisions, and horizontal scroll overflows.
  */
 export function LayoutDebugger() {
   const [visible, setVisible] = useState(false);
   const layout = useResponsiveLayout();
+  const { collisionCount } = useFloatingLayout();
+  const [hasOverflow, setHasOverflow] = useState(false);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -21,27 +23,29 @@ export function LayoutDebugger() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
+  useEffect(() => {
+    if (!visible) return;
+    const checkOverflow = () => {
+      setHasOverflow(document.documentElement.scrollWidth > window.innerWidth);
+    };
+    checkOverflow();
+    window.addEventListener('resize', checkOverflow);
+    return () => window.removeEventListener('resize', checkOverflow);
+  }, [visible]);
+
   if (!visible) return null;
 
-  // Color-code modes for quick visual scanning
-  const modeColor = (mode: string) => {
-    if (mode.includes('mobile-xs') || mode.includes('mobile')) return 'text-yellow-400';
-    if (mode.includes('tablet')) return 'text-blue-400';
-    if (mode.includes('compact') || mode.includes('small')) return 'text-amber-400';
-    return 'text-green-400';
+  const getModeColor = (mode: string) => {
+    switch (mode) {
+      case 'FULL': return 'text-green-400';
+      case 'COMPACT': return 'text-emerald-400';
+      case 'CONDENSED': return 'text-blue-400';
+      case 'STACKED': return 'text-purple-400';
+      case 'MINIMAL': return 'text-amber-400';
+      case 'MOBILE': return 'text-red-400 font-bold';
+      default: return 'text-stone-300';
+    }
   };
-
-  // Heuristic collision check — warn when two z-layers may be fighting
-  const collisionWarnings: string[] = [];
-  if (layout.width < 420 && layout.height < 650) {
-    collisionWarnings.push('⚠️ Very small viewport — QueueCard may be minimal');
-  }
-  if (layout.dockMode === 'mobile' && layout.height < 700) {
-    collisionWarnings.push('⚠️ Short mobile viewport — dock buttons may overlap');
-  }
-  if (layout.compactMode) {
-    collisionWarnings.push('⚠️ Compact mode active (height<600 or width<360)');
-  }
 
   return (
     <div
@@ -50,59 +54,72 @@ export function LayoutDebugger() {
     >
       {/* Header */}
       <div className="px-3 py-2 flex items-center justify-between border-b border-white/10">
-        <span className="text-white font-bold text-[11px]">📐 Layout HUD</span>
+        <span className="text-white font-bold text-[11px]">📐 Responsive HUD</span>
         <span className="text-[9px] text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded animate-pulse">ACTIVE</span>
       </div>
 
-      <div className="px-3 py-2 space-y-1">
-        {/* Viewport */}
+      <div className="px-3 py-2 space-y-1 text-stone-300">
         <div className="flex justify-between">
           <span className="text-stone-500">Viewport</span>
-          <span className={modeColor(layout.viewport)}>{layout.viewport}</span>
+          <span>{layout.width} × {layout.height}px</span>
         </div>
-        <div className="flex justify-between">
-          <span className="text-stone-500">Size</span>
-          <span className="text-stone-200">{layout.width}×{layout.height}px</span>
-        </div>
-        <div className="flex justify-between">
-          <span className="text-stone-500">Orientation</span>
-          <span className="text-stone-300">{layout.orientation}</span>
-        </div>
-        <div className="flex justify-between">
-          <span className="text-stone-500">Touch</span>
-          <span className={layout.touchDevice ? 'text-yellow-400' : 'text-stone-400'}>{layout.touchDevice ? 'Yes' : 'No'}</span>
+        
+        {/* Unified Layout Mode */}
+        <div className="flex justify-between font-bold">
+          <span className="text-stone-500">Layout Mode</span>
+          <span className={getModeColor(layout.layoutMode)}>{layout.layoutMode}</span>
         </div>
 
         {/* Separator */}
         <div className="border-t border-white/5 my-1" />
 
-        {/* Layout Modes */}
         <div className="flex justify-between">
-          <span className="text-stone-500">Queue Card</span>
-          <span className={modeColor(layout.queueCardMode)}>{layout.queueCardMode}</span>
+          <span className="text-stone-500">Queue Mode</span>
+          <span className="text-stone-300">{layout.queueCardMode}</span>
         </div>
         <div className="flex justify-between">
-          <span className="text-stone-500">Dock</span>
-          <span className={modeColor(layout.dockMode)}>{layout.dockMode}</span>
+          <span className="text-stone-500">Dock Mode</span>
+          <span className="text-stone-300">{layout.dockMode}</span>
+        </div>
+        <div className="flex justify-between font-mono">
+          <span className="text-stone-500">Navbar Mode</span>
+          <span className="text-stone-300">{layout.navbarMode}</span>
         </div>
         <div className="flex justify-between">
-          <span className="text-stone-500">Navbar</span>
-          <span className={layout.navbarMode === 'collapsed' ? 'text-yellow-400' : 'text-green-400'}>{layout.navbarMode}</span>
-        </div>
-        <div className="flex justify-between">
-          <span className="text-stone-500">Compact</span>
-          <span className={layout.compactMode ? 'text-red-400' : 'text-stone-400'}>{layout.compactMode ? 'YES' : 'No'}</span>
-        </div>
-        <div className="flex justify-between">
-          <span className="text-stone-500">isMobile</span>
-          <span className={layout.isMobile ? 'text-yellow-400' : 'text-stone-400'}>{layout.isMobile ? 'Yes' : 'No'}</span>
+          <span className="text-stone-500">Compact Height</span>
+          <span className={layout.compactMode ? 'text-amber-400 font-bold' : 'text-stone-500'}>
+            {layout.compactMode ? 'Yes' : 'No'}
+          </span>
         </div>
 
         {/* Separator */}
         <div className="border-t border-white/5 my-1" />
 
-        {/* Safe areas */}
-        <div className="text-stone-500 text-[9px] uppercase tracking-wider">Safe Insets</div>
+        {/* Floating Layout Collisions */}
+        <div className="flex justify-between">
+          <span className="text-stone-500">Collisions</span>
+          <span className={collisionCount > 0 ? 'text-red-400 font-extrabold animate-pulse' : 'text-green-400'}>
+            {collisionCount}
+          </span>
+        </div>
+
+        {/* Safe Area Status */}
+        <div className="flex justify-between">
+          <span className="text-stone-500">Safe Areas</span>
+          <span className="text-green-400">OK</span>
+        </div>
+
+        {/* Horizontal Scroll Overflow check */}
+        <div className="flex justify-between">
+          <span className="text-stone-500">Overflow</span>
+          <span className={hasOverflow ? 'text-red-400 font-extrabold animate-bounce' : 'text-green-400'}>
+            {hasOverflow ? 'YES (Horiz Scroll)' : 'No'}
+          </span>
+        </div>
+
+        {/* Safe Area list */}
+        <div className="border-t border-white/5 my-1 pt-1" />
+        <div className="text-stone-500 text-[8px] uppercase tracking-wider mb-1">Safe Insets</div>
         <div className="grid grid-cols-2 gap-x-3 gap-y-0.5 text-[9px]">
           <div className="flex justify-between"><span className="text-stone-600">Top</span><span className="text-stone-300">{layout.safeArea.top}px</span></div>
           <div className="flex justify-between"><span className="text-stone-600">Bottom</span><span className="text-stone-300">{layout.safeArea.bottom}px</span></div>
@@ -110,32 +127,20 @@ export function LayoutDebugger() {
           <div className="flex justify-between"><span className="text-stone-600">Right</span><span className="text-stone-300">{layout.safeArea.right}px</span></div>
         </div>
 
-        {/* Collision warnings */}
-        {collisionWarnings.length > 0 && (
-          <>
-            <div className="border-t border-red-500/20 my-1" />
-            <div className="text-red-400 text-[9px] space-y-0.5">
-              {collisionWarnings.map((w, i) => (
-                <div key={i}>{w}</div>
-              ))}
-            </div>
-          </>
-        )}
-
-        {/* Breakpoint ruler */}
-        <div className="border-t border-white/5 mt-1 pt-1">
-          <div className="text-stone-600 text-[9px] mb-1">Breakpoints</div>
+        {/* Breakpoint progress ruler */}
+        <div className="border-t border-white/5 mt-2 pt-1.5">
+          <div className="text-stone-600 text-[8px] mb-1">Active Breakpoint Bounds</div>
           <div className="flex gap-0.5">
-            {[320, 420, 560, 720, 900, 1100, 1400].map((bp) => (
+            {[320, 560, 768, 1024, 1200, 1440].map((bp) => (
               <div
                 key={bp}
                 className={`flex-1 h-1 rounded-full ${layout.width >= bp ? 'bg-emerald-500' : 'bg-stone-700'}`}
-                title={`${bp}px`}
+                title={`Breakpoint threshold: ${bp}px`}
               />
             ))}
           </div>
           <div className="flex justify-between text-[8px] text-stone-600 mt-0.5">
-            <span>320</span><span>560</span><span>900</span><span>1400</span>
+            <span>320</span><span>768</span><span>1200</span><span>1440</span>
           </div>
         </div>
       </div>

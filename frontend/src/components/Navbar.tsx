@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from '../utils/index.js';
+import { useResponsiveLayout } from '../hooks/useResponsiveLayout.js';
 import logoKaboom from '../../images/logo_kaboom.png';
 import iconKaboom from '../../images/icon_kaboom.png';
 
@@ -19,6 +20,17 @@ interface NavbarProps {
 export function Navbar({ isTransparent = false }: NavbarProps) {
   const location = useLocation();
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const { layoutMode } = useResponsiveLayout();
+
+  // Determine visibility states based on LayoutMode
+  const showFullLogo = layoutMode === 'FULL' || layoutMode === 'COMPACT';
+  const showSmallerLogo = layoutMode === 'CONDENSED' || layoutMode === 'STACKED' || layoutMode === 'MINIMAL';
+  const showIconOnly = layoutMode === 'MOBILE';
+
+  // Desktop Links are visible in FULL, COMPACT, CONDENSED, STACKED modes
+  const showNavLinks = layoutMode === 'FULL' || layoutMode === 'COMPACT' || layoutMode === 'CONDENSED' || layoutMode === 'STACKED';
+  // Hamburger menu is shown in MINIMAL and MOBILE modes
+  const showHamburger = layoutMode === 'MINIMAL' || layoutMode === 'MOBILE';
 
   return (
     <>
@@ -31,69 +43,87 @@ export function Navbar({ isTransparent = false }: NavbarProps) {
       >
         <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 flex items-center justify-between h-full">
 
-          {/* Logo */}
-          <Link to="/" className="flex items-center gap-[14px] group shrink-0">
+          {/* Logo Brand Segment */}
+          <Link to="/" className="flex items-center gap-[10px] group shrink-0">
+            {/* Brand Icon (always visible) */}
             <img 
               src={iconKaboom} 
               alt="Kaboom TV Icon" 
               className="object-contain rounded-[10px] transition-transform duration-300 group-hover:scale-105" 
-              style={{ width: 'clamp(28px, 3vw, 44px)', height: 'clamp(28px, 3vw, 44px)' }}
+              style={{
+                width: showFullLogo ? '40px' : showSmallerLogo ? '32px' : '28px',
+                height: showFullLogo ? '40px' : showSmallerLogo ? '32px' : '28px',
+              }}
             />
-            <div className="hidden min-[375px]:flex items-center justify-center p-[4px_8px] rounded-[14px] bg-transparent transition-all duration-300 hover:shadow-[0_0_15px_rgba(255,255,255,0.08)] group-hover:scale-[1.02] shrink-0">
-              <img 
-                src={logoKaboom} 
-                alt="Kaboom TV Logo" 
-                className="w-auto object-contain shrink-0"
-                style={{ height: 'clamp(24px, 2.5vw, 44px)' }}
-              />
-            </div>
+            {/* Brand Text Logo (hidden in MOBILE mode) */}
+            {!showIconOnly && (
+              <div 
+                className="flex items-center justify-center p-[4px_8px] rounded-[14px] bg-transparent transition-all duration-300 hover:shadow-[0_0_15px_rgba(255,255,255,0.08)] group-hover:scale-[1.02] shrink-0"
+                style={{
+                  opacity: showSmallerLogo ? 0.85 : 1,
+                  transform: showSmallerLogo ? 'scale(0.9)' : 'scale(1)',
+                  transformOrigin: 'left center'
+                }}
+              >
+                <img 
+                  src={logoKaboom} 
+                  alt="Kaboom TV Logo" 
+                  className="w-auto object-contain shrink-0"
+                  style={{ height: showFullLogo ? '32px' : '24px' }}
+                />
+              </div>
+            )}
           </Link>
 
-          {/* Desktop Nav */}
-          <nav className="hidden lg:flex items-center gap-1" aria-label="Main navigation">
-            {NAV_LINKS.map((link) => (
+          {/* Desktop Nav links (FULL, COMPACT, CONDENSED, STACKED) */}
+          {showNavLinks && (
+            <nav className="flex items-center gap-1.5" aria-label="Main navigation">
+              {NAV_LINKS.map((link) => (
+                <Link
+                  key={link.to}
+                  to={link.to}
+                  className={cn(
+                    'px-3 py-2 rounded-lg text-sm font-semibold transition-colors duration-150 whitespace-nowrap',
+                    location.pathname === link.to
+                      ? 'text-white bg-white/10'
+                      : 'text-white/60 hover:text-white hover:bg-white/5'
+                  )}
+                >
+                  {link.label}
+                </Link>
+              ))}
               <Link
-                key={link.to}
-                to={link.to}
-                className={cn(
-                  'px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-150 whitespace-nowrap',
-                  location.pathname === link.to
-                    ? 'text-white bg-white/10'
-                    : 'text-white/60 hover:text-white hover:bg-white/5'
-                )}
+                to="/chat"
+                className="btn-primary text-sm px-4 py-2 ml-2 rounded-xl"
+                id="nav-start-chat"
               >
-                {link.label}
+                Start Chat
               </Link>
-            ))}
-            <Link
-              to="/chat"
-              className="btn-primary text-sm px-4 py-2 ml-2 rounded-xl"
-              id="nav-start-chat"
-            >
-              Start Chat
-            </Link>
-          </nav>
+            </nav>
+          )}
 
-          {/* Mobile: Start Chat + Hamburger */}
-          <div className="flex lg:hidden items-center gap-2">
-            <Link
-              to="/chat"
-              className="btn-primary text-sm px-3 py-2 rounded-xl"
-              id="nav-start-chat-mobile"
-            >
-              Start Chat
-            </Link>
-            <button
-              aria-label="Open menu"
-              aria-expanded={drawerOpen}
-              onClick={() => setDrawerOpen(true)}
-              className="flex flex-col gap-[5px] p-2 rounded-lg hover:bg-white/10 transition-colors"
-            >
-              <span className="w-5 h-0.5 bg-white/80 rounded-full block" />
-              <span className="w-5 h-0.5 bg-white/80 rounded-full block" />
-              <span className="w-5 h-0.5 bg-white/80 rounded-full block" />
-            </button>
-          </div>
+          {/* Mobile/Hamburger Nav Segment (MINIMAL, MOBILE) */}
+          {showHamburger && (
+            <div className="flex items-center gap-2">
+              <Link
+                to="/chat"
+                className="btn-primary text-xs px-3 py-2 rounded-xl"
+                id="nav-start-chat-mobile"
+              >
+                Start Chat
+              </Link>
+              <button
+                aria-label="Open menu"
+                aria-expanded={drawerOpen}
+                onClick={() => setDrawerOpen(true)}
+                className="flex flex-col gap-[5px] p-2 rounded-lg hover:bg-white/10 transition-colors"
+              >
+                <span className="w-5 h-0.5 bg-white/80 rounded-full block" />
+                <span className="w-5 h-0.5 bg-white/80 rounded-full block" />
+                <span className="w-5 h-0.5 bg-white/80 rounded-full block" />
+              </button>
+            </div>
+          )}
 
         </div>
       </header>

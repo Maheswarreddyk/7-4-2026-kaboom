@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { QueueCard } from './QueueCard.js';
+import { useFloatingLayout } from '../contexts/FloatingLayoutContext.js';
 
 interface SearchingAnimationProps {
   queuePosition?: number;
@@ -25,6 +26,14 @@ export function SearchingAnimation({
   onResumeQueue,
   onPauseQueue
 }: SearchingAnimationProps) {
+  const { registerComponent, unregisterComponent, getStyle, layoutMode } = useFloatingLayout();
+
+  useEffect(() => {
+    const w = layoutMode === 'MOBILE' || layoutMode === 'MINIMAL' ? 440 : 340;
+    const h = layoutMode === 'MOBILE' || layoutMode === 'MINIMAL' ? 110 : 260;
+    registerComponent('queue-card', 'BC', w, h, true, 'queueCard');
+    return () => unregisterComponent('queue-card');
+  }, [layoutMode, registerComponent, unregisterComponent]);
 
   const [elapsed, setElapsed] = useState(0);
   const [animationStep, setAnimationStep] = useState(0);
@@ -419,11 +428,13 @@ export function SearchingAnimation({
         </div>
 
         {/* 
-         * QUEUE CARD — always anchored at bottom, shrink-0 so it never gets cut off.
-         * This is priority 1 — never disappears regardless of viewport height.
-         * The radar section above flexes to use whatever space remains.
+         * QUEUE CARD — positioned absolute at Bottom Center (BC) slot by layout manager.
+         * Dynamically reflows/snaps based on safe-area constraints and collision zones.
          */}
-        <div className="shrink-0 w-full px-4 pb-6 pt-1">
+        <div 
+          className="shrink-0 w-full px-4 pb-6 pt-1 flex justify-center"
+          style={getStyle('queue-card')}
+        >
           <QueueCard
             elapsed={elapsed}
             matchMode={activeMatchMode}
