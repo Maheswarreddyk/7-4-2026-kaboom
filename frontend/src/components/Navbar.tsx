@@ -22,15 +22,15 @@ export function Navbar({ isTransparent = false }: NavbarProps) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const { layoutMode } = useResponsiveLayout();
 
-  // Determine visibility states based on LayoutMode
-  const showFullLogo = layoutMode === 'FULL' || layoutMode === 'COMPACT';
-  const showSmallerLogo = layoutMode === 'CONDENSED' || layoutMode === 'STACKED' || layoutMode === 'MINIMAL';
-  const showIconOnly = layoutMode === 'MOBILE';
+  // Determine visibility states based on LayoutMode space states
+  const showFullLogo = layoutMode === 'Comfortable';
+  const showSmallerLogo = layoutMode === 'Medium' || layoutMode === 'Compact';
+  const showIconOnly = layoutMode === 'Minimal';
 
-  // Desktop Links are visible in FULL, COMPACT, CONDENSED, STACKED modes
-  const showNavLinks = layoutMode === 'FULL' || layoutMode === 'COMPACT' || layoutMode === 'CONDENSED' || layoutMode === 'STACKED';
-  // Hamburger menu is shown in MINIMAL and MOBILE modes
-  const showHamburger = layoutMode === 'MINIMAL' || layoutMode === 'MOBILE';
+  // Desktop Links are visible in Comfortable and Medium modes
+  const showNavLinks = layoutMode === 'Comfortable' || layoutMode === 'Medium';
+  // Hamburger menu is shown in Compact and Minimal modes
+  const showHamburger = layoutMode === 'Compact' || layoutMode === 'Minimal';
 
   return (
     <>

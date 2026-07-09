@@ -1,15 +1,18 @@
 import { useState, useEffect } from 'react';
 
-export type LayoutMode = 'FULL' | 'COMPACT' | 'CONDENSED' | 'STACKED' | 'MINIMAL' | 'MOBILE';
+export type LayoutMode = 'Comfortable' | 'Medium' | 'Compact' | 'Minimal';
 export type Orientation = 'portrait' | 'landscape';
 
 /**
- * useResponsiveLayout — Central Constraint-Based Responsive Layout Engine
+ * useResponsiveLayout — Central Space-Based Layout Engine
  * 
- * Determines a single layoutMode for the entire application.
- * Removes breakpoint-driven components and replaces them with continuous
- * scaling governed by a single DOM class at the root level:
- * e.g., 'layout-mode-FULL', 'layout-mode-COMPACT', etc.
+ * Evaluates both width and height constraints.
+ * 
+ * Space States:
+ *   - Comfortable (height >= 720px and width >= 1200px)
+ *   - Medium (height >= 600px and width >= 768px)
+ *   - Compact (height >= 500px and width >= 560px)
+ *   - Minimal (height < 500px or width < 560px)
  */
 export function useResponsiveLayout() {
   const [width, setWidth] = useState(() => window.innerWidth);
@@ -37,46 +40,27 @@ export function useResponsiveLayout() {
 
   const orientation: Orientation = height > width ? 'portrait' : 'landscape';
 
-  // Base layoutMode determined by viewport width
-  let baseLayoutMode: LayoutMode = 'FULL';
-  if (width < 560) {
-    baseLayoutMode = 'MOBILE';
-  } else if (width < 768) {
-    baseLayoutMode = 'MINIMAL';
-  } else if (width < 1024) {
-    baseLayoutMode = 'STACKED';
-  } else if (width < 1200) {
-    baseLayoutMode = 'CONDENSED';
-  } else if (width < 1440) {
-    baseLayoutMode = 'COMPACT';
+  // Compute LayoutMode based on available width AND height
+  let layoutMode: LayoutMode = 'Comfortable';
+  if (width < 560 || height < 500) {
+    layoutMode = 'Minimal';
+  } else if (width < 768 || height < 600) {
+    layoutMode = 'Compact';
+  } else if (width < 1200 || height < 720) {
+    layoutMode = 'Medium';
   } else {
-    baseLayoutMode = 'FULL';
+    layoutMode = 'Comfortable';
   }
 
-  // compactMode (height constraints or extremely narrow screen)
-  const compactMode = height < 600 || width < 360;
-
-  // Degrade layoutMode if height is extremely constrained, ensuring components shrink
-  let layoutMode = baseLayoutMode;
-  if (height < 600) {
-    if (baseLayoutMode === 'FULL') layoutMode = 'COMPACT';
-    else if (baseLayoutMode === 'COMPACT') layoutMode = 'CONDENSED';
-    else if (baseLayoutMode === 'CONDENSED') layoutMode = 'STACKED';
-    else if (baseLayoutMode === 'STACKED') layoutMode = 'MINIMAL';
-    else if (baseLayoutMode === 'MINIMAL' || baseLayoutMode === 'MOBILE') layoutMode = 'MOBILE';
-  }
-
-  // ── Sync to DOM root class for centralized CSS token overrides ──
+  // Sync to root DOM class for layout-mode styling overrides
   useEffect(() => {
     const root = document.documentElement;
-    // Remove any previous layout-mode classes
     const classesToRemove = Array.from(root.classList).filter(c => c.startsWith('layout-mode-'));
     classesToRemove.forEach(c => root.classList.remove(c));
-    // Add new layout-mode class
     root.classList.add(`layout-mode-${layoutMode}`);
   }, [layoutMode]);
 
-  // Retrieve safe area insets (Notch / Dynamic Island / Nav Bars)
+  // Safe area insets parsing
   const [safeArea, setSafeArea] = useState({ top: 16, bottom: 16, left: 16, right: 16 });
 
   useEffect(() => {
@@ -96,18 +80,17 @@ export function useResponsiveLayout() {
     });
   }, [width, height]);
 
-  // Backwards compatibility mappings for older components if any
-  const isMobile = layoutMode === 'MOBILE' || layoutMode === 'MINIMAL';
-  const queueCardMode = layoutMode === 'MOBILE' ? 'mobile' : 
-                        layoutMode === 'MINIMAL' ? 'tablet' : 
-                        layoutMode === 'STACKED' ? 'small-laptop' : 
-                        layoutMode === 'CONDENSED' ? 'compact' : 'desktop';
+  // Backwards compatibility mappings
+  const isMobile = layoutMode === 'Minimal' || layoutMode === 'Compact';
+  const queueCardMode = layoutMode === 'Minimal' ? 'mobile' : 
+                        layoutMode === 'Compact' ? 'tablet' : 
+                        layoutMode === 'Medium' ? 'compact' : 'desktop';
 
-  const dockMode = layoutMode === 'MOBILE' ? 'mobile' :
-                   layoutMode === 'MINIMAL' ? 'tablet' :
-                   layoutMode === 'STACKED' || layoutMode === 'CONDENSED' ? 'desktop-compact' : 'desktop-expanded';
+  const dockMode = layoutMode === 'Minimal' ? 'mobile' :
+                   layoutMode === 'Compact' ? 'tablet' :
+                   layoutMode === 'Medium' ? 'desktop-compact' : 'desktop-expanded';
 
-  const navbarMode = layoutMode === 'MOBILE' || layoutMode === 'MINIMAL' || layoutMode === 'STACKED' ? 'collapsed' : 'expanded';
+  const navbarMode = layoutMode === 'Minimal' || layoutMode === 'Compact' ? 'collapsed' : 'expanded';
 
   return {
     width,
@@ -115,7 +98,7 @@ export function useResponsiveLayout() {
     safeArea,
     orientation,
     layoutMode,
-    compactMode,
+    compactMode: layoutMode === 'Minimal' || layoutMode === 'Compact',
     touchDevice,
     isMobile,
     queueCardMode,

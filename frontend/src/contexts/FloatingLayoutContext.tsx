@@ -10,10 +10,23 @@ export interface FloatingComponent {
   height: number;
   isActive: boolean;
   zIndexKey: string;
+  priority: number; // 1 = Never Hide, 2 = Medium, 3 = Decorative
+  minSize?: { w: number; h: number };
+  maxSize?: { w: number; h: number };
 }
 
 interface FloatingLayoutContextType {
-  registerComponent: (id: string, preferred: ScreenPosition, width: number, height: number, isActive: boolean, zIndexKey: string) => void;
+  registerComponent: (
+    id: string,
+    preferred: ScreenPosition,
+    width: number,
+    height: number,
+    isActive: boolean,
+    zIndexKey: string,
+    priority?: number,
+    minSize?: { w: number; h: number },
+    maxSize?: { w: number; h: number }
+  ) => void;
   unregisterComponent: (id: string) => void;
   setComponentActive: (id: string, isActive: boolean) => void;
   setComponentSize: (id: string, width: number, height: number) => void;
@@ -69,10 +82,20 @@ export function FloatingLayoutProvider({ children }: { children: React.ReactNode
     });
   }, [width, height]);
 
-  const registerComponent = useCallback((id: string, preferred: ScreenPosition, w: number, h: number, isActive: boolean, zIndexKey: string) => {
+  const registerComponent = useCallback((
+    id: string,
+    preferred: ScreenPosition,
+    w: number,
+    h: number,
+    isActive: boolean,
+    zIndexKey: string,
+    priority = 1,
+    minSize?: { w: number; h: number },
+    maxSize?: { w: number; h: number }
+  ) => {
     setComponents((prev) => ({
       ...prev,
-      [id]: { id, preferredPosition: preferred, width: w, height: h, isActive, zIndexKey },
+      [id]: { id, preferredPosition: preferred, width: w, height: h, isActive, zIndexKey, priority, minSize, maxSize },
     }));
   }, []);
 
@@ -114,7 +137,6 @@ export function FloatingLayoutProvider({ children }: { children: React.ReactNode
       for (let j = i + 1; j < active.length; j++) {
         const a = active[i];
         const b = active[j];
-        // If preferred positions are the same, it is a collision
         if (a.preferredPosition === b.preferredPosition) {
           count++;
         }
@@ -146,10 +168,9 @@ export function FloatingLayoutProvider({ children }: { children: React.ReactNode
     // Set up safe positioning offsets
     // Header height changes dynamically with layoutMode
     let headerHeight = 72;
-    if (layoutMode === 'MOBILE') headerHeight = 56;
-    else if (layoutMode === 'MINIMAL') headerHeight = 60;
-    else if (layoutMode === 'STACKED') headerHeight = 64;
-    else if (layoutMode === 'CONDENSED') headerHeight = 68;
+    if (layoutMode === 'Minimal') headerHeight = 56;
+    else if (layoutMode === 'Compact') headerHeight = 60;
+    else if (layoutMode === 'Medium') headerHeight = 64;
 
     const sTop = Math.max(headerHeight + 12, safeInsets.top);
     const sBottom = safeInsets.bottom;
@@ -179,16 +200,17 @@ export function FloatingLayoutProvider({ children }: { children: React.ReactNode
       blOffset += partnerCardHeight + 12;
     }
 
-    // If controls-dock is active in MOBILE mode:
+    // If controls-dock is active in Minimal/Compact mode:
     // The mobile bottom stack sits at BL, so stack self-preview above it.
-    if (layoutMode === 'MOBILE' && isDockActive && id === 'self-preview' && pos === 'BL') {
+    const isMobileMode = layoutMode === 'Minimal' || layoutMode === 'Compact';
+    if (isMobileMode && isDockActive && id === 'self-preview' && pos === 'BL') {
       blOffset += 70; // stack above mobile buttons
     }
 
-    // If self-preview snaps to BR in MOBILE mode:
+    // If self-preview snaps to BR in Minimal/Compact mode:
     // Reflow/snap it to TR to prevent covering the large Swipe Next/Leave stack.
     let brOffset = sBottom;
-    if (layoutMode === 'MOBILE' && isDockActive && id === 'self-preview' && pos === 'BR') {
+    if (isMobileMode && isDockActive && id === 'self-preview' && pos === 'BR') {
       pos = 'TR'; // Reflow
     }
 

@@ -964,8 +964,15 @@ export function useVideoChat(
     const API_BASE = environment.apiUrl;
 
     const handleUnloadOrHide = (e?: Event) => {
-      console.log(`[Lifecycle] Event: ${e?.type || 'manual'} | sessionId=${sessionIdRef.current}`);
-      if (sessionIdRef.current && sessionTokenRef.current) {
+      console.log(`[Lifecycle] Event: ${e?.type || 'manual'} | Releasing camera tracks.`);
+      const activeStream = webrtcManager.getLocalStream();
+      if (activeStream) {
+        activeStream.getTracks().forEach(track => track.stop());
+        (webrtcManager as any).localStream = null;
+        setLocalStream(null);
+      }
+
+      if (sessionIdRef.current && sessionTokenRef.current && (e?.type === 'beforeunload' || e?.type === 'pagehide')) {
         // SendBeacon ensures payload is sent even if page is closing/suspending instantly
         const url = `${API_BASE}/api/match/disconnect`;
         const payload = JSON.stringify({
@@ -981,8 +988,35 @@ export function useVideoChat(
       }
     };
 
-    const handleResumeOrFocus = () => {
-      console.log('[Lifecycle] App resumed or focused');
+    const handleResumeOrFocus = async () => {
+      console.log('[Lifecycle] App resumed or focused. Re-acquiring camera tracks.');
+      
+      const isCallActive = [
+        'REQUESTING_MEDIA', 'MEDIA_READY', 'CONNECTING_REALTIME', 
+        'SEARCHING', 'REQUEUEING', 'PARTNER_LEFT', 'MATCH_FOUND', 'READY', 'NEGOTIATING', 'ICE_CONNECTING', 'CONNECTED'
+      ].includes(signalingStateRef.current);
+
+      if (isCallActive && !isQueuePausedRef.current) {
+        try {
+          const stream = await webrtcManager.getLocalMedia();
+          setLocalStream(stream);
+          
+          // Rebind tracks to peer connection if it exists
+          const pc = (webrtcManager as any).peerConnection;
+          if (pc && pc.connectionState !== 'closed') {
+            const senders = pc.getSenders();
+            stream.getTracks().forEach((track) => {
+              const sender = senders.find((s: any) => s.track && s.track.kind === track.kind);
+              if (sender) {
+                sender.replaceTrack(track).catch((e: any) => console.warn('[Lifecycle] replaceTrack failed:', e));
+              }
+            });
+          }
+        } catch (err) {
+          console.error('[Lifecycle] Failed to reacquire media on focus:', err);
+        }
+      }
+
       // Self-healing queue: If status is SEARCHING, send a heartbeat joinQueue immediately
       if (signalingStateRef.current === 'SEARCHING' && !isQueuePausedRef.current && sessionIdRef.current && sessionTokenRef.current && callbacksRef.current) {
         console.log('[Lifecycle] Queue active — forcing immediate heartbeat registration');
@@ -1001,7 +1035,7 @@ export function useVideoChat(
       if (document.visibilityState === 'hidden') {
         handleUnloadOrHide();
       } else {
-        handleResumeOrFocus();
+        void handleResumeOrFocus();
       }
     };
 
@@ -1009,8 +1043,8 @@ export function useVideoChat(
     window.addEventListener('pagehide', handleUnloadOrHide);
     document.addEventListener('visibilitychange', handleVisibilityChange);
     document.addEventListener('freeze', handleUnloadOrHide);
-    document.addEventListener('resume', handleResumeOrFocus);
-    window.addEventListener('focus', handleResumeOrFocus);
+    document.addEventListener('resume', () => void handleResumeOrFocus());
+    window.addEventListener('focus', () => void handleResumeOrFocus());
     window.addEventListener('online', handleOnline);
 
     return () => {
@@ -1018,8 +1052,8 @@ export function useVideoChat(
       window.removeEventListener('pagehide', handleUnloadOrHide);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       document.removeEventListener('freeze', handleUnloadOrHide);
-      document.removeEventListener('resume', handleResumeOrFocus);
-      window.removeEventListener('focus', handleResumeOrFocus);
+      document.removeEventListener('resume', () => void handleResumeOrFocus());
+      window.removeEventListener('focus', () => void handleResumeOrFocus());
       window.removeEventListener('online', handleOnline);
       
       clearSignalingRetryTimers();

@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { QueueCard } from './QueueCard.js';
 import { useFloatingLayout } from '../contexts/FloatingLayoutContext.js';
+import { cn } from '../utils/index.js';
 
 interface SearchingAnimationProps {
   queuePosition?: number;
@@ -27,13 +28,14 @@ export function SearchingAnimation({
   onPauseQueue
 }: SearchingAnimationProps) {
   const { registerComponent, unregisterComponent, getStyle, layoutMode } = useFloatingLayout();
+  const isMinimalLayout = layoutMode === 'Minimal' || layoutMode === 'Compact';
 
   useEffect(() => {
-    const w = layoutMode === 'MOBILE' || layoutMode === 'MINIMAL' ? 440 : 340;
-    const h = layoutMode === 'MOBILE' || layoutMode === 'MINIMAL' ? 110 : 260;
+    const w = isMinimalLayout ? 440 : 340;
+    const h = isMinimalLayout ? 110 : 260;
     registerComponent('queue-card', 'BC', w, h, true, 'queueCard');
     return () => unregisterComponent('queue-card');
-  }, [layoutMode, registerComponent, unregisterComponent]);
+  }, [isMinimalLayout, registerComponent, unregisterComponent]);
 
   const [elapsed, setElapsed] = useState(0);
   const [animationStep, setAnimationStep] = useState(0);
@@ -311,12 +313,12 @@ export function SearchingAnimation({
           ) : (
             /* Standard Searching State */
             <>
-              {/* Apple/Nothing Radar Pulse */}
-              <div className="relative mb-5 animate-fade-in shrink-0">
+              {/* Apple/Nothing Radar Pulse (Priority 3 - Shrinks under space constraints) */}
+              <div className={cn("relative animate-fade-in shrink-0", isMinimalLayout ? "mb-2" : "mb-5")}>
                 <div className={`absolute inset-0 rounded-full border ${colors.ping} animate-ping`} style={{ animationDuration: '3s' }} />
-                <div className="w-20 h-20 rounded-full border border-white/5 bg-white/[0.01] flex items-center justify-center relative shadow-2xl glass">
-                  <div className={`absolute w-14 h-14 rounded-full border ${colors.border} ${colors.bg} animate-pulse`} />
-                  <div className={`w-8 h-8 rounded-xl ${colors.bg} border ${colors.border} flex items-center justify-center ${colors.text} font-bold text-base animate-spin`} style={{ animationDuration: '8s' }}>
+                <div className={cn("rounded-full border border-white/5 bg-white/[0.01] flex items-center justify-center relative shadow-2xl glass", isMinimalLayout ? "w-14 h-14" : "w-20 h-20")}>
+                  <div className={cn("absolute rounded-full border", colors.border, colors.bg, "animate-pulse", isMinimalLayout ? "w-10 h-10" : "w-14 h-14")} />
+                  <div className={cn("rounded-xl border flex items-center justify-center font-bold animate-spin", colors.bg, colors.border, colors.text, isMinimalLayout ? "w-6 h-6 text-xs" : "w-8 h-8 text-base")} style={{ animationDuration: '8s' }}>
                     ✦
                   </div>
                 </div>
@@ -327,22 +329,24 @@ export function SearchingAnimation({
                 {currentStageText}
               </p>
 
-              {/* Queue statistics row */}
-              <div className="flex items-center justify-center gap-3 mt-2 text-[10px] text-stone-500 font-semibold uppercase tracking-wider border-t border-white/5 pt-2.5 w-full max-w-[280px] mx-auto shrink-0">
-                <div>Online: <span className="text-stone-300 font-bold font-mono">{stats.online}</span></div>
-                <div className="w-1 h-1 rounded-full bg-stone-700" />
-                <div>Queue: <span className="text-stone-300 font-bold font-mono">{stats.searching}</span></div>
-                <div className="w-1 h-1 rounded-full bg-stone-700" />
-                <div>Wait: <span className="text-stone-300 font-bold font-mono">{stats.wait}s</span></div>
-              </div>
+              {/* Queue statistics row (Priority 2 - Hidden on minimal heights to preserve space) */}
+              {!isMinimalLayout && (
+                <div className="flex items-center justify-center gap-3 mt-2 text-[10px] text-stone-500 font-semibold uppercase tracking-wider border-t border-white/5 pt-2.5 w-full max-w-[280px] mx-auto shrink-0">
+                  <div>Online: <span className="text-stone-300 font-bold font-mono">{stats.online}</span></div>
+                  <div className="w-1 h-1 rounded-full bg-stone-700" />
+                  <div>Queue: <span className="text-stone-300 font-bold font-mono">{stats.searching}</span></div>
+                  <div className="w-1 h-1 rounded-full bg-stone-700" />
+                  <div>Wait: <span className="text-stone-300 font-bold font-mono">{stats.wait}s</span></div>
+                </div>
+              )}
 
-              {/* Strict countdown / expand search suggest */}
+              {/* Strict countdown / expand search suggest (Priority 2) */}
               {activeMatchMode === 'STRICT' && elapsed >= 15 && (
-                <div className="mt-4 p-4 rounded-2xl border border-purple-500/20 bg-purple-950/20 backdrop-blur-xl animate-fade-in text-center flex flex-col items-center w-full max-w-[320px] shrink-0">
+                <div className={cn("mt-4 p-4 rounded-2xl border border-purple-500/20 bg-purple-950/20 backdrop-blur-xl animate-fade-in text-center flex flex-col items-center w-full shrink-0", isMinimalLayout ? "max-w-[260px]" : "max-w-[320px]")}>
                   <div className="text-xs text-purple-300 font-extrabold mb-1">
                     ⏱️ SEARCH TIME: {formatTimer(elapsed)}
                   </div>
-                  <h4 className="text-xs font-bold text-purple-300 uppercase tracking-wider mb-1">Still searching...</h4>
+                  {!isMinimalLayout && <h4 className="text-xs font-bold text-purple-300 uppercase tracking-wider mb-1">Still searching...</h4>}
                   <p className="text-[11px] text-stone-300 leading-relaxed max-w-[280px] mb-3">
                     Exact match not found yet. You can keep waiting or expand your search to Smart Match.
                   </p>
@@ -367,8 +371,8 @@ export function SearchingAnimation({
                 </div>
               )}
 
-              {/* Long wait time invite suggest (elapsed >= 30 seconds) */}
-              {elapsed >= 30 && (
+              {/* Long wait time invite suggest (elapsed >= 30 seconds - Priority 2, hidden on minimal) */}
+              {elapsed >= 30 && !isMinimalLayout && (
                 <div className="mt-3 p-3 rounded-xl border border-white/5 bg-white/[0.01] animate-fade-in text-center flex flex-col items-center w-full max-w-[260px] shrink-0">
                   <p className="text-[11px] text-stone-400 leading-relaxed">
                     No compatible users yet. Invite friends to Kaboom TV or keep searching!

@@ -29,10 +29,20 @@ export class WebRTCManager {
     this.iceServers = servers.length > 0 ? servers : DEFAULT_ICE_SERVERS;
   }
 
-  async getLocalMedia(): Promise<MediaStream> {
-    if (this.localStream) return this.localStream;
+  private localStreamPromise: Promise<MediaStream> | null = null;
 
-    this.localStream = await navigator.mediaDevices.getUserMedia({
+  async getLocalMedia(): Promise<MediaStream> {
+    // If stream already exists and all tracks are active, return it directly
+    if (this.localStream && this.localStream.getTracks().length > 0 && this.localStream.getTracks().every((t) => t.readyState === 'live')) {
+      return this.localStream;
+    }
+
+    if (this.localStreamPromise) {
+      return this.localStreamPromise;
+    }
+
+    console.log('[WebRTC] Requesting local media stream...');
+    this.localStreamPromise = navigator.mediaDevices.getUserMedia({
       video: {
         width: { ideal: 1280 },
         height: { ideal: 720 },
@@ -43,9 +53,18 @@ export class WebRTCManager {
         noiseSuppression: true,
         autoGainControl: true,
       },
+    }).then((stream) => {
+      this.localStream = stream;
+      this.localStreamPromise = null;
+      console.log('[WebRTC] Local media stream acquired successfully.');
+      return stream;
+    }).catch((err) => {
+      this.localStreamPromise = null;
+      console.error('[WebRTC] Failed to acquire local media stream:', err);
+      throw err;
     });
 
-    return this.localStream;
+    return this.localStreamPromise;
   }
 
   getLocalStream(): MediaStream | null {

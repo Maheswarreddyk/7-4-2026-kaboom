@@ -228,6 +228,14 @@ export function ChatPage() {
     }
   }, [stopChat, endSession, blocker]);
 
+  useEffect(() => {
+    return () => {
+      console.log('[ChatPage] Component unmounting — cleaning up WebRTC and session tracks...');
+      stopChat().catch((e) => console.warn('[ChatPage] Unmount stopChat failed:', e));
+      endSession().catch((e) => console.warn('[ChatPage] Unmount endSession failed:', e));
+    };
+  }, [stopChat, endSession]);
+
   const isConnected = chatState.status === 'CONNECTED';
   const isSearching = [
     'REQUESTING_MEDIA', 'MEDIA_READY', 'CONNECTING_REALTIME', 

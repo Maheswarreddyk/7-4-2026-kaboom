@@ -37,12 +37,10 @@ export function LayoutDebugger() {
 
   const getModeColor = (mode: string) => {
     switch (mode) {
-      case 'FULL': return 'text-green-400';
-      case 'COMPACT': return 'text-emerald-400';
-      case 'CONDENSED': return 'text-blue-400';
-      case 'STACKED': return 'text-purple-400';
-      case 'MINIMAL': return 'text-amber-400';
-      case 'MOBILE': return 'text-red-400 font-bold';
+      case 'Comfortable': return 'text-green-400';
+      case 'Medium': return 'text-blue-400';
+      case 'Compact': return 'text-amber-400';
+      case 'Minimal': return 'text-red-400 font-bold';
       default: return 'text-stone-300';
     }
   };
