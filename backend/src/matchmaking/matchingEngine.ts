@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import crypto from 'crypto';
 import { HEARTBEAT_STALE_MS, RESERVATION_TIMEOUT_MS } from './config.js';
 import { getIceServers } from '../config/index.js';
 import { broadcastToSession } from '../services/broadcast.js';
@@ -825,9 +826,76 @@ export async function markUserReady(
     throw new Error('Not a participant in this match');
   }
 
-  // If negotiation already started, don't re-broadcast (idempotency guard)
+  // If negotiation already started, re-broadcast start_negotiation to trigger renegotiation/ICE restart
   if (match.negotiation_started) {
-    console.log(`[/ready] [${requestId}] Negotiation already started — returning early`);
+    console.log(`[/ready] [${requestId}] Negotiation already started — re-broadcasting start_negotiation to restore session`);
+    const partnerId = isUserA ? match.user_b : match.user_a;
+    const iceServers = getIceServers();
+
+    const [sessSelfQuery, sessPartnerQuery] = await Promise.all([
+      supabase
+        .from('visitor_sessions')
+        .select('display_name, bio, match_mode, match_constraints, match_attributes, city, state, country, gender, looking_for, languages, interest_tags')
+        .eq('id', sessionId)
+        .maybeSingle(),
+      supabase
+        .from('visitor_sessions')
+        .select('display_name, bio, match_mode, match_constraints, match_attributes, city, state, country, gender, looking_for, languages, interest_tags')
+        .eq('id', partnerId)
+        .maybeSingle(),
+    ]);
+
+    const pSelf = sessSelfQuery.data;
+    const pPartner = sessPartnerQuery.data;
+    const eventId = crypto.randomUUID();
+
+    await Promise.all([
+      broadcastToSession(sessionId, 'start_negotiation', {
+        eventId,
+        matchId,
+        partnerSessionId: partnerId,
+        isInitiator: isUserA,
+        iceServers,
+        matchReasonMetadata: match.match_reason_metadata,
+        partnerProfile: pPartner ? {
+          displayName: pPartner.display_name || 'Guest',
+          bio: pPartner.bio || '',
+          matchMode: pPartner.match_mode || 'RANDOM',
+          matchConstraints: pPartner.match_constraints || {},
+          matchAttributes: pPartner.match_attributes || {},
+          city: pPartner.city || null,
+          state: pPartner.state || null,
+          country: pPartner.country || null,
+          gender: pPartner.gender || null,
+          lookingFor: pPartner.looking_for || [],
+          languages: pPartner.languages || [],
+          interestTags: pPartner.interest_tags || [],
+        } : null,
+      }).catch(e => console.warn(`[/ready] Re-broadcast to ${sessionId} failed:`, e?.message)),
+      broadcastToSession(partnerId, 'start_negotiation', {
+        eventId,
+        matchId,
+        partnerSessionId: sessionId,
+        isInitiator: !isUserA,
+        iceServers,
+        matchReasonMetadata: match.match_reason_metadata,
+        partnerProfile: pSelf ? {
+          displayName: pSelf.display_name || 'Guest',
+          bio: pSelf.bio || '',
+          matchMode: pSelf.match_mode || 'RANDOM',
+          matchConstraints: pSelf.match_constraints || {},
+          matchAttributes: pSelf.match_attributes || {},
+          city: pSelf.city || null,
+          state: pSelf.state || null,
+          country: pSelf.country || null,
+          gender: pSelf.gender || null,
+          lookingFor: pSelf.looking_for || [],
+          languages: pSelf.languages || [],
+          interestTags: pSelf.interest_tags || [],
+        } : null,
+      }).catch(e => console.warn(`[/ready] Re-broadcast to ${partnerId} failed:`, e?.message)),
+    ]);
+
     return { bothReady: true, isInitiator: isUserA };
   }
 
@@ -885,8 +953,11 @@ export async function markUserReady(
     const pSelf = sessSelfQuery.data;
     const pPartner = sessPartnerQuery.data;
 
+    const eventId = crypto.randomUUID();
+
     await Promise.all([
       broadcastToSession(sessionId, 'start_negotiation', {
+        eventId,
         matchId,
         partnerSessionId: partnerId,
         isInitiator: isUserA,
@@ -908,6 +979,7 @@ export async function markUserReady(
         } : null,
       }).catch(e => console.warn(`[/ready] Broadcast to ${sessionId} failed:`, e?.message)),
       broadcastToSession(partnerId, 'start_negotiation', {
+        eventId,
         matchId,
         partnerSessionId: sessionId,
         isInitiator: !isUserA,

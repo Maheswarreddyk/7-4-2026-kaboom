@@ -1795,9 +1795,13 @@ export function ChatPage() {
             <div className="w-12 h-12 rounded-full border border-amber-500/30 bg-amber-500/10 flex items-center justify-center text-xl mx-auto animate-spin">
               🌀
             </div>
-            <h3 className="text-lg font-bold text-white">Reconnecting...</h3>
+            <h3 className="text-lg font-bold text-white">Partner disconnected</h3>
             <p className="text-xs text-stone-400 leading-relaxed">
-              Connection lost. Waiting up to 10 seconds to restore...
+              Connection lost. Reconnecting in{' '}
+              <span className="text-amber-500 font-black text-sm">
+                {chatState.reconnectCountdown !== undefined && chatState.reconnectCountdown !== null ? chatState.reconnectCountdown : 10}
+              </span>{' '}
+              seconds...
             </p>
           </div>
         </div>

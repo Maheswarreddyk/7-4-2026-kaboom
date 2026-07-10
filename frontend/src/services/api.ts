@@ -81,6 +81,10 @@ export const apiService = {
     };
   },
 
+  async submitHeartbeat(sessionId: string, sessionToken: string): Promise<void> {
+    await api.post('/session/heartbeat', { sessionId, sessionToken });
+  },
+
   async submitReport(
     reporterSessionId: string,
     reportedSessionId: string,

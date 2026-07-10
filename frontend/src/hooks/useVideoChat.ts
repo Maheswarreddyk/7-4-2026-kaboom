@@ -37,6 +37,7 @@ const initialChatState: ChatState = {
   queuePosition: 0,
   connectionQuality: null,
   partnerSkipPending: false,
+  reconnectCountdown: null,
 };
 
 export function useVideoChat(
@@ -70,6 +71,12 @@ export function useVideoChat(
   
   // Phase 2: Ref to prevent stale closures in callbacks (specifically onOffer collision logic)
   const isInitiatorRef = useRef<boolean>(false);
+
+  // V6.15: Refs for debug transition logging, deduplication, and active call heartbeat
+  const processedEventsRef = useRef<Set<string>>(new Set());
+  const transitionLogRef = useRef<string[]>([]);
+  const reconnectIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const activeHeartbeatIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const playConnectChime = useCallback(() => {
     try {
@@ -109,6 +116,10 @@ export function useVideoChat(
   const webrtcTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const partnerReconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const updateChatState = useCallback((updates: Partial<ChatState>) => {
+    setChatState((prev) => ({ ...prev, ...updates }));
+  }, []);
+
   const clearWebRTCTimeout = useCallback(() => {
     if (webrtcTimeoutRef.current) {
       clearTimeout(webrtcTimeoutRef.current);
@@ -132,13 +143,27 @@ export function useVideoChat(
     const current = signalingStateRef.current;
     if (current === state) return;
 
-    console.log(`[FSM Transition] ${current} -> ${state}`);
+    // V6.15: Transition Logger
+    const logTime = new Date().toLocaleTimeString();
+    const entry = `${logTime} ${current} -> ${state}`;
+    transitionLogRef.current.push(entry);
+    if (environment.nodeEnv === 'development') {
+      console.log(`%c[FSM LOG] ${entry}`, 'color: #f59e0b; font-weight: bold;');
+    }
+
     signalingStateRef.current = state;
     setChatState((prev) => ({ ...prev, status: state }));
 
     // Auto-clear timeout on stable or ended states
     if (state === 'CONNECTED' || state === 'IDLE' || state === 'ENDED') {
       clearWebRTCTimeout();
+
+      // V6.15: Clear reconnect countdown on stable connection or exit
+      setChatState((prev) => ({ ...prev, reconnectCountdown: null }));
+      if (reconnectIntervalRef.current) {
+        clearInterval(reconnectIntervalRef.current);
+        reconnectIntervalRef.current = null;
+      }
     }
 
     // Session Lifecycle Manager updates
@@ -172,6 +197,39 @@ export function useVideoChat(
     }, 2500);
   }, [showToast, setSignalingState]);
 
+  const startReconnectCountdown = useCallback(() => {
+    if (reconnectIntervalRef.current) return; // Already counting down
+
+    if (partnerReconnectTimerRef.current) clearTimeout(partnerReconnectTimerRef.current);
+    
+    updateChatState({ connectionStatus: 'reconnecting', reconnectCountdown: 10 });
+
+    let count = 10;
+    reconnectIntervalRef.current = setInterval(() => {
+      count -= 1;
+      console.log(`[Grace Period Countdown] ${count}s remaining...`);
+      updateChatState({ reconnectCountdown: count });
+
+      if (count <= 0) {
+        console.log('[Grace Period] Reconnect countdown expired. Cleaning up...');
+        if (reconnectIntervalRef.current) {
+          clearInterval(reconnectIntervalRef.current);
+          reconnectIntervalRef.current = null;
+        }
+        executePartnerLeftTeardown();
+      }
+    }, 1000);
+
+    // Backup timer to ensure execution happens even if setInterval drifts
+    partnerReconnectTimerRef.current = setTimeout(() => {
+      if (reconnectIntervalRef.current) {
+        clearInterval(reconnectIntervalRef.current);
+        reconnectIntervalRef.current = null;
+      }
+      executePartnerLeftTeardown();
+    }, 10500);
+  }, [executePartnerLeftTeardown, updateChatState]);
+
   sessionIdRef.current = sessionId;
   sessionTokenRef.current = sessionToken;
 
@@ -184,10 +242,6 @@ export function useVideoChat(
       clearInterval(answerRetryTimerRef.current);
       answerRetryTimerRef.current = null;
     }
-  }, []);
-
-  const updateChatState = useCallback((updates: Partial<ChatState>) => {
-    setChatState((prev) => ({ ...prev, ...updates }));
   }, []);
 
   const handleIceRestart = useCallback(async () => {
@@ -239,12 +293,21 @@ export function useVideoChat(
             clearTimeout(partnerReconnectTimerRef.current);
             partnerReconnectTimerRef.current = null;
           }
+          if (reconnectIntervalRef.current) {
+            clearInterval(reconnectIntervalRef.current);
+            reconnectIntervalRef.current = null;
+          }
+          updateChatState({ reconnectCountdown: null });
           setSignalingState('CONNECTED');
           playConnectChime();
-        } else if (state === 'failed') {
-          showToast('error', 'Connection failed. Retrying connection...');
-          if (sessionIdRef.current && partnerSessionIdRef.current) {
-            void handleIceRestart();
+        } else if (state === 'disconnected' || state === 'failed') {
+          console.log(`[WebRTC State Change] State: ${state}. Starting reconnect countdown...`);
+          startReconnectCountdown();
+          if (state === 'failed') {
+            showToast('error', 'Connection failed. Retrying connection...');
+            if (sessionIdRef.current && partnerSessionIdRef.current) {
+              void handleIceRestart();
+            }
           }
         }
       },
@@ -494,6 +557,11 @@ export function useVideoChat(
     lastProcessedOfferSdpRef.current = null;
     lastProcessedAnswerSdpRef.current = null;
 
+    if (reconnectIntervalRef.current) {
+      clearInterval(reconnectIntervalRef.current);
+      reconnectIntervalRef.current = null;
+    }
+
     updateChatState({
       partnerSessionId: null,
       matchId: null,
@@ -504,6 +572,7 @@ export function useVideoChat(
       messages: [],
       unreadCount: 0,
       partnerTyping: false,
+      reconnectCountdown: null,
     });
 
     try {
@@ -540,6 +609,12 @@ export function useVideoChat(
       },
       onMatched: (data: any) => {
         if (skipInProgressRef.current) return;
+        if (data?.eventId && processedEventsRef.current.has(data.eventId)) {
+          console.log('[Signaling] Duplicate matched event ignored. eventId:', data.eventId);
+          return;
+        }
+        if (data?.eventId) processedEventsRef.current.add(data.eventId);
+
         if (webrtcManager.getConnectionState() === 'connected') {
           console.log('[Signaling] Already connected. Ignoring duplicate matched event.');
           return;
@@ -548,26 +623,30 @@ export function useVideoChat(
       },
       onStartNegotiation: (data: any) => {
         if (skipInProgressRef.current) return;
+        if (data?.eventId && processedEventsRef.current.has(data.eventId)) {
+          console.log('[Signaling] Duplicate startNegotiation event ignored. eventId:', data.eventId);
+          return;
+        }
+        if (data?.eventId) processedEventsRef.current.add(data.eventId);
+
         if (webrtcManager.getConnectionState() === 'connected') {
           console.log('[Signaling] Already connected. Ignoring duplicate startNegotiation event.');
           return;
         }
         handleStartNegotiation(data);
       },
-      onPartnerLeft: (data?: { reason: string }) => {
+      onPartnerLeft: (data?: { reason: string; eventId?: string }) => {
         if (skipInProgressRef.current) return;
+        if (data?.eventId && processedEventsRef.current.has(data.eventId)) {
+          console.log('[Signaling] Duplicate partner_left event ignored. eventId:', data.eventId);
+          return;
+        }
+        if (data?.eventId) processedEventsRef.current.add(data.eventId);
 
         if (data?.reason === 'disconnect') {
           console.log('[Grace Period] Partner disconnected accidentally. Starting 10s grace period...');
           updateChatState({ partnerSkipPending: false });
-          setChatState((prev) => ({ ...prev, connectionStatus: 'reconnecting' }));
-
-          if (partnerReconnectTimerRef.current) clearTimeout(partnerReconnectTimerRef.current);
-          partnerReconnectTimerRef.current = setTimeout(() => {
-            console.log('[Grace Period] 10s grace period expired. Cleaning up...');
-            partnerReconnectTimerRef.current = null;
-            executePartnerLeftTeardown();
-          }, 10000);
+          startReconnectCountdown();
           return;
         }
 
@@ -779,8 +858,10 @@ export function useVideoChat(
       connectRealtime(sessionId, sessionToken, callbacks);
 
       await joinQueue(sessionId, sessionToken, callbacks);
-      setSignalingState('SEARCHING');
-      console.log('[Lifecycle] Queue Joined');
+      if (signalingStateRef.current === 'CONNECTING_REALTIME') {
+        setSignalingState('SEARCHING');
+        console.log('[Lifecycle] Queue Joined');
+      }
     } catch (error) {
       const message =
         error instanceof DOMException && error.name === 'NotAllowedError'
@@ -958,6 +1039,36 @@ export function useVideoChat(
 
     return () => clearInterval(interval);
   }, [chatState.status, isQueuePaused, sessionId, sessionToken]);
+
+  // V6.15: Periodic active-call heartbeat to update last_activity during conversation
+  useEffect(() => {
+    if (chatState.status !== 'CONNECTED' || !sessionId || !sessionToken) {
+      if (activeHeartbeatIntervalRef.current) {
+        clearInterval(activeHeartbeatIntervalRef.current);
+        activeHeartbeatIntervalRef.current = null;
+      }
+      return;
+    }
+
+    const runHeartbeat = async () => {
+      try {
+        await apiService.submitHeartbeat(sessionId, sessionToken);
+      } catch (err) {
+        console.warn('[Heartbeat] Active heartbeat failed:', err);
+      }
+    };
+
+    // Send immediate heartbeat on connect, then tick every 20 seconds
+    void runHeartbeat();
+    activeHeartbeatIntervalRef.current = setInterval(runHeartbeat, 20000);
+
+    return () => {
+      if (activeHeartbeatIntervalRef.current) {
+        clearInterval(activeHeartbeatIntervalRef.current);
+        activeHeartbeatIntervalRef.current = null;
+      }
+    };
+  }, [chatState.status, sessionId, sessionToken]);
 
   // Mobile Lifecycle Event Listeners: visibilitychange, pagehide, freeze/resume, online/offline
   useEffect(() => {

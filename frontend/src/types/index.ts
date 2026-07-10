@@ -77,6 +77,7 @@ export interface ChatState {
   isChatOpen?: boolean;
   partnerTyping?: boolean;
   connectionQuality?: 'excellent' | 'good' | 'poor' | null;
+  reconnectCountdown?: number | null;
   partnerProfile?: {
     displayName: string;
     bio?: string;

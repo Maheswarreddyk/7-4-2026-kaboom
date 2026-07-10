@@ -28,6 +28,23 @@ router.get('/stats', statsController.getStats);
 router.post('/start-session', sessionRateLimiter, sessionController.startSession);
 router.post('/end-session', sessionController.endSession);
 router.post('/restore-session', sessionController.restoreSession);
+router.post('/session/heartbeat', async (req, res, next) => {
+  try {
+    const { sessionId, sessionToken } = req.body;
+    if (!sessionId || !sessionToken) {
+      return res.status(400).json({ error: 'sessionId and sessionToken are required' });
+    }
+    const { error } = await getSupabase()
+      .from('visitor_sessions')
+      .update({ last_activity: new Date().toISOString() })
+      .eq('id', sessionId)
+      .eq('session_token', sessionToken);
+    if (error) throw error;
+    res.json({ success: true });
+  } catch (err) {
+    next(err);
+  }
+});
 router.post('/report', reportRateLimiter, reportController.submitReport);
 router.post('/feedback', feedbackController.submitFeedback);
 
