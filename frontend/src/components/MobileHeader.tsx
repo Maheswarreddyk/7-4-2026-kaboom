@@ -1,6 +1,5 @@
 import { formatDuration } from '../utils/index.js';
 import { ConnectionStatusBadge } from './ConnectionStatusBadge.js';
-import { playTapSound } from '../utils/audio.js';
 import { cn } from '../utils/index.js';
 import logoKaboom from '../../images/logo_kaboom.png';
 import iconKaboom from '../../images/icon_kaboom.png';
@@ -11,6 +10,7 @@ interface MobileHeaderProps {
   connectionQuality: 'excellent' | 'good' | 'poor' | null;
   isConnected: boolean;
   onLeave: () => void;
+  controlsVisible?: boolean;
 }
 
 export function MobileHeader({
@@ -18,24 +18,14 @@ export function MobileHeader({
   connectionStatus,
   connectionQuality,
   isConnected,
-  onLeave,
+  controlsVisible,
 }: MobileHeaderProps) {
-  
-  const handleLeavePress = (e: React.PointerEvent<HTMLButtonElement>) => {
-    if (e.pointerType === 'mouse' && e.button !== 0) return;
-    e.preventDefault();
-    e.stopPropagation();
-    playTapSound();
-    
-    try {
-      if (navigator.vibrate) navigator.vibrate(12);
-    } catch {}
-
-    onLeave();
-  };
 
   return (
-    <div className="fixed top-0 left-0 right-0 z-30 select-none flex flex-col pointer-events-none">
+    <div className={cn(
+      "fixed top-0 left-0 right-0 z-30 select-none flex flex-col pointer-events-none transition-all duration-[250ms]",
+      !controlsVisible && "opacity-0 pointer-events-none"
+    )}>
       
       {/* ── Main Header Bar (72px) ── */}
       <div 
@@ -67,17 +57,6 @@ export function MobileHeader({
             {formatDuration(elapsedSeconds)}
           </div>
         )}
-
-        {/* Right: Close/Leave Button */}
-        <button
-          onPointerDown={handleLeavePress}
-          className="w-10 h-10 rounded-xl bg-red-500/10 border border-red-500/25 flex items-center justify-center text-red-500 hover:bg-red-500/20 transition-all duration-300"
-          aria-label="Leave chat room"
-        >
-          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
       </div>
 
       {/* ── Status Badges Sub-Bar (Directly below header) ── */}

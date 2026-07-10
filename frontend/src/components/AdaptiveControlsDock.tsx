@@ -282,15 +282,15 @@ function MobileDock({ props }: { props: AdaptiveControlsDockProps }) {
     <div className="absolute inset-0 w-full h-full pointer-events-none select-none">
       {/* Permanent Bottom Row: Mic, Camera, Like — always visible */}
       <div
-        className="absolute left-[20px] flex items-center gap-3.5 pointer-events-auto"
-        style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 20px)' }}
+        className="absolute left-1/2 -translate-x-1/2 flex items-center gap-4 pointer-events-auto"
+        style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 20px)', paddingRight: '90px' }}
       >
         <DockButton
           onClick={props.onToggleMute}
           disabled={props.disabled}
           icon={props.isMuted ? <Icons.MicOff /> : <Icons.MicOn />}
           warning={props.isMuted}
-          className="w-[50px] h-[50px] bg-black/45 backdrop-blur-xl border-white/5"
+          className="w-[50px] h-[50px] bg-black/75 backdrop-blur-[18px] border-white/[0.10] shadow-[0_4px_20px_rgba(0,0,0,0.55)]"
         />
 
         <DockButton
@@ -298,7 +298,7 @@ function MobileDock({ props }: { props: AdaptiveControlsDockProps }) {
           disabled={props.disabled}
           icon={props.isCameraOff ? <Icons.CameraOff /> : <Icons.CameraOn />}
           warning={props.isCameraOff}
-          className="w-[50px] h-[50px] bg-black/45 backdrop-blur-xl border-white/5"
+          className="w-[50px] h-[50px] bg-black/75 backdrop-blur-[18px] border-white/[0.10] shadow-[0_4px_20px_rgba(0,0,0,0.55)]"
         />
 
         {props.onLike && (
@@ -308,7 +308,7 @@ function MobileDock({ props }: { props: AdaptiveControlsDockProps }) {
             icon={props.liked ? <Icons.LikeOn /> : <Icons.LikeOff />}
             active={props.liked}
             soundType="like"
-            className="w-[50px] h-[50px] bg-black/45 backdrop-blur-xl border-white/5"
+            className="w-[50px] h-[50px] bg-black/75 backdrop-blur-[18px] border-white/[0.10] shadow-[0_4px_20px_rgba(0,0,0,0.55)]"
           />
         )}
       </div>
@@ -322,7 +322,7 @@ function MobileDock({ props }: { props: AdaptiveControlsDockProps }) {
           <DockButton
             onClick={props.onOpenPreferences}
             icon={<Icons.Settings />}
-            className="w-[46px] h-[46px] bg-black/45 backdrop-blur-xl border-white/5"
+            className="w-[46px] h-[46px] bg-black/75 backdrop-blur-[18px] border-white/[0.10] shadow-[0_4px_20px_rgba(0,0,0,0.55)]"
           />
         )}
 
@@ -330,7 +330,7 @@ function MobileDock({ props }: { props: AdaptiveControlsDockProps }) {
           onClick={props.onReport}
           disabled={props.disabled}
           icon={<Icons.Report />}
-          className="w-[46px] h-[46px] bg-black/45 backdrop-blur-xl border-white/5"
+          className="w-[46px] h-[46px] bg-black/75 backdrop-blur-[18px] border-white/[0.10] shadow-[0_4px_20px_rgba(0,0,0,0.55)]"
         />
 
         {props.onToggleChat && (
@@ -340,7 +340,7 @@ function MobileDock({ props }: { props: AdaptiveControlsDockProps }) {
             icon={<Icons.Chat />}
             active={props.isChatOpen}
             badgeCount={props.unreadCount}
-            className="w-[48px] h-[48px] bg-black/45 backdrop-blur-xl border-white/5 text-white/80"
+            className="w-[48px] h-[48px] bg-black/75 backdrop-blur-[18px] border-white/[0.10] shadow-[0_4px_20px_rgba(0,0,0,0.55)] text-white/80"
           />
         )}
 

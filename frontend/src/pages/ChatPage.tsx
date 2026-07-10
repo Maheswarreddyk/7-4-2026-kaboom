@@ -303,8 +303,8 @@ export function ChatPage() {
   // Register self-preview PiP
   useEffect(() => {
     const screenPos = isSearching ? 'TL' : (snapCorner.toUpperCase() as any);
-    const pipW = isSearching ? 100 : (isMobile ? 130 : 170);
-    const pipH = isSearching ? 100 : (isMobile ? 98 : 128);
+    const pipW = isSearching ? 100 : (isMobile ? 146 : 185);
+    const pipH = isSearching ? 100 : (isMobile ? 110 : 140);
     const priority = isSearching ? 2 : 1;
     const zKey = isSearching ? 'toast' : 'videoLocal';
     registerComponent('self-preview', screenPos, pipW, pipH, true, zKey, priority);
@@ -475,10 +475,12 @@ export function ChatPage() {
                   : 'opacity-0 -translate-y-1 pointer-events-none'
               }`}
             >
-              {/* Online status chip */}
-              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full border border-emerald-500/25 bg-emerald-500/10 backdrop-blur-[12px] shadow-[0_2px_12px_rgba(0,0,0,0.35)] text-emerald-400 text-[10px] font-bold leading-none">
-                🟢 Online
-              </span>
+              {/* Bio chip (replaces Online — user can already see the person) */}
+              {chatState.partnerProfile?.bio && (
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full border border-white/10 bg-white/8 backdrop-blur-[12px] shadow-[0_2px_12px_rgba(0,0,0,0.35)] text-stone-300 text-[10px] font-medium leading-none max-w-[160px]">
+                  <span className="truncate">{chatState.partnerProfile.bio.slice(0, 22)}{chatState.partnerProfile.bio.length > 22 ? '\u2026' : ''}</span>
+                </span>
+              )}
 
               {/* Match reason chips — max 3 */}
               {(() => {
@@ -615,7 +617,7 @@ export function ChatPage() {
       if (chatState.status === 'CONNECTED' && !showPreferenceModal) {
         setControlsVisible(false);
       }
-    }, 2500);
+    }, 4000);
   }, [chatState.status, showPreferenceModal]);
 
   useEffect(() => {
@@ -1143,6 +1145,7 @@ export function ChatPage() {
           connectionQuality={chatState.connectionQuality ?? null}
           isConnected={isConnected}
           onLeave={handleLeave}
+          controlsVisible={controlsVisible}
         />
       ) : (
         /* ── DESKTOP STATUS BAR (top-left, below header) ── */
@@ -1214,7 +1217,7 @@ export function ChatPage() {
               ? (chatState.partnerProfile?.displayName || 'Partner') 
               : isSearching 
                 ? (localStorage.getItem('kaboom_display_name')?.split(' ')[0] || 'You')
-                : `You • ${localStorage.getItem('kaboom_display_name')?.split(' ')[0] || 'Guest'}`
+                : undefined
           }
           frozen={isPlacementsSwapped ? false : isSkipPending}
         />

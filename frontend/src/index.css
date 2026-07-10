@@ -592,6 +592,24 @@
 .animate-island-in { animation: island-slide-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
 .island-progress-bar { animation: progress-shrink 5s linear forwards; }
 
+/* V6.13 Premium In-Call Polish */
+/* Stronger glass FAB appearance */
+.glass-fab {
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.55);
+}
+
+/* Button tap micro-animation */
+.dock-btn-tap {
+  transition: transform 0.12s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.dock-btn-tap:active {
+  transform: scale(0.93);
+}
+
 /* Safe area settings */
 @supports (padding-bottom: env(safe-area-inset-bottom)) {
   .controls-dock {
