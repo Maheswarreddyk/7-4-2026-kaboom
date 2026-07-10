@@ -67,10 +67,6 @@ export function ChatPage() {
     document.documentElement.className = `theme-${activeTheme}`;
   }, []);
 
-  // FaceTime autohide controls state
-  const [controlsVisible, setControlsVisible] = useState(true);
-  const hideTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
   // FaceTime draggable self-preview state
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
@@ -240,13 +236,48 @@ export function ChatPage() {
   const isConnected = chatState.status === 'CONNECTED';
   const isSearching = chatState.status !== 'CONNECTED' && chatState.status !== 'IDLE' && chatState.status !== 'ENDED';
 
-  // Dispatch search state to global Navbar receiver
-  useEffect(() => {
-    window.dispatchEvent(new CustomEvent('kaboom_search_state', { detail: { isSearching } }));
-  }, [isSearching]);
-
   // Central Responsive Layout Manager hooks
-  const { registerComponent, getStyle } = useFloatingLayout();
+  const { 
+    registerComponent, 
+    getStyle, 
+    controlsVisible, 
+    resetInactivityTimeout, 
+    setIsSearching, 
+    setIsConnected, 
+    videoLayout, 
+    setVideoLayout 
+  } = useFloatingLayout();
+
+  // Sync connection state to global manager (Phase 2)
+  useEffect(() => {
+    setIsSearching(isSearching);
+    setIsConnected(isConnected);
+  }, [isSearching, isConnected, setIsSearching, setIsConnected]);
+
+  // Layout switcher cycle function (Phase 4 & 5)
+  const cycleLayout = useCallback(() => {
+    const nextLayoutMap = { focus: 'split', split: 'pip', pip: 'focus' } as const;
+    const next = nextLayoutMap[videoLayout];
+    setVideoLayout(next);
+    showToast('info', `Layout changed to ${next.toUpperCase()} Mode`);
+  }, [videoLayout, setVideoLayout, showToast]);
+
+  // Orientation and resize listener (Phase 4)
+  const [isLandscape, setIsLandscape] = useState(window.innerWidth > window.innerHeight);
+  useEffect(() => {
+    const handleResize = () => {
+      setIsLandscape(window.innerWidth > window.innerHeight);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Reset drag offset when layout becomes Focus Mode (Phase 4)
+  useEffect(() => {
+    if (videoLayout === 'focus') {
+      setDragOffset({ x: 0, y: 0 });
+    }
+  }, [videoLayout]);
 
   // V6.12 Partner Card expand/collapse state & auto-fade timers
   const [isPartnerCardExpanded, setIsPartnerCardExpanded] = useState(false);
@@ -302,23 +333,22 @@ export function ChatPage() {
 
   // Register self-preview PiP
   useEffect(() => {
-    const screenPos = isSearching ? 'TL' : (snapCorner.toUpperCase() as any);
+    const showSelfPreview = isSearching || (isConnected && videoLayout !== 'split');
+    const screenPos = isSearching ? 'TL' : (videoLayout === 'focus' ? 'TL' : (snapCorner.toUpperCase() as any));
     const pipW = isSearching ? 100 : (isMobile ? 146 : 185);
     const pipH = isSearching ? 100 : (isMobile ? 110 : 140);
     const priority = isSearching ? 2 : 1;
     const zKey = isSearching ? 'toast' : 'videoLocal';
-    registerComponent('self-preview', screenPos, pipW, pipH, true, zKey, priority);
-  }, [snapCorner, registerComponent, isSearching, isMobile]);
+    registerComponent('self-preview', screenPos, pipW, pipH, showSelfPreview, zKey, priority);
+  }, [snapCorner, registerComponent, isSearching, isMobile, videoLayout, isConnected]);
 
   // Register queue card directly at top level
   useEffect(() => {
-    const widthVal = isMobile ? 340 : 420;
-    const heightVal = isMobile ? 220 : 280;
-    registerComponent('queue-card', 'BC', widthVal, heightVal, isSearching, 'queueCard', 1);
+    registerComponent('queue-card', 'BC', isMobile ? 340 : 420, isMobile ? 220 : 280, isSearching, 'queueCard', 1);
   }, [isSearching, registerComponent, isMobile]);
 
-  // Register partner info card
-  const showPartnerCard = !!(isConnected && chatState.partnerProfile);
+  // Register partner info card (hidden in Split mode)
+  const showPartnerCard = !!(isConnected && videoLayout !== 'split' && chatState.partnerProfile);
   useEffect(() => {
     registerComponent('partner-card', 'BL', 240, 160, showPartnerCard, 'partnerCard', 1);
   }, [showPartnerCard, registerComponent]);
@@ -383,149 +413,144 @@ export function ChatPage() {
     setLocalAspectRatio(ratio);
   }, []);
 
-  const getRemoteVideoStyle = useCallback((): React.CSSProperties => {
-    const ratio = mainAspectRatio;
-    if (!isConnected || !ratio) {
-      return { width: '100%', height: '100%', left: 0, top: 0, transform: 'none', borderRadius: 0 };
+  const getRemoteContainerStyle = useCallback((): React.CSSProperties => {
+    if (!isConnected) {
+      // Searching state: remote video covers screen (globe or background animations)
+      return {
+        width: '100%',
+        height: '100%',
+        left: 0,
+        top: 0,
+        zIndex: 5,
+      };
     }
-    
+
+    if (videoLayout === 'split') {
+      if (isLandscape) {
+        // Landscape Split Mode: Remote video occupies the right 50%
+        return {
+          width: '50%',
+          height: '100%',
+          left: '50%',
+          top: 0,
+          zIndex: 5,
+        };
+      } else {
+        // Portrait Split Mode: Remote video occupies the top 50%
+        return {
+          width: '100%',
+          height: '50%',
+          left: 0,
+          top: 0,
+          zIndex: 5,
+        };
+      }
+    }
+
+    // Focus Mode and PiP Mode: Fullscreen/centered base style
+    const ratio = mainAspectRatio;
     const baseStyles: React.CSSProperties = {
       position: 'absolute',
       left: '50%',
       top: '50%',
       transform: 'translate(-50%, -50%)',
-      borderRadius: '24px',
-      border: '1.5px solid rgba(255, 255, 255, 0.08)',
-      boxShadow: '0 24px 64px rgba(0, 0, 0, 0.9)',
-      overflow: 'hidden',
-      transition: 'all 0.5s cubic-bezier(0.16, 1, 0.3, 1)'
+      borderRadius: isMobile ? 0 : '24px',
+      border: isMobile ? 'none' : '1.5px solid rgba(255, 255, 255, 0.08)',
+      boxShadow: isMobile ? 'none' : '0 24px 64px rgba(0, 0, 0, 0.9)',
+      zIndex: 5,
     };
 
-    if (isMobile) {
-      return { width: '100%', height: '100%', left: 0, top: 0, transform: 'none', borderRadius: 0, border: 'none' };
+    if (isMobile || chatState.isFullscreen) {
+      return {
+        width: '100%',
+        height: '100%',
+        left: 0,
+        top: 0,
+        transform: 'none',
+        borderRadius: 0,
+        border: 'none',
+        zIndex: 5,
+      };
     } else {
-      if (ratio < 1) {
+      if (ratio && ratio < 1) {
         return {
           ...baseStyles,
           height: '80vh',
           width: `calc(80vh * ${ratio})`,
           maxHeight: '90%',
-          maxWidth: '90%'
+          maxWidth: '90%',
         };
       }
       return {
         ...baseStyles,
         width: '80vw',
-        height: `calc(80vw / ${ratio})`,
+        height: ratio ? `calc(80vw / ${ratio})` : '80vh',
         maxHeight: '80vh',
-        maxWidth: `calc(80vh * ${ratio})`
+        maxWidth: ratio ? `calc(80vh * ${ratio})` : '80vw',
       };
     }
-  }, [isConnected, isMobile, mainAspectRatio]);
+  }, [isConnected, videoLayout, isLandscape, isMobile, chatState.isFullscreen, mainAspectRatio]);
 
-  const renderVideoAndOverlays = useCallback(() => {
-    return (
-      <div className="w-full h-full relative">
-        <VideoPlayer
-          stream={isPlacementsSwapped ? localStream : remoteStream}
-          mirrored={isPlacementsSwapped}
-          muted={isPlacementsSwapped}
-          fullscreen={isMobile || chatState.isFullscreen}
-          onAspectRatioChange={isPlacementsSwapped ? handleLocalAspectRatioChange : handleRemoteAspectRatioChange}
-          placeholder={isSearching ? 'Looking for a partner...' : 'Partner video will appear here'}
-          frozen={isPlacementsSwapped ? isSkipPending : false}
-        />
+  const getLocalContainerStyle = useCallback((): React.CSSProperties => {
+    if (isSearching) {
+      // Searching state style: floating preview at top-left
+      return {
+        width: '100px',
+        height: '100px',
+        left: '16px',
+        top: '76px', // under header
+        zIndex: 10,
+      };
+    }
 
-        {/* Partner Skip Pending status banner */}
-        {chatState.partnerSkipPending && (
-          <div className="absolute top-20 left-1/2 -translate-x-1/2 bg-amber-500/90 backdrop-blur-md text-stone-950 px-4 py-2 rounded-full font-semibold text-xs shadow-lg animate-pulse flex items-center gap-2 z-30 border border-amber-400">
-            <span className="w-2 h-2 rounded-full bg-stone-950 animate-ping" />
-            Partner is deciding whether to continue...
-          </div>
-        )}
+    if (videoLayout === 'split') {
+      if (isLandscape) {
+        // Landscape Split Mode: Local video occupies the left 50%
+        return {
+          width: '50%',
+          height: '100%',
+          left: 0,
+          top: 0,
+          zIndex: 10,
+        };
+      } else {
+        // Portrait Split Mode: Local video occupies the bottom 50%
+        return {
+          width: '100%',
+          height: '50%',
+          left: 0,
+          top: '50%',
+          zIndex: 10,
+        };
+      }
+    }
 
-        {/* Conversation Resumed status banner */}
-        {showResumedBanner && (
-          <div className="absolute top-20 left-1/2 -translate-x-1/2 bg-emerald-500/90 backdrop-blur-md text-white px-4 py-2 rounded-full font-semibold text-xs shadow-lg animate-bounce flex items-center gap-2 z-30 border border-emerald-400">
-            <span className="w-2 h-2 rounded-full bg-white" />
-            Conversation resumed.
-          </div>
-        )}
+    // Focus Mode and PiP Mode: floating window
+    const pipW = isMobile ? 146 : 185;
+    const pipH = isMobile ? 110 : 140;
 
-        {/* V6.12 — Floating glass chips (conversation-first, replaces partner card rectangle) */}
-        {isConnected && chatState.partnerProfile && (
-          <div
-            className="absolute flex flex-col items-start gap-[8px] pointer-events-auto select-none"
-            style={{ ...getStyle('partner-card') }}
-          >
-            {/* Name chip — always visible, tap to expand/collapse tags */}
-            <button
-              onClick={handleTogglePartnerCard}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-white/10 bg-black/45 backdrop-blur-[12px] shadow-[0_2px_16px_rgba(0,0,0,0.45)] text-stone-100 text-[11px] font-bold leading-none hover:bg-black/60 transition-colors"
-              aria-label="Toggle partner info"
-            >
-              👤 {chatState.partnerProfile.displayName || 'Guest'}
-            </button>
+    if (videoLayout === 'focus') {
+      // Focus Mode: Docked fixed at top-left corner
+      return {
+        width: `${pipW}px`,
+        height: `${pipH}px`,
+        left: '16px',
+        top: '76px', // docked under header area
+        zIndex: 10,
+        transform: 'none',
+      };
+    }
 
-            {/* Tag chips — visible when expanded */}
-            <div
-              className={`flex flex-col items-start gap-[8px] transition-all duration-500 ease-out ${
-                isPartnerCardExpanded
-                  ? 'opacity-100 translate-y-0 pointer-events-auto'
-                  : 'opacity-0 -translate-y-1 pointer-events-none'
-              }`}
-            >
-              {/* Bio chip (replaces Online — user can already see the person) */}
-              {chatState.partnerProfile?.bio && (
-                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full border border-white/10 bg-white/8 backdrop-blur-[12px] shadow-[0_2px_12px_rgba(0,0,0,0.35)] text-stone-300 text-[10px] font-medium leading-none max-w-[160px]">
-                  <span className="truncate">{chatState.partnerProfile.bio.slice(0, 22)}{chatState.partnerProfile.bio.length > 22 ? '\u2026' : ''}</span>
-                </span>
-              )}
-
-              {/* Match reason chips — max 3 */}
-              {(() => {
-                const reasons = chatState.matchReasonMetadata?.matchedBy ?? [];
-                const university = chatState.partnerProfile?.matchAttributes?.university?.[0] || (chatState.partnerProfile as any)?.university || '';
-                const allTags = [...reasons, ...(university ? [`🎓 ${university}`] : [])];
-                const visible = allTags.slice(0, 3);
-                const overflow = allTags.length - 3;
-                return (
-                  <>
-                    {visible.map((tag, i) => (
-                      <span
-                        key={i}
-                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full border border-amber-500/20 bg-amber-500/10 backdrop-blur-[12px] shadow-[0_2px_12px_rgba(0,0,0,0.35)] text-amber-300 text-[10px] font-bold leading-none"
-                      >
-                        🏷 {tag}
-                      </span>
-                    ))}
-                    {overflow > 0 && (
-                      <span className="inline-flex items-center px-2 py-1 rounded-full border border-white/10 bg-white/5 backdrop-blur-[12px] text-stone-400 text-[10px] font-bold leading-none">
-                        +{overflow}
-                      </span>
-                    )}
-                  </>
-                );
-              })()}
-            </div>
-          </div>
-        )}
-
-        {/* Connection Quality widget inside video borders */}
-      </div>
-    );
-  }, [
-    isConnected,
-    isPlacementsSwapped,
-    localStream,
-    remoteStream,
-    chatState.partnerProfile,
-    chatState.connectionQuality,
-    chatState.isFullscreen,
-    isSearching,
-    handleLocalAspectRatioChange,
-    handleRemoteAspectRatioChange
-  ]);
+    // PiP Mode: Draggable snap position
+    const layoutStyle = getStyle('self-preview');
+    return {
+      ...layoutStyle,
+      width: `${pipW}px`,
+      height: `${pipH}px`,
+      zIndex: 10,
+      transform: `translate(${dragOffset.x}px, ${dragOffset.y}px)`,
+    };
+  }, [isSearching, videoLayout, isLandscape, isMobile, dragOffset, getStyle]);
 
   const handleLike = useCallback(async () => {
     triggerReaction('❤️');
@@ -586,7 +611,7 @@ export function ChatPage() {
   const touchStartY = useRef<number | null>(null);
 
   const handleTouchStartRoot = (e: React.TouchEvent) => {
-    resetControlsTimeout();
+    resetInactivityTimeout();
     const touch = e.touches[0];
     touchStartX.current = touch.clientX;
     touchStartY.current = touch.clientY;
@@ -607,25 +632,6 @@ export function ChatPage() {
     touchStartX.current = null;
     touchStartY.current = null;
   };
-
-  // Autohide controls logic
-  const resetControlsTimeout = useCallback(() => {
-    setControlsVisible(true);
-    if (hideTimeoutRef.current) clearTimeout(hideTimeoutRef.current);
-    hideTimeoutRef.current = setTimeout(() => {
-      // Keep controls visible if searching or preferences open
-      if (chatState.status === 'CONNECTED' && !showPreferenceModal) {
-        setControlsVisible(false);
-      }
-    }, 4000);
-  }, [chatState.status, showPreferenceModal]);
-
-  useEffect(() => {
-    resetControlsTimeout();
-    return () => {
-      if (hideTimeoutRef.current) clearTimeout(hideTimeoutRef.current);
-    };
-  }, [resetControlsTimeout]);
 
   // Mutual Match Auto-Dismiss Logic
   useEffect(() => {
@@ -1050,7 +1056,7 @@ export function ChatPage() {
     /* Root: fills entire 100dvh viewport (set by layout-immersive on parent) */
     <div
       className="absolute inset-0 bg-black overflow-hidden select-none"
-      onMouseMove={resetControlsTimeout}
+      onMouseMove={resetInactivityTimeout}
       onTouchStart={handleTouchStartRoot}
       onTouchEnd={handleTouchEndRoot}
       role="main"
@@ -1058,29 +1064,193 @@ export function ChatPage() {
     >
       <MetaManager page="chat" />
       <TipEngine />
-       {/* ── LAYER 1: Remote video — z-index: var(--z-video) ── */}
-       {isMobile ? (
+
+      {/* ── VIDEO SCENE (Unified layouts: Focus, Split, PiP) ── */}
+      {isMobile ? (
         <GestureLayer
           onSwipeLeft={startSkipCountdown}
           disabled={chatState.isChatOpen || isDragging}
         >
-          <div 
-            className="video-viewport opacity-100 scale-100 translate-x-0"
-            style={getRemoteVideoStyle()}
-          >
-            {renderVideoAndOverlays()}
+          <div className="absolute inset-0 z-0 bg-stone-950 overflow-hidden">
+            {/* Remote Video Container */}
+            <div
+              className={cn(
+                "absolute transition-all duration-[350ms] ease-out overflow-hidden bg-black",
+                videoLayout === 'split' ? "border border-white/5" : ""
+              )}
+              style={getRemoteContainerStyle()}
+            >
+              <VideoPlayer
+                stream={isPlacementsSwapped ? localStream : remoteStream}
+                mirrored={isPlacementsSwapped}
+                muted={isPlacementsSwapped}
+                fullscreen={videoLayout === 'split' || isMobile || chatState.isFullscreen}
+                onAspectRatioChange={isPlacementsSwapped ? handleLocalAspectRatioChange : handleRemoteAspectRatioChange}
+                placeholder={isSearching ? 'Looking for a partner...' : 'Partner video will appear here'}
+                frozen={isPlacementsSwapped ? isSkipPending : false}
+              />
+            </div>
+
+            {/* Local Video (Self Preview) Container */}
+            <div
+              onMouseDown={handleMouseDown}
+              onTouchStart={handleTouchStart}
+              onDoubleClick={handleDoubleTapSwap}
+              className={cn(
+                "absolute transition-all duration-[350ms] ease-out overflow-hidden bg-black",
+                videoLayout === 'split' ? "border border-white/5" : "rounded-2xl border border-white/10 shadow-2xl",
+                isDragging && 'shadow-2xl border-amber-500/30 scale-[1.03]',
+                (!controlsVisible && videoLayout !== 'split') && 'border-transparent shadow-none'
+              )}
+              style={getLocalContainerStyle()}
+            >
+              <VideoPlayer
+                stream={isPlacementsSwapped ? remoteStream : localStream}
+                muted={!isPlacementsSwapped}
+                mirrored={!isPlacementsSwapped}
+                onAspectRatioChange={isPlacementsSwapped ? handleRemoteAspectRatioChange : handleLocalAspectRatioChange}
+                className="w-full h-full pointer-events-none"
+                fullscreen={isSearching || isPlacementsSwapped || videoLayout === 'split'}
+                label={
+                  isPlacementsSwapped 
+                    ? (chatState.partnerProfile?.displayName || 'Partner') 
+                    : isSearching 
+                      ? (localStorage.getItem('kaboom_display_name')?.split(' ')[0] || 'You')
+                      : undefined
+                }
+                frozen={isPlacementsSwapped ? false : isSkipPending}
+              />
+            </div>
           </div>
         </GestureLayer>
       ) : (
-        <div 
-          className={cn(
-            "video-viewport transition-all duration-[750ms] ease-[cubic-bezier(0.16,1,0.3,1)]",
-            isConnected ? "opacity-100 scale-100 translate-x-0" : "opacity-0 scale-95 -translate-x-10"
-          )}
-          style={getRemoteVideoStyle()}
-          onDoubleClick={handleLike}
+        <div className="absolute inset-0 z-0 bg-stone-950 overflow-hidden">
+          {/* Remote Video Container */}
+          <div
+            className={cn(
+              "absolute transition-all duration-[350ms] ease-out overflow-hidden bg-black",
+              videoLayout === 'split' ? "border border-white/5" : ""
+            )}
+            style={getRemoteContainerStyle()}
+          >
+            <VideoPlayer
+              stream={isPlacementsSwapped ? localStream : remoteStream}
+              mirrored={isPlacementsSwapped}
+              muted={isPlacementsSwapped}
+              fullscreen={videoLayout === 'split' || isMobile || chatState.isFullscreen}
+              onAspectRatioChange={isPlacementsSwapped ? handleLocalAspectRatioChange : handleRemoteAspectRatioChange}
+              placeholder={isSearching ? 'Looking for a partner...' : 'Partner video will appear here'}
+              frozen={isPlacementsSwapped ? isSkipPending : false}
+            />
+          </div>
+
+          {/* Local Video (Self Preview) Container */}
+          <div
+            onMouseDown={handleMouseDown}
+            onTouchStart={handleTouchStart}
+            onDoubleClick={handleDoubleTapSwap}
+            className={cn(
+              "absolute transition-all duration-[350ms] ease-out overflow-hidden bg-black",
+              videoLayout === 'split' ? "border border-white/5" : "rounded-2xl border border-white/10 shadow-2xl",
+              isDragging && 'shadow-2xl border-amber-500/30 scale-[1.03]',
+              (!controlsVisible && videoLayout !== 'split') && 'border-transparent shadow-none'
+            )}
+            style={getLocalContainerStyle()}
+          >
+            <VideoPlayer
+              stream={isPlacementsSwapped ? remoteStream : localStream}
+              muted={!isPlacementsSwapped}
+              mirrored={!isPlacementsSwapped}
+              onAspectRatioChange={isPlacementsSwapped ? handleRemoteAspectRatioChange : handleLocalAspectRatioChange}
+              className="w-full h-full pointer-events-none"
+              fullscreen={isSearching || isPlacementsSwapped || videoLayout === 'split'}
+              label={
+                isPlacementsSwapped 
+                  ? (chatState.partnerProfile?.displayName || 'Partner') 
+                  : isSearching 
+                    ? (localStorage.getItem('kaboom_display_name')?.split(' ')[0] || 'You')
+                    : undefined
+              }
+              frozen={isPlacementsSwapped ? false : isSkipPending}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Partner Skip Pending status banner */}
+      {chatState.partnerSkipPending && (
+        <div className="absolute top-20 left-1/2 -translate-x-1/2 bg-amber-500/90 backdrop-blur-md text-stone-950 px-4 py-2 rounded-full font-semibold text-xs shadow-lg animate-pulse flex items-center gap-2 z-30 border border-amber-400">
+          <span className="w-2 h-2 rounded-full bg-stone-950 animate-ping" />
+          Partner is deciding whether to continue...
+        </div>
+      )}
+
+      {/* Conversation Resumed status banner */}
+      {showResumedBanner && (
+        <div className="absolute top-20 left-1/2 -translate-x-1/2 bg-emerald-500/90 backdrop-blur-md text-white px-4 py-2 rounded-full font-semibold text-xs shadow-lg animate-bounce flex items-center gap-2 z-30 border border-emerald-400">
+          <span className="w-2 h-2 rounded-full bg-white" />
+          Conversation resumed.
+        </div>
+      )}
+
+      {/* V6.12 — Floating glass chips (conversation-first, replaces partner card rectangle) */}
+      {showPartnerCard && chatState.partnerProfile && (
+        <div
+          className="absolute flex flex-col items-start gap-[8px] pointer-events-auto select-none transition-all duration-300 z-30"
+          style={{ 
+            ...getStyle('partner-card'),
+            opacity: controlsVisible ? 1 : 0.4
+          }}
         >
-          {renderVideoAndOverlays()}
+          {/* Name chip — always visible, tap to expand/collapse tags */}
+          <button
+            onClick={handleTogglePartnerCard}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-white/10 bg-black/45 backdrop-blur-[12px] shadow-[0_2px_16px_rgba(0,0,0,0.45)] text-stone-100 text-[11px] font-bold leading-none hover:bg-black/60 transition-colors"
+            aria-label="Toggle partner info"
+          >
+            👤 {chatState.partnerProfile.displayName || 'Guest'}
+          </button>
+
+          {/* Tag chips — visible when expanded */}
+          <div
+            className={`flex flex-col items-start gap-[8px] transition-all duration-500 ease-out ${
+              isPartnerCardExpanded
+                ? 'opacity-100 translate-y-0 pointer-events-auto'
+                : 'opacity-0 -translate-y-1 pointer-events-none'
+            }`}
+          >
+            {chatState.partnerProfile?.bio && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full border border-white/10 bg-white/8 backdrop-blur-[12px] shadow-[0_2px_12px_rgba(0,0,0,0.35)] text-stone-300 text-[10px] font-medium leading-none max-w-[160px]">
+                <span className="truncate">{chatState.partnerProfile.bio.slice(0, 22)}{chatState.partnerProfile.bio.length > 22 ? '…' : ''}</span>
+              </span>
+            )}
+
+            {/* Match reason chips — max 3 */}
+            {(() => {
+              const reasons = chatState.matchReasonMetadata?.matchedBy ?? [];
+              const university = chatState.partnerProfile?.matchAttributes?.university?.[0] || (chatState.partnerProfile as any)?.university || '';
+              const allTags = [...reasons, ...(university ? [`🎓 ${university}`] : [])];
+              const visible = allTags.slice(0, 3);
+              const overflow = allTags.length - 3;
+              return (
+                <>
+                  {visible.map((tag, i) => (
+                    <span
+                      key={i}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full border border-amber-500/20 bg-amber-500/10 backdrop-blur-[12px] shadow-[0_2px_12px_rgba(0,0,0,0.35)] text-amber-300 text-[10px] font-bold leading-none"
+                    >
+                      🏷 {tag}
+                    </span>
+                  ))}
+                  {overflow > 0 && (
+                    <span className="inline-flex items-center px-2 py-1 rounded-full border border-white/10 bg-white/5 backdrop-blur-[12px] text-stone-400 text-[10px] font-bold leading-none">
+                      +{overflow}
+                    </span>
+                  )}
+                </>
+              );
+            })()}
+          </div>
         </div>
       )}
 
@@ -1150,7 +1320,10 @@ export function ChatPage() {
       ) : (
         /* ── DESKTOP STATUS BAR (top-left, below header) ── */
         <div
-          className="absolute left-4 flex items-center gap-3"
+          className={cn(
+            "absolute left-4 flex items-center gap-3 transition-all duration-300",
+            !controlsVisible && "opacity-0 -translate-y-2 pointer-events-none"
+          )}
           style={{
             top: 'calc(var(--header-h) + 12px)',
             zIndex: 'var(--z-controls)' as any,
@@ -1169,7 +1342,6 @@ export function ChatPage() {
           )}
         </div>
       )}
-
 
       {/* ── COACH MARK (hint) — always below header ────────── */}
       {activeHint && !hintDismissed && (
@@ -1190,38 +1362,6 @@ export function ChatPage() {
           </div>
         </div>
       )}
-
-      {/* ── SELF-PREVIEW PiP (corner-snapping) ─────────────── */}
-      <div
-        className={cn(
-          isSearching ? 'searching-self-preview' : 'self-preview transition-transform',
-          isDragging && 'shadow-2xl border-amber-500/30'
-        )}
-        style={{
-          transform: isSearching ? 'none' : `translate(${dragOffset.x}px, ${dragOffset.y}px) scale(${isDragging ? pipScale * 1.03 : pipScale})`,
-          ...getStyle('self-preview'),
-        }}
-        onMouseDown={handleMouseDown}
-        onTouchStart={handleTouchStart}
-        onDoubleClick={handleDoubleTapSwap}
-      >
-        <VideoPlayer
-          stream={isPlacementsSwapped ? remoteStream : localStream}
-          muted={!isPlacementsSwapped}
-          mirrored={!isPlacementsSwapped}
-          onAspectRatioChange={isPlacementsSwapped ? handleRemoteAspectRatioChange : handleLocalAspectRatioChange}
-          className="w-full h-full pointer-events-none"
-          fullscreen={isSearching || isPlacementsSwapped}
-          label={
-            isPlacementsSwapped 
-              ? (chatState.partnerProfile?.displayName || 'Partner') 
-              : isSearching 
-                ? (localStorage.getItem('kaboom_display_name')?.split(' ')[0] || 'You')
-                : undefined
-          }
-          frozen={isPlacementsSwapped ? false : isSkipPending}
-        />
-      </div>
 
       {/* ── CONTROLS DOCK ─────────────────────────────────── */}
       <div 
@@ -1251,6 +1391,8 @@ export function ChatPage() {
             setShowPreferenceModal(true);
           }}
           unreadCount={chatState.unreadCount}
+          videoLayout={videoLayout}
+          onCycleLayout={cycleLayout}
         />
       </div>
 

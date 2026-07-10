@@ -33,6 +33,17 @@ interface FloatingLayoutContextType {
   getStyle: (id: string) => React.CSSProperties;
   safeInsets: { top: number; bottom: number; left: number; right: number };
   collisionCount: number;
+
+  // V6.14 Global Overlay Visibility Manager & Layout Persistence
+  controlsVisible: boolean;
+  setControlsVisible: (val: boolean) => void;
+  resetInactivityTimeout: () => void;
+  isSearching: boolean;
+  setIsSearching: (val: boolean) => void;
+  isConnected: boolean;
+  setIsConnected: (val: boolean) => void;
+  videoLayout: 'focus' | 'split' | 'pip';
+  setVideoLayout: (layout: 'focus' | 'split' | 'pip') => void;
 }
 
 const FloatingLayoutContext = createContext<FloatingLayoutContextType | null>(null);
@@ -59,6 +70,59 @@ export function FloatingLayoutProvider({ children }: { children: React.ReactNode
   const { width, height } = useResponsiveLayout();
   const [components, setComponents] = useState<Record<string, FloatingComponent>>({});
   const [collisionCount, setCollisionCount] = useState(0);
+  const [controlsVisible, setControlsVisible] = useState(true);
+  const [isSearching, setIsSearching] = useState(false);
+  const [isConnected, setIsConnected] = useState(false);
+  const [videoLayout, setVideoLayout] = useState<'focus' | 'split' | 'pip'>(() => {
+    return (localStorage.getItem('kaboom_video_layout') as any) || 'focus';
+  });
+
+  const hideTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const resetInactivityTimeout = useCallback(() => {
+    setControlsVisible(true);
+    if (hideTimeoutRef.current) {
+      clearTimeout(hideTimeoutRef.current);
+    }
+    hideTimeoutRef.current = setTimeout(() => {
+      // Auto-hide only when connected and NOT searching
+      if (isConnected && !isSearching) {
+        setControlsVisible(false);
+      }
+    }, 4000);
+  }, [isConnected, isSearching]);
+
+  // Sync controls state when status changes
+  useEffect(() => {
+    resetInactivityTimeout();
+    return () => {
+      if (hideTimeoutRef.current) clearTimeout(hideTimeoutRef.current);
+    };
+  }, [isConnected, isSearching, resetInactivityTimeout]);
+
+  // Global listener for inactivity on windows/touch
+  useEffect(() => {
+    const handleActivity = () => {
+      resetInactivityTimeout();
+    };
+
+    window.addEventListener('mousemove', handleActivity);
+    window.addEventListener('mousedown', handleActivity);
+    window.addEventListener('touchstart', handleActivity);
+    window.addEventListener('keydown', handleActivity);
+
+    return () => {
+      window.removeEventListener('mousemove', handleActivity);
+      window.removeEventListener('mousedown', handleActivity);
+      window.removeEventListener('touchstart', handleActivity);
+      window.removeEventListener('keydown', handleActivity);
+    };
+  }, [resetInactivityTimeout]);
+
+  const handleSetVideoLayout = useCallback((layout: 'focus' | 'split' | 'pip') => {
+    setVideoLayout(layout);
+    localStorage.setItem('kaboom_video_layout', layout);
+  }, []);
 
   // Parse Safe Area Insets ( Notch/Dynamic Island support )
   const [safeInsets, setSafeInsets] = useState({ top: 16, bottom: 16, left: 16, right: 16 });
@@ -293,6 +357,15 @@ export function FloatingLayoutProvider({ children }: { children: React.ReactNode
       getStyle,
       safeInsets,
       collisionCount,
+      controlsVisible,
+      setControlsVisible,
+      resetInactivityTimeout,
+      isSearching,
+      setIsSearching,
+      isConnected,
+      setIsConnected,
+      videoLayout,
+      setVideoLayout: handleSetVideoLayout,
     }}>
       {children}
     </FloatingLayoutContext.Provider>

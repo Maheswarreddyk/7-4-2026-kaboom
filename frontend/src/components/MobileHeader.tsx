@@ -23,8 +23,8 @@ export function MobileHeader({
 
   return (
     <div className={cn(
-      "fixed top-0 left-0 right-0 z-30 select-none flex flex-col pointer-events-none transition-all duration-[250ms]",
-      !controlsVisible && "opacity-0 pointer-events-none"
+      "fixed top-0 left-0 right-0 z-30 select-none flex flex-col pointer-events-none transition-all duration-[300ms] ease-out",
+      !controlsVisible && "opacity-0 -translate-y-2 pointer-events-none"
     )}>
       
       {/* ── Main Header Bar (72px) ── */}
@@ -32,19 +32,23 @@ export function MobileHeader({
         className="w-full h-[72px] px-4 flex items-center justify-between bg-gradient-to-b from-black/85 via-black/50 to-transparent pointer-events-auto"
         style={{ paddingTop: 'env(safe-area-inset-top)' }}
       >
-        {/* Left: Logo */}
-        <div className="flex items-center gap-[12px] select-none pointer-events-auto">
-          <img 
-            src={iconKaboom} 
-            alt="Kaboom TV Icon" 
-            className="w-8 h-8 object-contain rounded-lg" 
-          />
-          <img 
-            src={logoKaboom} 
-            alt="Kaboom TV Logo" 
-            className="h-[36px] w-auto object-contain" 
-          />
-        </div>
+        {/* Left: Logo (unrenders in connected call) */}
+        {!isConnected ? (
+          <div className="flex items-center gap-[12px] select-none pointer-events-auto">
+            <img 
+              src={iconKaboom} 
+              alt="Kaboom TV Icon" 
+              className="w-8 h-8 object-contain rounded-lg" 
+            />
+            <img 
+              src={logoKaboom} 
+              alt="Kaboom TV Logo" 
+              className="h-[36px] w-auto object-contain" 
+            />
+          </div>
+        ) : (
+          <div className="w-[1px] h-[1px]" />
+        )}
 
         {/* Center: Live Timer */}
         {isConnected && (

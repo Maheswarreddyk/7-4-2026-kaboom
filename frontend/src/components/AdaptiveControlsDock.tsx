@@ -22,6 +22,8 @@ interface AdaptiveControlsDockProps {
   onOpenPreferences?: () => void;
   unreadCount?: number;
   style?: React.CSSProperties;
+  videoLayout?: 'focus' | 'split' | 'pip';
+  onCycleLayout?: () => void;
 }
 
 export const Icons = {
@@ -86,6 +88,11 @@ export const Icons = {
   Leave: () => (
     <svg className="w-[var(--icon-size)] h-[var(--icon-size)] text-white rotate-[135deg]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.94.725l.548 2.2a1 1 0 01-.321.988l-1.305.98a10.582 10.582 0 004.872 4.872l.98-1.305a1 1 0 01.988-.321l2.2.548a1 1 0 01.725.94V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+    </svg>
+  ),
+  Layout: () => (
+    <svg className="w-[var(--icon-size)] h-[var(--icon-size)]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
     </svg>
   ),
 };
@@ -162,6 +169,15 @@ function DesktopDock({ props, style }: { props: AdaptiveControlsDockProps; style
         tooltip="Report Partner"
       />
 
+      {props.onCycleLayout && (
+        <DockButton
+          onClick={props.onCycleLayout}
+          icon={<Icons.Layout />}
+          tooltip={`Layout Mode: ${props.videoLayout?.toUpperCase() || 'FOCUS'}`}
+          disabled={props.disabled}
+        />
+      )}
+
       <DockButton
         onClick={props.onToggleFullscreen}
         icon={<Icons.Fullscreen />}
@@ -237,6 +253,15 @@ function TabletDock({ props, style }: { props: AdaptiveControlsDockProps; style?
         className="w-[calc(var(--control-size)*1.1)] h-[calc(var(--control-size)*1.1)] bg-gradient-to-r from-amber-500 to-amber-600 border-amber-400 text-stone-950 hover:shadow-[0_8px_24px_rgba(245,166,35,0.35)]"
         tooltip="Next Partner"
       />
+
+      {props.onCycleLayout && (
+        <DockButton
+          onClick={props.onCycleLayout}
+          icon={<Icons.Layout />}
+          tooltip={`Layout Mode: ${props.videoLayout?.toUpperCase() || 'FOCUS'}`}
+          disabled={props.disabled}
+        />
+      )}
 
       {/* Overflow Menu for Low Priority */}
       <OverflowMenu disabled={props.disabled}>
@@ -323,6 +348,15 @@ function MobileDock({ props }: { props: AdaptiveControlsDockProps }) {
             onClick={props.onOpenPreferences}
             icon={<Icons.Settings />}
             className="w-[46px] h-[46px] bg-black/75 backdrop-blur-[18px] border-white/[0.10] shadow-[0_4px_20px_rgba(0,0,0,0.55)]"
+          />
+        )}
+
+        {props.onCycleLayout && (
+          <DockButton
+            onClick={props.onCycleLayout}
+            icon={<Icons.Layout />}
+            className="w-[46px] h-[46px] bg-black/75 backdrop-blur-[18px] border-white/[0.10] shadow-[0_4px_20px_rgba(0,0,0,0.55)]"
+            tooltip={`Layout: ${props.videoLayout?.toUpperCase() || 'FOCUS'}`}
           />
         )}
 

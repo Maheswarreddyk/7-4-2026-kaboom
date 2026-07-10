@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from '../utils/index.js';
 import { useResponsiveLayout } from '../hooks/useResponsiveLayout.js';
+import { useFloatingLayout } from '../contexts/FloatingLayoutContext.js';
 import logoKaboom from '../../images/logo_kaboom.png';
 import iconKaboom from '../../images/icon_kaboom.png';
 
@@ -22,22 +23,12 @@ export function Navbar({ isTransparent = false }: NavbarProps) {
   const isChatPage = location.pathname === '/chat';
   const [drawerOpen, setDrawerOpen] = useState(false);
   const { layoutMode } = useResponsiveLayout();
+  const { isConnected, isSearching } = useFloatingLayout();
 
-  const [isSearching, setIsSearching] = useState(isChatPage);
-
-  useEffect(() => {
-    setIsSearching(location.pathname === '/chat');
-
-    const handleSearchState = (e: Event) => {
-      const customEvent = e as CustomEvent<{ isSearching: boolean }>;
-      setIsSearching(customEvent.detail.isSearching);
-    };
-
-    window.addEventListener('kaboom_search_state', handleSearchState);
-    return () => {
-      window.removeEventListener('kaboom_search_state', handleSearchState);
-    };
-  }, [location.pathname]);
+  // Completely unrender Navbar during immersive active calls (Phase 1 & 3)
+  if (isChatPage && isConnected) {
+    return null;
+  }
 
   // Determine visibility states based on LayoutMode space states
   const showFullLogo = layoutMode === 'Comfortable';
