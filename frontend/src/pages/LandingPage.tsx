@@ -418,16 +418,15 @@ function InteractiveDemo() {
   );
 }
 
-// ── PLAYFUL HELPER MESSAGES UNDER BUTTON ──
-const ROTATING_WORDS = ['WORLD', 'STRANGER', 'FRIEND', 'CONNECTION', 'STORY', 'CONVERSATION'];
+const ROTATING_WORDS = ['CLICK', 'CONVERSATION', 'CONNECTION', 'STRANGER', 'STORY', 'FRIEND'];
 
-const PLAYFUL_MESSAGES = [
-  "🌍 Meet someone new",
-  "🎉 Start your next story",
-  "✨ Your next best friend is one click away",
-  "👋 Say hello to the world",
-  "❤️ Every conversation starts with a click",
-  "🚀 Ready to match?",
+const CURIOSITY_MESSAGES = [
+  "✨ Meet someone today",
+  "🌎 Talk beyond borders",
+  "💬 One click away",
+  "🎯 Your next conversation is waiting",
+  "🔥 Thousands online now",
+  "🌍 Discover someone unexpected",
 ];
 
 const FLOATING_EMOJIS_POOL = ['❤️', '🔥', '✨', '🎉', '👋', '🌎', '💫', '💥', '😂', '👍'];
@@ -440,43 +439,60 @@ export function LandingPage() {
   const [showPreferenceModal, setShowPreferenceModal] = useState(false);
   const [showTutorial, setShowTutorial] = useState(false);
 
-  // V7: Active filters state for returning users
-  const [activeFilters, setActiveFilters] = useState<string[]>([]);
   const [displayName, setDisplayName] = useState<string | null>(null);
+  const [matchMode, setMatchMode] = useState<string>('RANDOM');
+  const [languagesDetail, setLanguagesDetail] = useState<string>('');
+  const [showResumeCard, setShowResumeCard] = useState(false);
+  const [curiosityIdx, setCuriosityIdx] = useState(0);
+  const [curiosityFadeState, setCuriosityFadeState] = useState<'in' | 'out'>('in');
+  const [magneticOffset, setMagneticOffset] = useState({ x: 0, y: 0 });
+  const buttonRef = useRef<HTMLButtonElement | null>(null);
+
+  const getSavedPreferences = () => {
+    try {
+      return {
+        display_name: localStorage.getItem('kaboom_display_name') || '',
+        bio: localStorage.getItem('kaboom_bio') || '',
+        university: localStorage.getItem('kaboom_university') || '',
+        match_mode: localStorage.getItem('kaboom_match_mode') || 'RANDOM',
+        match_constraints: JSON.parse(localStorage.getItem('kaboom_match_constraints') || '{}'),
+        languages: JSON.parse(localStorage.getItem('kaboom_languages') || '["English"]'),
+        country: localStorage.getItem('kaboom_country') || '',
+        state: localStorage.getItem('kaboom_state') || '',
+        district: localStorage.getItem('kaboom_district') || '',
+        city: localStorage.getItem('kaboom_city') || '',
+        gender: localStorage.getItem('kaboom_gender') || 'Prefer not to say',
+        looking_for: JSON.parse(localStorage.getItem('kaboom_looking_for') || '["Anyone"]'),
+        interest_tags: JSON.parse(localStorage.getItem('kaboom_interest_tags') || '[]'),
+      };
+    } catch {
+      return {};
+    }
+  };
 
   useEffect(() => {
     const name = localStorage.getItem('kaboom_display_name');
     if (name) {
       setDisplayName(name);
-      const chips: string[] = [];
-      const mode = localStorage.getItem('kaboom_match_mode') || 'RANDOM';
-      chips.push(`Mode: ${mode}`);
-
-      const uni = localStorage.getItem('kaboom_university');
-      if (uni) chips.push(`🎓 ${uni}`);
-
-      const city = localStorage.getItem('kaboom_city');
-      const country = localStorage.getItem('kaboom_country');
-      if (city || country) {
-        chips.push(`📍 ${[city, country].filter(Boolean).join(', ')}`);
-      }
-
+      setMatchMode(localStorage.getItem('kaboom_match_mode') || 'RANDOM');
       try {
         const langs = JSON.parse(localStorage.getItem('kaboom_languages') || '[]');
         if (langs.length > 0) {
-          chips.push(`🗣️ ${langs.slice(0, 2).join(', ')}${langs.length > 2 ? '...' : ''}`);
+          setLanguagesDetail(langs.join(', '));
+        } else {
+          setLanguagesDetail('English');
         }
-      } catch {}
-
-      try {
-        const tags = JSON.parse(localStorage.getItem('kaboom_interest_tags') || '[]');
-        if (tags.length > 0) {
-          chips.push(`✨ ${tags.slice(0, 2).map((t: string) => `#${t}`).join(' ')}${tags.length > 2 ? '...' : ''}`);
-        }
-      } catch {}
-
-      setActiveFilters(chips);
+      } catch {
+        setLanguagesDetail('English');
+      }
     }
+  }, []);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowResumeCard(true);
+    }, 300);
+    return () => clearTimeout(timer);
   }, []);
 
   // V4.1 Auto-Restoration Redirect (Requirement 6 & 17)
@@ -507,10 +523,6 @@ export function LandingPage() {
   const [clickParticles, setClickParticles] = useState<Array<{ id: number; emoji?: string; x: number; y: number; scale: number; active: boolean }>>([]);
   const [isExploded, setIsExploded] = useState(false);
 
-  // Playful message under button rotation
-  const [helperIdx, setHelperIdx] = useState(0);
-  const [helperFadeState, setHelperFadeState] = useState<'in' | 'out'>('in');
-
   // Dynamic Story notifications state
   const [storyNotification, setStoryNotification] = useState<{ text: string; side: 'left' | 'right' } | null>(null);
 
@@ -533,14 +545,14 @@ export function LandingPage() {
       }, 400);
     }, 4000);
 
-    // Playful helper message updates
-    const helperInterval = setInterval(() => {
-      setHelperFadeState('out');
+    // Curiosity text rotator
+    const curiosityInterval = setInterval(() => {
+      setCuriosityFadeState('out');
       setTimeout(() => {
-        setHelperIdx((prev) => (prev + 1) % PLAYFUL_MESSAGES.length);
-        setHelperFadeState('in');
+        setCuriosityIdx((prev) => (prev + 1) % CURIOSITY_MESSAGES.length);
+        setCuriosityFadeState('in');
       }, 300);
-    }, 3800);
+    }, 5000);
 
     // Continuous floating emojis (Emoji Personality)
     const emojiInterval = setInterval(() => {
@@ -582,7 +594,7 @@ export function LandingPage() {
 
     return () => {
       clearInterval(rotationInterval);
-      clearInterval(helperInterval);
+      clearInterval(curiosityInterval);
       clearInterval(emojiInterval);
       clearInterval(storyInterval);
       clearInterval(countInterval);
@@ -596,10 +608,33 @@ export function LandingPage() {
     const y = (e.clientY - rect.top) / rect.height - 0.5;
     setTilt({ x: x * 6, y: y * -6 });
     setMousePos({ x: e.clientX, y: e.clientY });
+
+    // Magnetic cursor pull on the primary button
+    if (buttonRef.current) {
+      const btnRect = buttonRef.current.getBoundingClientRect();
+      const btnCenterX = btnRect.left + btnRect.width / 2;
+      const btnCenterY = btnRect.top + btnRect.height / 2;
+      
+      const dx = e.clientX - btnCenterX;
+      const dy = e.clientY - btnCenterY;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+
+      if (distance < 140) {
+        // Gently pull 2-4px towards pointer (responsive interaction)
+        const pullFactor = 0.035;
+        setMagneticOffset({
+          x: dx * pullFactor,
+          y: dy * pullFactor,
+        });
+      } else {
+        setMagneticOffset({ x: 0, y: 0 });
+      }
+    }
   };
 
   const handleMouseLeave = () => {
     setTilt({ x: 0, y: 0 });
+    setMagneticOffset({ x: 0, y: 0 });
   };
 
   const triggerClickExplosion = () => {
@@ -632,21 +667,21 @@ export function LandingPage() {
     }, 1500);
   };
 
-  const handleStartChat = async () => {
-    // Satisfying game click animation sequence
+  const handleStartNewConversation = async () => {
     triggerClickExplosion();
-    await new Promise((resolve) => setTimeout(resolve, 800));
+    await new Promise((resolve) => setTimeout(resolve, 600));
 
-    const hasName = localStorage.getItem('kaboom_display_name');
-    if (!hasName) {
-      const tutorialSeen = localStorage.getItem('kaboom_tutorial_seen') === 'true';
-      if (!tutorialSeen) {
-        setShowTutorial(true);
-      } else {
-        setShowPreferenceModal(true);
-      }
-      return;
+    const tutorialSeen = localStorage.getItem('kaboom_tutorial_seen') === 'true';
+    if (!tutorialSeen) {
+      setShowTutorial(true);
+    } else {
+      setShowPreferenceModal(true);
     }
+  };
+
+  const handleResumeSetup = async () => {
+    triggerClickExplosion();
+    await new Promise((resolve) => setTimeout(resolve, 600));
 
     setStarting(true);
     try {
@@ -782,6 +817,64 @@ export function LandingPage() {
         .animate-bubble-pop {
           animation: bubblePop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
         }
+
+        /* V6.16 Redesign Animations */
+        @keyframes buttonBreathe {
+          0%, 100% { transform: scale(1); }
+          50% { transform: scale(1.02); }
+        }
+        .animate-breathe {
+          animation: buttonBreathe 5.5s ease-in-out infinite;
+        }
+
+        @keyframes glowPulse {
+          0%, 100% { opacity: 0.35; filter: blur(12px); }
+          50% { opacity: 0.65; filter: blur(18px); }
+        }
+        .primary-glow {
+          animation: glowPulse 4s ease-in-out infinite;
+        }
+
+        @keyframes sweep {
+          0% { left: -150%; }
+          50% { left: 150%; }
+          100% { left: 150%; }
+        }
+        .light-sweep::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          width: 30%;
+          height: 100%;
+          background: linear-gradient(90deg, transparent, rgba(255, 215, 0, 0.12), transparent);
+          transform: skewX(-25deg);
+          animation: sweep 9s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+        }
+
+        @keyframes sparkDrift1 {
+          0% { transform: translate(-80px, -60px) scale(0); opacity: 0; }
+          50% { opacity: 0.8; }
+          100% { transform: translate(0px, 0px) scale(1); opacity: 0; }
+        }
+        @keyframes sparkDrift2 {
+          0% { transform: translate(90px, 70px) scale(0); opacity: 0; }
+          50% { opacity: 0.8; }
+          100% { transform: translate(0px, 0px) scale(1); opacity: 0; }
+        }
+        @keyframes sparkDrift3 {
+          0% { transform: translate(-70px, 80px) scale(0); opacity: 0; }
+          50% { opacity: 0.8; }
+          100% { transform: translate(0px, 0px) scale(1); opacity: 0; }
+        }
+        @keyframes sparkDrift4 {
+          0% { transform: translate(80px, -70px) scale(0); opacity: 0; }
+          50% { opacity: 0.8; }
+          100% { transform: translate(0px, 0px) scale(1); opacity: 0; }
+        }
+        .spark-1 { animation: sparkDrift1 7s ease-in-out infinite; }
+        .spark-2 { animation: sparkDrift2 9s ease-in-out infinite; }
+        .spark-3 { animation: sparkDrift3 8s ease-in-out infinite; }
+        .spark-4 { animation: sparkDrift4 6.5s ease-in-out infinite; }
       `}</style>
 
       {/* Layered Background: Breathing Auroras & Grids */}
@@ -836,7 +929,7 @@ export function LandingPage() {
 
           {/* Heading - Shifted Upwards slightly to allow the button to command the center */}
           <h1 className="heading-clamp-h1 font-black tracking-tight text-stone-900 mb-14 max-w-3xl">
-            {['YOUR', 'NEXT', 'CONVERSATION', 'STARTS'].map((word, i) => (
+            {['EVERY', 'CONVERSATION', 'STARTS', 'WITH'].map((word, i) => (
               <span
                 key={word}
                 className="reveal-letter"
@@ -848,7 +941,7 @@ export function LandingPage() {
             <br />
             <span className="inline-block relative">
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600">
-                WITH A{' '}
+                ONE{' '}
               </span>
               <span
                 className={`inline-block min-w-[180px] text-stone-900 transition-all duration-300 font-extrabold tracking-tight ${
@@ -860,18 +953,40 @@ export function LandingPage() {
             </span>
           </h1>
 
-          {/* ── THE IRRESISTIBLE GAME-STYLE CTA BUTTON ── */}
-          <div className="relative my-10 z-20 flex items-center justify-center">
+          {/* Rotating Curiosity Message */}
+          <div className="h-6 overflow-hidden mb-4 flex items-center justify-center relative z-10 select-none">
+            <span
+              className={`text-amber-500 text-[10px] font-black tracking-[0.2em] uppercase transition-all duration-300 block ${
+                curiosityFadeState === 'in' ? 'opacity-100 translate-y-0 filter blur-0' : 'opacity-0 -translate-y-2 filter blur-[2px]'
+              }`}
+            >
+              {CURIOSITY_MESSAGES[curiosityIdx]}
+            </span>
+          </div>
+
+          {/* ── THE REDESIGNED PREMIUM CTA BUTTON ── */}
+          <div className={`relative ${displayName ? 'my-6' : 'my-12'} z-20 flex items-center justify-center`}>
             
+            {/* Ambient golden backing pulse */}
+            <div className="absolute -inset-2 rounded-[36px] bg-gradient-to-r from-amber-500/10 via-orange-500/15 to-amber-600/10 opacity-60 blur-md primary-glow pointer-events-none z-0" />
+            
+            {/* Sparkles drifting toward button */}
+            <div className="absolute w-[240px] h-[240px] pointer-events-none z-0 hidden sm:block">
+              <div className="absolute w-1.5 h-1.5 rounded-full bg-amber-400/90 blur-[1px] spark-1" style={{ top: '50%', left: '50%' }} />
+              <div className="absolute w-1.5 h-1.5 rounded-full bg-orange-400/90 blur-[1px] spark-2" style={{ top: '50%', left: '50%' }} />
+              <div className="absolute w-2 h-2 rounded-full bg-yellow-400/95 blur-[1px] spark-3" style={{ top: '50%', left: '50%' }} />
+              <div className="absolute w-1 h-1 rounded-full bg-amber-300/80 blur-[1px] spark-4" style={{ top: '50%', left: '50%' }} />
+            </div>
+
             {/* Orbiting particles */}
-            <div className="absolute w-[220px] h-[220px] rounded-full border border-amber-500/10 pointer-events-none z-0 hidden sm:block">
+            <div className="absolute w-[240px] h-[240px] rounded-full border border-amber-500/10 pointer-events-none z-0 hidden sm:block">
               <div className="absolute w-2 h-2 rounded-full bg-amber-500/60 shadow-lg animate-orbit-dot-1" />
               <div className="absolute w-1.5 h-1.5 rounded-full bg-orange-500/60 shadow-lg animate-orbit-dot-2" />
             </div>
 
             {/* Dynamic Story Speech Notification Bubble (Left) */}
             {storyNotification && storyNotification.side === 'left' && (
-              <div className="absolute left-[-220px] top-[-10px] hidden lg:block max-w-[190px] bg-white border border-stone-200/80 rounded-2xl rounded-br-none p-3 shadow-xl text-left animate-bubble-pop z-30">
+              <div className="absolute left-[-240px] top-[-10px] hidden lg:block max-w-[190px] bg-white border border-stone-200/80 rounded-2xl rounded-br-none p-3 shadow-xl text-left animate-bubble-pop z-30">
                 <p className="text-[10px] font-bold text-stone-600 leading-snug">{storyNotification.text}</p>
                 <div className="absolute right-[-6px] bottom-3 w-3 h-3 bg-white border-r border-b border-stone-200/80 transform rotate-[-45deg]" />
               </div>
@@ -879,7 +994,7 @@ export function LandingPage() {
 
             {/* Dynamic Story Speech Notification Bubble (Right) */}
             {storyNotification && storyNotification.side === 'right' && (
-              <div className="absolute right-[-220px] top-[-10px] hidden lg:block max-w-[190px] bg-white border border-stone-200/80 rounded-2xl rounded-bl-none p-3 shadow-xl text-left animate-bubble-pop z-30">
+              <div className="absolute right-[-240px] top-[-10px] hidden lg:block max-w-[190px] bg-white border border-stone-200/80 rounded-2xl rounded-bl-none p-3 shadow-xl text-left animate-bubble-pop z-30">
                 <p className="text-[10px] font-bold text-stone-600 leading-snug">{storyNotification.text}</p>
                 <div className="absolute left-[-6px] bottom-3 w-3 h-3 bg-white border-l border-t border-stone-200/80 transform rotate-[-45deg]" />
               </div>
@@ -913,71 +1028,78 @@ export function LandingPage() {
                 {p.emoji || '✦'}
               </span>
             ))}
-
-            {/* Glowing gold backing panel */}
-            <div className="absolute -inset-1 rounded-3xl bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 opacity-40 blur-md group-hover:opacity-75 transition-opacity duration-300 pointer-events-none" />
             
             {/* The main button container */}
             <button
-              onClick={handleStartChat}
+              ref={buttonRef}
+              onClick={handleStartNewConversation}
               disabled={isLoading}
-              className={`relative btn-shine w-56 h-20 bg-stone-900 hover:bg-stone-800 text-stone-100 font-extrabold text-lg rounded-3xl shadow-[0_16px_40px_rgba(245,166,35,0.22)] border border-stone-800 flex flex-col items-center justify-center gap-1 overflow-hidden transition-all duration-300 hover:scale-105 active:scale-95 group active:shadow-[0_4px_12px_rgba(245,166,35,0.15)] ${isExploded ? 'scale-90 shadow-inner border-amber-500/30' : ''}`}
-              style={{ zIndex: 10 }}
+              className={`relative btn-shine light-sweep animate-breathe w-64 h-20 bg-stone-900 hover:bg-stone-800 text-stone-100 font-extrabold text-lg rounded-3xl shadow-[0_16px_40px_rgba(245,166,35,0.22)] border border-stone-800 flex flex-col items-center justify-center gap-1 overflow-hidden transition-all duration-300 hover:scale-105 active:scale-95 hover:-translate-y-1 group active:shadow-[0_4px_12px_rgba(245,166,35,0.15)] ${isExploded ? 'scale-90 shadow-inner border-amber-500/30' : ''}`}
+              style={{
+                zIndex: 10,
+                transform: `translate3d(${magneticOffset.x}px, ${magneticOffset.y}px, 0) scale(${isExploded ? 0.9 : 1})`,
+              }}
             >
               <div className="flex items-center gap-2.5">
                 <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-ping shrink-0" />
-                <span className="tracking-wide text-white uppercase text-sm font-black">Start Match</span>
+                <span className="tracking-wide text-white text-sm font-black">✨ Start New Conversation</span>
               </div>
-              <span className="text-[9px] font-bold tracking-[0.2em] text-amber-400/80 uppercase">One Click Connection</span>
+              <span className="text-[9px] font-bold tracking-[0.2em] text-amber-400/80 uppercase">Meet someone new</span>
             </button>
           </div>
 
-          {/* V7 Active Filters chip preview block for returning users */}
-          {displayName && activeFilters.length > 0 && (
-            <div className="mt-6 flex flex-col items-center gap-2 relative z-10 max-w-sm px-4">
-              <span className="text-[10px] text-stone-400 uppercase font-black tracking-wider text-center">
-                Matching as <span className="text-amber-500 font-black">{displayName}</span> using:
-              </span>
-              <div className="flex flex-wrap gap-1.5 justify-center">
-                {activeFilters.map((chip, idx) => (
-                  <span
-                    key={idx}
-                    className="inline-flex items-center px-2.5 py-1 rounded-full bg-stone-900/50 border border-stone-800/85 text-[10px] text-stone-300 font-bold"
-                  >
-                    {chip}
+          {/* V6.16 Resume Setup Glass Card */}
+          {displayName && (
+            <div className={`mt-2 flex flex-col items-center gap-4 relative z-10 max-w-xs w-full px-4 transition-all duration-700 transform ${showResumeCard ? 'opacity-100 translate-y-0 filter blur-0 animate-fade-in' : 'opacity-0 translate-y-3 filter blur-md'}`}>
+              <div className="w-full glass-card rounded-3xl p-5 border border-white/40 bg-white/45 backdrop-blur-xl shadow-lg text-left relative overflow-hidden transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl group">
+                <div className="absolute top-0 right-0 w-16 h-16 rounded-full bg-amber-500/5 blur-xl pointer-events-none" />
+                
+                <div className="flex justify-between items-center mb-3">
+                  <span className="text-[9px] text-stone-400 uppercase font-black tracking-wider">
+                    Resume Setup
                   </span>
-                ))}
+                  <span className="text-[8px] font-mono text-stone-400 bg-stone-200/50 px-2 py-0.5 rounded-full font-bold">
+                    Active
+                  </span>
+                </div>
+
+                <div className="space-y-2 mb-4">
+                  <div className="flex items-center gap-2 text-xs font-bold text-stone-700">
+                    <span className="w-4 text-center">👤</span>
+                    <span className="text-stone-900 font-extrabold truncate">{displayName}</span>
+                  </div>
+
+                  {languagesDetail && (
+                    <div className="flex items-center gap-2 text-xs text-stone-500 font-medium">
+                      <span className="w-4 text-center">🗣️</span>
+                      <span className="truncate max-w-[200px]">{languagesDetail}</span>
+                    </div>
+                  )}
+
+                  <div className="flex items-center gap-2 text-xs text-stone-500 font-medium">
+                    <span className="w-4 text-center">🎲</span>
+                    <span className="capitalize">{matchMode.toLowerCase()} Mode</span>
+                  </div>
+                </div>
+
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setShowPreferenceModal(true)}
+                    className="flex-1 px-3 py-2.5 rounded-xl border border-stone-200 bg-white text-[10px] font-bold text-stone-600 hover:bg-stone-50/50 active:scale-[0.98] transition-all duration-200 text-center"
+                  >
+                    Edit Setup
+                  </button>
+
+                  <button
+                    onClick={handleResumeSetup}
+                    className="flex-1 px-3 py-2.5 rounded-xl bg-amber-500 border border-amber-500 text-[10px] font-black text-stone-950 hover:bg-amber-400 active:scale-[0.98] transition-all duration-200 text-center shadow-[0_4px_12px_rgba(245,166,35,0.22)]"
+                  >
+                    Resume
+                  </button>
+                </div>
               </div>
-              <button
-                onClick={() => {
-                  localStorage.removeItem('kaboom_display_name');
-                  localStorage.removeItem('kaboom_bio');
-                  localStorage.removeItem('kaboom_university');
-                  localStorage.removeItem('kaboom_education_tags');
-                  localStorage.removeItem('kaboom_interest_tags');
-                  localStorage.removeItem('kaboom_languages');
-                  localStorage.removeItem('kaboom_country');
-                  localStorage.removeItem('kaboom_city');
-                  setDisplayName(null);
-                  setActiveFilters([]);
-                }}
-                className="text-[10px] text-amber-500 hover:text-amber-400 underline font-bold mt-1"
-              >
-                Reset & Create New Profile
-              </button>
             </div>
           )}
-
-          {/* Playful CTA helper message sliding transition */}
-          <div className="h-6 overflow-hidden mt-6 mb-10 flex items-center justify-center">
-            <span
-              className={`text-stone-500 text-xs font-bold transition-all duration-300 block ${
-                helperFadeState === 'in' ? 'opacity-100 translate-y-0 filter blur-0' : 'opacity-0 -translate-y-2 filter blur-[2px]'
-              }`}
-            >
-              {PLAYFUL_MESSAGES[helperIdx]}
-            </span>
-          </div>
         </div>
 
         {/* Floating Mini counters */}
@@ -1214,7 +1336,7 @@ export function LandingPage() {
           <div className="relative group">
             <div className="absolute -inset-0.5 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 opacity-40 blur-md group-hover:opacity-75 transition-opacity duration-300 pointer-events-none" />
             <button
-              onClick={handleStartChat}
+              onClick={handleStartNewConversation}
               disabled={isLoading}
               className="relative btn-shine text-sm px-8 py-3.5 bg-stone-900 text-stone-100 hover:bg-stone-800 font-black rounded-full hover:scale-[1.03] active:scale-[0.97] transition-all duration-300 flex items-center gap-2 border border-stone-800 shadow-md"
             >
@@ -1241,7 +1363,7 @@ export function LandingPage() {
               setStarting(false);
             }
           }}
-          currentPreferences={{}}
+          currentPreferences={getSavedPreferences()}
         />
       )}
 
