@@ -51,53 +51,48 @@ export function SearchingAnimation({
     // If University selected (Campus Match)
     if (uni) {
       customMessages.push(
-        `Looking around ${uni.split(' ')[0]}...`,
-        "Checking nearby campuses...",
-        "Searching for classmates...",
-        "Finding someone from your university..."
+        `Searching ${uni.split(' ')[0]}...`,
+        "Checking compatibility...",
+        "Preparing a secure connection...",
+        "Finding classmates...",
+        "Almost there..."
       );
+      return customMessages;
     }
 
     // If non-English languages selected
     const nonEnglishLangs = langs.filter(l => l !== 'English');
     if (nonEnglishLangs.length > 0) {
-      nonEnglishLangs.forEach(lang => {
-        customMessages.push(
-          `Finding ${lang} speakers...`,
-          `Checking ${lang} compatibility...`
-        );
-      });
-      customMessages.push("Looking for comfortable conversations...");
+      customMessages.push(
+        `Finding ${nonEnglishLangs[0]} speakers...`,
+        "Checking compatibility...",
+        "Preparing a secure connection...",
+        "Looking for active chat rooms...",
+        "Almost there..."
+      );
+      return customMessages;
     }
 
     // If interests selected
     if (interests.length > 0) {
-      interests.forEach(interest => {
-        customMessages.push(
-          `Searching for ${interest.toLowerCase()} fans...`,
-          `Looking for ${interest.toLowerCase()} enthusiasts...`
-        );
-      });
-      customMessages.push("Finding music and vibe matches...");
+      customMessages.push(
+        `Searching for ${interests[0].toLowerCase()} fans...`,
+        "Checking compatibility...",
+        "Preparing a secure connection...",
+        `Looking for active ${interests[0].toLowerCase()} groups...`,
+        "Almost there..."
+      );
+      return customMessages;
     }
 
     // Default Fallbacks
-    if (customMessages.length === 0) {
-      customMessages.push(
-        "Looking nearby...",
-        "Checking shared interests...",
-        "Exploring connections...",
-        "Finding someone who matches your vibe...",
-        "Almost there..."
-      );
-    } else {
-      customMessages.push(
-        "Checking active peers...",
-        "Exploring campus connections...",
-        "Finding matches close to your vibe...",
-        "Almost there..."
-      );
-    }
+    customMessages.push(
+      "Searching worldwide...",
+      "Checking compatibility...",
+      "Preparing a secure connection...",
+      "Finding someone who matches your vibe...",
+      "Almost there..."
+    );
 
     return customMessages;
   };

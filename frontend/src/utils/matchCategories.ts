@@ -5,6 +5,7 @@ export interface MatchCategory {
   subtitle: string;
   placeholderText: string;
   rotatorMessages: string[];
+  recommended?: boolean;
 }
 
 export const MATCH_CATEGORIES: MatchCategory[] = [
@@ -12,8 +13,9 @@ export const MATCH_CATEGORIES: MatchCategory[] = [
     id: 'COLLEGE',
     icon: '🏫',
     title: 'Campus Match',
-    subtitle: 'Meet students from your university',
+    subtitle: 'Meet someone between classes. Students are chatting right now.',
     placeholderText: 'Search your university...',
+    recommended: true,
     rotatorMessages: [
       'Students from Saveetha University are online...',
       'Someone from VIT is looking for new friends...',
@@ -24,8 +26,8 @@ export const MATCH_CATEGORIES: MatchCategory[] = [
   {
     id: 'NEARBY',
     icon: '🌎',
-    title: 'Nearby Connections',
-    subtitle: 'Find conversations closer to you',
+    title: 'Nearby',
+    subtitle: 'Sometimes your next friend is only a few streets away.',
     placeholderText: 'Search by city, state, or country...',
     rotatorMessages: [
       'New users in Hyderabad just came online...',
@@ -38,7 +40,7 @@ export const MATCH_CATEGORIES: MatchCategory[] = [
     id: 'LANGUAGE',
     icon: '💬',
     title: 'Language Match',
-    subtitle: 'Talk in the language you love',
+    subtitle: 'Some conversations are just easier when everyone speaks the same language.',
     placeholderText: 'Select languages...',
     rotatorMessages: [
       'Telugu conversations are trending...',
@@ -51,7 +53,7 @@ export const MATCH_CATEGORIES: MatchCategory[] = [
     id: 'INTERESTS',
     icon: '🎮',
     title: 'Shared Hobbies',
-    subtitle: 'Meet people who share your passion',
+    subtitle: 'Meet people who share your passion.',
     placeholderText: 'Search interests (e.g. Gaming)...',
     rotatorMessages: [
       'Gamers are online right now...',
@@ -64,7 +66,7 @@ export const MATCH_CATEGORIES: MatchCategory[] = [
     id: 'RANDOM',
     icon: '❤️',
     title: 'Surprise Me',
-    subtitle: 'Meet someone completely unexpected',
+    subtitle: 'Forget filters. Let\'s surprise you.',
     placeholderText: '',
     rotatorMessages: [
       'Connecting to global conversations...',
