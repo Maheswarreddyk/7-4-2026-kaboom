@@ -16,9 +16,6 @@ export function SearchingAnimation({
   const { width, height } = useResponsiveLayout();
   const isMinimalLayout = width < 560 || height < 500;
 
-  const activeMatchMode = localStorage.getItem('kaboom_match_mode') || 'RANDOM';
-  const university = localStorage.getItem('kaboom_university') || '';
-
   const [animationStep, setAnimationStep] = useState(0);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const isTabVisible = useRef(true);
@@ -27,43 +24,85 @@ export function SearchingAnimation({
   const [fadingText, setFadingText] = useState('Starting search...');
   const [fadeOpacity, setFadeOpacity] = useState(1);
 
-  // Rotating messages during search stages
+  // Rotating messages during search stages (slow 5.5s loops)
   useEffect(() => {
     if (status === 'PARTNER_LEFT' || isQueuePaused) return;
     const interval = setInterval(() => {
       setAnimationStep((prev) => prev + 1);
-    }, 2000);
+    }, 5500);
     return () => clearInterval(interval);
   }, [status, isQueuePaused]);
 
-  const randomMessages = [
-    "Searching worldwide...",
-    "Checking active users...",
-    "Finding someone online...",
-    "Finding your next conversation..."
-  ];
+  const getContextMessages = () => {
+    const uni = localStorage.getItem('kaboom_university') || '';
+    
+    let langs: string[] = [];
+    try {
+      langs = JSON.parse(localStorage.getItem('kaboom_languages') || '[]');
+    } catch {}
 
-  const smartMessages = [
-    "Looking for shared interests...",
-    "Checking university networks...",
-    "Searching nearby regions...",
-    "Matching profile attributes..."
-  ];
+    let interests: string[] = [];
+    try {
+      interests = JSON.parse(localStorage.getItem('kaboom_interest_tags') || '[]');
+    } catch {}
 
-  const strictMessages = [
-    "Searching exact criteria...",
-    "Analyzing selected filters...",
-    university ? `Waiting for another ${university} student...` : "Searching selected campus network...",
-    "Exact matching takes slightly longer..."
-  ];
+    const customMessages: string[] = [];
 
-  const getRotatingMessages = () => {
-    if (activeMatchMode === 'STRICT') return strictMessages;
-    if (activeMatchMode === 'PREFER') return smartMessages;
-    return randomMessages;
+    // If University selected (Campus Match)
+    if (uni) {
+      customMessages.push(
+        `Looking around ${uni.split(' ')[0]}...`,
+        "Checking nearby campuses...",
+        "Searching for classmates...",
+        "Finding someone from your university..."
+      );
+    }
+
+    // If non-English languages selected
+    const nonEnglishLangs = langs.filter(l => l !== 'English');
+    if (nonEnglishLangs.length > 0) {
+      nonEnglishLangs.forEach(lang => {
+        customMessages.push(
+          `Finding ${lang} speakers...`,
+          `Checking ${lang} compatibility...`
+        );
+      });
+      customMessages.push("Looking for comfortable conversations...");
+    }
+
+    // If interests selected
+    if (interests.length > 0) {
+      interests.forEach(interest => {
+        customMessages.push(
+          `Searching for ${interest.toLowerCase()} fans...`,
+          `Looking for ${interest.toLowerCase()} enthusiasts...`
+        );
+      });
+      customMessages.push("Finding music and vibe matches...");
+    }
+
+    // Default Fallbacks
+    if (customMessages.length === 0) {
+      customMessages.push(
+        "Looking nearby...",
+        "Checking shared interests...",
+        "Exploring connections...",
+        "Finding someone who matches your vibe...",
+        "Almost there..."
+      );
+    } else {
+      customMessages.push(
+        "Checking active peers...",
+        "Exploring campus connections...",
+        "Finding matches close to your vibe...",
+        "Almost there..."
+      );
+    }
+
+    return customMessages;
   };
 
-  const currentMessages = getRotatingMessages();
+  const currentMessages = getContextMessages();
   const currentStageText = currentMessages[animationStep % currentMessages.length];
 
   // Apply smooth fade state transition
