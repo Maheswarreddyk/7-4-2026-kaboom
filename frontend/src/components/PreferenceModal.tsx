@@ -44,13 +44,18 @@ const BIO_PLACEHOLDERS = [
   'Anyone up for gaming?',
 ];
 
-// Rotating invitation copy beneath "Discover Match Filters"
+// Rotating invitation copy beneath "Discover Match Filters" — campus-first discovery
 const DISCOVER_COPY = [
-  { icon: '🏫', text: 'Meet people from your campus' },
-  { icon: '🌍', text: 'Find people nearby' },
-  { icon: '💬', text: 'Talk in your language' },
-  { icon: '🎮', text: 'Match by hobbies' },
-  { icon: '❤️', text: 'Discover someone unexpected' },
+  { text: '🏫 Students from Saveetha University are meeting right now...' },
+  { text: '🏫 Someone from SRM just joined the conversation.' },
+  { text: '🎓 Meet students from Sri Venkateshwara College today.' },
+  { text: '🌏 New conversations started at Chinmaya Vishwa Vidyapeetham.' },
+  { text: '💬 Your next campus friend could be one click away.' },
+  { text: '🎉 Students are making new friends across campuses.' },
+  { text: '💬 Talk in Telugu. Find people nearby.' },
+  { text: '🎮 Find gamers. Match by hobbies.' },
+  { text: '❤️ Meet someone with your interests.' },
+  { text: '✨ Better conversations start with better filters.' },
 ];
 
 // Per-tab tickers
@@ -91,33 +96,141 @@ const TAB_TICKERS: Record<CategoryId, string[]> = {
 // ─────────────────────────────────────────────────────────────
 
 const STYLES = `
+  /* ── Entry ─────────────────────────────────────────────── */
   @keyframes slideUpFadeIn {
     from { opacity: 0; transform: translateY(24px); }
     to   { opacity: 1; transform: translateY(0);    }
   }
-  @keyframes hammerTap {
-    0%, 88%, 100% { transform: rotate(0deg); }
-    90%, 96%      { transform: rotate(-22deg); }
-    93%           { transform: rotate(8deg); }
-  }
+
+  /* ── Buttons ────────────────────────────────────────────── */
   @keyframes breathe {
-    0%, 100% { transform: scale(1); }
-    50%      { transform: scale(1.022); }
+    0%, 100% { transform: scale(1);     box-shadow: 0 8px 24px rgba(251,191,36,0.15); }
+    50%      { transform: scale(1.022); box-shadow: 0 12px 32px rgba(251,191,36,0.28); }
+  }
+  @keyframes rocketBounce {
+    0%, 70%, 100% { transform: translateY(0)   rotate(0deg);  }
+    78%           { transform: translateY(-5px) rotate(-6deg); }
+    84%           { transform: translateY(-2px) rotate(2deg);  }
+    90%           { transform: translateY(-4px) rotate(-3deg); }
+    96%           { transform: translateY(0)   rotate(0deg);  }
+  }
+  @keyframes lightningFlash {
+    0%, 89%, 100% { opacity: 1; }
+    90%, 92%, 94% { opacity: 0; }
+    91%, 93%      { opacity: 1; }
   }
   @keyframes recipeShake {
     0%, 100% { transform: translateX(0); }
     20%, 60% { transform: translateX(-6px); }
     40%, 80% { transform: translateX(6px); }
   }
+
+  /* ── Discover button ────────────────────────────────────── */
+  @keyframes discoverFloat {
+    0%, 100% { transform: translateY(0px);   }
+    50%      { transform: translateY(-2px);  }
+  }
+  @keyframes sparkSweep {
+    0%   { left: -14px; opacity: 0; }
+    5%   { opacity: 0.65; }
+    95%  { opacity: 0.35; }
+    100% { left: calc(100% + 14px); opacity: 0; }
+  }
+  @keyframes glowPulse {
+    0%, 100% { box-shadow: 0 0 0px 0px rgba(251,191,36,0); }
+    50%      { box-shadow: 0 0 12px 2px rgba(251,191,36,0.18); }
+  }
+
+  /* ── Particles ──────────────────────────────────────────── */
   @keyframes inwardParticle {
     0%   { transform: translate(var(--dx), var(--dy)) scale(0); opacity: 0; }
     20%  { opacity: 0.9; }
     100% { transform: translate(0, 0) scale(1); opacity: 0; }
   }
-  .anim-slide-up  { animation: slideUpFadeIn 0.35s cubic-bezier(0.34,1.56,0.64,1) both; }
-  .anim-breathe   { animation: breathe 4.5s ease-in-out infinite; }
-  .anim-hammer    { animation: hammerTap 9s ease-in-out infinite; transform-origin: bottom right; }
-  .anim-shake     { animation: recipeShake 0.42s ease-in-out; }
+
+  /* ── Icon micro-animations ──────────────────────────────── */
+  @keyframes flagWave {
+    0%, 85%, 100% { transform: rotate(0deg) skewX(0deg);  }
+    88%           { transform: rotate(6deg) skewX(-4deg); }
+    91%           { transform: rotate(-3deg) skewX(2deg); }
+    94%           { transform: rotate(5deg) skewX(-3deg); }
+    97%           { transform: rotate(-1deg) skewX(1deg); }
+  }
+  @keyframes globeTilt {
+    0%, 80%, 100% { transform: rotate(0deg);  }
+    85%           { transform: rotate(-12deg); }
+    92%           { transform: rotate(8deg);  }
+    96%           { transform: rotate(-4deg); }
+  }
+  @keyframes bubblePop {
+    0%, 82%, 100% { transform: scale(1);    }
+    85%           { transform: scale(1.28); }
+    88%           { transform: scale(0.88); }
+    91%           { transform: scale(1.12); }
+    95%           { transform: scale(1);    }
+  }
+  @keyframes joystickTilt {
+    0%, 78%, 100% { transform: rotate(0deg);   }
+    81%           { transform: rotate(18deg);  }
+    84%           { transform: rotate(-14deg); }
+    87%           { transform: rotate(10deg);  }
+    90%           { transform: rotate(-6deg);  }
+    93%           { transform: rotate(3deg);   }
+    96%           { transform: rotate(0deg);   }
+  }
+  @keyframes heartbeat {
+    0%, 65%, 100% { transform: scale(1);    }
+    68%           { transform: scale(1.3);  }
+    71%           { transform: scale(1.1);  }
+    74%           { transform: scale(1.25); }
+    78%           { transform: scale(1);    }
+  }
+  @keyframes sparkleTwinkle {
+    0%, 75%, 100% { opacity: 1; transform: scale(1)    rotate(0deg);  }
+    78%           { opacity: 0.2; transform: scale(0.5) rotate(30deg); }
+    82%           { opacity: 1; transform: scale(1.3)  rotate(-15deg);}
+    86%           { opacity: 0.5; transform: scale(0.8) rotate(20deg); }
+    90%           { opacity: 1; transform: scale(1)    rotate(0deg);  }
+  }
+  @keyframes targetFocus {
+    0%, 80%, 100% { transform: scale(1); }
+    84%           { transform: scale(0.78); }
+    88%           { transform: scale(1.18); }
+    92%           { transform: scale(0.95); }
+    96%           { transform: scale(1);   }
+  }
+  @keyframes brainPulse {
+    0%, 100% { filter: brightness(1);    }
+    50%      { filter: brightness(1.35); }
+  }
+
+  /* ── Class bindings ─────────────────────────────────────── */
+  .anim-slide-up       { animation: slideUpFadeIn 0.35s cubic-bezier(0.34,1.56,0.64,1) both; }
+  .anim-breathe        { animation: breathe 4.5s ease-in-out infinite; }
+  .anim-rocket         { animation: rocketBounce 8s ease-in-out infinite; display: inline-block; }
+  .anim-lightning      { animation: lightningFlash 11s ease-in-out infinite; display: inline-block; }
+  .anim-shake          { animation: recipeShake 0.42s ease-in-out; }
+  .anim-discover-float { animation: discoverFloat 3.8s ease-in-out infinite; }
+  .anim-glow-pulse     { animation: glowPulse 3.2s ease-in-out infinite; }
+  .anim-flag-wave      { animation: flagWave 7s ease-in-out infinite; display:inline-block; }
+  .anim-globe-tilt     { animation: globeTilt 9s ease-in-out infinite; display:inline-block; }
+  .anim-bubble-pop     { animation: bubblePop 8.5s ease-in-out infinite; display:inline-block; }
+  .anim-joystick-tilt  { animation: joystickTilt 10s ease-in-out infinite; display:inline-block; }
+  .anim-heartbeat      { animation: heartbeat 6s ease-in-out infinite; display:inline-block; }
+  .anim-sparkle        { animation: sparkleTwinkle 7.5s ease-in-out infinite; display:inline-block; }
+  .anim-target-focus   { animation: targetFocus 9s ease-in-out infinite; display:inline-block; }
+  .anim-brain-pulse    { animation: brainPulse 4s ease-in-out infinite; display:inline-block; }
+
+  /* ── Discover spark sweep ───────────────────────────────── */
+  .spark-sweep {
+    position: absolute; top: 0; bottom: 0; width: 14px;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.55), transparent);
+    border-radius: 50%; pointer-events: none;
+    animation: sparkSweep 5s ease-in-out infinite;
+    animation-delay: 1.8s;
+  }
+
+  /* ── Particles ──────────────────────────────────────────── */
   .particle {
     position: absolute; width: 3px; height: 3px; border-radius: 50%;
     background: rgba(251,191,36,0.8); top: 50%; left: 50%;
@@ -486,7 +599,7 @@ export function PreferenceModal({
 
   if (!isOpen) return null;
 
-  const discoverItem = DISCOVER_COPY[discoverCopyIdx];
+  const discoverText = DISCOVER_COPY[discoverCopyIdx]?.text ?? '';
 
   // ─────────────────────────────────────────────────────────
   // Render
@@ -625,7 +738,7 @@ export function PreferenceModal({
                   onMouseEnter={() => setBtnHovered(true)}
                   onMouseLeave={() => { setMagnetic({ x: 0, y: 0 }); setBtnHovered(false); }}
                   style={{ transform: `translate3d(${magnetic.x}px, ${magnetic.y}px, 0)` }}
-                  className="relative overflow-hidden px-10 py-4 bg-amber-500 text-stone-950 text-[13px] font-black rounded-2xl shadow-lg shadow-amber-500/15 flex items-center gap-2 min-w-[220px] justify-center transition-all duration-300 active:scale-95 anim-breathe hover:shadow-amber-500/25 hover:-translate-y-0.5 disabled:opacity-60 disabled:cursor-not-allowed"
+                  className="relative overflow-hidden px-10 py-4 bg-amber-500 text-stone-950 text-[13px] font-black rounded-2xl shadow-lg shadow-amber-500/15 flex items-center gap-2 min-w-[220px] justify-center transition-all duration-300 active:scale-95 anim-breathe hover:shadow-amber-500/30 hover:-translate-y-0.5 disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   {/* Particles */}
                   <div className="absolute inset-0 rounded-2xl overflow-hidden pointer-events-none">
@@ -634,9 +747,15 @@ export function PreferenceModal({
                     <div className={cn('particle p3', btnHovered && 'duration-200')} />
                     <div className={cn('particle p4', btnHovered && 'duration-200')} />
                   </div>
-                  {isSaving === 'idle' && <span className="anim-hammer shrink-0">🔨</span>}
+                  {/* Rocket + lightning icons */}
+                  {isSaving === 'idle' && (
+                    <span className="relative z-10 flex items-center gap-1.5 shrink-0">
+                      <span className="anim-rocket">🚀</span>
+                      <span className="anim-lightning">⚡</span>
+                    </span>
+                  )}
                   <span className="relative z-10">
-                    {isSaving === 'idle'    && '🚀 Start Conversation'}
+                    {isSaving === 'idle'    && 'Start Conversation'}
                     {isSaving === 'joining' && 'Joining...'}
                     {isSaving === 'spinner' && (
                       <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
@@ -658,17 +777,17 @@ export function PreferenceModal({
                   <div className="flex-1 h-px bg-white/[0.06]" />
                 </div>
 
-                {/* Rotating copy */}
+                {/* Rotating campus-focused copy */}
                 <div
                   className="transition-all duration-300"
-                  style={{ opacity: discoverVisible ? 1 : 0, transform: discoverVisible ? 'translateY(0)' : 'translateY(4px)' }}
+                  style={{ opacity: discoverVisible ? 1 : 0, transform: discoverVisible ? 'translateY(0)' : 'translateY(5px)' }}
                 >
-                  <p className="text-[10px] text-stone-500 font-semibold text-center">
-                    {discoverItem.icon} {discoverItem.text}
+                  <p className="text-[10px] text-stone-500 font-semibold text-center leading-relaxed">
+                    {discoverText}
                   </p>
                 </div>
 
-                {/* Discover button */}
+                {/* Discover button — alive with float + spark sweep + glow */}
                 <button
                   type="button"
                   onClick={() => {
@@ -676,10 +795,14 @@ export function PreferenceModal({
                     setActiveCategory('COLLEGE');
                     log('Advanced journey opened');
                   }}
-                  className="px-5 py-2.5 border border-white/10 bg-white/[0.03] hover:bg-white/[0.07] text-white text-[11px] font-black rounded-xl transition-all active:scale-95 flex items-center gap-2"
+                  className="relative overflow-hidden px-5 py-2.5 border border-white/[0.12] bg-white/[0.04] hover:bg-white/[0.09] hover:border-amber-500/30 text-white text-[11px] font-black rounded-xl transition-all duration-300 active:scale-95 flex items-center gap-2 anim-discover-float anim-glow-pulse"
                 >
-                  <span>✨</span>
-                  <span>Discover Match Filters</span>
+                  {/* Spark sweep on idle */}
+                  <div className="spark-sweep" />
+                  <span className="anim-sparkle relative z-10">✨</span>
+                  <span className="relative z-10">Discover Match Filters</span>
+                  {/* Tiny arrow nudge */}
+                  <span className="relative z-10 text-stone-500 text-[9px] opacity-60">›</span>
                 </button>
               </div>
             </div>
@@ -703,13 +826,14 @@ export function PreferenceModal({
               {/* ── Category selector row ─────────────────────────── */}
               <div className="px-6 grid grid-cols-5 gap-2 pb-4">
                 {(['COLLEGE', 'NEARBY', 'LANGUAGE', 'INTERESTS', 'RANDOM'] as CategoryId[]).map(id => {
-                  const META = {
-                    COLLEGE:   { icon: '🏫', label: 'Campus' },
-                    NEARBY:    { icon: '🌍', label: 'Nearby' },
-                    LANGUAGE:  { icon: '💬', label: 'Language' },
-                    INTERESTS: { icon: '🎮', label: 'Interests' },
-                    RANDOM:    { icon: '❤️', label: 'Surprise' },
-                  }[id];
+                  const META: Record<CategoryId, { iconClass: string; icon: string; label: string }> = {
+                    COLLEGE:   { icon: '🏫', iconClass: 'anim-flag-wave',     label: 'Campus'    },
+                    NEARBY:    { icon: '🌍', iconClass: 'anim-globe-tilt',    label: 'Nearby'    },
+                    LANGUAGE:  { icon: '💬', iconClass: 'anim-bubble-pop',   label: 'Language'  },
+                    INTERESTS: { icon: '🎮', iconClass: 'anim-joystick-tilt', label: 'Interests' },
+                    RANDOM:    { icon: '❤️', iconClass: 'anim-heartbeat',    label: 'Surprise'  },
+                  };
+                  const m = META[id];
                   const active = activeCategory === id;
                   return (
                     <button
@@ -720,13 +844,13 @@ export function PreferenceModal({
                         'flex flex-col items-center gap-1 p-2.5 rounded-2xl border transition-all duration-200',
                         active
                           ? 'bg-amber-500/15 border-amber-500/50 scale-105'
-                          : 'border-white/[0.07] bg-white/[0.02] hover:bg-white/[0.05]',
+                          : 'border-white/[0.07] bg-white/[0.02] hover:bg-white/[0.05] hover:scale-[1.03]',
                         id === 'COLLEGE' && !active && 'border-amber-500/20',
                       )}
                     >
-                      <span className="text-xl">{META.icon}</span>
+                      <span className={cn('text-xl', m.iconClass)}>{m.icon}</span>
                       <span className={cn('text-[8px] font-black', active ? 'text-amber-400' : 'text-stone-500')}>
-                        {META.label}
+                        {m.label}
                       </span>
                       {id === 'COLLEGE' && (
                         <span className="text-[6px] font-black text-amber-500 uppercase tracking-wide">⭐ Best</span>
@@ -964,9 +1088,9 @@ export function PreferenceModal({
                     type="button"
                     disabled={isSaving !== 'idle'}
                     onClick={() => executeJoin(buildAdvancedPayload('PREFER'), 'Smart Match (PREFER) queue join')}
-                    className="relative w-full overflow-hidden py-3.5 bg-amber-500 text-stone-950 text-xs font-black rounded-2xl shadow-lg shadow-amber-500/15 flex items-center justify-center gap-2 active:scale-[0.98] transition-all hover:shadow-amber-500/25 disabled:opacity-60 anim-breathe"
+                    className="relative w-full overflow-hidden py-3.5 bg-amber-500 text-stone-950 text-xs font-black rounded-2xl shadow-lg shadow-amber-500/15 flex items-center justify-center gap-2 active:scale-[0.98] transition-all hover:shadow-amber-500/30 hover:-translate-y-px disabled:opacity-60 anim-breathe"
                   >
-                    <span className="text-base">🧠</span>
+                    <span className="text-base anim-brain-pulse">🧠</span>
                     <div className="text-left">
                       <p className="font-black text-[12px] leading-none">Smart Match</p>
                       <p className="text-[9px] font-semibold opacity-70 mt-0.5">Best speed + compatibility. Recommended.</p>
@@ -984,9 +1108,9 @@ export function PreferenceModal({
                     type="button"
                     disabled={isSaving !== 'idle'}
                     onClick={() => executeJoin(buildAdvancedPayload('STRICT'), 'Exact Match (STRICT) queue join')}
-                    className="w-full py-3 border border-white/10 bg-white/[0.03] hover:bg-white/[0.07] text-white text-xs font-black rounded-2xl flex items-center justify-center gap-2 active:scale-[0.98] transition-all disabled:opacity-60"
+                    className="w-full py-3 border border-white/10 bg-white/[0.03] hover:bg-white/[0.09] hover:border-white/20 text-white text-xs font-black rounded-2xl flex items-center justify-center gap-2 active:scale-[0.98] transition-all duration-200 disabled:opacity-60"
                   >
-                    <span className="text-base">🎯</span>
+                    <span className="text-base anim-target-focus">🎯</span>
                     <div className="text-left">
                       <p className="font-black text-[11px] leading-none">Exact Match</p>
                       <p className="text-[9px] font-semibold text-stone-500 mt-0.5">Wait longer. Only people matching your filters.</p>
