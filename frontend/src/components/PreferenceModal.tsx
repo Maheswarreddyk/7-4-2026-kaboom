@@ -1,8 +1,11 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { apiService } from '../services/api.js';
 import { cn } from '../utils/index.js';
 import { COLLEGE_SUGGESTIONS } from '../utils/collegeSuggestions.js';
-import { MATCH_CATEGORIES } from '../utils/matchCategories.js';
+
+// ─────────────────────────────────────────────────────────────
+// Types
+// ─────────────────────────────────────────────────────────────
 
 interface PreferenceModalProps {
   isOpen: boolean;
@@ -11,354 +14,344 @@ interface PreferenceModalProps {
   currentPreferences?: any;
 }
 
+type JourneyMode = 'FAST' | 'ADVANCED';
+type CategoryId = 'COLLEGE' | 'NEARBY' | 'LANGUAGE' | 'INTERESTS' | 'RANDOM';
+type SavingState = 'idle' | 'joining' | 'spinner' | 'success';
+
+// ─────────────────────────────────────────────────────────────
+// Static data
+// ─────────────────────────────────────────────────────────────
+
 const LANGUAGES = [
   'English', 'Hindi', 'Telugu', 'Tamil', 'Kannada', 'Malayalam',
-  'Spanish', 'French', 'German', 'Japanese', 'Chinese', 'Arabic', 'Russian'
+  'Spanish', 'French', 'German', 'Japanese', 'Chinese', 'Arabic', 'Russian',
 ];
 
 const BANNER_MESSAGES = [
-  "Someone nearby...",
-  "Someone from your campus...",
-  "Someone who speaks Telugu...",
-  "Someone unexpected..."
+  'Someone unexpected...',
+  'Someone from your city...',
+  'Someone from your campus...',
+  'Someone who speaks Telugu...',
+  'Someone genuinely interesting...',
 ];
 
 const NAME_PLACEHOLDERS = ['Rahul', 'Aishu', 'Shadow', 'CoffeeAddict', 'Mahes'];
 const BIO_PLACEHOLDERS = [
   'Just finished exams 🎉',
-  'Looking for coding buddies',
-  'Late night conversations',
   'Need coffee friends ☕',
+  'Late night conversations',
+  'Looking for coding buddies',
   'Anyone up for gaming?',
-  'AI enthusiast'
 ];
 
-// Continuous status tickers for advanced tabs
-const TAB_TICKERS: Record<string, string[]> = {
+// Rotating invitation copy beneath "Discover Match Filters"
+const DISCOVER_COPY = [
+  { icon: '🏫', text: 'Meet people from your campus' },
+  { icon: '🌍', text: 'Find people nearby' },
+  { icon: '💬', text: 'Talk in your language' },
+  { icon: '🎮', text: 'Match by hobbies' },
+  { icon: '❤️', text: 'Discover someone unexpected' },
+];
+
+// Per-tab tickers
+const TAB_TICKERS: Record<CategoryId, string[]> = {
   COLLEGE: [
-    "Students from Saveetha joined...",
-    "Someone from SRM is waiting...",
-    "Meet people from your campus."
+    'Students from Saveetha joined...',
+    'Someone from SRM is waiting...',
+    'Someone from VIT is looking for new friends...',
+    'Meet people from your campus.',
   ],
   NEARBY: [
-    "Someone nearby joined...",
-    "People from Hyderabad...",
-    "People from Bangalore..."
+    'Someone nearby joined...',
+    'People from Hyderabad are online...',
+    'Strangers waving in Bangalore...',
+    'Connecting you to nearby peers...',
   ],
   LANGUAGE: [
-    "Telugu conversations...",
-    "English speakers...",
-    "Hindi conversations..."
+    'Telugu conversations are active...',
+    'Hindi speakers just joined...',
+    'English rooms are filling up...',
+    'Someone waiting to speak Tamil...',
   ],
   INTERESTS: [
-    "Gamers online...",
-    "AI enthusiasts...",
-    "Music lovers..."
+    'Gamers are online right now...',
+    'AI enthusiasts are waiting...',
+    'Music lovers sharing playlists...',
+    'Cricket fans are matching...',
   ],
   RANDOM: [
-    "We'll introduce someone unexpected."
-  ]
+    'Forget filters. Let\'s surprise you.',
+    'Discover someone unexpected...',
+    'Every conversation starts with one click.',
+  ],
 };
 
-// V8 CSS Animation & Tap Physics overrides
-const MODAL_ANIMATION_STYLES = `
-  @keyframes inwardParticle {
-    0% { transform: translate(var(--dx), var(--dy)) scale(0); opacity: 0; }
-    20% { opacity: 0.9; }
-    100% { transform: translate(0, 0) scale(1.1); opacity: 0.1; }
-  }
-  .btn-particle {
-    position: absolute;
-    width: 3px;
-    height: 3px;
-    border-radius: 50%;
-    background: rgba(251, 191, 36, 0.85);
-    top: 50%;
-    left: 50%;
-    pointer-events: none;
-    transition: animation-duration 0.2s ease;
-  }
-  .btn-particle-fast {
-    animation-duration: 0.8s !important;
-  }
-  .bp-1 { --dx: -75px; --dy: -25px; animation: inwardParticle 2.2s infinite ease-in; }
-  .bp-2 { --dx: 80px; --dy: 30px; animation: inwardParticle 2.6s infinite ease-in; animation-delay: 0.4s; }
-  .bp-3 { --dx: -45px; --dy: 45px; animation: inwardParticle 2.0s infinite ease-in; animation-delay: 0.8s; }
-  .bp-4 { --dx: 65px; --dy: -40px; animation: inwardParticle 2.4s infinite ease-in; animation-delay: 1.2s; }
+// ─────────────────────────────────────────────────────────────
+// Animation CSS
+// ─────────────────────────────────────────────────────────────
 
+const STYLES = `
+  @keyframes slideUpFadeIn {
+    from { opacity: 0; transform: translateY(24px); }
+    to   { opacity: 1; transform: translateY(0);    }
+  }
   @keyframes hammerTap {
-    0%, 90%, 100% { transform: rotate(0deg); }
-    92%, 96% { transform: rotate(-24deg); }
-    94% { transform: rotate(10deg); }
+    0%, 88%, 100% { transform: rotate(0deg); }
+    90%, 96%      { transform: rotate(-22deg); }
+    93%           { transform: rotate(8deg); }
   }
-  .hammer-tap-anim {
-    animation: hammerTap 9s ease-in-out infinite;
-    transform-origin: bottom right;
-  }
-
-  @keyframes buttonBreathe {
+  @keyframes breathe {
     0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.025); }
+    50%      { transform: scale(1.022); }
   }
-  .button-breathe-slow {
-    animation: buttonBreathe 4.5s ease-in-out infinite;
-  }
-
   @keyframes recipeShake {
     0%, 100% { transform: translateX(0); }
     20%, 60% { transform: translateX(-6px); }
     40%, 80% { transform: translateX(6px); }
   }
-  .recipe-shake-anim {
-    animation: recipeShake 0.4s ease-in-out;
+  @keyframes inwardParticle {
+    0%   { transform: translate(var(--dx), var(--dy)) scale(0); opacity: 0; }
+    20%  { opacity: 0.9; }
+    100% { transform: translate(0, 0) scale(1); opacity: 0; }
   }
+  .anim-slide-up  { animation: slideUpFadeIn 0.35s cubic-bezier(0.34,1.56,0.64,1) both; }
+  .anim-breathe   { animation: breathe 4.5s ease-in-out infinite; }
+  .anim-hammer    { animation: hammerTap 9s ease-in-out infinite; transform-origin: bottom right; }
+  .anim-shake     { animation: recipeShake 0.42s ease-in-out; }
+  .particle {
+    position: absolute; width: 3px; height: 3px; border-radius: 50%;
+    background: rgba(251,191,36,0.8); top: 50%; left: 50%;
+    pointer-events: none;
+  }
+  .p1 { --dx:-78px; --dy:-28px; animation: inwardParticle 2.3s infinite ease-in; }
+  .p2 { --dx:82px;  --dy:32px;  animation: inwardParticle 2.7s infinite ease-in; animation-delay:.45s; }
+  .p3 { --dx:-48px; --dy:48px;  animation: inwardParticle 2.1s infinite ease-in; animation-delay:.85s; }
+  .p4 { --dx:66px;  --dy:-44px; animation: inwardParticle 2.5s infinite ease-in; animation-delay:1.25s; }
 `;
 
-function TypewriterRotator({ messages, speed = 45, delay = 2400 }: { messages: string[], speed?: number, delay?: number }) {
-  const [currentIdx, setCurrentIdx] = useState(0);
-  const [displayText, setDisplayText] = useState('');
-  const [isDeleting, setIsDeleting] = useState(false);
+// ─────────────────────────────────────────────────────────────
+// Sub-components
+// ─────────────────────────────────────────────────────────────
+
+function TypewriterRotator({
+  messages,
+  speed = 42,
+  delay = 2200,
+  className = '',
+}: {
+  messages: string[];
+  speed?: number;
+  delay?: number;
+  className?: string;
+}) {
+  const [idx, setIdx] = useState(0);
+  const [text, setText] = useState('');
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
+    const full = messages[idx] ?? '';
     let timer: ReturnType<typeof setTimeout>;
-    const fullText = messages[currentIdx] || '';
-    
-    if (isDeleting) {
-      timer = setTimeout(() => {
-        setDisplayText(fullText.substring(0, displayText.length - 1));
-      }, 20);
+    if (!deleting) {
+      if (text === full) {
+        timer = setTimeout(() => setDeleting(true), delay);
+      } else {
+        timer = setTimeout(() => setText(full.slice(0, text.length + 1)), speed);
+      }
     } else {
-      timer = setTimeout(() => {
-        setDisplayText(fullText.substring(0, displayText.length + 1));
-      }, speed);
+      if (text === '') {
+        setDeleting(false);
+        setIdx(i => (i + 1) % messages.length);
+      } else {
+        timer = setTimeout(() => setText(text.slice(0, -1)), 18);
+      }
     }
-
-    if (!isDeleting && displayText === fullText) {
-      timer = setTimeout(() => {
-        setIsDeleting(true);
-      }, delay);
-    } else if (isDeleting && displayText === '') {
-      setIsDeleting(false);
-      setCurrentIdx((prev) => (prev + 1) % messages.length);
-    }
-
     return () => clearTimeout(timer);
-  }, [displayText, isDeleting, currentIdx, messages, speed, delay]);
+  }, [text, deleting, idx, messages, speed, delay]);
 
   return (
-    <div className="h-5 flex items-center justify-center select-none text-[11px] font-semibold text-amber-500/80">
-      <span>{displayText}</span>
-      <span className="w-1 h-3.5 bg-amber-500/80 ml-0.5 animate-pulse" />
-    </div>
+    <span className={className}>
+      {text}
+      <span className="inline-block w-0.5 h-3.5 bg-current ml-0.5 align-middle animate-pulse" />
+    </span>
   );
 }
 
-export function PreferenceModal({ isOpen, onClose, onSave, currentPreferences = {} }: PreferenceModalProps) {
-  // Telemetry Duration & Abandonment trackers
-  const modalOpenedTimeRef = useRef<number>(Date.now());
-  const hasJoinedQueueRef = useRef<boolean>(false);
+// ─────────────────────────────────────────────────────────────
+// Main Component
+// ─────────────────────────────────────────────────────────────
 
-  // Tabs and general visual drawers
-  const [activeTabId, setActiveTabId] = useState<string>('COLLEGE');
-  const [isNewUser, setIsNewUser] = useState<boolean>(true);
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const [shakeRecipe, setShakeRecipe] = useState(false);
+export function PreferenceModal({
+  isOpen,
+  onClose,
+  onSave,
+  currentPreferences = {},
+}: PreferenceModalProps) {
+  // ── Telemetry ──────────────────────────────────────────────
+  const openedAt = useRef(Date.now());
+  const didJoin = useRef(false);
 
-  // Original single source of truth preference states
-  const [gender, setGender] = useState<string>(currentPreferences.gender || 'Prefer not to say');
-  const [lookingFor, setLookingFor] = useState<string[]>(currentPreferences.looking_for || ['Anyone']);
-  
-  // Location selections
-  const [country, setCountry] = useState<string>(currentPreferences.country || '');
-  const [state, setState] = useState<string>(currentPreferences.state || '');
-  const [district, setDistrict] = useState<string>(currentPreferences.district || '');
-  const [city, setCity] = useState<string>(currentPreferences.city || '');
-  
-  // Interests & Languages
-  const [interestTags, setInterestTags] = useState<string[]>(currentPreferences.interest_tags || []);
-  const [languages, setLanguages] = useState<string[]>(currentPreferences.languages || ['English']);
+  // ── Journey state ──────────────────────────────────────────
+  const [journey, setJourney] = useState<JourneyMode>('FAST');
+  const [activeCategory, setActiveCategory] = useState<CategoryId | null>(null);
 
-  // V6 & V6.5 states
-  const [displayName, setDisplayName] = useState<string>(() => {
-    return currentPreferences.display_name || localStorage.getItem('kaboom_display_name') || '';
-  });
-  const [bio, setBio] = useState<string>(() => {
-    return currentPreferences.bio || localStorage.getItem('kaboom_bio') || '';
-  });
-  const [matchMode, setMatchMode] = useState<'RANDOM' | 'PREFER' | 'STRICT'>(() => {
-    return currentPreferences.match_mode || (localStorage.getItem('kaboom_match_mode') as any) || 'RANDOM';
-  });
-  const [matchConstraints, setMatchConstraints] = useState<Record<string, boolean>>(() => {
-    try {
-      return currentPreferences.match_constraints || JSON.parse(localStorage.getItem('kaboom_match_constraints') || '{}');
-    } catch {
-      return { university: false, city: false, country: false };
-    }
-  });
+  // ── Primary fields (always collected) ─────────────────────
+  const [displayName, setDisplayName] = useState(() =>
+    currentPreferences.display_name || localStorage.getItem('kaboom_display_name') || '',
+  );
+  const [bio, setBio] = useState(() =>
+    currentPreferences.bio || localStorage.getItem('kaboom_bio') || '',
+  );
+  const [gender, setGender] = useState<string>(
+    currentPreferences.gender || 'Prefer not to say',
+  );
+  const [lookingFor, setLookingFor] = useState<string[]>(
+    currentPreferences.looking_for || ['Anyone'],
+  );
 
-  const [university, setUniversity] = useState<string>(() => {
+  // ── Advanced filter fields ─────────────────────────────────
+  const [university, setUniversity] = useState(() => {
     const attrs = currentPreferences.match_attributes || {};
-    return (attrs.university && attrs.university[0]) || localStorage.getItem('kaboom_university') || '';
+    return attrs.university?.[0] || localStorage.getItem('kaboom_university') || '';
   });
-  const [eduTags, setEduTags] = useState<string[]>(() => {
-    const attrs = currentPreferences.match_attributes || {};
-    return attrs.education_tags || JSON.parse(localStorage.getItem('kaboom_education_tags') || '[]');
+  const [country, setCountry] = useState(currentPreferences.country || '');
+  const [state, setState] = useState(currentPreferences.state || '');
+  const [district, setDistrict] = useState(currentPreferences.district || '');
+  const [city, setCity] = useState(currentPreferences.city || '');
+  const [languages, setLanguages] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem('kaboom_languages') || '["English"]'); } catch { return ['English']; }
+  });
+  const [interestTags, setInterestTags] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem('kaboom_interest_tags') || '[]'); } catch { return []; }
   });
 
-  // Saving states
-  const [isSavingState, setIsSavingState] = useState<'idle' | 'joining' | 'spinner' | 'success'>('idle');
+  // ── UI states ──────────────────────────────────────────────
+  const [isSaving, setIsSaving] = useState<SavingState>('idle');
   const [isFadingOut, setIsFadingOut] = useState(false);
-
-  const [universityQuery, setUniversityQuery] = useState('');
-  const [universityResults, setUniversityResults] = useState<any[]>([]);
-
-  const universityDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  // Focus & scrolling tracking references
-  const universityInputRef = useRef<HTMLInputElement | null>(null);
-  const locationInputRef = useRef<HTMLInputElement | null>(null);
-  const interestInputRef = useRef<HTMLInputElement | null>(null);
-
-  // Button magnetic offsets
-  const buttonRef = useRef<HTMLButtonElement | null>(null);
-  const [btnMagneticOffset, setBtnMagneticOffset] = useState({ x: 0, y: 0 });
-  const [isHovered, setIsHovered] = useState(false);
-
-  // Rotating identity placeholders index
+  const [shakeRecipe, setShakeRecipe] = useState(false);
   const [placeholderIdx, setPlaceholderIdx] = useState(0);
+  const [discoverCopyIdx, setDiscoverCopyIdx] = useState(0);
+  const [discoverVisible, setDiscoverVisible] = useState(true);
 
-  // Shuffled dynamic hot filter chips
-  const [hotChips, setHotChips] = useState<any[]>([]);
+  // ── Autocomplete ───────────────────────────────────────────
+  const [uniQuery, setUniQuery] = useState('');
+  const [uniResults, setUniResults] = useState<any[]>([]);
+  const [locQuery, setLocQuery] = useState('');
+  const [locResults, setLocResults] = useState<any[]>([]);
+  const [intQuery, setIntQuery] = useState('');
+  const [intResults, setIntResults] = useState<any[]>([]);
 
-  const trackTelemetry = (event: string, meta?: any) => {
-    console.log(`[Telemetry Event] ${event}`, meta || {});
-  };
+  const uniDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const locDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const intDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // ── Refs ───────────────────────────────────────────────────
+  const btnRef = useRef<HTMLButtonElement | null>(null);
+  const [magnetic, setMagnetic] = useState({ x: 0, y: 0 });
+  const [btnHovered, setBtnHovered] = useState(false);
+
+  // ─────────────────────────────────────────────────────────
+  // Computed
+  // ─────────────────────────────────────────────────────────
+
+  const activeFilterCount = useCallback(() => {
+    let n = 0;
+    if (university) n++;
+    if (city) n++;
+    const extraLangs = languages.filter(l => l !== 'English');
+    if (extraLangs.length > 0) n += extraLangs.length;
+    n += interestTags.length;
+    return n;
+  }, [university, city, languages, interestTags]);
+
+  const filterCount = activeFilterCount();
+  const hasAdvancedFilters = filterCount > 0;
+
+  // ─────────────────────────────────────────────────────────
+  // Effects
+  // ─────────────────────────────────────────────────────────
 
   useEffect(() => {
-    if (isOpen) {
-      modalOpenedTimeRef.current = Date.now();
-      hasJoinedQueueRef.current = false;
-      trackTelemetry('Preference modal opened');
-      const hasName = localStorage.getItem('kaboom_display_name');
-      setIsNewUser(!hasName);
-
-      // Shuffle popular filters every page load
-      const chips = [
-        { type: 'university' as const, label: '🏫 Saveetha', val: 'Saveetha University' },
-        { type: 'location' as const, label: '🌍 Hyderabad', val: { name: 'Hyderabad, Telangana, India', country: 'India', state: 'Telangana', city: 'Hyderabad' } },
-        { type: 'language' as const, label: '💬 Telugu', val: 'Telugu' },
-        { type: 'interest' as const, label: '🎮 Gaming', val: 'Gaming' },
-        { type: 'interest' as const, label: '🤖 AI', val: 'AI' },
-        { type: 'interest' as const, label: '🎵 Music', val: 'Music' }
-      ];
-      setHotChips(chips.sort(() => Math.random() - 0.5));
-    }
+    if (!isOpen) return;
+    openedAt.current = Date.now();
+    didJoin.current = false;
+    setJourney('FAST');
+    setActiveCategory(null);
+    setIsSaving('idle');
+    setIsFadingOut(false);
   }, [isOpen]);
 
-  const handleCloseTrigger = () => {
-    if (!hasJoinedQueueRef.current) {
-      trackTelemetry('Queue abandonment (user closes before joining)', {
-        timeSpentMs: Date.now() - modalOpenedTimeRef.current
-      });
+  // Rotate name/bio placeholders
+  useEffect(() => {
+    if (!isOpen) return;
+    const t = setInterval(() => setPlaceholderIdx(i => (i + 1) % NAME_PLACEHOLDERS.length), 3500);
+    return () => clearInterval(t);
+  }, [isOpen]);
+
+  // Rotate "Discover Match Filters" copy with fade
+  useEffect(() => {
+    if (!isOpen || journey === 'ADVANCED') return;
+    const t = setInterval(() => {
+      setDiscoverVisible(false);
+      setTimeout(() => {
+        setDiscoverCopyIdx(i => (i + 1) % DISCOVER_COPY.length);
+        setDiscoverVisible(true);
+      }, 280);
+    }, 3500);
+    return () => clearInterval(t);
+  }, [isOpen, journey]);
+
+  // University autocomplete
+  useEffect(() => {
+    if (uniQuery.trim().length < 2) { setUniResults([]); return; }
+    if (uniDebounce.current) clearTimeout(uniDebounce.current);
+    uniDebounce.current = setTimeout(async () => {
+      try { setUniResults(await apiService.getUniversities(uniQuery)); } catch { setUniResults([]); }
+    }, 240);
+    return () => { if (uniDebounce.current) clearTimeout(uniDebounce.current); };
+  }, [uniQuery]);
+
+  // Location autocomplete
+  useEffect(() => {
+    if (!locQuery.trim()) { setLocResults([]); return; }
+    if (locDebounce.current) clearTimeout(locDebounce.current);
+    locDebounce.current = setTimeout(async () => {
+      try { setLocResults(await apiService.getLocations(locQuery)); } catch { setLocResults([]); }
+    }, 240);
+    return () => { if (locDebounce.current) clearTimeout(locDebounce.current); };
+  }, [locQuery]);
+
+  // Interest autocomplete
+  useEffect(() => {
+    if (!intQuery.trim()) { setIntResults([]); return; }
+    if (intDebounce.current) clearTimeout(intDebounce.current);
+    intDebounce.current = setTimeout(async () => {
+      try { setIntResults(await apiService.getInterests(intQuery)); } catch { setIntResults([]); }
+    }, 240);
+    return () => { if (intDebounce.current) clearTimeout(intDebounce.current); };
+  }, [intQuery]);
+
+  // ─────────────────────────────────────────────────────────
+  // Helpers
+  // ─────────────────────────────────────────────────────────
+
+  const log = (event: string, meta?: any) => console.log(`[Kaboom] ${event}`, meta || {});
+
+  const handleClose = () => {
+    if (!didJoin.current) {
+      log('Modal abandoned', { ms: Date.now() - openedAt.current });
     }
     onClose();
   };
 
-  // Rotates placeholders every 3.5s
-  useEffect(() => {
-    if (!isOpen) return;
-    const interval = setInterval(() => {
-      setPlaceholderIdx((prev) => (prev + 1) % NAME_PLACEHOLDERS.length);
-    }, 3500);
-    return () => clearInterval(interval);
-  }, [isOpen]);
-
-  // Debounce universities autocomplete
-  useEffect(() => {
-    if (universityQuery.trim().length < 2) {
-      setUniversityResults([]);
-      return;
-    }
-    if (universityDebounce.current) clearTimeout(universityDebounce.current);
-    universityDebounce.current = setTimeout(async () => {
-      try {
-        const results = await apiService.getUniversities(universityQuery);
-        setUniversityResults(results);
-      } catch (err) {
-        console.error(err);
-      }
-    }, 250);
-
-    return () => {
-      if (universityDebounce.current) clearTimeout(universityDebounce.current);
-    };
-  }, [universityQuery]);
-
-  // Autocomplete location and interest hooks
-  const [locationQuery, setLocationQuery] = useState('');
-  const [locationResults, setLocationResults] = useState<any[]>([]);
-  const [interestQuery, setInterestQuery] = useState('');
-  const [interestResults, setInterestResults] = useState<any[]>([]);
-
-  const locationDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const interestDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  // Debounce locations autocomplete
-  useEffect(() => {
-    if (!locationQuery.trim()) {
-      setLocationResults([]);
-      return;
-    }
-    if (locationDebounce.current) clearTimeout(locationDebounce.current);
-    locationDebounce.current = setTimeout(async () => {
-      try {
-        const results = await apiService.getLocations(locationQuery);
-        setLocationResults(results);
-      } catch (err) {
-        console.error(err);
-      }
-    }, 250);
-
-    return () => {
-      if (locationDebounce.current) clearTimeout(locationDebounce.current);
-    };
-  }, [locationQuery]);
-
-  // Debounce interests autocomplete
-  useEffect(() => {
-    if (!interestQuery.trim()) {
-      setInterestResults([]);
-      return;
-    }
-    if (interestDebounce.current) clearTimeout(interestDebounce.current);
-    interestDebounce.current = setTimeout(async () => {
-      try {
-        const results = await apiService.getInterests(interestQuery);
-        setInterestResults(results);
-      } catch (err) {
-        console.error(err);
-      }
-    }, 250);
-
-    return () => {
-      if (interestDebounce.current) clearTimeout(interestDebounce.current);
-    };
-  }, [interestQuery]);
-
-  if (!isOpen) return null;
-
-  // Active filter count check (max 3 filters strictly)
-  const getActiveFilterCount = () => {
-    let count = 0;
-    if (university) count++;
-    if (city) count++;
-    if (languages.filter(l => l !== 'English').length > 0) count++;
-    if (interestTags.length > 0) count += interestTags.length;
-    return count;
+  const handleLookingForChange = (val: string) => {
+    if (val === 'Anyone') { setLookingFor(['Anyone']); return; }
+    let next = lookingFor.filter(x => x !== 'Anyone');
+    next = next.includes(val) ? next.filter(x => x !== val) : [...next, val];
+    setLookingFor(next.length === 0 ? ['Anyone'] : next);
   };
 
-  const checkAndAddFilter = (action: () => void) => {
-    if (getActiveFilterCount() >= 3) {
+  const tryAddFilter = (action: () => void) => {
+    if (filterCount >= 3) {
       setShakeRecipe(true);
       setTimeout(() => setShakeRecipe(false), 450);
       return;
@@ -366,773 +359,669 @@ export function PreferenceModal({ isOpen, onClose, onSave, currentPreferences = 
     action();
   };
 
-  const handleLookingForChange = (val: string) => {
-    if (val === 'Anyone') {
-      setLookingFor(['Anyone']);
-    } else {
-      let updated = lookingFor.filter(x => x !== 'Anyone');
-      if (updated.includes(val)) {
-        updated = updated.filter(x => x !== val);
-      } else {
-        updated.push(val);
-      }
-      if (updated.length === 0) updated = ['Anyone'];
-      setLookingFor(updated);
-    }
-  };
+  const clearLocation = () => { setCountry(''); setState(''); setDistrict(''); setCity(''); };
 
-  const handleSelectLocation = (loc: any) => {
-    checkAndAddFilter(() => {
+  const selectLocation = (loc: any) => {
+    tryAddFilter(() => {
       setCountry(loc.country || '');
       setState(loc.state || '');
       setDistrict(loc.district || '');
       setCity(loc.city || '');
-      setLocationQuery('');
-      setLocationResults([]);
+      setLocQuery('');
+      setLocResults([]);
     });
   };
 
-  const handleSelectInterest = (name: string) => {
+  const addInterest = (name: string) => {
     if (interestTags.includes(name)) return;
-    checkAndAddFilter(() => {
-      setInterestTags([...interestTags, name]);
-      setInterestQuery('');
-      setInterestResults([]);
+    tryAddFilter(() => {
+      setInterestTags(prev => [...prev, name]);
+      setIntQuery('');
+      setIntResults([]);
     });
-  };
-
-  const removeInterest = (name: string) => {
-    setInterestTags(interestTags.filter(x => x !== name));
   };
 
   const toggleLanguage = (lang: string) => {
     if (languages.includes(lang)) {
-      setLanguages(languages.filter(x => x !== lang));
+      setLanguages(prev => prev.filter(l => l !== lang));
     } else {
-      checkAndAddFilter(() => {
-        setLanguages([...languages, lang]);
-      });
+      tryAddFilter(() => setLanguages(prev => [...prev, lang]));
     }
   };
 
-  const handleReset = () => {
-    setGender('Prefer not to say');
-    setLookingFor(['Anyone']);
-    setCountry('');
-    setState('');
-    setDistrict('');
-    setCity('');
-    setInterestTags([]);
-    setLanguages(['English']);
-    setDisplayName('');
-    setBio('');
-    setMatchMode('RANDOM');
-    setMatchConstraints({ university: false, city: false, country: false });
-    setUniversity('');
-    setEduTags([]);
-  };
-
-  const validateDisplayName = (): boolean => {
-    const nameClean = displayName.trim();
-    if (!nameClean || nameClean.length < 3) {
-      alert('Display Name is mandatory and must be at least 3 characters.');
-      return false;
-    }
-    if (nameClean.length > 25) {
-      alert('Display Name cannot exceed 25 characters.');
-      return false;
-    }
-    if (/<[^>]*>/g.test(nameClean)) {
-      alert('Display Name cannot contain HTML tags.');
-      return false;
-    }
-
-    const emojiRegex = /[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/gu;
-    const emojisFound = nameClean.match(emojiRegex) || [];
-    if (emojisFound.length > 2) {
-      alert('Display Name cannot contain more than 2 emojis.');
-      return false;
-    }
-    const consecutiveEmojiRegex = /([\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]){2,}/gu;
-    if (consecutiveEmojiRegex.test(nameClean)) {
-      alert('Display Name cannot contain consecutive emojis.');
-      return false;
-    }
-
-    const badWords = ['fuck', 'shit', 'asshole', 'bitch', 'crap', 'dick', 'pussy', 'bastard', 'cunt', 'nigger', 'faggot'];
-    const lowerName = nameClean.toLowerCase();
-    if (badWords.some(w => lowerName.includes(w))) {
-      alert('Please keep your display name clean and friendly.');
-      return false;
-    }
-
+  const validateName = (): boolean => {
+    const n = displayName.trim();
+    if (n.length < 3) { alert('Display name must be at least 3 characters.'); return false; }
+    if (n.length > 25) { alert('Display name cannot exceed 25 characters.'); return false; }
+    if (/<[^>]*>/.test(n)) { alert('Display name cannot contain HTML.'); return false; }
+    const badWords = ['fuck','shit','asshole','bitch','crap','dick','pussy','bastard','cunt','nigger','faggot'];
+    if (badWords.some(w => n.toLowerCase().includes(w))) { alert('Please keep your display name friendly.'); return false; }
     return true;
   };
 
-  const handleSelectTabButton = (tabId: string) => {
-    trackTelemetry('Tab channel changed', { tabId });
-    setActiveTabId(tabId);
-    setTimeout(() => {
-      if (tabId === 'COLLEGE') universityInputRef.current?.focus();
-      else if (tabId === 'NEARBY') locationInputRef.current?.focus();
-      else if (tabId === 'INTERESTS') interestInputRef.current?.focus();
-    }, 150);
-  };
+  const buildFastPayload = () => ({
+    display_name: displayName.trim(),
+    bio: bio.trim() || null,
+    gender,
+    looking_for: lookingFor,
+    languages: ['English'],
+    match_mode: 'PREFER',
+    match_constraints: {},
+    match_attributes: {},
+    country: null, state: null, district: null, city: null,
+    interest_tags: [],
+  });
 
-  const handleSelectHotChip = (chip: any) => {
-    trackTelemetry('Hot chip selected', { type: chip.type, value: chip.val });
-    checkAndAddFilter(() => {
-      if (chip.type === 'university') {
-        setUniversity(chip.val);
-        setUniversityQuery('');
-      } else if (chip.type === 'location') {
-        setCountry(chip.val.country);
-        setState(chip.val.state);
-        setCity(chip.val.city);
-      } else if (chip.type === 'language') {
-        if (!languages.includes(chip.val)) {
-          setLanguages([...languages, chip.val]);
+  const buildAdvancedPayload = (mode: 'PREFER' | 'STRICT') => ({
+    display_name: displayName.trim(),
+    bio: bio.trim() || null,
+    gender,
+    looking_for: lookingFor,
+    languages,
+    interest_tags: interestTags,
+    country: country || null,
+    state: state || null,
+    district: district || null,
+    city: city || null,
+    match_mode: mode,
+    match_constraints: mode === 'STRICT'
+      ? {
+          university: !!university,
+          city: !!city,
+          country: !!country,
+          languages: languages.filter(l => l !== 'English').length > 0,
+          interests: interestTags.length > 0,
         }
-      } else if (chip.type === 'interest') {
-        if (!interestTags.includes(chip.val)) {
-          setInterestTags([...interestTags, chip.val]);
-        }
-      }
-    });
-  };
+      : {},
+    match_attributes: {
+      university: university ? [university] : [],
+      city: city ? [city] : [],
+      state: state ? [state] : [],
+      country: country ? [country] : [],
+      languages,
+      interests: interestTags,
+    },
+  });
 
-  const handleSave = async () => {
-    const nameClean = displayName.trim();
-    if (!validateDisplayName()) return;
-
-    setIsSavingState('joining');
-    hasJoinedQueueRef.current = true;
-    trackTelemetry('Start Conversation clicked');
-    trackTelemetry('Average time from modal open to queue join', {
-      durationMs: Date.now() - modalOpenedTimeRef.current
-    });
-
-    localStorage.setItem('kaboom_display_name', nameClean);
+  const persistLocals = (name: string) => {
+    localStorage.setItem('kaboom_display_name', name);
     localStorage.setItem('kaboom_bio', bio.trim());
-    localStorage.setItem('kaboom_match_mode', matchMode);
-    localStorage.setItem('kaboom_match_constraints', JSON.stringify(matchConstraints));
     localStorage.setItem('kaboom_university', university);
-    localStorage.setItem('kaboom_education_tags', JSON.stringify(eduTags));
     localStorage.setItem('kaboom_interest_tags', JSON.stringify(interestTags));
     localStorage.setItem('kaboom_languages', JSON.stringify(languages));
     localStorage.setItem('kaboom_country', country);
     localStorage.setItem('kaboom_city', city);
+  };
 
-    setTimeout(() => {
-      setIsSavingState('spinner');
-    }, 850);
+  const executeJoin = async (payload: any, label: string) => {
+    if (!validateName()) return;
+    setIsSaving('joining');
+    didJoin.current = true;
+    persistLocals(payload.display_name);
+    log(label, { durationMs: Date.now() - openedAt.current });
 
+    setTimeout(() => setIsSaving('spinner'), 800);
     try {
-      await onSave({
-        gender,
-        looking_for: lookingFor,
-        languages,
-        country: country || null,
-        state: state || null,
-        district: district || null,
-        city: city || null,
-        interest_tags: interestTags,
-        display_name: nameClean,
-        bio: bio.trim() || null,
-        match_mode: matchMode,
-        match_constraints: matchConstraints,
-        match_attributes: {
-          university: university ? [university] : [],
-          education_tags: eduTags,
-          city: city ? [city] : [],
-          state: state ? [state] : [],
-          country: country ? [country] : [],
-          languages: languages,
-          interests: interestTags
-        }
-      });
-      
-      setTimeout(() => {
-        setIsSavingState('success');
-      }, 1650);
-
-      setTimeout(() => {
-        setIsFadingOut(true);
-      }, 2250);
-
-      setTimeout(() => {
-        onClose();
-        setIsSavingState('idle');
-        setIsFadingOut(false);
-      }, 2600);
-
+      await onSave(payload);
+      setTimeout(() => setIsSaving('success'), 1600);
+      setTimeout(() => setIsFadingOut(true), 2200);
+      setTimeout(() => { onClose(); setIsSaving('idle'); setIsFadingOut(false); }, 2550);
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Save failed');
-      setIsSavingState('idle');
+      alert(err instanceof Error ? err.message : 'Could not join queue.');
+      setIsSaving('idle');
     }
   };
 
-  // Button magnetic coordinates trackers
-  const handleButtonMouseMove = (e: React.MouseEvent) => {
-    if (!buttonRef.current) return;
-    const rect = buttonRef.current.getBoundingClientRect();
-    const bx = rect.left + rect.width / 2;
-    const by = rect.top + rect.height / 2;
-    const dx = e.clientX - bx;
-    const dy = e.clientY - by;
-    setBtnMagneticOffset({ x: dx * 0.045, y: dy * 0.045 });
+  // ─────────────────────────────────────────────────────────
+  // Magnetic button handlers
+  // ─────────────────────────────────────────────────────────
+
+  const onBtnMouseMove = (e: React.MouseEvent) => {
+    if (!btnRef.current) return;
+    const r = btnRef.current.getBoundingClientRect();
+    const dx = e.clientX - (r.left + r.width / 2);
+    const dy = e.clientY - (r.top + r.height / 2);
+    setMagnetic({ x: dx * 0.04, y: dy * 0.04 });
   };
 
-  const handleButtonMouseLeave = () => {
-    setBtnMagneticOffset({ x: 0, y: 0 });
-    setIsHovered(false);
-  };
+  if (!isOpen) return null;
+
+  const discoverItem = DISCOVER_COPY[discoverCopyIdx];
+
+  // ─────────────────────────────────────────────────────────
+  // Render
+  // ─────────────────────────────────────────────────────────
 
   return (
-    <div className={cn(
-      "fixed inset-0 z-[999] flex items-end sm:items-center justify-center bg-black/80 backdrop-blur-md transition-all duration-300 select-none",
-      isFadingOut ? "opacity-0 pointer-events-none scale-95" : "opacity-100 scale-100"
-    )}>
-      <style>{MODAL_ANIMATION_STYLES}</style>
+    <div
+      className={cn(
+        'fixed inset-0 z-[999] flex items-end sm:items-center justify-center bg-black/80 backdrop-blur-md transition-all duration-300 select-none',
+        isFadingOut ? 'opacity-0 pointer-events-none scale-95' : 'opacity-100 scale-100',
+      )}
+    >
+      <style>{STYLES}</style>
 
-      <div className="relative w-full max-w-lg bg-stone-900 border border-white/10 rounded-t-3xl sm:rounded-3xl overflow-hidden shadow-2xl flex flex-col max-h-[85vh] sm:max-h-[90vh] transition-transform duration-300">
-        
-        {/* Header Title */}
-        <div className="px-6 py-4 flex items-center justify-between border-b border-white/10 bg-stone-950">
+      <div className="relative w-full max-w-lg bg-stone-900 border border-white/10 rounded-t-3xl sm:rounded-3xl overflow-hidden shadow-2xl flex flex-col max-h-[92vh] sm:max-h-[90vh]">
+
+        {/* ── Header ─────────────────────────────────────────── */}
+        <div className="px-6 py-4 flex items-center justify-between border-b border-white/[0.08] bg-stone-950 shrink-0">
           <div>
-            <h2 className="text-base font-black text-white uppercase tracking-wider">
+            <h2 className="text-sm font-black text-white uppercase tracking-wider">
               Who do you want to meet today?
             </h2>
-            <p className="text-[10px] text-stone-500 font-bold tracking-wider uppercase mt-0.5">Start with one choice.</p>
+            <div className="h-4 mt-0.5">
+              <TypewriterRotator
+                messages={BANNER_MESSAGES}
+                className="text-[10px] font-semibold text-amber-500/75"
+              />
+            </div>
           </div>
-          {isSavingState === 'idle' && (
-            <button onClick={handleCloseTrigger} className="p-2 text-white/40 hover:text-white rounded-full hover:bg-white/5 transition-colors">
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          {isSaving === 'idle' && (
+            <button
+              onClick={handleClose}
+              className="p-2 text-white/30 hover:text-white/70 rounded-full hover:bg-white/5 transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
           )}
         </div>
 
-        {/* Modal Scrollable Body */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
-          
-          <TypewriterRotator messages={BANNER_MESSAGES} />
+        {/* ── Scrollable body ─────────────────────────────────── */}
+        <div className="flex-1 overflow-y-auto">
 
-          {/* IDENTITY SECTION (Name, Bio) */}
-          <div className="space-y-4">
+          {/* ══ IDENTITY SECTION (always visible) ══ */}
+          <div className="px-6 pt-5 pb-4 space-y-4">
+
+            {/* Name */}
             <div>
-              <label className="block text-[10px] text-stone-400 uppercase font-black tracking-wider mb-2">
+              <label className="block text-[9px] text-stone-500 uppercase font-black tracking-widest mb-1.5">
                 👋 What should people call you?
               </label>
               <input
                 type="text"
                 placeholder={NAME_PLACEHOLDERS[placeholderIdx]}
                 value={displayName}
-                onChange={(e) => setDisplayName(e.target.value)}
-                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-stone-600 focus:outline-none focus:border-amber-500 text-sm font-semibold transition-colors"
+                maxLength={25}
+                onChange={e => setDisplayName(e.target.value)}
+                className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white placeholder-stone-600 focus:outline-none focus:border-amber-500 text-sm font-semibold transition-colors"
               />
             </div>
 
+            {/* Bio */}
             <div>
-              <label className="block text-[10px] text-stone-400 uppercase font-black tracking-wider mb-2">
+              <label className="block text-[9px] text-stone-500 uppercase font-black tracking-widest mb-1.5">
                 ✨ Tell people your vibe
               </label>
               <input
                 type="text"
-                placeholder={BIO_PLACEHOLDERS[placeholderIdx]}
+                placeholder={BIO_PLACEHOLDERS[placeholderIdx % BIO_PLACEHOLDERS.length]}
                 value={bio}
-                onChange={(e) => setBio(e.target.value.slice(0, 120))}
-                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-stone-600 focus:outline-none focus:border-amber-500 text-sm font-semibold transition-colors"
+                maxLength={120}
+                onChange={e => setBio(e.target.value.slice(0, 120))}
+                className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white placeholder-stone-600 focus:outline-none focus:border-amber-500 text-sm font-semibold transition-colors"
               />
             </div>
-          </div>
 
-          {/* I AM / LOOKING FOR CHIPS */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-[10px] text-stone-400 uppercase font-black tracking-wider mb-2">I Am</label>
-              <div className="flex flex-wrap gap-1.5">
-                {['Male', 'Female', 'Non Binary', 'Prefer not to say'].map((g) => (
-                  <button
-                    key={g}
-                    type="button"
-                    onClick={() => setGender(g)}
-                    className={cn(
-                      "px-2.5 py-1.5 text-[9px] rounded-lg font-bold border text-center transition-all duration-150 truncate",
-                      gender === g 
-                        ? "bg-amber-500 border-amber-500 text-stone-950 font-black" 
-                        : "border-white/10 bg-white/5 text-stone-400 hover:bg-white/10"
-                    )}
-                  >
-                    {g.split(' ')[0]}
-                  </button>
-                ))}
+            {/* I Am / Looking For */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-[9px] text-stone-500 uppercase font-black tracking-widest mb-1.5">I Am</label>
+                <div className="flex flex-wrap gap-1.5">
+                  {['Male', 'Female', 'Non-Binary', 'Prefer not to say'].map(g => (
+                    <button
+                      key={g}
+                      type="button"
+                      onClick={() => setGender(g)}
+                      className={cn(
+                        'px-2.5 py-1.5 text-[9px] rounded-lg font-bold border transition-all',
+                        gender === g
+                          ? 'bg-amber-500 border-amber-500 text-stone-950'
+                          : 'border-white/10 bg-white/5 text-stone-400 hover:bg-white/10',
+                      )}
+                    >
+                      {g.split(' ')[0]}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[9px] text-stone-500 uppercase font-black tracking-widest mb-1.5">Looking For</label>
+                <div className="flex flex-wrap gap-1.5">
+                  {['Male', 'Female', 'Anyone'].map(l => (
+                    <button
+                      key={l}
+                      type="button"
+                      onClick={() => handleLookingForChange(l)}
+                      className={cn(
+                        'px-2.5 py-1.5 text-[9px] rounded-lg font-bold border transition-all',
+                        lookingFor.includes(l)
+                          ? 'bg-amber-500 border-amber-500 text-stone-950'
+                          : 'border-white/10 bg-white/5 text-stone-400 hover:bg-white/10',
+                      )}
+                    >
+                      {l}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
-
-            <div>
-              <label className="block text-[10px] text-stone-400 uppercase font-black tracking-wider mb-2">Looking For</label>
-              <div className="flex flex-wrap gap-1.5">
-                {['Male', 'Female', 'Anyone'].map((l) => (
-                  <button
-                    key={l}
-                    type="button"
-                    onClick={() => handleLookingForChange(l)}
-                    className={cn(
-                      "px-2.5 py-1.5 text-[9px] rounded-lg font-bold border text-center transition-all duration-150",
-                      lookingFor.includes(l)
-                        ? "bg-amber-500 border-amber-500 text-stone-950 font-black" 
-                        : "border-white/10 bg-white/5 text-stone-400 hover:bg-white/10"
-                    )}
-                  >
-                    {l}
-                  </button>
-                ))}
-              </div>
-            </div>
           </div>
 
-          {/* PRIMARY START CONVERSATION CTA */}
-          <div className="flex justify-center pt-2">
-            <button
-              ref={buttonRef}
-              onClick={handleSave}
-              onMouseMove={handleButtonMouseMove}
-              onMouseEnter={() => setIsHovered(true)}
-              onMouseLeave={handleButtonMouseLeave}
-              disabled={isSavingState !== 'idle'}
-              className="relative overflow-hidden px-8 py-3.5 bg-amber-500 text-stone-950 text-xs rounded-2xl font-black shadow-lg shadow-amber-500/10 flex items-center gap-2 min-w-[200px] justify-center select-none transition-all duration-300 active:scale-95 button-breathe-slow hover:-translate-y-0.5 hover:shadow-amber-500/20"
-              style={{
-                transform: `translate3d(${btnMagneticOffset.x}px, ${btnMagneticOffset.y}px, 0)`,
-              }}
-            >
-              {/* Particle convergence layer */}
-              <div className="absolute inset-0 rounded-2xl overflow-hidden pointer-events-none">
-                <div className={cn("btn-particle bp-1", isHovered && "btn-particle-fast")} />
-                <div className={cn("btn-particle bp-2", isHovered && "btn-particle-fast")} />
-                <div className={cn("btn-particle bp-3", isHovered && "btn-particle-fast")} />
-                <div className={cn("btn-particle bp-4", isHovered && "btn-particle-fast")} />
-              </div>
+          {/* ══ JOURNEY 1 — Fast CTA + Discover invite ══ */}
+          {journey === 'FAST' && (
+            <div className="px-6 pb-6 space-y-5 anim-slide-up">
 
-              {/* Hammer Tap Anim */}
-              {isSavingState === 'idle' && (
-                <span className="text-xs hammer-tap-anim shrink-0">🔨</span>
-              )}
-
-              <span className="relative z-10 flex items-center gap-1.5">
-                {isSavingState === 'idle' 
-                  ? isNewUser 
-                    ? '🚀 Start Conversation' 
-                    : 'Continue' 
-                  : isSavingState === 'joining' 
-                    ? 'Joining...' 
-                    : isSavingState === 'spinner' 
-                      ? (
-                        <svg className="animate-spin h-4 w-4 text-stone-950" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                        </svg>
-                      )
-                      : '✓ Ready!'}
-              </span>
-            </button>
-          </div>
-
-          {/* CHOOSE MATCH STYLE (Always visible) */}
-          <div className="space-y-3 pt-2">
-            <h3 className="text-[10px] font-black text-stone-500 uppercase tracking-widest text-center">
-              Choose Match Style
-            </h3>
-            
-            <div className="grid grid-cols-3 gap-2">
-              {[
-                {
-                  mode: 'RANDOM' as const,
-                  icon: '⚡',
-                  title: 'Quick',
-                  desc: 'Meet someone in seconds. Great when you just want to chat.'
-                },
-                {
-                  mode: 'PREFER' as const,
-                  icon: '🧠',
-                  title: 'Smart',
-                  desc: 'Most popular. Balances speed with compatibility.',
-                  recommended: true
-                },
-                {
-                  mode: 'STRICT' as const,
-                  icon: '🎯',
-                  title: 'Exact',
-                  desc: 'Wait longer. Meet only people matching chosen preferences.'
-                }
-              ].map((item) => (
+              {/* Primary CTA — Start Conversation */}
+              <div className="flex justify-center">
                 <button
-                  key={item.mode}
+                  ref={btnRef}
+                  type="button"
+                  disabled={isSaving !== 'idle'}
+                  onClick={() => executeJoin(buildFastPayload(), 'Fast journey queue join')}
+                  onMouseMove={onBtnMouseMove}
+                  onMouseEnter={() => setBtnHovered(true)}
+                  onMouseLeave={() => { setMagnetic({ x: 0, y: 0 }); setBtnHovered(false); }}
+                  style={{ transform: `translate3d(${magnetic.x}px, ${magnetic.y}px, 0)` }}
+                  className="relative overflow-hidden px-10 py-4 bg-amber-500 text-stone-950 text-[13px] font-black rounded-2xl shadow-lg shadow-amber-500/15 flex items-center gap-2 min-w-[220px] justify-center transition-all duration-300 active:scale-95 anim-breathe hover:shadow-amber-500/25 hover:-translate-y-0.5 disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {/* Particles */}
+                  <div className="absolute inset-0 rounded-2xl overflow-hidden pointer-events-none">
+                    <div className={cn('particle p1', btnHovered && 'duration-200')} />
+                    <div className={cn('particle p2', btnHovered && 'duration-200')} />
+                    <div className={cn('particle p3', btnHovered && 'duration-200')} />
+                    <div className={cn('particle p4', btnHovered && 'duration-200')} />
+                  </div>
+                  {isSaving === 'idle' && <span className="anim-hammer shrink-0">🔨</span>}
+                  <span className="relative z-10">
+                    {isSaving === 'idle'    && '🚀 Start Conversation'}
+                    {isSaving === 'joining' && 'Joining...'}
+                    {isSaving === 'spinner' && (
+                      <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                      </svg>
+                    )}
+                    {isSaving === 'success' && '✓ Ready!'}
+                  </span>
+                </button>
+              </div>
+
+              {/* Discover Match Filters invitation */}
+              <div className="flex flex-col items-center gap-3 pt-1">
+                {/* Divider */}
+                <div className="flex items-center gap-3 w-full">
+                  <div className="flex-1 h-px bg-white/[0.06]" />
+                  <span className="text-[9px] text-stone-600 font-bold uppercase tracking-widest">or</span>
+                  <div className="flex-1 h-px bg-white/[0.06]" />
+                </div>
+
+                {/* Rotating copy */}
+                <div
+                  className="transition-all duration-300"
+                  style={{ opacity: discoverVisible ? 1 : 0, transform: discoverVisible ? 'translateY(0)' : 'translateY(4px)' }}
+                >
+                  <p className="text-[10px] text-stone-500 font-semibold text-center">
+                    {discoverItem.icon} {discoverItem.text}
+                  </p>
+                </div>
+
+                {/* Discover button */}
+                <button
                   type="button"
                   onClick={() => {
-                    setMatchMode(item.mode);
-                    trackTelemetry('Match style selected', { style: item.mode });
-                    if (item.mode === 'STRICT') {
-                      setMatchConstraints({
-                        university: !!university,
-                        city: !!city,
-                        country: !!country,
-                        languages: languages.length > 0,
-                        interests: interestTags.length > 0
-                      });
-                    }
+                    setJourney('ADVANCED');
+                    setActiveCategory('COLLEGE');
+                    log('Advanced journey opened');
                   }}
-                  className={cn(
-                    "p-3 rounded-xl border text-center transition-all duration-300 flex flex-col items-center justify-between min-h-[110px] relative",
-                    matchMode === item.mode
-                      ? "bg-amber-500/10 border-amber-500 text-white scale-[1.02]"
-                      : "border-white/5 bg-white/[0.01] text-stone-400 hover:bg-white/[0.04]"
-                  )}
+                  className="px-5 py-2.5 border border-white/10 bg-white/[0.03] hover:bg-white/[0.07] text-white text-[11px] font-black rounded-xl transition-all active:scale-95 flex items-center gap-2"
                 >
-                  {item.recommended && (
-                    <span className="absolute -top-1.5 left-1/2 -translate-x-1/2 text-[7px] font-black uppercase bg-amber-500 text-stone-950 px-1 rounded-full whitespace-nowrap">
-                      Smart
-                    </span>
-                  )}
-                  <span className="text-lg mt-1">{item.icon}</span>
-                  <h4 className={cn("text-xs font-black mt-1", matchMode === item.mode ? "text-amber-400" : "text-white")}>
-                    {item.title}
-                  </h4>
-                  <p className="text-[8px] text-stone-500 leading-tight mt-1 truncate-3-lines">{item.desc}</p>
+                  <span>✨</span>
+                  <span>Discover Match Filters</span>
                 </button>
-              ))}
-            </div>
-          </div>
-
-          {/* DYNAMIC SHUFFLED HOT FILTERS CHIPS */}
-          {hotChips.length > 0 && (
-            <div className="pt-2">
-              <label className="block text-[9px] text-stone-500 uppercase font-black tracking-wider mb-2">🔥 Popular Right Now</label>
-              <div className="flex flex-wrap gap-1.5">
-                {hotChips.map((chip, idx) => {
-                  return (
-                    <button
-                      key={idx}
-                      type="button"
-                      onClick={() => handleSelectHotChip(chip)}
-                      className="px-2.5 py-1 rounded-full text-[10px] font-bold border border-white/5 bg-white/[0.02] text-stone-400 hover:bg-white/5 transition-colors flex items-center gap-1"
-                    >
-                      {chip.label}
-                    </button>
-                  );
-                })}
               </div>
             </div>
           )}
 
-          {/* PERSONALIZATION DRAWER ACCORDION */}
-          <div className="border border-white/10 rounded-2xl overflow-hidden bg-white/[0.01] pt-1">
-            <button
-              type="button"
-              onClick={() => {
-                setIsDrawerOpen(!isDrawerOpen);
-                trackTelemetry('Drawer filters expanded', { expanded: !isDrawerOpen });
-              }}
-              className="w-full flex items-center justify-between text-left p-4 focus:outline-none hover:bg-white/[0.02] transition-colors"
-            >
-              <div>
-                <h4 className="text-sm font-black text-white flex items-center gap-1.5">
-                  ✨ Boost Your Match Quality
-                </h4>
-                <p className="text-[9px] text-stone-500 mt-0.5">
-                  More people use these filters to find better conversations. (Optional)
-                </p>
-              </div>
-              <span className="text-xs text-stone-400">{isDrawerOpen ? '▲ Hide' : '▼ Personalize More'}</span>
-            </button>
+          {/* ══ JOURNEY 2 — Advanced filter experience ══ */}
+          {journey === 'ADVANCED' && (
+            <div className="anim-slide-up">
 
-            <div className={cn(
-              "transition-all duration-300 overflow-hidden",
-              isDrawerOpen ? "max-h-[600px] border-t border-white/5 p-4 space-y-4 opacity-100" : "max-h-0 opacity-0 pointer-events-none"
-            )}>
-              
-              {/* TAB BUTTONS BAR */}
-              <div className="flex border-b border-white/10 pb-2 overflow-x-auto gap-2">
-                {MATCH_CATEGORIES.map((cat) => {
-                  const active = activeTabId === cat.id;
+              {/* Back to simple */}
+              <div className="px-6 pt-1 pb-3 flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => { setJourney('FAST'); setActiveCategory(null); }}
+                  className="text-[10px] text-stone-500 hover:text-stone-300 font-bold flex items-center gap-1 transition-colors"
+                >
+                  ← Back to quick start
+                </button>
+              </div>
+
+              {/* ── Category selector row ─────────────────────────── */}
+              <div className="px-6 grid grid-cols-5 gap-2 pb-4">
+                {(['COLLEGE', 'NEARBY', 'LANGUAGE', 'INTERESTS', 'RANDOM'] as CategoryId[]).map(id => {
+                  const META = {
+                    COLLEGE:   { icon: '🏫', label: 'Campus' },
+                    NEARBY:    { icon: '🌍', label: 'Nearby' },
+                    LANGUAGE:  { icon: '💬', label: 'Language' },
+                    INTERESTS: { icon: '🎮', label: 'Interests' },
+                    RANDOM:    { icon: '❤️', label: 'Surprise' },
+                  }[id];
+                  const active = activeCategory === id;
                   return (
                     <button
-                      key={cat.id}
+                      key={id}
                       type="button"
-                      onClick={() => handleSelectTabButton(cat.id)}
+                      onClick={() => setActiveCategory(prev => prev === id ? null : id)}
                       className={cn(
-                        "px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all flex items-center gap-1.5 border shrink-0",
-                        cat.recommended && !active ? "border-amber-500/20 bg-amber-500/[0.02]" : "border-transparent",
-                        active 
-                          ? "bg-amber-500 text-stone-950 border-amber-500 font-black" 
-                          : "text-stone-400 hover:bg-white/5"
+                        'flex flex-col items-center gap-1 p-2.5 rounded-2xl border transition-all duration-200',
+                        active
+                          ? 'bg-amber-500/15 border-amber-500/50 scale-105'
+                          : 'border-white/[0.07] bg-white/[0.02] hover:bg-white/[0.05]',
+                        id === 'COLLEGE' && !active && 'border-amber-500/20',
                       )}
                     >
-                      <span>{cat.icon}</span>
-                      <span>{cat.title.split(' ')[0]}</span>
-                      {cat.recommended && (
-                        <span className="text-[7px] font-black uppercase bg-amber-500 text-stone-950 px-1 rounded-full">
-                          ⭐ Recommended
-                        </span>
+                      <span className="text-xl">{META.icon}</span>
+                      <span className={cn('text-[8px] font-black', active ? 'text-amber-400' : 'text-stone-500')}>
+                        {META.label}
+                      </span>
+                      {id === 'COLLEGE' && (
+                        <span className="text-[6px] font-black text-amber-500 uppercase tracking-wide">⭐ Best</span>
                       )}
                     </button>
                   );
                 })}
               </div>
 
-              {/* Dynamic Content Panel depends on selected tab */}
-              <div className="bg-stone-950/60 p-4 border border-white/5 rounded-2xl min-h-[160px] relative">
-                
-                {/* Simulated continuous typewriter online tickers */}
-                {activeTabId && TAB_TICKERS[activeTabId] && (
-                  <div className="mb-3 text-center border-b border-white/5 pb-2">
-                    <TypewriterRotator messages={TAB_TICKERS[activeTabId]} speed={30} delay={1800} />
-                  </div>
-                )}
+              {/* ── Active category panel ─────────────────────────── */}
+              {activeCategory && (
+                <div className="px-6 pb-4 anim-slide-up" key={activeCategory}>
+                  <div className="bg-stone-950/70 border border-white/[0.07] rounded-2xl p-4 space-y-3">
 
-                {/* College tab content */}
-                {activeTabId === 'COLLEGE' && (
-                  <div className="space-y-4 animate-fade-in">
-                    <div>
-                      <input
-                        ref={universityInputRef}
-                        type="text"
-                        placeholder="Search your university... e.g. VIT, SRM, IIT"
-                        value={universityQuery}
-                        onChange={(e) => {
-                          setUniversityQuery(e.target.value);
-                          if (!e.target.value) setUniversity('');
-                        }}
-                        className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white placeholder-stone-500 focus:outline-none focus:border-amber-500 text-xs font-semibold"
+                    {/* Live ticker */}
+                    <div className="text-center border-b border-white/[0.06] pb-2 mb-1">
+                      <TypewriterRotator
+                        messages={TAB_TICKERS[activeCategory]}
+                        speed={30}
+                        delay={1800}
+                        className="text-[10px] font-semibold text-amber-500/70"
                       />
+                    </div>
 
-                      {universityResults.length > 0 && (
-                        <div className="mt-2 bg-stone-950 border border-white/10 rounded-xl max-h-32 overflow-y-auto divide-y divide-white/5 shadow-xl relative z-20">
-                          {universityResults.map((u) => (
-                            <button
-                              key={u.name}
-                              type="button"
-                              onClick={() => {
-                                checkAndAddFilter(() => {
-                                  setUniversity(u.name);
-                                  setUniversityQuery('');
-                                  setUniversityResults([]);
-                                });
-                              }}
-                              className="w-full px-4 py-2 text-left hover:bg-white/5 text-xs text-white/80 flex justify-between items-center"
-                            >
-                              <span className="font-bold">{u.name}</span>
-                              <span className="text-[9px] text-stone-500">{u.country}</span>
-                            </button>
-                          ))}
+                    {/* Campus */}
+                    {activeCategory === 'COLLEGE' && (
+                      <div className="space-y-3">
+                        <div className="relative">
+                          <input
+                            autoFocus
+                            type="text"
+                            placeholder="Search your university… e.g. VIT, SRM, IIT"
+                            value={uniQuery}
+                            onChange={e => { setUniQuery(e.target.value); if (!e.target.value) setUniversity(''); }}
+                            className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white placeholder-stone-600 focus:outline-none focus:border-amber-500 text-xs font-semibold"
+                          />
+                          {uniResults.length > 0 && (
+                            <div className="absolute top-full mt-1.5 left-0 right-0 bg-stone-900 border border-white/10 rounded-xl max-h-32 overflow-y-auto z-30 shadow-xl divide-y divide-white/5">
+                              {uniResults.map(u => (
+                                <button key={u.name} type="button"
+                                  onClick={() => { tryAddFilter(() => { setUniversity(u.name); setUniQuery(''); setUniResults([]); }); }}
+                                  className="w-full px-4 py-2 text-left hover:bg-white/5 text-xs text-white/80 flex justify-between"
+                                >
+                                  <span className="font-bold">{u.name}</span>
+                                  <span className="text-[9px] text-stone-500">{u.country}</span>
+                                </button>
+                              ))}
+                            </div>
+                          )}
                         </div>
-                      )}
-                    </div>
 
-                    <div>
-                      <label className="block text-[8px] text-stone-500 uppercase font-black tracking-wider mb-1.5">Popular campuses</label>
-                      <div className="flex flex-wrap gap-1.5">
-                        {COLLEGE_SUGGESTIONS.slice(0, 4).map((col) => (
-                          <button
-                            key={col}
-                            type="button"
-                            onClick={() => {
-                              checkAndAddFilter(() => {
-                                setUniversity(col);
-                              });
-                            }}
-                            className={cn(
-                              "px-2.5 py-1 rounded-full text-[9px] font-bold border transition-colors",
-                              university === col
-                                ? "bg-amber-500/20 border-amber-500 text-amber-400"
-                                : "border-white/5 bg-white/[0.02] text-stone-400 hover:bg-white/5"
-                            )}
-                          >
-                            {col.split(' ')[0]}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Nearby tab content */}
-                {activeTabId === 'NEARBY' && (
-                  <div className="space-y-4 animate-fade-in">
-                    <div>
-                      <input
-                        ref={locationInputRef}
-                        type="text"
-                        placeholder="Search by city, state, or country..."
-                        value={locationQuery}
-                        onChange={(e) => setLocationQuery(e.target.value)}
-                        className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white placeholder-stone-500 focus:outline-none focus:border-amber-500 text-xs font-semibold"
-                      />
-
-                      {locationResults.length > 0 && (
-                        <div className="mt-2 bg-stone-950 border border-white/10 rounded-xl max-h-32 overflow-y-auto divide-y divide-white/5 shadow-xl relative z-20">
-                          {locationResults.map((loc) => (
-                            <button
-                              key={loc.id}
-                              type="button"
-                              onClick={() => handleSelectLocation(loc)}
-                              className="w-full px-4 py-2 text-left hover:bg-white/5 text-xs text-white/80 flex justify-between items-center"
-                            >
-                              <span>{loc.name}</span>
-                              <span className="text-[9px] text-stone-500 capitalize">{loc.type}</span>
-                            </button>
-                          ))}
+                        <div>
+                          <p className="text-[8px] text-stone-600 uppercase font-black tracking-wider mb-1.5">Popular campuses</p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {COLLEGE_SUGGESTIONS.slice(0, 5).map(col => (
+                              <button key={col} type="button"
+                                onClick={() => tryAddFilter(() => setUniversity(col))}
+                                className={cn(
+                                  'px-2.5 py-1 rounded-full text-[9px] font-bold border transition-colors',
+                                  university === col
+                                    ? 'bg-amber-500/20 border-amber-500 text-amber-400'
+                                    : 'border-white/[0.07] bg-white/[0.02] text-stone-400 hover:bg-white/5',
+                                )}
+                              >
+                                {col.split(' ')[0]}
+                              </button>
+                            ))}
+                          </div>
                         </div>
-                      )}
-                    </div>
-
-                    <div className="text-[9px] text-stone-500 leading-relaxed">
-                      Nearby conversations happen fastest. Enable a city to improve suggestions.
-                    </div>
-                  </div>
-                )}
-
-                {/* Language tab content */}
-                {activeTabId === 'LANGUAGE' && (
-                  <div className="space-y-4 animate-fade-in">
-                    <div className="text-[9px] text-stone-400 mb-1 leading-relaxed">
-                      People speaking Telugu and English are highly active now.
-                    </div>
-                    <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto">
-                      {LANGUAGES.map((lang) => {
-                        const selected = languages.includes(lang);
-                        return (
-                          <button
-                            key={lang}
-                            type="button"
-                            onClick={() => toggleLanguage(lang)}
-                            className={cn(
-                              "px-2.5 py-1 rounded-full text-[10px] font-bold border transition-colors",
-                              selected
-                                ? "bg-amber-500/20 border-amber-500 text-amber-400"
-                                : "border-white/5 bg-white/[0.02] text-stone-400 hover:bg-white/5"
-                            )}
-                          >
-                            {lang}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-
-                {/* Interests tab content */}
-                {activeTabId === 'INTERESTS' && (
-                  <div className="space-y-4 animate-fade-in">
-                    <input
-                      ref={interestInputRef}
-                      type="text"
-                      placeholder="Search interests (e.g. Gaming)..."
-                      value={interestQuery}
-                      onChange={(e) => setInterestQuery(e.target.value)}
-                      className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white placeholder-stone-500 focus:outline-none focus:border-amber-500 text-xs font-semibold"
-                    />
-
-                    {interestResults.length > 0 && (
-                      <div className="mt-2 bg-stone-950 border border-white/10 rounded-xl max-h-32 overflow-y-auto divide-y divide-white/5 shadow-xl relative z-20">
-                        {interestResults.map((item) => (
-                          <button
-                            key={item.id}
-                            type="button"
-                            onClick={() => handleSelectInterest(item.name)}
-                            className="w-full px-4 py-2 text-left hover:bg-white/5 text-xs text-white/80 flex justify-between items-center"
-                          >
-                            <span>{item.name}</span>
-                            <span className="text-[9px] px-1.5 py-0.5 bg-white/5 rounded text-stone-400">{item.category}</span>
-                          </button>
-                        ))}
                       </div>
                     )}
 
-                    <div className="text-[9px] text-stone-500 leading-relaxed">
-                      Shared hobbies make great icebreakers. Search interests.
+                    {/* Nearby */}
+                    {activeCategory === 'NEARBY' && (
+                      <div className="space-y-3">
+                        <div className="relative">
+                          <input
+                            autoFocus
+                            type="text"
+                            placeholder="Search by city, state, or country…"
+                            value={locQuery}
+                            onChange={e => setLocQuery(e.target.value)}
+                            className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white placeholder-stone-600 focus:outline-none focus:border-amber-500 text-xs font-semibold"
+                          />
+                          {locResults.length > 0 && (
+                            <div className="absolute top-full mt-1.5 left-0 right-0 bg-stone-900 border border-white/10 rounded-xl max-h-32 overflow-y-auto z-30 shadow-xl divide-y divide-white/5">
+                              {locResults.map(loc => (
+                                <button key={loc.id ?? loc.name} type="button"
+                                  onClick={() => selectLocation(loc)}
+                                  className="w-full px-4 py-2 text-left hover:bg-white/5 text-xs text-white/80 flex justify-between"
+                                >
+                                  <span>{loc.name}</span>
+                                  <span className="text-[9px] text-stone-500 capitalize">{loc.type}</span>
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                        {!city && (
+                          <p className="text-[9px] text-stone-600 leading-relaxed">
+                            Nearby conversations happen fastest. Search your city to improve suggestions.
+                          </p>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Language */}
+                    {activeCategory === 'LANGUAGE' && (
+                      <div className="space-y-2">
+                        <p className="text-[9px] text-stone-500 leading-relaxed">
+                          Select languages you're comfortable speaking.
+                        </p>
+                        <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto">
+                          {LANGUAGES.map(lang => {
+                            const sel = languages.includes(lang);
+                            return (
+                              <button key={lang} type="button" onClick={() => toggleLanguage(lang)}
+                                className={cn(
+                                  'px-3 py-1 rounded-full text-[10px] font-bold border transition-colors',
+                                  sel
+                                    ? 'bg-amber-500/20 border-amber-500 text-amber-400'
+                                    : 'border-white/[0.07] bg-white/[0.02] text-stone-400 hover:bg-white/5',
+                                )}
+                              >
+                                {lang}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Interests */}
+                    {activeCategory === 'INTERESTS' && (
+                      <div className="space-y-3">
+                        <div className="relative">
+                          <input
+                            autoFocus
+                            type="text"
+                            placeholder="Search interests… e.g. Gaming, Music, AI"
+                            value={intQuery}
+                            onChange={e => setIntQuery(e.target.value)}
+                            className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white placeholder-stone-600 focus:outline-none focus:border-amber-500 text-xs font-semibold"
+                          />
+                          {intResults.length > 0 && (
+                            <div className="absolute top-full mt-1.5 left-0 right-0 bg-stone-900 border border-white/10 rounded-xl max-h-32 overflow-y-auto z-30 shadow-xl divide-y divide-white/5">
+                              {intResults.map(item => (
+                                <button key={item.id ?? item.name} type="button"
+                                  onClick={() => addInterest(item.name)}
+                                  className="w-full px-4 py-2 text-left hover:bg-white/5 text-xs text-white/80 flex justify-between"
+                                >
+                                  <span>{item.name}</span>
+                                  <span className="text-[9px] text-stone-500">{item.category}</span>
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                        <p className="text-[9px] text-stone-600 leading-relaxed">
+                          Shared hobbies make great icebreakers.
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Surprise */}
+                    {activeCategory === 'RANDOM' && (
+                      <div className="text-center py-4 space-y-2">
+                        <p className="text-2xl">🌎</p>
+                        <p className="text-xs text-stone-400 font-semibold">
+                          No filters. No expectations.
+                        </p>
+                        <p className="text-[9px] text-stone-600">
+                          We'll introduce someone completely unexpected.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* ── Active filter recipe ──────────────────────────── */}
+              {hasAdvancedFilters && (
+                <div className={cn('px-6 pb-4 anim-slide-up', shakeRecipe && 'anim-shake')}>
+                  <div className={cn(
+                    'p-3.5 border rounded-2xl bg-white/[0.02] transition-all',
+                    shakeRecipe ? 'border-red-500/40' : 'border-white/[0.08]',
+                  )}>
+                    <div className="flex justify-between items-center mb-2">
+                      <h4 className="text-[9px] font-black text-white/60 uppercase tracking-widest">✨ Today's Vibe</h4>
+                      <span className={cn('text-[9px] font-black', filterCount >= 3 ? 'text-red-400' : 'text-amber-500')}>
+                        {filterCount}/3
+                      </span>
                     </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {university && (
+                        <Chip label={`🏫 ${university.split(' ')[0]}`} onRemove={() => setUniversity('')} />
+                      )}
+                      {city && (
+                        <Chip label={`📍 ${city}`} onRemove={clearLocation} />
+                      )}
+                      {languages.filter(l => l !== 'English').map(lang => (
+                        <Chip key={lang} label={`💬 ${lang}`} onRemove={() => toggleLanguage(lang)} />
+                      ))}
+                      {interestTags.map(tag => (
+                        <Chip key={tag} label={`🎮 ${tag}`} onRemove={() => setInterestTags(prev => prev.filter(t => t !== tag))} />
+                      ))}
+                    </div>
+                    {shakeRecipe && (
+                      <p className="text-[9px] text-red-400 font-bold mt-2">
+                        ⚠️ Maximum 3 filters. Remove one to add another.
+                      </p>
+                    )}
                   </div>
-                )}
-
-                {/* Random tab content */}
-                {activeTabId === 'RANDOM' && (
-                  <div className="text-center py-6 animate-fade-in text-stone-400 text-xs">
-                    🌎 No filters. No expectations. Just one interesting conversation.
-                  </div>
-                )}
-
-              </div>
-
-              {/* ✨ Today's Conversation (Selected Recipe - Max 3, inline shake warning) */}
-              <div className={cn(
-                "p-4 bg-white/5 border border-white/10 rounded-2xl relative",
-                shakeRecipe && "recipe-shake-anim border-red-500/40"
-              )}>
-                <div className="flex justify-between items-center mb-2.5">
-                  <h4 className="text-xs font-black text-white">✨ Today's Conversation</h4>
-                  <span className="text-[9px] font-black text-amber-500">{getActiveFilterCount()}/3</span>
                 </div>
+              )}
 
-                <div className="flex flex-wrap gap-1.5">
-                  {university && (
-                    <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-500/15 text-amber-400 rounded-full text-[10px] font-bold border border-amber-500/10">
-                      🏫 {university.split(' ')[0]}
-                      <button type="button" onClick={() => setUniversity('')} className="text-stone-400 hover:text-red-400 font-bold ml-1">×</button>
-                    </span>
-                  )}
-                  {city && (
-                    <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-500/15 text-amber-400 rounded-full text-[10px] font-bold border border-amber-500/10">
-                      📍 {city}
-                      <button type="button" onClick={() => { setCountry(''); setState(''); setCity(''); }} className="text-stone-400 hover:text-red-400 font-bold ml-1">×</button>
-                    </span>
-                  )}
-                  {languages.filter(l => l !== 'English').map((lang) => (
-                    <span key={lang} className="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-500/15 text-amber-400 rounded-full text-[10px] font-bold border border-amber-500/10">
-                      💬 {lang}
-                      <button type="button" onClick={() => toggleLanguage(lang)} className="text-stone-400 hover:text-red-400 font-bold ml-1">×</button>
-                    </span>
-                  ))}
-                  {interestTags.map((tag) => (
-                    <span key={tag} className="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-500/15 text-amber-400 rounded-full text-[10px] font-bold border border-amber-500/10">
-                      🎮 {tag}
-                      <button type="button" onClick={() => removeInterest(tag)} className="text-stone-400 hover:text-red-400 font-bold ml-1">×</button>
-                    </span>
-                  ))}
-
-                  {getActiveFilterCount() === 0 && (
-                    <span className="text-[10px] text-stone-500 font-semibold italic">Explore cards above to build today's conversation vibe.</span>
-                  )}
+              {/* ── Empty state ───────────────────────────────────── */}
+              {!hasAdvancedFilters && !activeCategory && (
+                <div className="px-6 pb-4 text-center">
+                  <p className="text-[10px] text-stone-600 font-semibold">
+                    Select a category above to personalize your match.
+                  </p>
                 </div>
+              )}
 
-                {shakeRecipe && (
-                  <div className="text-[9px] text-red-400 font-bold mt-2">
-                    ⚠️ Maximum 3 filters. Choose your strongest preferences.
+              {/* ── ADVANCED CTAs — only visible after ≥1 filter ─── */}
+              {hasAdvancedFilters && (
+                <div className="px-6 pb-6 space-y-2.5 anim-slide-up">
+                  <p className="text-[9px] text-stone-600 font-black uppercase tracking-widest text-center mb-1">
+                    Choose how to match
+                  </p>
+
+                  {/* Smart Match */}
+                  <button
+                    type="button"
+                    disabled={isSaving !== 'idle'}
+                    onClick={() => executeJoin(buildAdvancedPayload('PREFER'), 'Smart Match (PREFER) queue join')}
+                    className="relative w-full overflow-hidden py-3.5 bg-amber-500 text-stone-950 text-xs font-black rounded-2xl shadow-lg shadow-amber-500/15 flex items-center justify-center gap-2 active:scale-[0.98] transition-all hover:shadow-amber-500/25 disabled:opacity-60 anim-breathe"
+                  >
+                    <span className="text-base">🧠</span>
+                    <div className="text-left">
+                      <p className="font-black text-[12px] leading-none">Smart Match</p>
+                      <p className="text-[9px] font-semibold opacity-70 mt-0.5">Best speed + compatibility. Recommended.</p>
+                    </div>
+                    {isSaving !== 'idle' && (
+                      <svg className="w-4 h-4 animate-spin ml-1" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                      </svg>
+                    )}
+                  </button>
+
+                  {/* Exact Match */}
+                  <button
+                    type="button"
+                    disabled={isSaving !== 'idle'}
+                    onClick={() => executeJoin(buildAdvancedPayload('STRICT'), 'Exact Match (STRICT) queue join')}
+                    className="w-full py-3 border border-white/10 bg-white/[0.03] hover:bg-white/[0.07] text-white text-xs font-black rounded-2xl flex items-center justify-center gap-2 active:scale-[0.98] transition-all disabled:opacity-60"
+                  >
+                    <span className="text-base">🎯</span>
+                    <div className="text-left">
+                      <p className="font-black text-[11px] leading-none">Exact Match</p>
+                      <p className="text-[9px] font-semibold text-stone-500 mt-0.5">Wait longer. Only people matching your filters.</p>
+                    </div>
+                  </button>
+                </div>
+              )}
+
+              {/* Empty advanced — show a hint to select filters */}
+              {!hasAdvancedFilters && (
+                <div className="px-6 pb-5">
+                  <div className="py-3 border border-white/[0.06] rounded-2xl text-center">
+                    <p className="text-[10px] text-stone-600 font-semibold">
+                      Add at least one filter above to unlock Smart & Exact Match.
+                    </p>
                   </div>
-                )}
-              </div>
-
+                </div>
+              )}
             </div>
-          </div>
-
+          )}
         </div>
-
-        {/* Footer Actions */}
-        <div className="px-6 py-4 border-t border-white/10 bg-stone-950 flex items-center justify-between">
-          <button
-            type="button"
-            onClick={handleReset}
-            disabled={isSavingState !== 'idle'}
-            className="px-4 py-2 border border-white/10 hover:bg-white/5 text-stone-500 hover:text-stone-300 text-xs rounded-xl font-bold transition-all disabled:opacity-30"
-          >
-            Reset All
-          </button>
-
-          <span className="text-[10px] text-stone-500 font-bold tracking-wider uppercase">V8 REDESIGN</span>
-        </div>
-
       </div>
     </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// Chip helper
+// ─────────────────────────────────────────────────────────────
+
+function Chip({ label, onRemove }: { label: string; onRemove: () => void }) {
+  return (
+    <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-500/10 border border-amber-500/20 text-amber-400 rounded-full text-[10px] font-bold">
+      {label}
+      <button type="button" onClick={onRemove} className="text-stone-500 hover:text-red-400 font-black ml-0.5 transition-colors">×</button>
+    </span>
   );
 }
