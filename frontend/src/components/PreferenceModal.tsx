@@ -121,6 +121,9 @@ function TypewriterRotator({ messages, speed = 45, delay = 2400 }: { messages: s
 }
 
 export function PreferenceModal({ isOpen, onClose, onSave, currentPreferences = {} }: PreferenceModalProps) {
+  const modalOpenedTimeRef = useRef<number>(Date.now());
+  const hasJoinedQueueRef = useRef<boolean>(false);
+
   // Tabs and general visual drawers
   const [activeTabId, setActiveTabId] = useState<string>('COLLEGE');
   const [isNewUser, setIsNewUser] = useState<boolean>(true);
@@ -197,8 +200,19 @@ export function PreferenceModal({ isOpen, onClose, onSave, currentPreferences = 
     console.log(`[Telemetry Event] ${event}`, meta || {});
   };
 
+  const handleCloseTrigger = () => {
+    if (!hasJoinedQueueRef.current) {
+      trackTelemetry('Queue abandonment (user closes before joining)', {
+        timeSpentMs: Date.now() - modalOpenedTimeRef.current
+      });
+    }
+    onClose();
+  };
+
   useEffect(() => {
     if (isOpen) {
+      modalOpenedTimeRef.current = Date.now();
+      hasJoinedQueueRef.current = false;
       trackTelemetry('Preference modal opened');
       const hasName = localStorage.getItem('kaboom_display_name');
       setIsNewUser(!hasName);
@@ -458,7 +472,11 @@ export function PreferenceModal({ isOpen, onClose, onSave, currentPreferences = 
     if (!validateDisplayName()) return;
 
     setIsSavingState('joining');
+    hasJoinedQueueRef.current = true;
     trackTelemetry('Start Conversation clicked');
+    trackTelemetry('Average time from modal open to queue join', {
+      durationMs: Date.now() - modalOpenedTimeRef.current
+    });
 
     localStorage.setItem('kaboom_display_name', nameClean);
     localStorage.setItem('kaboom_bio', bio.trim());
@@ -556,7 +574,7 @@ export function PreferenceModal({ isOpen, onClose, onSave, currentPreferences = 
             <p className="text-[10px] text-stone-500 font-bold tracking-wider uppercase mt-0.5">Start with one choice.</p>
           </div>
           {isSavingState === 'idle' && (
-            <button onClick={onClose} className="p-2 text-white/40 hover:text-white rounded-full hover:bg-white/5 transition-colors">
+            <button onClick={handleCloseTrigger} className="p-2 text-white/40 hover:text-white rounded-full hover:bg-white/5 transition-colors">
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
               </svg>

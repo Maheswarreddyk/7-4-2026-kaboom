@@ -51,9 +51,9 @@ export function SearchingAnimation({
     // If University selected (Campus Match)
     if (uni) {
       customMessages.push(
+        `Checking nearby campuses...`,
         `Searching ${uni.split(' ')[0]}...`,
         "Checking compatibility...",
-        "Preparing a secure connection...",
         "Finding classmates...",
         "Almost there..."
       );
@@ -67,7 +67,6 @@ export function SearchingAnimation({
         `Finding ${nonEnglishLangs[0]} speakers...`,
         "Checking compatibility...",
         "Preparing a secure connection...",
-        "Looking for active chat rooms...",
         "Almost there..."
       );
       return customMessages;
@@ -76,21 +75,31 @@ export function SearchingAnimation({
     // If interests selected
     if (interests.length > 0) {
       customMessages.push(
-        `Searching for ${interests[0].toLowerCase()} fans...`,
+        `Finding ${interests[0].toLowerCase()} enthusiasts...`,
         "Checking compatibility...",
         "Preparing a secure connection...",
-        `Looking for active ${interests[0].toLowerCase()} groups...`,
         "Almost there..."
       );
       return customMessages;
     }
 
-    // Default Fallbacks
+    // If nearby location selected
+    const cityPref = localStorage.getItem('kaboom_city') || '';
+    if (cityPref) {
+      customMessages.push(
+        `Searching nearby conversations...`,
+        `Looking around ${cityPref}...`,
+        "Checking regional compatibility...",
+        "Almost there..."
+      );
+      return customMessages;
+    }
+
+    // Default Fallbacks (Random / basic)
     customMessages.push(
-      "Searching worldwide...",
+      "Finding someone interesting...",
       "Checking compatibility...",
       "Preparing a secure connection...",
-      "Finding someone who matches your vibe...",
       "Almost there..."
     );
 

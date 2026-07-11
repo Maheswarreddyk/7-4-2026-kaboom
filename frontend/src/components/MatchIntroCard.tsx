@@ -13,6 +13,8 @@ interface MatchIntroCardProps {
       education_tags?: string[];
       city?: string[];
       country?: string[];
+      languages?: string[];
+      interests?: string[];
     };
     languages?: string[];
     interestTags?: string[];
@@ -29,7 +31,6 @@ interface MatchIntroCardProps {
 
 export function MatchIntroCard({
   partnerProfile,
-  matchReasonMetadata,
   status,
   isChatOpen,
   onDismiss
@@ -50,9 +51,9 @@ export function MatchIntroCard({
     setTimeout(() => { onDismissRef.current(); }, 400);
   };
 
-  // Auto-dismiss after 5s
+  // Auto-dismiss after 4s (per V7 specifications)
   useEffect(() => {
-    const t = setTimeout(() => triggerDismiss(), 5000);
+    const t = setTimeout(() => triggerDismiss(), 4000);
     return () => clearTimeout(t);
   }, []);
 
@@ -86,23 +87,40 @@ export function MatchIntroCard({
 
   if (!partnerProfile) return null;
 
-  // Collect all match attributes into a flat list (max 3 shown, overflow → +N)
-  const matchedBy = matchReasonMetadata?.matchedBy ?? [];
-  const university = partnerProfile.matchAttributes?.university?.[0] || (partnerProfile as any).university || '';
-  const city = partnerProfile.city || partnerProfile.matchAttributes?.city?.[0] || '';
-  const country = partnerProfile.country || partnerProfile.matchAttributes?.country?.[0] || '';
-  const locationStr = [city, country].filter(Boolean).join(', ');
+  // Determine matching reasons dynamically
+  const partnerUni = partnerProfile.matchAttributes?.university?.[0] || (partnerProfile as any).university || '';
+  const partnerLangs = partnerProfile.languages || partnerProfile.matchAttributes?.languages || [];
+  const partnerInterests = partnerProfile.interestTags || partnerProfile.matchAttributes?.interests || [];
 
-  const allAttrs: string[] = [
-    ...matchedBy,
-    ...(university ? [`🎓 ${university}`] : []),
-    ...(locationStr ? [`📍 ${locationStr}`] : []),
-  ];
-  const MAX_ATTRS = 3;
-  const visibleAttrs = allAttrs.slice(0, MAX_ATTRS);
-  const overflowCount = allAttrs.length - MAX_ATTRS;
+  const localUni = localStorage.getItem('kaboom_university') || '';
+  let localLangs: string[] = [];
+  try { localLangs = JSON.parse(localStorage.getItem('kaboom_languages') || '[]'); } catch {}
+  let localInterests: string[] = [];
+  try { localInterests = JSON.parse(localStorage.getItem('kaboom_interest_tags') || '[]'); } catch {}
 
-  const name = partnerProfile.displayName || 'Guest';
+  const reasons: string[] = [];
+
+  // University comparison
+  if (localUni && partnerUni && localUni.toLowerCase().trim() === partnerUni.toLowerCase().trim()) {
+    reasons.push('🏫 Same Campus');
+  }
+
+  // Language comparison
+  const matchedLang = localLangs.find(l => partnerLangs.some(pl => pl.toLowerCase().trim() === l.toLowerCase().trim()));
+  if (matchedLang) {
+    reasons.push(`💬 ${matchedLang}`);
+  }
+
+  // Interest comparison
+  const matchedInterest = localInterests.find(i => partnerInterests.some(pi => pi.toLowerCase().trim() === i.toLowerCase().trim()));
+  if (matchedInterest) {
+    reasons.push(`🎮 ${matchedInterest}`);
+  }
+
+  // Fallback to random mode if no filters overlap
+  if (reasons.length === 0) {
+    reasons.push('🎲 Surprise Match');
+  }
 
   return (
     <div
@@ -118,7 +136,6 @@ export function MatchIntroCard({
       className={cn(
         'fixed top-4 left-1/2 select-none cursor-grab active:cursor-grabbing',
         'w-[calc(100%-2rem)] max-w-[360px]',
-        // Glass pill — Dynamic Island style
         'rounded-[20px] overflow-hidden',
         'border border-white/[0.08]',
         'shadow-[0_0_32px_rgba(0,0,0,0.6),0_0_12px_rgba(251,191,36,0.10)]',
@@ -127,50 +144,51 @@ export function MatchIntroCard({
           : 'animate-island-in'
       )}
     >
-      {/* Glass backdrop */}
       <div className="absolute inset-0 bg-[rgba(14,14,14,0.72)] backdrop-blur-[28px]" />
-
-      {/* Ambient top glow strip */}
       <div className="absolute top-0 inset-x-0 h-[1px] bg-gradient-to-r from-transparent via-amber-400/30 to-transparent" />
 
-      {/* Content */}
       <div className="relative px-4 py-3 flex items-center gap-3">
-        {/* Sparkle icon pill */}
         <div className="shrink-0 w-9 h-9 rounded-[12px] bg-amber-500/[0.12] border border-amber-400/20 flex items-center justify-center text-base">
           ✨
         </div>
 
-        {/* Text block */}
         <div className="flex-1 min-w-0">
-          <p className="text-[10px] font-semibold text-amber-400/80 leading-none mb-[3px]">
-            Connected with
+          <p className="text-[10px] font-black text-amber-400/90 leading-none mb-1 uppercase tracking-wide">
+            Great news! We found someone matching your vibe.
           </p>
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-sm font-bold text-white truncate leading-tight">
-              {name}
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="text-[9px] font-bold text-stone-400">
+              Matched because:
             </span>
-            {/* Visible match attrs */}
-            {visibleAttrs.map((attr, i) => (
+            {reasons.map((r, i) => (
               <span
                 key={i}
-                className="inline-flex items-center px-1.5 py-[2px] rounded-full bg-amber-500/10 border border-amber-400/20 text-[9px] font-bold text-amber-300 whitespace-nowrap"
+                className="inline-flex items-center px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-400/20 text-[9px] font-bold text-amber-300 whitespace-nowrap"
               >
-                {attr}
+                {r}
               </span>
             ))}
-            {overflowCount > 0 && (
-              <span className="inline-flex items-center px-1.5 py-[2px] rounded-full bg-white/5 border border-white/10 text-[9px] font-bold text-stone-400">
-                +{overflowCount}
-              </span>
-            )}
           </div>
         </div>
       </div>
 
-      {/* 2px progress bar */}
       <div className="relative h-[2px] w-full bg-white/[0.04]">
-        <div className="island-progress-bar h-full bg-gradient-to-r from-amber-500 via-amber-400 to-amber-300" />
+        {/* Custom island animation running down to zero over 4s */}
+        <div 
+          className="h-full bg-gradient-to-r from-amber-500 via-amber-400 to-amber-300 transition-all ease-linear"
+          style={{
+            animation: 'progressShrink 4s linear forwards'
+          }}
+        />
       </div>
+
+      {/* Progress bar shrink inline animation */}
+      <style>{`
+        @keyframes progressShrink {
+          from { width: 100%; }
+          to { width: 0%; }
+        }
+      `}</style>
     </div>
   );
 }

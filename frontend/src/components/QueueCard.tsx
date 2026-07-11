@@ -162,14 +162,16 @@ export function QueueCard({
 
         {/* Strict Match suggest banner (Only in STRICT mode and elapsed time is high) */}
         {matchMode === 'STRICT' && elapsed >= 15 && onDisableStrict && (
-          <div className="p-2 mx-1 rounded-xl bg-purple-950/20 border border-purple-500/20 flex flex-col gap-1.5 text-center">
-            <span className="text-[9px] text-purple-300 font-bold">⏱️ Search is slow in Exact Mode</span>
+          <div className="p-2.5 mx-1 rounded-xl bg-purple-950/20 border border-purple-500/20 flex flex-col gap-1.5 text-center">
+            <span className="text-[10px] text-purple-300 font-bold">
+              Still looking... Most users switch to Smart Match for faster conversations.
+            </span>
             <button
               type="button"
               onClick={(e) => { e.stopPropagation(); onDisableStrict(); }}
-              className="py-1 px-2 rounded-md bg-purple-600 hover:bg-purple-500 text-white text-[9px] font-bold active:scale-95 transition-all cursor-pointer"
+              className="py-1.5 px-3.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-stone-950 text-[10px] font-black active:scale-95 transition-all cursor-pointer"
             >
-              Expand to Smart Match
+              Switch to Smart Match
             </button>
           </div>
         )}
