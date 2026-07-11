@@ -328,6 +328,62 @@ const STYLES = `
   .p2 { --dx:82px;  --dy:32px;  animation: inwardParticle 2.7s infinite ease-in; animation-delay:.45s; }
   .p3 { --dx:-48px; --dy:48px;  animation: inwardParticle 2.1s infinite ease-in; animation-delay:.85s; }
   .p4 { --dx:66px;  --dy:-44px; animation: inwardParticle 2.5s infinite ease-in; animation-delay:1.25s; }
+
+  /* ── Mathematical Battle Animations ────────────────────── */
+  @keyframes topButtonBattle {
+      0%, 100% { transform: scale(1) translateY(0); z-index: 20; }
+      20% { transform: scale(1.06) translateY(-4px); }
+      40% { transform: scale(1.04) translateY(2px); }
+      50% { transform: scale(0.95) translateY(6px); }
+      75% { transform: scale(0.94) translateY(4px); }
+  }
+
+  @keyframes bottomButtonBattle {
+      0%, 100% { transform: scale(1) translateY(0); opacity: 0.9; }
+      20% { transform: scale(0.94) translateY(4px); opacity: 0.7; }
+      50% { transform: scale(1.06) translateY(-6px); opacity: 1; }
+      75% { transform: scale(1.04) translateY(-4px); opacity: 1; }
+  }
+
+  .battle-btn-top { animation: topButtonBattle 5s infinite cubic-bezier(0.4, 0, 0.2, 1); }
+  .battle-btn-bottom { animation: bottomButtonBattle 5s infinite cubic-bezier(0.4, 0, 0.2, 1); }
+
+  /* ── peeking & waving characters ───────────────────────── */
+  @keyframes topCharacterDance {
+      0%, 100% { transform: translateY(12px) scale(0.9); }
+      20% { transform: translateY(-4px) scale(1.1) rotate(-5deg); }
+      40% { transform: translateY(0px) scale(1.1) rotate(5deg); }
+      50% { transform: translateY(16px) scale(0.8); }
+  }
+
+  @keyframes bottomCharacterDance {
+      0%, 100% { transform: translateY(-10px) scale(0.8); }
+      20% { transform: translateY(14px) scale(0.8); }
+      50% { transform: translateY(-16px) scale(1.15) rotate(8deg); }
+      75% { transform: translateY(-12px) scale(1.15) rotate(-8deg); }
+  }
+
+  @keyframes highFiveWave {
+      0%, 100% { transform: rotate(0deg); }
+      50% { transform: rotate(-35deg) translateY(-2px); }
+  }
+
+  .animate-top-char { animation: topCharacterDance 5s infinite ease-in-out; }
+  .animate-bottom-char { animation: bottomCharacterDance 5s infinite ease-in-out; }
+  .animate-wave { animation: highFiveWave 0.2s infinite ease-in-out; }
+
+  /* ── speech bubbles ────────────────────────────────────── */
+  @keyframes speechOne {
+      0%, 45%, 100% { transform: scale(0); opacity: 0; }
+      15%, 40% { transform: scale(1); opacity: 1; }
+  }
+  @keyframes speechTwo {
+      0%, 50%, 95% { transform: scale(0); opacity: 0; }
+      55%, 90% { transform: scale(1); opacity: 1; }
+  }
+
+  .bubble-1 { animation: speechOne 5s infinite cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+  .bubble-2 { animation: speechTwo 5s infinite cubic-bezier(0.175, 0.885, 0.32, 1.275); }
 `;
 
 // ─────────────────────────────────────────────────────────────
@@ -816,7 +872,21 @@ export function PreferenceModal({
             <div className="px-6 pb-6 space-y-5 anim-slide-up">
 
               {/* Primary CTA — Start Conversation */}
-              <div className="flex justify-center">
+              <div className="w-full relative battle-btn-top flex justify-center">
+                {/* Talking Speech Bubble */}
+                <div className="absolute -top-12 left-2 pointer-events-none z-30 bubble-1">
+                  <div className="bg-white text-black text-[10px] font-black px-2.5 py-1.5 rounded-xl shadow-lg border border-black relative whitespace-nowrap">
+                    Hey! Click me for a fast match! ⚡😊
+                    <div className="absolute -bottom-1 left-6 w-2 h-2 bg-white border-r border-b border-black rotate-45"></div>
+                  </div>
+                </div>
+
+                {/* Expressive Peeking Emoji */}
+                <div className="absolute -top-7 right-8 pointer-events-none z-30 flex items-center animate-top-char">
+                  <span className="text-3xl filter drop-shadow-md">😎</span>
+                  <span className="text-2xl -ml-2 mb-4 inline-block origin-bottom-left animate-wave">👋</span>
+                </div>
+
                 <button
                   ref={btnRef}
                   type="button"
@@ -826,7 +896,7 @@ export function PreferenceModal({
                   onMouseEnter={() => setBtnHovered(true)}
                   onMouseLeave={() => { setMagnetic({ x: 0, y: 0 }); setBtnHovered(false); }}
                   style={{ transform: `translate3d(${magnetic.x}px, ${magnetic.y}px, 0)` }}
-                  className="relative overflow-hidden px-10 py-4 bg-amber-500 text-stone-950 text-[13px] font-black rounded-2xl flex items-center gap-2 min-w-[220px] justify-center transition-all duration-300 active:scale-95 anim-start-btn hover:-translate-y-0.5 disabled:opacity-60 disabled:cursor-not-allowed"
+                  className="relative overflow-hidden w-full bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 text-black font-black text-xs uppercase tracking-wider py-4 px-6 rounded-2xl shadow-[0_4px_20px_rgba(245,158,11,0.2)] border-b-4 border-amber-700 active:border-b-0 active:translate-y-[4px] flex items-center justify-center cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed transition-all duration-300"
                 >
                   {/* Particles */}
                   <div className="absolute inset-0 rounded-2xl overflow-hidden pointer-events-none">
@@ -837,13 +907,13 @@ export function PreferenceModal({
                   </div>
                   {/* Rocket + lightning icons */}
                   {isSaving === 'idle' && (
-                    <span className="relative z-10 flex items-center gap-1.5 shrink-0">
+                    <span className="relative z-10 flex items-center gap-1.5 shrink-0 mr-1">
                       <span className="anim-rocket">🚀</span>
                       <span className="anim-lightning">⚡</span>
                     </span>
                   )}
                   <span className="relative z-10">
-                    {isSaving === 'idle'    && 'Start Conversation'}
+                    {isSaving === 'idle'    && 'Start Conversation Now'}
                     {isSaving === 'joining' && 'Joining...'}
                     {isSaving === 'spinner' && (
                       <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
@@ -905,21 +975,37 @@ export function PreferenceModal({
                   </div>
                 </div>
 
-                {/* Discover button — float + glow chain + spark sweep */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setJourney('ADVANCED');
-                    setActiveCategory('COLLEGE');
-                    log('Advanced journey opened');
-                  }}
-                  className="relative overflow-hidden px-5 py-2.5 border border-white/[0.12] bg-white/[0.04] hover:bg-white/[0.09] hover:border-amber-500/35 text-white text-[11px] font-black rounded-xl transition-all duration-300 active:scale-95 flex items-center gap-2 anim-discover-float anim-discover-glow"
-                >
-                  <div className="spark-sweep" />
-                  <span className="anim-sparkle relative z-10">✨</span>
-                  <span className="relative z-10">Discover Match Filters</span>
-                  <span className="relative z-10 text-stone-500 text-[9px] opacity-60">›</span>
-                </button>
+                {/* Discover button container */}
+                <div className="w-full relative battle-btn-bottom flex justify-center pt-8">
+                  {/* Dialogue bubble */}
+                  <div className="absolute -top-6 right-2 pointer-events-none z-30 bubble-2">
+                    <div className="bg-indigo-600 text-white text-[10px] font-black px-2.5 py-1.5 rounded-xl shadow-lg relative whitespace-nowrap">
+                      Wait! I can make it way better! 👇🤫
+                      <div className="absolute -bottom-1 right-8 w-2 h-2 bg-indigo-600 rotate-45"></div>
+                    </div>
+                  </div>
+
+                  {/* Expressive emoji */}
+                  <div className="absolute -top-3 left-10 pointer-events-none z-30 flex items-center animate-bottom-char">
+                    <span className="text-2xl mr-1 inline-block origin-bottom-right animate-wave">🙋‍♂️</span>
+                    <span className="text-3xl filter drop-shadow-md">🤩</span>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setJourney('ADVANCED');
+                      setActiveCategory('COLLEGE');
+                      log('Advanced journey opened');
+                    }}
+                    className="w-full bg-neutral-900 hover:bg-neutral-800 text-neutral-400 hover:text-white font-bold text-xs tracking-wide py-3.5 px-6 rounded-2xl border-2 border-dashed border-indigo-500/30 hover:border-indigo-500 transition-all duration-200 flex items-center justify-center gap-1 cursor-pointer relative overflow-hidden active:scale-95 anim-discover-float anim-discover-glow"
+                  >
+                    <div className="spark-sweep" />
+                    <span className="anim-sparkle relative z-10">✨</span>
+                    <span className="relative z-10">Discover Match Filters</span>
+                    <span className="relative z-10 text-stone-500 text-[9px] opacity-60">›</span>
+                  </button>
+                </div>
               </div>
             </div>
           )}
