@@ -105,6 +105,13 @@ export function MatchIntroCard({
     reasons.push('🏫 Same Campus');
   }
 
+  // City comparison
+  const localCity = localStorage.getItem('kaboom_city') || '';
+  const partnerCity = partnerProfile.matchAttributes?.city?.[0] || (partnerProfile as any).city || '';
+  if (localCity && partnerCity && localCity.toLowerCase().trim() === partnerCity.toLowerCase().trim()) {
+    reasons.push('📍 Same City');
+  }
+
   // Language comparison
   const matchedLang = localLangs.find(l => partnerLangs.some(pl => pl.toLowerCase().trim() === l.toLowerCase().trim()));
   if (matchedLang) {

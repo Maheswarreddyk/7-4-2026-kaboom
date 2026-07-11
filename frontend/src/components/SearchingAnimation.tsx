@@ -16,7 +16,6 @@ export function SearchingAnimation({
   const { width, height } = useResponsiveLayout();
   const isMinimalLayout = width < 560 || height < 500;
 
-  const [animationStep, setAnimationStep] = useState(0);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const isTabVisible = useRef(true);
 
@@ -24,90 +23,67 @@ export function SearchingAnimation({
   const [fadingText, setFadingText] = useState('Starting search...');
   const [fadeOpacity, setFadeOpacity] = useState(1);
 
-  // Rotating messages during search stages (slow 5.5s loops)
+  const [elapsedSec, setElapsedSec] = useState(0);
+
+  // Increment counter every second
   useEffect(() => {
     if (status === 'PARTNER_LEFT' || isQueuePaused) return;
+    setElapsedSec(0);
     const interval = setInterval(() => {
-      setAnimationStep((prev) => prev + 1);
-    }, 5500);
+      setElapsedSec((prev) => prev + 1);
+    }, 1000);
     return () => clearInterval(interval);
   }, [status, isQueuePaused]);
 
-  const getContextMessages = () => {
+  const getSearchMessage = () => {
     const uni = localStorage.getItem('kaboom_university') || '';
     
     let langs: string[] = [];
-    try {
-      langs = JSON.parse(localStorage.getItem('kaboom_languages') || '[]');
-    } catch {}
+    try { langs = JSON.parse(localStorage.getItem('kaboom_languages') || '[]'); } catch {}
 
     let interests: string[] = [];
-    try {
-      interests = JSON.parse(localStorage.getItem('kaboom_interest_tags') || '[]');
-    } catch {}
+    try { interests = JSON.parse(localStorage.getItem('kaboom_interest_tags') || '[]'); } catch {}
 
-    const customMessages: string[] = [];
-
-    // If University selected (Campus Match)
-    if (uni) {
-      customMessages.push(
-        `Checking nearby campuses...`,
-        `Searching ${uni.split(' ')[0]}...`,
-        "Checking compatibility...",
-        "Finding classmates...",
-        "Almost there..."
-      );
-      return customMessages;
-    }
-
-    // If non-English languages selected
-    const nonEnglishLangs = langs.filter(l => l !== 'English');
-    if (nonEnglishLangs.length > 0) {
-      customMessages.push(
-        `Finding ${nonEnglishLangs[0]} speakers...`,
-        "Checking compatibility...",
-        "Preparing a secure connection...",
-        "Almost there..."
-      );
-      return customMessages;
-    }
-
-    // If interests selected
-    if (interests.length > 0) {
-      customMessages.push(
-        `Finding ${interests[0].toLowerCase()} enthusiasts...`,
-        "Checking compatibility...",
-        "Preparing a secure connection...",
-        "Almost there..."
-      );
-      return customMessages;
-    }
-
-    // If nearby location selected
     const cityPref = localStorage.getItem('kaboom_city') || '';
-    if (cityPref) {
-      customMessages.push(
-        `Searching nearby conversations...`,
-        `Looking around ${cityPref}...`,
-        "Checking regional compatibility...",
-        "Almost there..."
-      );
-      return customMessages;
+
+    // Stage 1: Campus Match (0-15s)
+    if (elapsedSec < 15) {
+      if (uni) {
+        return `Searching ${uni.split(' ')[0]} student network...`;
+      }
+      return 'Checking nearby campuses...';
     }
 
-    // Default Fallbacks (Random / basic)
-    customMessages.push(
-      "Finding someone interesting...",
-      "Checking compatibility...",
-      "Preparing a secure connection...",
-      "Almost there..."
-    );
+    // Stage 2: Interests / Hobbies (15-30s)
+    if (elapsedSec < 30) {
+      if (interests.length > 0) {
+        return `Finding ${interests[0].toLowerCase()} fans...`;
+      }
+      return 'Checking shared interests...';
+    }
 
-    return customMessages;
+    // Stage 3: Languages (30-45s)
+    if (elapsedSec < 45) {
+      const nonEnglish = langs.filter(l => l !== 'English');
+      if (nonEnglish.length > 0) {
+        return `Finding ${nonEnglish[0]} speakers...`;
+      }
+      return 'Expanding languages check...';
+    }
+
+    // Stage 4: Location / Nearby (45-60s)
+    if (elapsedSec < 60) {
+      if (cityPref) {
+        return `Looking around ${cityPref}...`;
+      }
+      return 'Searching nearby conversations...';
+    }
+
+    // Stage 5: Fallback search (60+s)
+    return 'Finding someone interesting...';
   };
 
-  const currentMessages = getContextMessages();
-  const currentStageText = currentMessages[animationStep % currentMessages.length];
+  const currentStageText = getSearchMessage();
 
   // Apply smooth fade state transition
   useEffect(() => {

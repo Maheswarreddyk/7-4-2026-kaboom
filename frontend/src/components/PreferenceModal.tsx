@@ -17,17 +17,50 @@ const LANGUAGES = [
 ];
 
 const BANNER_MESSAGES = [
-  "Students from Saveetha University are waiting...",
-  "People nearby are joining...",
-  "Someone who speaks Telugu is online...",
-  "Find someone who shares your interests...",
-  "Your next conversation starts here..."
+  "Someone nearby...",
+  "Someone from your campus...",
+  "Someone who speaks Telugu...",
+  "Someone unexpected..."
 ];
 
 const NAME_PLACEHOLDERS = ['Rahul', 'Aishu', 'Shadow', 'CoffeeAddict', 'Mahes'];
-const BIO_PLACEHOLDERS = ['Coffee first ☕', 'Just finished exams 😴', 'Looking for new friends 👋', 'Anyone up for gaming?', 'Learning AI'];
+const BIO_PLACEHOLDERS = [
+  'Just finished exams 🎉',
+  'Looking for coding buddies',
+  'Late night conversations',
+  'Need coffee friends ☕',
+  'Anyone up for gaming?',
+  'AI enthusiast'
+];
 
-// CSS Animations: breathing, hammer, particles, and constraint shake
+// Continuous status tickers for advanced tabs
+const TAB_TICKERS: Record<string, string[]> = {
+  COLLEGE: [
+    "Students from Saveetha joined...",
+    "Someone from SRM is waiting...",
+    "Meet people from your campus."
+  ],
+  NEARBY: [
+    "Someone nearby joined...",
+    "People from Hyderabad...",
+    "People from Bangalore..."
+  ],
+  LANGUAGE: [
+    "Telugu conversations...",
+    "English speakers...",
+    "Hindi conversations..."
+  ],
+  INTERESTS: [
+    "Gamers online...",
+    "AI enthusiasts...",
+    "Music lovers..."
+  ],
+  RANDOM: [
+    "We'll introduce someone unexpected."
+  ]
+};
+
+// V8 CSS Animation & Tap Physics overrides
 const MODAL_ANIMATION_STYLES = `
   @keyframes inwardParticle {
     0% { transform: translate(var(--dx), var(--dy)) scale(0); opacity: 0; }
@@ -121,6 +154,7 @@ function TypewriterRotator({ messages, speed = 45, delay = 2400 }: { messages: s
 }
 
 export function PreferenceModal({ isOpen, onClose, onSave, currentPreferences = {} }: PreferenceModalProps) {
+  // Telemetry Duration & Abandonment trackers
   const modalOpenedTimeRef = useRef<number>(Date.now());
   const hasJoinedQueueRef = useRef<boolean>(false);
 
@@ -200,15 +234,6 @@ export function PreferenceModal({ isOpen, onClose, onSave, currentPreferences = 
     console.log(`[Telemetry Event] ${event}`, meta || {});
   };
 
-  const handleCloseTrigger = () => {
-    if (!hasJoinedQueueRef.current) {
-      trackTelemetry('Queue abandonment (user closes before joining)', {
-        timeSpentMs: Date.now() - modalOpenedTimeRef.current
-      });
-    }
-    onClose();
-  };
-
   useEffect(() => {
     if (isOpen) {
       modalOpenedTimeRef.current = Date.now();
@@ -229,6 +254,15 @@ export function PreferenceModal({ isOpen, onClose, onSave, currentPreferences = 
       setHotChips(chips.sort(() => Math.random() - 0.5));
     }
   }, [isOpen]);
+
+  const handleCloseTrigger = () => {
+    if (!hasJoinedQueueRef.current) {
+      trackTelemetry('Queue abandonment (user closes before joining)', {
+        timeSpentMs: Date.now() - modalOpenedTimeRef.current
+      });
+    }
+    onClose();
+  };
 
   // Rotates placeholders every 3.5s
   useEffect(() => {
@@ -554,8 +588,6 @@ export function PreferenceModal({ isOpen, onClose, onSave, currentPreferences = 
     setIsHovered(false);
   };
 
-  const activeCategory = MATCH_CATEGORIES.find(c => c.id === activeTabId);
-
   return (
     <div className={cn(
       "fixed inset-0 z-[999] flex items-end sm:items-center justify-center bg-black/80 backdrop-blur-md transition-all duration-300 select-none",
@@ -853,9 +885,9 @@ export function PreferenceModal({ isOpen, onClose, onSave, currentPreferences = 
               <div className="bg-stone-950/60 p-4 border border-white/5 rounded-2xl min-h-[160px] relative">
                 
                 {/* Simulated continuous typewriter online tickers */}
-                {activeCategory && (
+                {activeTabId && TAB_TICKERS[activeTabId] && (
                   <div className="mb-3 text-center border-b border-white/5 pb-2">
-                    <TypewriterRotator messages={activeCategory.rotatorMessages} speed={30} delay={1800} />
+                    <TypewriterRotator messages={TAB_TICKERS[activeTabId]} speed={30} delay={1800} />
                   </div>
                 )}
 
@@ -956,7 +988,7 @@ export function PreferenceModal({ isOpen, onClose, onSave, currentPreferences = 
                     </div>
 
                     <div className="text-[9px] text-stone-500 leading-relaxed">
-                      Nearby conversations happen fastest. Enable a city to improve matching suggestions.
+                      Nearby conversations happen fastest. Enable a city to improve suggestions.
                     </div>
                   </div>
                 )}
@@ -1019,7 +1051,7 @@ export function PreferenceModal({ isOpen, onClose, onSave, currentPreferences = 
                     )}
 
                     <div className="text-[9px] text-stone-500 leading-relaxed">
-                      Gamers and music lovers are connected recently. Select keywords to tune matches.
+                      Shared hobbies make great icebreakers. Search interests.
                     </div>
                   </div>
                 )}
@@ -1033,13 +1065,13 @@ export function PreferenceModal({ isOpen, onClose, onSave, currentPreferences = 
 
               </div>
 
-              {/* ✨ Your Conversation Vibe (Selected Recipe - Max 3, inline shake warning) */}
+              {/* ✨ Today's Conversation (Selected Recipe - Max 3, inline shake warning) */}
               <div className={cn(
                 "p-4 bg-white/5 border border-white/10 rounded-2xl relative",
                 shakeRecipe && "recipe-shake-anim border-red-500/40"
               )}>
                 <div className="flex justify-between items-center mb-2.5">
-                  <h4 className="text-xs font-black text-white">✨ Your Conversation Vibe</h4>
+                  <h4 className="text-xs font-black text-white">✨ Today's Conversation</h4>
                   <span className="text-[9px] font-black text-amber-500">{getActiveFilterCount()}/3</span>
                 </div>
 
@@ -1070,7 +1102,7 @@ export function PreferenceModal({ isOpen, onClose, onSave, currentPreferences = 
                   ))}
 
                   {getActiveFilterCount() === 0 && (
-                    <span className="text-[10px] text-stone-500 font-semibold italic">Explore cards to build today's vibe...</span>
+                    <span className="text-[10px] text-stone-500 font-semibold italic">Explore cards above to build today's conversation vibe.</span>
                   )}
                 </div>
 
@@ -1097,7 +1129,7 @@ export function PreferenceModal({ isOpen, onClose, onSave, currentPreferences = 
             Reset All
           </button>
 
-          <span className="text-[10px] text-stone-500 font-bold tracking-wider uppercase">V7.1 Polish</span>
+          <span className="text-[10px] text-stone-500 font-bold tracking-wider uppercase">V8 REDESIGN</span>
         </div>
 
       </div>
