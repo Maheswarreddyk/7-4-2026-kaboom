@@ -44,18 +44,49 @@ const BIO_PLACEHOLDERS = [
   'Anyone up for gaming?',
 ];
 
-// Rotating invitation copy beneath "Discover Match Filters" — campus-first discovery
-const DISCOVER_COPY = [
-  { text: '🏫 Students from Saveetha University are meeting right now...' },
-  { text: '🏫 Someone from SRM just joined the conversation.' },
-  { text: '🎓 Meet students from Sri Venkateshwara College today.' },
-  { text: '🌏 New conversations started at Chinmaya Vishwa Vidyapeetham.' },
-  { text: '💬 Your next campus friend could be one click away.' },
-  { text: '🎉 Students are making new friends across campuses.' },
-  { text: '💬 Talk in Telugu. Find people nearby.' },
-  { text: '🎮 Find gamers. Match by hobbies.' },
-  { text: '❤️ Meet someone with your interests.' },
-  { text: '✨ Better conversations start with better filters.' },
+// ─── Campus Discovery Cards (premium ticker) ──────────────────
+interface CampusCard {
+  badge: string;
+  badgeClass: string;
+  liveDotClass: string;
+  college: string;
+  location: string;
+  message: string;
+}
+
+const CAMPUS_CARDS: CampusCard[] = [
+  {
+    badge: '🔥 LIVE NOW',
+    badgeClass: 'text-red-400',
+    liveDotClass: 'bg-red-400',
+    college: 'Saveetha University',
+    location: 'Chennai, Tamil Nadu',
+    message: 'Students are joining right now...',
+  },
+  {
+    badge: '✨ TRENDING',
+    badgeClass: 'text-amber-400',
+    liveDotClass: 'bg-amber-400',
+    college: 'SRM Institute of Science & Technology',
+    location: 'Chennai, Tamil Nadu',
+    message: 'Meet someone from SRM today.',
+  },
+  {
+    badge: '🎓 ACTIVE CAMPUS',
+    badgeClass: 'text-sky-400',
+    liveDotClass: 'bg-sky-400',
+    college: 'Sri Venkateshwara College of Engineering',
+    location: 'Chittoor, Andhra Pradesh',
+    message: 'Your next conversation could start here.',
+  },
+  {
+    badge: '🌍 CAMPUS DISCOVERY',
+    badgeClass: 'text-emerald-400',
+    liveDotClass: 'bg-emerald-400',
+    college: 'Chinmaya Vishwa Vidyapeetham',
+    location: 'Ernakulam, Kerala',
+    message: 'New conversations started.',
+  },
 ];
 
 // Per-tab tickers
@@ -99,25 +130,29 @@ const STYLES = `
   /* ── Entry ─────────────────────────────────────────────── */
   @keyframes slideUpFadeIn {
     from { opacity: 0; transform: translateY(24px); }
-    to   { opacity: 1; transform: translateY(0);    }
+    to   { opacity: 1; transform: translateY(0); }
   }
 
-  /* ── Buttons ────────────────────────────────────────────── */
-  @keyframes breathe {
-    0%, 100% { transform: scale(1);     box-shadow: 0 8px 24px rgba(251,191,36,0.15); }
-    50%      { transform: scale(1.022); box-shadow: 0 12px 32px rgba(251,191,36,0.28); }
+  /* ── Start Conversation — coordinated 9s idle cycle ─────── */
+  /* Phase 0-10%: glow brightens  |  20-35%: rocket launches  |
+     48-54%: lightning flash      |  60-100%: rest            */
+  @keyframes startBtnIdle {
+    0%,  10%, 18%, 100% { box-shadow: 0 8px 22px rgba(251,191,36,0.14); }
+    5%                  { box-shadow: 0 10px 38px rgba(251,191,36,0.42); }
   }
-  @keyframes rocketBounce {
-    0%, 70%, 100% { transform: translateY(0)   rotate(0deg);  }
-    78%           { transform: translateY(-5px) rotate(-6deg); }
-    84%           { transform: translateY(-2px) rotate(2deg);  }
-    90%           { transform: translateY(-4px) rotate(-3deg); }
-    96%           { transform: translateY(0)   rotate(0deg);  }
+  @keyframes rocketIdle {
+    0%,  18%, 38%, 100% { transform: translateY(0) rotate(0deg); }
+    22%                 { transform: translateY(-7px) rotate(-8deg); }
+    27%                 { transform: translateY(-4px) rotate(4deg);  }
+    32%                 { transform: translateY(-6px) rotate(-3deg); }
+    36%                 { transform: translateY(0)   rotate(0deg);  }
   }
-  @keyframes lightningFlash {
-    0%, 89%, 100% { opacity: 1; }
-    90%, 92%, 94% { opacity: 0; }
-    91%, 93%      { opacity: 1; }
+  @keyframes lightningIdle {
+    0%, 46%, 57%, 100% { opacity: 1; transform: scale(1);   }
+    49%                { opacity: 0.05; transform: scale(0.6); }
+    51%                { opacity: 1;    transform: scale(1.4); }
+    53%                { opacity: 0.1;  transform: scale(0.8); }
+    55%                { opacity: 1;    transform: scale(1);   }
   }
   @keyframes recipeShake {
     0%, 100% { transform: translateX(0); }
@@ -125,20 +160,43 @@ const STYLES = `
     40%, 80% { transform: translateX(6px); }
   }
 
-  /* ── Discover button ────────────────────────────────────── */
+  /* ── Discover button — 6s float + glow chain ────────────── */
   @keyframes discoverFloat {
-    0%, 100% { transform: translateY(0px);   }
-    50%      { transform: translateY(-2px);  }
+    0%, 100% { transform: translateY(0px); }
+    50%      { transform: translateY(-2px); }
   }
+  @keyframes discoverGlow {
+    0%, 20%, 80%, 100% { box-shadow: 0 0 0 0 rgba(251,191,36,0); }
+    50%                { box-shadow: 0 0 16px 3px rgba(251,191,36,0.22); }
+  }
+  /* spark sweep across the Discover button */
   @keyframes sparkSweep {
-    0%   { left: -14px; opacity: 0; }
-    5%   { opacity: 0.65; }
-    95%  { opacity: 0.35; }
-    100% { left: calc(100% + 14px); opacity: 0; }
+    0%   { left: -18px; opacity: 0; }
+    6%   { opacity: 0.7; }
+    94%  { opacity: 0.4; }
+    100% { left: calc(100% + 18px); opacity: 0; }
   }
-  @keyframes glowPulse {
-    0%, 100% { box-shadow: 0 0 0px 0px rgba(251,191,36,0); }
-    50%      { box-shadow: 0 0 12px 2px rgba(251,191,36,0.18); }
+  /* sparkle icon wiggle at 70-85% of its 7.5s period */
+  @keyframes sparkleTwinkle {
+    0%, 70%, 92%, 100% { opacity: 1; transform: scale(1) rotate(0deg);    }
+    74%                { opacity: 0.15; transform: scale(0.45) rotate(28deg);  }
+    78%                { opacity: 1;    transform: scale(1.35) rotate(-18deg); }
+    82%                { opacity: 0.4;  transform: scale(0.7)  rotate(14deg);  }
+    86%                { opacity: 1;    transform: scale(1)    rotate(0deg);   }
+  }
+
+  /* ── Campus ticker — shimmer gold text + live dot ────────── */
+  @keyframes shimmerGold {
+    0%   { background-position: -200% center; }
+    100% { background-position:  200% center; }
+  }
+  @keyframes liveDotPulse {
+    0%, 100% { opacity: 1; transform: scale(1);    box-shadow: 0 0 0 0 rgba(var(--dot-rgb),0.5); }
+    50%      { opacity: 0.65; transform: scale(0.88); box-shadow: 0 0 0 5px rgba(var(--dot-rgb),0); }
+  }
+  @keyframes tickerShimmer {
+    0%   { transform: translateX(-100%); }
+    100% { transform: translateX(100%);  }
   }
 
   /* ── Particles ──────────────────────────────────────────── */
@@ -151,83 +209,113 @@ const STYLES = `
   /* ── Icon micro-animations ──────────────────────────────── */
   @keyframes flagWave {
     0%, 85%, 100% { transform: rotate(0deg) skewX(0deg);  }
-    88%           { transform: rotate(6deg) skewX(-4deg); }
-    91%           { transform: rotate(-3deg) skewX(2deg); }
+    88%           { transform: rotate(7deg) skewX(-5deg); }
+    91%           { transform: rotate(-4deg) skewX(3deg); }
     94%           { transform: rotate(5deg) skewX(-3deg); }
     97%           { transform: rotate(-1deg) skewX(1deg); }
   }
   @keyframes globeTilt {
-    0%, 80%, 100% { transform: rotate(0deg);  }
-    85%           { transform: rotate(-12deg); }
-    92%           { transform: rotate(8deg);  }
+    0%, 80%, 100% { transform: rotate(0deg); }
+    85%           { transform: rotate(-13deg); }
+    92%           { transform: rotate(9deg); }
     96%           { transform: rotate(-4deg); }
   }
   @keyframes bubblePop {
     0%, 82%, 100% { transform: scale(1);    }
-    85%           { transform: scale(1.28); }
-    88%           { transform: scale(0.88); }
-    91%           { transform: scale(1.12); }
+    85%           { transform: scale(1.32); }
+    88%           { transform: scale(0.85); }
+    92%           { transform: scale(1.14); }
     95%           { transform: scale(1);    }
   }
   @keyframes joystickTilt {
     0%, 78%, 100% { transform: rotate(0deg);   }
-    81%           { transform: rotate(18deg);  }
-    84%           { transform: rotate(-14deg); }
-    87%           { transform: rotate(10deg);  }
-    90%           { transform: rotate(-6deg);  }
+    81%           { transform: rotate(20deg);  }
+    84%           { transform: rotate(-16deg); }
+    87%           { transform: rotate(11deg);  }
+    90%           { transform: rotate(-7deg);  }
     93%           { transform: rotate(3deg);   }
     96%           { transform: rotate(0deg);   }
   }
   @keyframes heartbeat {
     0%, 65%, 100% { transform: scale(1);    }
-    68%           { transform: scale(1.3);  }
+    68%           { transform: scale(1.32); }
     71%           { transform: scale(1.1);  }
-    74%           { transform: scale(1.25); }
+    74%           { transform: scale(1.26); }
     78%           { transform: scale(1);    }
   }
-  @keyframes sparkleTwinkle {
-    0%, 75%, 100% { opacity: 1; transform: scale(1)    rotate(0deg);  }
-    78%           { opacity: 0.2; transform: scale(0.5) rotate(30deg); }
-    82%           { opacity: 1; transform: scale(1.3)  rotate(-15deg);}
-    86%           { opacity: 0.5; transform: scale(0.8) rotate(20deg); }
-    90%           { opacity: 1; transform: scale(1)    rotate(0deg);  }
-  }
   @keyframes targetFocus {
-    0%, 80%, 100% { transform: scale(1); }
-    84%           { transform: scale(0.78); }
-    88%           { transform: scale(1.18); }
-    92%           { transform: scale(0.95); }
-    96%           { transform: scale(1);   }
+    0%, 80%, 100% { transform: scale(1);    }
+    84%           { transform: scale(0.76); }
+    88%           { transform: scale(1.2);  }
+    92%           { transform: scale(0.94); }
+    96%           { transform: scale(1);    }
   }
   @keyframes brainPulse {
     0%, 100% { filter: brightness(1);    }
-    50%      { filter: brightness(1.35); }
+    50%      { filter: brightness(1.4);  }
   }
 
   /* ── Class bindings ─────────────────────────────────────── */
   .anim-slide-up       { animation: slideUpFadeIn 0.35s cubic-bezier(0.34,1.56,0.64,1) both; }
-  .anim-breathe        { animation: breathe 4.5s ease-in-out infinite; }
-  .anim-rocket         { animation: rocketBounce 8s ease-in-out infinite; display: inline-block; }
-  .anim-lightning      { animation: lightningFlash 11s ease-in-out infinite; display: inline-block; }
-  .anim-shake          { animation: recipeShake 0.42s ease-in-out; }
+  /* Start Conversation coordinated idle — all share 9s period */
+  .anim-start-btn      { animation: startBtnIdle 9s ease-in-out infinite; }
+  .anim-rocket         { animation: rocketIdle   9s ease-in-out infinite; display: inline-block; }
+  .anim-lightning      { animation: lightningIdle 9s ease-in-out infinite; display: inline-block; }
+  /* Discover button */
   .anim-discover-float { animation: discoverFloat 3.8s ease-in-out infinite; }
-  .anim-glow-pulse     { animation: glowPulse 3.2s ease-in-out infinite; }
-  .anim-flag-wave      { animation: flagWave 7s ease-in-out infinite; display:inline-block; }
-  .anim-globe-tilt     { animation: globeTilt 9s ease-in-out infinite; display:inline-block; }
-  .anim-bubble-pop     { animation: bubblePop 8.5s ease-in-out infinite; display:inline-block; }
-  .anim-joystick-tilt  { animation: joystickTilt 10s ease-in-out infinite; display:inline-block; }
-  .anim-heartbeat      { animation: heartbeat 6s ease-in-out infinite; display:inline-block; }
-  .anim-sparkle        { animation: sparkleTwinkle 7.5s ease-in-out infinite; display:inline-block; }
-  .anim-target-focus   { animation: targetFocus 9s ease-in-out infinite; display:inline-block; }
-  .anim-brain-pulse    { animation: brainPulse 4s ease-in-out infinite; display:inline-block; }
+  .anim-discover-glow  { animation: discoverGlow  4.5s ease-in-out infinite; }
+  .anim-sparkle        { animation: sparkleTwinkle 7.5s ease-in-out infinite; display: inline-block; }
+  /* Icons */
+  .anim-flag-wave      { animation: flagWave 7s ease-in-out infinite; display: inline-block; }
+  .anim-globe-tilt     { animation: globeTilt 9s ease-in-out infinite; display: inline-block; }
+  .anim-bubble-pop     { animation: bubblePop 8.5s ease-in-out infinite; display: inline-block; }
+  .anim-joystick-tilt  { animation: joystickTilt 10s ease-in-out infinite; display: inline-block; }
+  .anim-heartbeat      { animation: heartbeat 6s ease-in-out infinite; display: inline-block; }
+  .anim-target-focus   { animation: targetFocus 9s ease-in-out infinite; display: inline-block; }
+  .anim-brain-pulse    { animation: brainPulse 4s ease-in-out infinite; display: inline-block; }
+  /* Misc */
+  .anim-shake          { animation: recipeShake 0.42s ease-in-out; }
 
   /* ── Discover spark sweep ───────────────────────────────── */
   .spark-sweep {
-    position: absolute; top: 0; bottom: 0; width: 14px;
-    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.55), transparent);
+    position: absolute; top: 0; bottom: 0; width: 18px;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.5), transparent);
     border-radius: 50%; pointer-events: none;
-    animation: sparkSweep 5s ease-in-out infinite;
-    animation-delay: 1.8s;
+    animation: sparkSweep 6s ease-in-out infinite;
+    animation-delay: 2.2s;
+  }
+
+  /* ── Hero college name — gold shimmer gradient ───────────── */
+  .hero-college {
+    background: linear-gradient(
+      90deg,
+      #d97706 0%,
+      #fcd34d 30%,
+      #fef3c7 50%,
+      #fcd34d 70%,
+      #d97706 100%
+    );
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: shimmerGold 2.8s linear infinite;
+  }
+
+  /* ── Live dot pulse ─────────────────────────────────────── */
+  .live-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    flex-shrink: 0;
+    animation: liveDotPulse 2s ease-in-out infinite;
+  }
+
+  /* ── Ticker shimmer overlay ─────────────────────────────── */
+  .ticker-shimmer {
+    position: absolute; inset: 0;
+    background: linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.03) 50%, transparent 60%);
+    background-size: 200% 100%;
+    animation: tickerShimmer 4s ease-in-out infinite;
+    pointer-events: none; border-radius: inherit;
   }
 
   /* ── Particles ──────────────────────────────────────────── */
@@ -406,10 +494,10 @@ export function PreferenceModal({
     const t = setInterval(() => {
       setDiscoverVisible(false);
       setTimeout(() => {
-        setDiscoverCopyIdx(i => (i + 1) % DISCOVER_COPY.length);
+        setDiscoverCopyIdx(i => (i + 1) % CAMPUS_CARDS.length);
         setDiscoverVisible(true);
-      }, 280);
-    }, 3500);
+      }, 350);
+    }, 4500);
     return () => clearInterval(t);
   }, [isOpen, journey]);
 
@@ -599,7 +687,7 @@ export function PreferenceModal({
 
   if (!isOpen) return null;
 
-  const discoverText = DISCOVER_COPY[discoverCopyIdx]?.text ?? '';
+  const campusCard = CAMPUS_CARDS[discoverCopyIdx % CAMPUS_CARDS.length];
 
   // ─────────────────────────────────────────────────────────
   // Render
@@ -738,7 +826,7 @@ export function PreferenceModal({
                   onMouseEnter={() => setBtnHovered(true)}
                   onMouseLeave={() => { setMagnetic({ x: 0, y: 0 }); setBtnHovered(false); }}
                   style={{ transform: `translate3d(${magnetic.x}px, ${magnetic.y}px, 0)` }}
-                  className="relative overflow-hidden px-10 py-4 bg-amber-500 text-stone-950 text-[13px] font-black rounded-2xl shadow-lg shadow-amber-500/15 flex items-center gap-2 min-w-[220px] justify-center transition-all duration-300 active:scale-95 anim-breathe hover:shadow-amber-500/30 hover:-translate-y-0.5 disabled:opacity-60 disabled:cursor-not-allowed"
+                  className="relative overflow-hidden px-10 py-4 bg-amber-500 text-stone-950 text-[13px] font-black rounded-2xl flex items-center gap-2 min-w-[220px] justify-center transition-all duration-300 active:scale-95 anim-start-btn hover:-translate-y-0.5 disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   {/* Particles */}
                   <div className="absolute inset-0 rounded-2xl overflow-hidden pointer-events-none">
@@ -777,17 +865,47 @@ export function PreferenceModal({
                   <div className="flex-1 h-px bg-white/[0.06]" />
                 </div>
 
-                {/* Rotating campus-focused copy */}
+                {/* ── Premium Campus Discovery Ticker ─────────────── */}
                 <div
-                  className="transition-all duration-300"
-                  style={{ opacity: discoverVisible ? 1 : 0, transform: discoverVisible ? 'translateY(0)' : 'translateY(5px)' }}
+                  className="w-full transition-all duration-500 ease-out"
+                  style={{
+                    opacity: discoverVisible ? 1 : 0,
+                    transform: discoverVisible ? 'translateY(0) scale(1)' : 'translateY(8px) scale(0.97)',
+                  }}
                 >
-                  <p className="text-[10px] text-stone-500 font-semibold text-center leading-relaxed">
-                    {discoverText}
-                  </p>
+                  <div className="relative mx-auto rounded-2xl border border-white/[0.07] bg-gradient-to-br from-white/[0.03] to-white/[0.01] p-3.5 overflow-hidden">
+                    {/* Ticker shimmer overlay */}
+                    <div className="ticker-shimmer" />
+
+                    {/* Live badge + dot */}
+                    <div className="flex items-center gap-2 mb-2">
+                      <span
+                        className={cn('live-dot', campusCard.liveDotClass)}
+                        style={{ '--dot-rgb': campusCard.liveDotClass === 'bg-red-400' ? '248,113,113' : campusCard.liveDotClass === 'bg-amber-400' ? '251,191,36' : campusCard.liveDotClass === 'bg-sky-400' ? '56,189,248' : '52,211,153' } as React.CSSProperties}
+                      />
+                      <span className={cn('text-[8px] font-black uppercase tracking-[0.12em]', campusCard.badgeClass)}>
+                        {campusCard.badge}
+                      </span>
+                    </div>
+
+                    {/* Hero college name — gold shimmer */}
+                    <p className="hero-college text-[15px] font-black leading-snug mb-0.5">
+                      {campusCard.college}
+                    </p>
+
+                    {/* Location */}
+                    <p className="text-[9px] text-stone-600 font-semibold mb-1.5">
+                      {campusCard.location}
+                    </p>
+
+                    {/* Message */}
+                    <p className="text-[10px] text-stone-500 font-semibold leading-relaxed">
+                      {campusCard.message}
+                    </p>
+                  </div>
                 </div>
 
-                {/* Discover button — alive with float + spark sweep + glow */}
+                {/* Discover button — float + glow chain + spark sweep */}
                 <button
                   type="button"
                   onClick={() => {
@@ -795,13 +913,11 @@ export function PreferenceModal({
                     setActiveCategory('COLLEGE');
                     log('Advanced journey opened');
                   }}
-                  className="relative overflow-hidden px-5 py-2.5 border border-white/[0.12] bg-white/[0.04] hover:bg-white/[0.09] hover:border-amber-500/30 text-white text-[11px] font-black rounded-xl transition-all duration-300 active:scale-95 flex items-center gap-2 anim-discover-float anim-glow-pulse"
+                  className="relative overflow-hidden px-5 py-2.5 border border-white/[0.12] bg-white/[0.04] hover:bg-white/[0.09] hover:border-amber-500/35 text-white text-[11px] font-black rounded-xl transition-all duration-300 active:scale-95 flex items-center gap-2 anim-discover-float anim-discover-glow"
                 >
-                  {/* Spark sweep on idle */}
                   <div className="spark-sweep" />
                   <span className="anim-sparkle relative z-10">✨</span>
                   <span className="relative z-10">Discover Match Filters</span>
-                  {/* Tiny arrow nudge */}
                   <span className="relative z-10 text-stone-500 text-[9px] opacity-60">›</span>
                 </button>
               </div>
