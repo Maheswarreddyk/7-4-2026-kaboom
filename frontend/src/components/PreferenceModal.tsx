@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { apiService } from '../services/api.js';
 import { cn } from '../utils/index.js';
 import { COLLEGE_SUGGESTIONS } from '../utils/collegeSuggestions.js';
-import { MATCH_CATEGORIES, MatchCategory } from '../utils/matchCategories.js';
+import { MATCH_CATEGORIES } from '../utils/matchCategories.js';
 
 interface PreferenceModalProps {
   isOpen: boolean;
@@ -27,7 +27,7 @@ const BANNER_MESSAGES = [
 const NAME_PLACEHOLDERS = ['Rahul', 'Aishu', 'Shadow', 'CoffeeAddict', 'Mahes'];
 const BIO_PLACEHOLDERS = ['Coffee first ☕', 'Just finished exams 😴', 'Looking for new friends 👋', 'Anyone up for gaming?', 'Learning AI'];
 
-// Inward particle styles & hammer tap animation
+// CSS Animations: breathing, hammer, particles, and constraint shake
 const MODAL_ANIMATION_STYLES = `
   @keyframes inwardParticle {
     0% { transform: translate(var(--dx), var(--dy)) scale(0); opacity: 0; }
@@ -70,9 +70,18 @@ const MODAL_ANIMATION_STYLES = `
   .button-breathe-slow {
     animation: buttonBreathe 4.5s ease-in-out infinite;
   }
+
+  @keyframes recipeShake {
+    0%, 100% { transform: translateX(0); }
+    20%, 60% { transform: translateX(-6px); }
+    40%, 80% { transform: translateX(6px); }
+  }
+  .recipe-shake-anim {
+    animation: recipeShake 0.4s ease-in-out;
+  }
 `;
 
-function TypewriterRotator({ messages }: { messages: string[] }) {
+function TypewriterRotator({ messages, speed = 45, delay = 2400 }: { messages: string[], speed?: number, delay?: number }) {
   const [currentIdx, setCurrentIdx] = useState(0);
   const [displayText, setDisplayText] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
@@ -88,23 +97,23 @@ function TypewriterRotator({ messages }: { messages: string[] }) {
     } else {
       timer = setTimeout(() => {
         setDisplayText(fullText.substring(0, displayText.length + 1));
-      }, 45);
+      }, speed);
     }
 
     if (!isDeleting && displayText === fullText) {
       timer = setTimeout(() => {
         setIsDeleting(true);
-      }, 2400);
+      }, delay);
     } else if (isDeleting && displayText === '') {
       setIsDeleting(false);
       setCurrentIdx((prev) => (prev + 1) % messages.length);
     }
 
     return () => clearTimeout(timer);
-  }, [displayText, isDeleting, currentIdx, messages]);
+  }, [displayText, isDeleting, currentIdx, messages, speed, delay]);
 
   return (
-    <div className="h-5 flex items-center justify-center select-none text-[11px] font-semibold text-amber-500/80 mb-2">
+    <div className="h-5 flex items-center justify-center select-none text-[11px] font-semibold text-amber-500/80">
       <span>{displayText}</span>
       <span className="w-1 h-3.5 bg-amber-500/80 ml-0.5 animate-pulse" />
     </div>
@@ -112,9 +121,11 @@ function TypewriterRotator({ messages }: { messages: string[] }) {
 }
 
 export function PreferenceModal({ isOpen, onClose, onSave, currentPreferences = {} }: PreferenceModalProps) {
-  // Wizard card selection
-  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
+  // Tabs and general visual drawers
+  const [activeTabId, setActiveTabId] = useState<string>('COLLEGE');
   const [isNewUser, setIsNewUser] = useState<boolean>(true);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [shakeRecipe, setShakeRecipe] = useState(false);
 
   // Original single source of truth preference states
   const [gender, setGender] = useState<string>(currentPreferences.gender || 'Prefer not to say');
@@ -160,11 +171,9 @@ export function PreferenceModal({ isOpen, onClose, onSave, currentPreferences = 
   // Saving states
   const [isSavingState, setIsSavingState] = useState<'idle' | 'joining' | 'spinner' | 'success'>('idle');
   const [isFadingOut, setIsFadingOut] = useState(false);
-  const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
 
   const [universityQuery, setUniversityQuery] = useState('');
   const [universityResults, setUniversityResults] = useState<any[]>([]);
-  const [eduTagInput, setEduTagInput] = useState('');
 
   const universityDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -172,7 +181,6 @@ export function PreferenceModal({ isOpen, onClose, onSave, currentPreferences = 
   const universityInputRef = useRef<HTMLInputElement | null>(null);
   const locationInputRef = useRef<HTMLInputElement | null>(null);
   const interestInputRef = useRef<HTMLInputElement | null>(null);
-  const identitySectionRef = useRef<HTMLDivElement | null>(null);
 
   // Button magnetic offsets
   const buttonRef = useRef<HTMLButtonElement | null>(null);
@@ -185,7 +193,6 @@ export function PreferenceModal({ isOpen, onClose, onSave, currentPreferences = 
   // Shuffled dynamic hot filter chips
   const [hotChips, setHotChips] = useState<any[]>([]);
 
-  // Telemetry Telemetry Future-Proofing Hooks
   const trackTelemetry = (event: string, meta?: any) => {
     console.log(`[Telemetry Event] ${event}`, meta || {});
   };
@@ -248,14 +255,6 @@ export function PreferenceModal({ isOpen, onClose, onSave, currentPreferences = 
   const locationDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
   const interestDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // App preferences (Tips, Theme)
-  const [showTips, setShowTips] = useState(() => {
-    return localStorage.getItem('kaboom_show_tips') !== 'false';
-  });
-  const [theme, setTheme] = useState(() => {
-    return localStorage.getItem('kaboom_theme') || 'ember';
-  });
-
   // Debounce locations autocomplete
   useEffect(() => {
     if (!locationQuery.trim()) {
@@ -300,15 +299,23 @@ export function PreferenceModal({ isOpen, onClose, onSave, currentPreferences = 
 
   if (!isOpen) return null;
 
-  // Checks whether the currently selected category has been configured
-  const isCategoryConfigured = () => {
-    if (!selectedCategoryId) return false;
-    if (selectedCategoryId === 'COLLEGE') return university !== '';
-    if (selectedCategoryId === 'NEARBY') return city !== '' || state !== '' || country !== '';
-    if (selectedCategoryId === 'LANGUAGE') return languages.length > 0;
-    if (selectedCategoryId === 'INTERESTS') return interestTags.length > 0;
-    if (selectedCategoryId === 'RANDOM') return true;
-    return false;
+  // Active filter count check (max 3 filters strictly)
+  const getActiveFilterCount = () => {
+    let count = 0;
+    if (university) count++;
+    if (city) count++;
+    if (languages.filter(l => l !== 'English').length > 0) count++;
+    if (interestTags.length > 0) count += interestTags.length;
+    return count;
+  };
+
+  const checkAndAddFilter = (action: () => void) => {
+    if (getActiveFilterCount() >= 3) {
+      setShakeRecipe(true);
+      setTimeout(() => setShakeRecipe(false), 450);
+      return;
+    }
+    action();
   };
 
   const handleLookingForChange = (val: string) => {
@@ -327,29 +334,23 @@ export function PreferenceModal({ isOpen, onClose, onSave, currentPreferences = 
   };
 
   const handleSelectLocation = (loc: any) => {
-    setCountry(loc.country || '');
-    setState(loc.state || '');
-    setDistrict(loc.district || '');
-    setCity(loc.city || '');
-    setLocationQuery('');
-    setLocationResults([]);
-    
-    // Auto-focus identity block after selection
-    setTimeout(() => {
-      identitySectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    }, 150);
+    checkAndAddFilter(() => {
+      setCountry(loc.country || '');
+      setState(loc.state || '');
+      setDistrict(loc.district || '');
+      setCity(loc.city || '');
+      setLocationQuery('');
+      setLocationResults([]);
+    });
   };
 
   const handleSelectInterest = (name: string) => {
-    if (interestTags.length >= 5) {
-      alert('You can select a maximum of 5 interests to avoid choice fatigue.');
-      return;
-    }
-    if (!interestTags.includes(name)) {
+    if (interestTags.includes(name)) return;
+    checkAndAddFilter(() => {
       setInterestTags([...interestTags, name]);
-    }
-    setInterestQuery('');
-    setInterestResults([]);
+      setInterestQuery('');
+      setInterestResults([]);
+    });
   };
 
   const removeInterest = (name: string) => {
@@ -360,11 +361,9 @@ export function PreferenceModal({ isOpen, onClose, onSave, currentPreferences = 
     if (languages.includes(lang)) {
       setLanguages(languages.filter(x => x !== lang));
     } else {
-      if (languages.length >= 3) {
-        alert('Please select up to 3 languages to keep matching fast.');
-        return;
-      }
-      setLanguages([...languages, lang]);
+      checkAndAddFilter(() => {
+        setLanguages([...languages, lang]);
+      });
     }
   };
 
@@ -377,15 +376,12 @@ export function PreferenceModal({ isOpen, onClose, onSave, currentPreferences = 
     setCity('');
     setInterestTags([]);
     setLanguages(['English']);
-    setShowTips(true);
-    setTheme('ember');
     setDisplayName('');
     setBio('');
     setMatchMode('RANDOM');
     setMatchConstraints({ university: false, city: false, country: false });
     setUniversity('');
     setEduTags([]);
-    setSelectedCategoryId(null);
   };
 
   const validateDisplayName = (): boolean => {
@@ -425,63 +421,36 @@ export function PreferenceModal({ isOpen, onClose, onSave, currentPreferences = 
     return true;
   };
 
-  const handleSelectCategoryCard = (category: MatchCategory) => {
-    trackTelemetry('Match category selected', { categoryId: category.id });
-    setSelectedCategoryId(category.id);
-    
-    // Clear out alternate filter overrides to keep choices isolated
-    if (category.id === 'COLLEGE') {
-      // Keep university
-    } else if (category.id === 'NEARBY') {
-      setUniversity('');
-    } else if (category.id === 'LANGUAGE') {
-      setUniversity('');
-    } else if (category.id === 'INTERESTS') {
-      setUniversity('');
-    } else if (category.id === 'RANDOM') {
-      setUniversity('');
-      setInterestTags([]);
-      setLanguages(['English']);
-      setCountry('');
-      setState('');
-      setCity('');
-    }
-
-    // Dynamic focus shifts and scrolling
+  const handleSelectTabButton = (tabId: string) => {
+    trackTelemetry('Tab channel changed', { tabId });
+    setActiveTabId(tabId);
     setTimeout(() => {
-      if (category.id === 'COLLEGE') universityInputRef.current?.focus();
-      else if (category.id === 'NEARBY') locationInputRef.current?.focus();
-      else if (category.id === 'INTERESTS') interestInputRef.current?.focus();
-    }, 200);
+      if (tabId === 'COLLEGE') universityInputRef.current?.focus();
+      else if (tabId === 'NEARBY') locationInputRef.current?.focus();
+      else if (tabId === 'INTERESTS') interestInputRef.current?.focus();
+    }, 150);
   };
 
-  // Wire Hot chips to existing state handlers
   const handleSelectHotChip = (chip: any) => {
     trackTelemetry('Hot chip selected', { type: chip.type, value: chip.val });
-    if (chip.type === 'university') {
-      setUniversity(chip.val);
-      setUniversityQuery('');
-      setUniversityResults([]);
-    } else if (chip.type === 'location') {
-      setCountry(chip.val.country);
-      setState(chip.val.state);
-      setCity(chip.val.city);
-    } else if (chip.type === 'language') {
-      if (!languages.includes(chip.val)) {
-        if (languages.length < 3) {
+    checkAndAddFilter(() => {
+      if (chip.type === 'university') {
+        setUniversity(chip.val);
+        setUniversityQuery('');
+      } else if (chip.type === 'location') {
+        setCountry(chip.val.country);
+        setState(chip.val.state);
+        setCity(chip.val.city);
+      } else if (chip.type === 'language') {
+        if (!languages.includes(chip.val)) {
           setLanguages([...languages, chip.val]);
         }
+      } else if (chip.type === 'interest') {
+        if (!interestTags.includes(chip.val)) {
+          setInterestTags([...interestTags, chip.val]);
+        }
       }
-    } else if (chip.type === 'interest') {
-      if (interestTags.length < 5 && !interestTags.includes(chip.val)) {
-        setInterestTags([...interestTags, chip.val]);
-      }
-    }
-
-    // Scroll to reveal identity below
-    setTimeout(() => {
-      identitySectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    }, 150);
+    });
   };
 
   const handleSave = async () => {
@@ -490,11 +459,6 @@ export function PreferenceModal({ isOpen, onClose, onSave, currentPreferences = 
 
     setIsSavingState('joining');
     trackTelemetry('Start Conversation clicked');
-
-    localStorage.setItem('kaboom_show_tips', showTips ? 'true' : 'false');
-    localStorage.setItem('kaboom_suggestions_enabled', showTips ? 'ON' : 'OFF');
-    localStorage.setItem('kaboom_theme', theme);
-    document.documentElement.className = `theme-${theme}`;
 
     localStorage.setItem('kaboom_display_name', nameClean);
     localStorage.setItem('kaboom_bio', bio.trim());
@@ -571,17 +535,19 @@ export function PreferenceModal({ isOpen, onClose, onSave, currentPreferences = 
     setBtnMagneticOffset({ x: 0, y: 0 });
     setIsHovered(false);
   };
+
+  const activeCategory = MATCH_CATEGORIES.find(c => c.id === activeTabId);
+
   return (
     <div className={cn(
       "fixed inset-0 z-[999] flex items-end sm:items-center justify-center bg-black/80 backdrop-blur-md transition-all duration-300 select-none",
       isFadingOut ? "opacity-0 pointer-events-none scale-95" : "opacity-100 scale-100"
     )}>
-      {/* Dynamic inward moving particles keyframe injection */}
       <style>{MODAL_ANIMATION_STYLES}</style>
 
       <div className="relative w-full max-w-lg bg-stone-900 border border-white/10 rounded-t-3xl sm:rounded-3xl overflow-hidden shadow-2xl flex flex-col max-h-[85vh] sm:max-h-[90vh] transition-transform duration-300">
         
-        {/* Header Block */}
+        {/* Header Title */}
         <div className="px-6 py-4 flex items-center justify-between border-b border-white/10 bg-stone-950">
           <div>
             <h2 className="text-base font-black text-white uppercase tracking-wider">
@@ -598,579 +564,109 @@ export function PreferenceModal({ isOpen, onClose, onSave, currentPreferences = 
           )}
         </div>
 
-        {/* Scrollable Flow Body */}
+        {/* Modal Scrollable Body */}
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
           
-          {/* Ticker subtitle rotating social proof */}
           <TypewriterRotator messages={BANNER_MESSAGES} />
 
-          {/* VIBE CHANNELS LIST */}
-          <div className="space-y-3">
-            {MATCH_CATEGORIES.map((cat) => {
-              const active = selectedCategoryId === cat.id;
-              
-              // Generate mock online numbers for visual activity
-              const mockCount = cat.id === 'COLLEGE' ? '24 students online' : cat.id === 'NEARBY' ? 'Conversations nearby' : 'Chat lines open';
-              
-              return (
-                <div key={cat.id} className="w-full">
+          {/* IDENTITY SECTION (Name, Bio) */}
+          <div className="space-y-4">
+            <div>
+              <label className="block text-[10px] text-stone-400 uppercase font-black tracking-wider mb-2">
+                👋 What should people call you?
+              </label>
+              <input
+                type="text"
+                placeholder={NAME_PLACEHOLDERS[placeholderIdx]}
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-stone-600 focus:outline-none focus:border-amber-500 text-sm font-semibold transition-colors"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[10px] text-stone-400 uppercase font-black tracking-wider mb-2">
+                ✨ Tell people your vibe
+              </label>
+              <input
+                type="text"
+                placeholder={BIO_PLACEHOLDERS[placeholderIdx]}
+                value={bio}
+                onChange={(e) => setBio(e.target.value.slice(0, 120))}
+                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-stone-600 focus:outline-none focus:border-amber-500 text-sm font-semibold transition-colors"
+              />
+            </div>
+          </div>
+
+          {/* I AM / LOOKING FOR CHIPS */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-[10px] text-stone-400 uppercase font-black tracking-wider mb-2">I Am</label>
+              <div className="flex flex-wrap gap-1.5">
+                {['Male', 'Female', 'Non Binary', 'Prefer not to say'].map((g) => (
                   <button
+                    key={g}
                     type="button"
-                    onClick={() => handleSelectCategoryCard(cat)}
+                    onClick={() => setGender(g)}
                     className={cn(
-                      "w-full text-left p-4 rounded-2xl border transition-all duration-300 flex items-center justify-between group",
-                      cat.recommended && !active ? "border-amber-500/25 bg-amber-500/[0.02]" : "border-white/5 bg-white/[0.01]",
-                      active ? "border-amber-500 bg-amber-500/10 shadow-md scale-[1.01]" : "hover:bg-white/[0.04]"
+                      "px-2.5 py-1.5 text-[9px] rounded-lg font-bold border text-center transition-all duration-150 truncate",
+                      gender === g 
+                        ? "bg-amber-500 border-amber-500 text-stone-950 font-black" 
+                        : "border-white/10 bg-white/5 text-stone-400 hover:bg-white/10"
                     )}
                   >
-                    <div className="flex items-center gap-4">
-                      <span className="text-2xl group-hover:scale-110 transition-transform duration-300">{cat.icon}</span>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <h4 className={cn("text-sm font-black transition-colors", active ? "text-amber-400" : "text-white")}>{cat.title}</h4>
-                          {cat.recommended && (
-                            <span className="text-[8px] font-black uppercase bg-amber-500 text-stone-950 px-1.5 py-0.5 rounded-full">
-                              ⭐ Recommended
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-[10px] text-stone-400 font-medium mt-0.5">{cat.subtitle}</p>
-                        
-                        {/* Dynamic Active Counter */}
-                        <p className="text-[8px] text-amber-500/80 font-black tracking-wider uppercase mt-1">
-                          {cat.id === 'COLLEGE' ? `👥 ${mockCount}` : `🔥 ${mockCount}`}
-                        </p>
-                      </div>
-                    </div>
-                    <span className="text-stone-500 group-hover:translate-x-0.5 transition-transform">➔</span>
+                    {g.split(' ')[0]}
                   </button>
+                ))}
+              </div>
+            </div>
 
-                  {/* Dynamic Category Autocomplete / Expanded Details (Expanded Inline) */}
-                  <div className={cn(
-                    "transition-all duration-500 ease-out overflow-hidden",
-                    active ? "max-h-[350px] opacity-100 p-4 border-x border-b border-white/10 bg-stone-950/40 rounded-b-2xl -mt-2 mb-3" : "max-h-0 opacity-0 pointer-events-none"
-                  )}>
-                    
-                    {/* College match content */}
-                    {cat.id === 'COLLEGE' && (
-                      <div className="space-y-4 animate-fade-in">
-                        <div>
-                          <label className="block text-[9px] text-stone-400 uppercase font-black tracking-wider mb-2">Search University</label>
-                          <input
-                            ref={universityInputRef}
-                            type="text"
-                            placeholder="Type university... e.g. VIT, SRM, IIT"
-                            value={universityQuery}
-                            onChange={(e) => {
-                              setUniversityQuery(e.target.value);
-                              if (!e.target.value) setUniversity('');
-                            }}
-                            className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-stone-500 focus:outline-none focus:border-amber-500 text-xs font-semibold"
-                          />
-
-                          {universityResults.length > 0 && (
-                            <div className="mt-2 bg-stone-950 border border-white/10 rounded-xl max-h-32 overflow-y-auto divide-y divide-white/5 shadow-xl relative z-20">
-                              {universityResults.map((u) => (
-                                <button
-                                  key={u.name}
-                                  type="button"
-                                  onClick={() => {
-                                    setUniversity(u.name);
-                                    setUniversityQuery('');
-                                    setUniversityResults([]);
-                                    // Highlight name input
-                                    setTimeout(() => {
-                                      identitySectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                                    }, 150);
-                                  }}
-                                  className="w-full px-4 py-2.5 text-left hover:bg-white/5 text-xs text-white/80 flex justify-between items-center"
-                                >
-                                  <span className="font-bold">{u.name}</span>
-                                  <span className="text-[9px] text-stone-500">{u.country}</span>
-                                </button>
-                              ))}
-                            </div>
-                          )}
-
-                          {university && (
-                            <div className="mt-3 flex items-center justify-between p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl">
-                              <span className="text-xs text-amber-400 font-bold">🎓 {university}</span>
-                              <button type="button" onClick={() => setUniversity('')} className="text-[10px] text-red-400 font-bold">Remove</button>
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Popular choices selector */}
-                        <div>
-                          <label className="block text-[9px] text-stone-500 uppercase font-black tracking-wider mb-1.5">🏫 Popular Universities</label>
-                          <div className="flex flex-wrap gap-1.5">
-                            {COLLEGE_SUGGESTIONS.slice(0, 4).map((col) => (
-                              <button
-                                key={col}
-                                type="button"
-                                onClick={() => {
-                                  setUniversity(col);
-                                  setTimeout(() => {
-                                    identitySectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                                  }, 150);
-                                }}
-                                className={cn(
-                                  "px-2.5 py-1 rounded-full text-[9px] font-bold border transition-colors",
-                                  university === col
-                                    ? "bg-amber-500/20 border-amber-500 text-amber-400"
-                                    : "border-white/5 bg-white/[0.02] text-stone-400 hover:bg-white/5"
-                                )}
-                              >
-                                {col.split(' ')[0]}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Nearby location content */}
-                    {cat.id === 'NEARBY' && (
-                      <div className="space-y-4 animate-fade-in">
-                        <div>
-                          <label className="block text-[9px] text-stone-400 uppercase font-black tracking-wider mb-2">Search Location</label>
-                          <input
-                            ref={locationInputRef}
-                            type="text"
-                            placeholder="Type city, state, or country..."
-                            value={locationQuery}
-                            onChange={(e) => setLocationQuery(e.target.value)}
-                            className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-stone-500 focus:outline-none focus:border-amber-500 text-xs font-semibold"
-                          />
-
-                          {locationResults.length > 0 && (
-                            <div className="mt-2 bg-stone-950 border border-white/10 rounded-xl max-h-32 overflow-y-auto divide-y divide-white/5 shadow-xl relative z-20">
-                              {locationResults.map((loc) => (
-                                <button
-                                  key={loc.id}
-                                  type="button"
-                                  onClick={() => handleSelectLocation(loc)}
-                                  className="w-full px-4 py-2.5 text-left hover:bg-white/5 text-xs text-white/80 flex justify-between items-center"
-                                >
-                                  <span>{loc.name}</span>
-                                  <span className="text-[9px] text-stone-500 capitalize">{loc.type}</span>
-                                </button>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-
-                        {(city || state || country) && (
-                          <div className="p-3 bg-white/5 rounded-xl border border-white/10 flex items-center justify-between">
-                            <span className="text-xs text-white/80 font-bold">📍 {[city, state, country].filter(Boolean).join(' • ')}</span>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setCountry('');
-                                setState('');
-                                setDistrict('');
-                                setCity('');
-                              }}
-                              className="text-[10px] text-red-400 font-bold"
-                            >
-                              Clear
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Language content */}
-                    {cat.id === 'LANGUAGE' && (
-                      <div className="space-y-4 animate-fade-in">
-                        <div className="flex justify-between items-center">
-                          <label className="block text-[9px] text-stone-400 uppercase font-black tracking-wider">Select Spoken Languages (Max 3)</label>
-                          <span className="text-[9px] text-amber-500 font-bold">{languages.length}/3</span>
-                        </div>
-                        <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto">
-                          {LANGUAGES.map((lang) => {
-                            const selected = languages.includes(lang);
-                            return (
-                              <button
-                                key={lang}
-                                type="button"
-                                onClick={() => toggleLanguage(lang)}
-                                className={cn(
-                                  "px-2.5 py-1 rounded-full text-[10px] font-bold border transition-colors",
-                                  selected
-                                    ? "bg-amber-500/20 border-amber-500 text-amber-400"
-                                    : "border-white/5 bg-white/[0.02] text-stone-400 hover:bg-white/5"
-                                )}
-                              >
-                                {lang}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Interests content */}
-                    {cat.id === 'INTERESTS' && (
-                      <div className="space-y-4 animate-fade-in">
-                        <div className="flex justify-between items-center">
-                          <label className="block text-[9px] text-stone-400 uppercase font-black tracking-wider">Search Interests (Max 5)</label>
-                          <span className="text-[9px] text-amber-500 font-bold">{interestTags.length}/5</span>
-                        </div>
-
-                        <input
-                          ref={interestInputRef}
-                          type="text"
-                          placeholder="Search hobbies... e.g. Gaming, Music"
-                          value={interestQuery}
-                          onChange={(e) => setInterestQuery(e.target.value)}
-                          className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-stone-500 focus:outline-none focus:border-amber-500 text-xs font-semibold"
-                        />
-
-                        {interestResults.length > 0 && (
-                          <div className="mt-2 bg-stone-950 border border-white/10 rounded-xl max-h-32 overflow-y-auto divide-y divide-white/5 shadow-xl relative z-20">
-                            {interestResults.map((item) => (
-                              <button
-                                key={item.id}
-                                type="button"
-                                onClick={() => {
-                                  handleSelectInterest(item.name);
-                                  // Highlight name input
-                                  setTimeout(() => {
-                                    identitySectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                                  }, 150);
-                                }}
-                                className="w-full px-4 py-2.5 text-left hover:bg-white/5 text-xs text-white/80 flex justify-between items-center"
-                              >
-                                <span>{item.name}</span>
-                                <span className="text-[9px] px-1.5 py-0.5 bg-white/5 rounded text-stone-400">{item.category}</span>
-                              </button>
-                            ))}
-                          </div>
-                        )}
-
-                        {interestTags.length > 0 && (
-                          <div className="flex flex-wrap gap-1.5">
-                            {interestTags.map((tag) => (
-                              <span key={tag} className="inline-flex items-center gap-1 px-2.5 py-1 bg-white/10 text-white rounded-full text-[10px] font-bold border border-white/5">
-                                {tag}
-                                <button type="button" onClick={() => removeInterest(tag)} className="text-stone-400 hover:text-red-400 font-bold ml-1">×</button>
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Surprise content */}
-                    {cat.id === 'RANDOM' && (
-                      <div className="text-center py-2 animate-fade-in">
-                        <p className="text-[10px] text-amber-500/80 font-black tracking-wider uppercase">Surprise Match selected.</p>
-                      </div>
-                    )}
-
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* DYNAMIC SHUFFLED HOT FILTERS CHIPS */}
-          {hotChips.length > 0 && (
             <div>
-              <label className="block text-[9px] text-stone-500 uppercase font-black tracking-wider mb-2">🔥 Popular Right Now</label>
+              <label className="block text-[10px] text-stone-400 uppercase font-black tracking-wider mb-2">Looking For</label>
               <div className="flex flex-wrap gap-1.5">
-                {hotChips.map((chip, idx) => {
-                  return (
-                    <button
-                      key={idx}
-                      type="button"
-                      onClick={() => handleSelectHotChip(chip)}
-                      className="px-2.5 py-1 rounded-full text-[10px] font-bold border border-white/5 bg-white/[0.02] text-stone-400 hover:bg-white/5 transition-colors flex items-center gap-1"
-                    >
-                      {chip.label}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* IDENTITY BLOCK: REVEALED INLINE AFTER CONFIGURING CATEGORY */}
-          <div
-            ref={identitySectionRef}
-            className={cn(
-              "transition-all duration-500 ease-out overflow-hidden border-t border-white/5 pt-6",
-              isCategoryConfigured() ? "max-h-[350px] opacity-100" : "max-h-0 opacity-0 pointer-events-none"
-            )}
-          >
-            <div className="space-y-4">
-              <div>
-                <label className="block text-[10px] text-stone-400 uppercase font-black tracking-wider mb-2">
-                  👋 What should people call you?
-                </label>
-                <input
-                  type="text"
-                  placeholder={NAME_PLACEHOLDERS[placeholderIdx]}
-                  value={displayName}
-                  onChange={(e) => setDisplayName(e.target.value)}
-                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-stone-600 focus:outline-none focus:border-amber-500 text-sm font-semibold transition-colors"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[10px] text-stone-400 uppercase font-black tracking-wider mb-2">
-                  Say something about yourself...
-                </label>
-                <input
-                  type="text"
-                  placeholder={BIO_PLACEHOLDERS[placeholderIdx]}
-                  value={bio}
-                  onChange={(e) => setBio(e.target.value.slice(0, 120))}
-                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-stone-600 focus:outline-none focus:border-amber-500 text-sm font-semibold transition-colors"
-                />
+                {['Male', 'Female', 'Anyone'].map((l) => (
+                  <button
+                    key={l}
+                    type="button"
+                    onClick={() => handleLookingForChange(l)}
+                    className={cn(
+                      "px-2.5 py-1.5 text-[9px] rounded-lg font-bold border text-center transition-all duration-150",
+                      lookingFor.includes(l)
+                        ? "bg-amber-500 border-amber-500 text-stone-950 font-black" 
+                        : "border-white/10 bg-white/5 text-stone-400 hover:bg-white/10"
+                    )}
+                  >
+                    {l}
+                  </button>
+                ))}
               </div>
             </div>
           </div>
 
-          {/* OPTIONAL PERSONALIZATION ACCORDION */}
-          <div className={cn(
-            "transition-all duration-500 ease-out overflow-hidden",
-            isCategoryConfigured() ? "max-h-[400px] opacity-100" : "max-h-0 opacity-0 pointer-events-none"
-          )}>
-            <div className="border border-white/10 rounded-2xl overflow-hidden bg-white/[0.01]">
-              <button
-                type="button"
-                onClick={() => {
-                  setIsAdvancedOpen(!isAdvancedOpen);
-                  trackTelemetry('Advanced filters expanded', { expanded: !isAdvancedOpen });
-                }}
-                className="w-full flex items-center justify-between text-left p-4 focus:outline-none hover:bg-white/[0.02] transition-colors"
-              >
-                <div>
-                  <h4 className="text-sm font-black text-white">
-                    Want even better matches?
-                  </h4>
-                  <p className="text-[9px] text-stone-400 mt-0.5">▼ Personalize More</p>
-                </div>
-              </button>
-
-              <div className={cn(
-                "transition-all duration-300 overflow-hidden",
-                isAdvancedOpen ? "max-h-[300px] border-t border-white/5 p-4 space-y-4 opacity-100" : "max-h-0 opacity-0 pointer-events-none"
-              )}>
-                <div>
-                  <label className="block text-[10px] text-stone-400 uppercase font-black tracking-wider mb-1.5">My Gender</label>
-                  <div className="grid grid-cols-4 gap-1.5">
-                    {['Male', 'Female', 'Non Binary', 'Prefer not to say'].map((g) => (
-                      <button
-                        key={g}
-                        type="button"
-                        onClick={() => setGender(g)}
-                        className={cn(
-                          "px-2 py-1.5 text-[9px] rounded-lg font-bold border text-center transition-all duration-150 truncate",
-                          gender === g 
-                            ? "bg-amber-500 border-amber-500 text-stone-950 font-black" 
-                            : "border-white/10 bg-white/5 text-stone-400 hover:bg-white/10"
-                        )}
-                      >
-                        {g.split(' ')[0]}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-[10px] text-stone-400 uppercase font-black tracking-wider mb-1.5">Looking For</label>
-                  <div className="grid grid-cols-3 gap-1.5">
-                    {['Male', 'Female', 'Anyone'].map((l) => (
-                      <button
-                        key={l}
-                        type="button"
-                        onClick={() => handleLookingForChange(l)}
-                        className={cn(
-                          "px-2.5 py-1.5 text-[10px] rounded-lg font-bold border text-center transition-all duration-150",
-                          lookingFor.includes(l)
-                            ? "bg-amber-500 border-amber-500 text-stone-950 font-black" 
-                            : "border-white/10 bg-white/5 text-stone-400 hover:bg-white/10"
-                        )}
-                      >
-                        {l}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <div className="flex justify-between items-center mb-1.5">
-                    <label className="block text-[10px] text-stone-400 uppercase font-black tracking-wider">Campus Tags</label>
-                    <span className="text-[9px] text-amber-500 font-bold">{eduTags.length}/3</span>
-                  </div>
-                  <input
-                    type="text"
-                    placeholder="e.g. Intern, CS Major (Enter to add)"
-                    value={eduTagInput}
-                    onChange={(e) => setEduTagInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        const tag = eduTagInput.trim();
-                        if (tag) {
-                          if (eduTags.length >= 3) {
-                            alert('Maximum of 3 education tags allowed.');
-                            return;
-                          }
-                          if (!eduTags.includes(tag)) {
-                            setEduTags([...eduTags, tag]);
-                            setEduTagInput('');
-                          }
-                        }
-                      }
-                    }}
-                    className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-stone-600 focus:outline-none focus:border-amber-500 text-xs font-semibold"
-                  />
-                  {eduTags.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5 mt-2">
-                      {eduTags.map((tag) => (
-                        <span key={tag} className="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-500/10 text-amber-400 rounded-full text-[9px] border border-amber-500/10 font-bold">
-                          {tag}
-                          <button type="button" onClick={() => setEduTags(eduTags.filter(x => x !== tag))} className="text-stone-500 hover:text-red-400 font-bold ml-1">×</button>
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* CHOOSE MATCHING STYLE */}
-          <div className={cn(
-            "transition-all duration-500 ease-out overflow-hidden space-y-3",
-            isCategoryConfigured() ? "max-h-[300px] opacity-100" : "max-h-0 opacity-0 pointer-events-none"
-          )}>
-            <h3 className="text-[10px] font-black text-stone-500 uppercase tracking-widest text-center mt-2">
-              Choose Matching Style
-            </h3>
-            
-            <div className="grid grid-cols-1 gap-2.5">
-              {[
-                {
-                  mode: 'RANDOM' as const,
-                  icon: '⚡',
-                  title: 'Quick',
-                  speed: 'Fastest',
-                  wait: 'Usually under 10 sec'
-                },
-                {
-                  mode: 'PREFER' as const,
-                  icon: '🧠',
-                  title: 'Smart',
-                  speed: 'Most Popular',
-                  wait: 'Balanced matching',
-                  recommended: true
-                },
-                {
-                  mode: 'STRICT' as const,
-                  icon: '🎯',
-                  title: 'Exact',
-                  speed: 'Longest wait',
-                  wait: 'Highest precision'
-                }
-              ].map((item) => (
-                <button
-                  key={item.mode}
-                  type="button"
-                  onClick={() => {
-                    setMatchMode(item.mode);
-                    trackTelemetry('Match style selected', { style: item.mode });
-                    if (item.mode === 'STRICT') {
-                      setMatchConstraints({
-                        university: !!university,
-                        city: !!city,
-                        country: !!country,
-                        languages: languages.length > 0,
-                        interests: interestTags.length > 0
-                      });
-                    }
-                  }}
-                  className={cn(
-                    "w-full text-left p-3.5 rounded-2xl border transition-all duration-300 flex items-center justify-between gap-4",
-                    matchMode === item.mode
-                      ? "bg-amber-500/10 border-amber-500 text-white shadow-md scale-[1.01]"
-                      : "border-white/5 bg-white/[0.01] text-stone-400 hover:bg-white/[0.04]"
-                  )}
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="text-xl shrink-0">{item.icon}</span>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <h4 className={cn("text-xs font-black", matchMode === item.mode ? "text-amber-400" : "text-white")}>
-                          {item.title}
-                        </h4>
-                        {item.recommended && (
-                          <span className="text-[7px] font-black uppercase bg-amber-500 text-stone-950 px-1 rounded-full">
-                            Recommended
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-[10px] text-stone-500 font-medium mt-0.5">{item.speed} · {item.wait}</p>
-                    </div>
-                  </div>
-                  <div className={cn(
-                    "w-4 h-4 rounded-full border flex items-center justify-center text-[10px] transition-colors",
-                    matchMode === item.mode ? "border-amber-500 bg-amber-500 text-stone-950 font-black" : "border-white/20"
-                  )}>
-                    {matchMode === item.mode ? '✓' : ''}
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
-
-        </div>
-
-        {/* Footer Actions & Charging CTA Button */}
-        <div className="px-6 py-4 border-t border-white/10 bg-stone-950 flex items-center justify-between">
-          <button
-            type="button"
-            onClick={handleReset}
-            disabled={isSavingState !== 'idle'}
-            className="px-4 py-2 border border-white/10 hover:bg-white/5 text-stone-500 hover:text-stone-300 text-xs rounded-xl font-bold transition-all disabled:opacity-30"
-          >
-            Reset All
-          </button>
-          
-          <div className="flex gap-2">
+          {/* PRIMARY START CONVERSATION CTA */}
+          <div className="flex justify-center pt-2">
             <button
               ref={buttonRef}
               onClick={handleSave}
               onMouseMove={handleButtonMouseMove}
               onMouseEnter={() => setIsHovered(true)}
               onMouseLeave={handleButtonMouseLeave}
-              disabled={isSavingState !== 'idle' || !isCategoryConfigured()}
-              className={cn(
-                "relative overflow-hidden px-6 py-3 text-stone-950 text-xs rounded-xl font-black shadow-lg flex items-center gap-2 min-w-[155px] justify-center select-none transition-all duration-300 active:scale-95",
-                isCategoryConfigured() 
-                  ? "bg-amber-500 shadow-amber-500/20 hover:bg-amber-400 cursor-pointer button-breathe-slow" 
-                  : "bg-stone-800 border border-white/5 text-stone-600 cursor-not-allowed opacity-50"
-              )}
+              disabled={isSavingState !== 'idle'}
+              className="relative overflow-hidden px-8 py-3.5 bg-amber-500 text-stone-950 text-xs rounded-2xl font-black shadow-lg shadow-amber-500/10 flex items-center gap-2 min-w-[200px] justify-center select-none transition-all duration-300 active:scale-95 button-breathe-slow hover:-translate-y-0.5 hover:shadow-amber-500/20"
               style={{
                 transform: `translate3d(${btnMagneticOffset.x}px, ${btnMagneticOffset.y}px, 0)`,
               }}
             >
-              {/* Inward Particle Convergence Layers */}
-              {isCategoryConfigured() && (
-                <div className="absolute inset-0 rounded-xl overflow-hidden pointer-events-none">
-                  <div className={cn("btn-particle bp-1", isHovered && "btn-particle-fast")} />
-                  <div className={cn("btn-particle bp-2", isHovered && "btn-particle-fast")} />
-                  <div className={cn("btn-particle bp-3", isHovered && "btn-particle-fast")} />
-                  <div className={cn("btn-particle bp-4", isHovered && "btn-particle-fast")} />
-                </div>
-              )}
+              {/* Particle convergence layer */}
+              <div className="absolute inset-0 rounded-2xl overflow-hidden pointer-events-none">
+                <div className={cn("btn-particle bp-1", isHovered && "btn-particle-fast")} />
+                <div className={cn("btn-particle bp-2", isHovered && "btn-particle-fast")} />
+                <div className={cn("btn-particle bp-3", isHovered && "btn-particle-fast")} />
+                <div className={cn("btn-particle bp-4", isHovered && "btn-particle-fast")} />
+              </div>
 
-              {/* Duolingo style playful small hammer icon tapping */}
-              {isCategoryConfigured() && isSavingState === 'idle' && (
+              {/* Hammer Tap Anim */}
+              {isSavingState === 'idle' && (
                 <span className="text-xs hammer-tap-anim shrink-0">🔨</span>
               )}
 
@@ -1192,6 +688,398 @@ export function PreferenceModal({ isOpen, onClose, onSave, currentPreferences = 
               </span>
             </button>
           </div>
+
+          {/* CHOOSE MATCH STYLE (Always visible) */}
+          <div className="space-y-3 pt-2">
+            <h3 className="text-[10px] font-black text-stone-500 uppercase tracking-widest text-center">
+              Choose Match Style
+            </h3>
+            
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                {
+                  mode: 'RANDOM' as const,
+                  icon: '⚡',
+                  title: 'Quick',
+                  desc: 'Meet someone in seconds. Great when you just want to chat.'
+                },
+                {
+                  mode: 'PREFER' as const,
+                  icon: '🧠',
+                  title: 'Smart',
+                  desc: 'Most popular. Balances speed with compatibility.',
+                  recommended: true
+                },
+                {
+                  mode: 'STRICT' as const,
+                  icon: '🎯',
+                  title: 'Exact',
+                  desc: 'Wait longer. Meet only people matching chosen preferences.'
+                }
+              ].map((item) => (
+                <button
+                  key={item.mode}
+                  type="button"
+                  onClick={() => {
+                    setMatchMode(item.mode);
+                    trackTelemetry('Match style selected', { style: item.mode });
+                    if (item.mode === 'STRICT') {
+                      setMatchConstraints({
+                        university: !!university,
+                        city: !!city,
+                        country: !!country,
+                        languages: languages.length > 0,
+                        interests: interestTags.length > 0
+                      });
+                    }
+                  }}
+                  className={cn(
+                    "p-3 rounded-xl border text-center transition-all duration-300 flex flex-col items-center justify-between min-h-[110px] relative",
+                    matchMode === item.mode
+                      ? "bg-amber-500/10 border-amber-500 text-white scale-[1.02]"
+                      : "border-white/5 bg-white/[0.01] text-stone-400 hover:bg-white/[0.04]"
+                  )}
+                >
+                  {item.recommended && (
+                    <span className="absolute -top-1.5 left-1/2 -translate-x-1/2 text-[7px] font-black uppercase bg-amber-500 text-stone-950 px-1 rounded-full whitespace-nowrap">
+                      Smart
+                    </span>
+                  )}
+                  <span className="text-lg mt-1">{item.icon}</span>
+                  <h4 className={cn("text-xs font-black mt-1", matchMode === item.mode ? "text-amber-400" : "text-white")}>
+                    {item.title}
+                  </h4>
+                  <p className="text-[8px] text-stone-500 leading-tight mt-1 truncate-3-lines">{item.desc}</p>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* DYNAMIC SHUFFLED HOT FILTERS CHIPS */}
+          {hotChips.length > 0 && (
+            <div className="pt-2">
+              <label className="block text-[9px] text-stone-500 uppercase font-black tracking-wider mb-2">🔥 Popular Right Now</label>
+              <div className="flex flex-wrap gap-1.5">
+                {hotChips.map((chip, idx) => {
+                  return (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => handleSelectHotChip(chip)}
+                      className="px-2.5 py-1 rounded-full text-[10px] font-bold border border-white/5 bg-white/[0.02] text-stone-400 hover:bg-white/5 transition-colors flex items-center gap-1"
+                    >
+                      {chip.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* PERSONALIZATION DRAWER ACCORDION */}
+          <div className="border border-white/10 rounded-2xl overflow-hidden bg-white/[0.01] pt-1">
+            <button
+              type="button"
+              onClick={() => {
+                setIsDrawerOpen(!isDrawerOpen);
+                trackTelemetry('Drawer filters expanded', { expanded: !isDrawerOpen });
+              }}
+              className="w-full flex items-center justify-between text-left p-4 focus:outline-none hover:bg-white/[0.02] transition-colors"
+            >
+              <div>
+                <h4 className="text-sm font-black text-white flex items-center gap-1.5">
+                  ✨ Boost Your Match Quality
+                </h4>
+                <p className="text-[9px] text-stone-500 mt-0.5">
+                  More people use these filters to find better conversations. (Optional)
+                </p>
+              </div>
+              <span className="text-xs text-stone-400">{isDrawerOpen ? '▲ Hide' : '▼ Personalize More'}</span>
+            </button>
+
+            <div className={cn(
+              "transition-all duration-300 overflow-hidden",
+              isDrawerOpen ? "max-h-[600px] border-t border-white/5 p-4 space-y-4 opacity-100" : "max-h-0 opacity-0 pointer-events-none"
+            )}>
+              
+              {/* TAB BUTTONS BAR */}
+              <div className="flex border-b border-white/10 pb-2 overflow-x-auto gap-2">
+                {MATCH_CATEGORIES.map((cat) => {
+                  const active = activeTabId === cat.id;
+                  return (
+                    <button
+                      key={cat.id}
+                      type="button"
+                      onClick={() => handleSelectTabButton(cat.id)}
+                      className={cn(
+                        "px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all flex items-center gap-1.5 border shrink-0",
+                        cat.recommended && !active ? "border-amber-500/20 bg-amber-500/[0.02]" : "border-transparent",
+                        active 
+                          ? "bg-amber-500 text-stone-950 border-amber-500 font-black" 
+                          : "text-stone-400 hover:bg-white/5"
+                      )}
+                    >
+                      <span>{cat.icon}</span>
+                      <span>{cat.title.split(' ')[0]}</span>
+                      {cat.recommended && (
+                        <span className="text-[7px] font-black uppercase bg-amber-500 text-stone-950 px-1 rounded-full">
+                          ⭐ Recommended
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Dynamic Content Panel depends on selected tab */}
+              <div className="bg-stone-950/60 p-4 border border-white/5 rounded-2xl min-h-[160px] relative">
+                
+                {/* Simulated continuous typewriter online tickers */}
+                {activeCategory && (
+                  <div className="mb-3 text-center border-b border-white/5 pb-2">
+                    <TypewriterRotator messages={activeCategory.rotatorMessages} speed={30} delay={1800} />
+                  </div>
+                )}
+
+                {/* College tab content */}
+                {activeTabId === 'COLLEGE' && (
+                  <div className="space-y-4 animate-fade-in">
+                    <div>
+                      <input
+                        ref={universityInputRef}
+                        type="text"
+                        placeholder="Search your university... e.g. VIT, SRM, IIT"
+                        value={universityQuery}
+                        onChange={(e) => {
+                          setUniversityQuery(e.target.value);
+                          if (!e.target.value) setUniversity('');
+                        }}
+                        className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white placeholder-stone-500 focus:outline-none focus:border-amber-500 text-xs font-semibold"
+                      />
+
+                      {universityResults.length > 0 && (
+                        <div className="mt-2 bg-stone-950 border border-white/10 rounded-xl max-h-32 overflow-y-auto divide-y divide-white/5 shadow-xl relative z-20">
+                          {universityResults.map((u) => (
+                            <button
+                              key={u.name}
+                              type="button"
+                              onClick={() => {
+                                checkAndAddFilter(() => {
+                                  setUniversity(u.name);
+                                  setUniversityQuery('');
+                                  setUniversityResults([]);
+                                });
+                              }}
+                              className="w-full px-4 py-2 text-left hover:bg-white/5 text-xs text-white/80 flex justify-between items-center"
+                            >
+                              <span className="font-bold">{u.name}</span>
+                              <span className="text-[9px] text-stone-500">{u.country}</span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="block text-[8px] text-stone-500 uppercase font-black tracking-wider mb-1.5">Popular campuses</label>
+                      <div className="flex flex-wrap gap-1.5">
+                        {COLLEGE_SUGGESTIONS.slice(0, 4).map((col) => (
+                          <button
+                            key={col}
+                            type="button"
+                            onClick={() => {
+                              checkAndAddFilter(() => {
+                                setUniversity(col);
+                              });
+                            }}
+                            className={cn(
+                              "px-2.5 py-1 rounded-full text-[9px] font-bold border transition-colors",
+                              university === col
+                                ? "bg-amber-500/20 border-amber-500 text-amber-400"
+                                : "border-white/5 bg-white/[0.02] text-stone-400 hover:bg-white/5"
+                            )}
+                          >
+                            {col.split(' ')[0]}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Nearby tab content */}
+                {activeTabId === 'NEARBY' && (
+                  <div className="space-y-4 animate-fade-in">
+                    <div>
+                      <input
+                        ref={locationInputRef}
+                        type="text"
+                        placeholder="Search by city, state, or country..."
+                        value={locationQuery}
+                        onChange={(e) => setLocationQuery(e.target.value)}
+                        className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white placeholder-stone-500 focus:outline-none focus:border-amber-500 text-xs font-semibold"
+                      />
+
+                      {locationResults.length > 0 && (
+                        <div className="mt-2 bg-stone-950 border border-white/10 rounded-xl max-h-32 overflow-y-auto divide-y divide-white/5 shadow-xl relative z-20">
+                          {locationResults.map((loc) => (
+                            <button
+                              key={loc.id}
+                              type="button"
+                              onClick={() => handleSelectLocation(loc)}
+                              className="w-full px-4 py-2 text-left hover:bg-white/5 text-xs text-white/80 flex justify-between items-center"
+                            >
+                              <span>{loc.name}</span>
+                              <span className="text-[9px] text-stone-500 capitalize">{loc.type}</span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="text-[9px] text-stone-500 leading-relaxed">
+                      Nearby conversations happen fastest. Enable a city to improve matching suggestions.
+                    </div>
+                  </div>
+                )}
+
+                {/* Language tab content */}
+                {activeTabId === 'LANGUAGE' && (
+                  <div className="space-y-4 animate-fade-in">
+                    <div className="text-[9px] text-stone-400 mb-1 leading-relaxed">
+                      People speaking Telugu and English are highly active now.
+                    </div>
+                    <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto">
+                      {LANGUAGES.map((lang) => {
+                        const selected = languages.includes(lang);
+                        return (
+                          <button
+                            key={lang}
+                            type="button"
+                            onClick={() => toggleLanguage(lang)}
+                            className={cn(
+                              "px-2.5 py-1 rounded-full text-[10px] font-bold border transition-colors",
+                              selected
+                                ? "bg-amber-500/20 border-amber-500 text-amber-400"
+                                : "border-white/5 bg-white/[0.02] text-stone-400 hover:bg-white/5"
+                            )}
+                          >
+                            {lang}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Interests tab content */}
+                {activeTabId === 'INTERESTS' && (
+                  <div className="space-y-4 animate-fade-in">
+                    <input
+                      ref={interestInputRef}
+                      type="text"
+                      placeholder="Search interests (e.g. Gaming)..."
+                      value={interestQuery}
+                      onChange={(e) => setInterestQuery(e.target.value)}
+                      className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white placeholder-stone-500 focus:outline-none focus:border-amber-500 text-xs font-semibold"
+                    />
+
+                    {interestResults.length > 0 && (
+                      <div className="mt-2 bg-stone-950 border border-white/10 rounded-xl max-h-32 overflow-y-auto divide-y divide-white/5 shadow-xl relative z-20">
+                        {interestResults.map((item) => (
+                          <button
+                            key={item.id}
+                            type="button"
+                            onClick={() => handleSelectInterest(item.name)}
+                            className="w-full px-4 py-2 text-left hover:bg-white/5 text-xs text-white/80 flex justify-between items-center"
+                          >
+                            <span>{item.name}</span>
+                            <span className="text-[9px] px-1.5 py-0.5 bg-white/5 rounded text-stone-400">{item.category}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
+                    <div className="text-[9px] text-stone-500 leading-relaxed">
+                      Gamers and music lovers are connected recently. Select keywords to tune matches.
+                    </div>
+                  </div>
+                )}
+
+                {/* Random tab content */}
+                {activeTabId === 'RANDOM' && (
+                  <div className="text-center py-6 animate-fade-in text-stone-400 text-xs">
+                    🌎 No filters. No expectations. Just one interesting conversation.
+                  </div>
+                )}
+
+              </div>
+
+              {/* ✨ Your Conversation Vibe (Selected Recipe - Max 3, inline shake warning) */}
+              <div className={cn(
+                "p-4 bg-white/5 border border-white/10 rounded-2xl relative",
+                shakeRecipe && "recipe-shake-anim border-red-500/40"
+              )}>
+                <div className="flex justify-between items-center mb-2.5">
+                  <h4 className="text-xs font-black text-white">✨ Your Conversation Vibe</h4>
+                  <span className="text-[9px] font-black text-amber-500">{getActiveFilterCount()}/3</span>
+                </div>
+
+                <div className="flex flex-wrap gap-1.5">
+                  {university && (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-500/15 text-amber-400 rounded-full text-[10px] font-bold border border-amber-500/10">
+                      🏫 {university.split(' ')[0]}
+                      <button type="button" onClick={() => setUniversity('')} className="text-stone-400 hover:text-red-400 font-bold ml-1">×</button>
+                    </span>
+                  )}
+                  {city && (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-500/15 text-amber-400 rounded-full text-[10px] font-bold border border-amber-500/10">
+                      📍 {city}
+                      <button type="button" onClick={() => { setCountry(''); setState(''); setCity(''); }} className="text-stone-400 hover:text-red-400 font-bold ml-1">×</button>
+                    </span>
+                  )}
+                  {languages.filter(l => l !== 'English').map((lang) => (
+                    <span key={lang} className="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-500/15 text-amber-400 rounded-full text-[10px] font-bold border border-amber-500/10">
+                      💬 {lang}
+                      <button type="button" onClick={() => toggleLanguage(lang)} className="text-stone-400 hover:text-red-400 font-bold ml-1">×</button>
+                    </span>
+                  ))}
+                  {interestTags.map((tag) => (
+                    <span key={tag} className="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-500/15 text-amber-400 rounded-full text-[10px] font-bold border border-amber-500/10">
+                      🎮 {tag}
+                      <button type="button" onClick={() => removeInterest(tag)} className="text-stone-400 hover:text-red-400 font-bold ml-1">×</button>
+                    </span>
+                  ))}
+
+                  {getActiveFilterCount() === 0 && (
+                    <span className="text-[10px] text-stone-500 font-semibold italic">Explore cards to build today's vibe...</span>
+                  )}
+                </div>
+
+                {shakeRecipe && (
+                  <div className="text-[9px] text-red-400 font-bold mt-2">
+                    ⚠️ Maximum 3 filters. Choose your strongest preferences.
+                  </div>
+                )}
+              </div>
+
+            </div>
+          </div>
+
+        </div>
+
+        {/* Footer Actions */}
+        <div className="px-6 py-4 border-t border-white/10 bg-stone-950 flex items-center justify-between">
+          <button
+            type="button"
+            onClick={handleReset}
+            disabled={isSavingState !== 'idle'}
+            className="px-4 py-2 border border-white/10 hover:bg-white/5 text-stone-500 hover:text-stone-300 text-xs rounded-xl font-bold transition-all disabled:opacity-30"
+          >
+            Reset All
+          </button>
+
+          <span className="text-[10px] text-stone-500 font-bold tracking-wider uppercase">V7.1 Polish</span>
         </div>
 
       </div>
