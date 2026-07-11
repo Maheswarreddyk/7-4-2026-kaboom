@@ -224,6 +224,7 @@ export async function runGlobalMatchCycle(supabase: SupabaseClient): Promise<voi
         user_b: userB,
         match_score: bestMatch.weightedScore,
         matched_reason: bestMatch.reason,
+        match_reason_metadata: bestMatch.reasonMetadata,
       })
       .select()
       .single();

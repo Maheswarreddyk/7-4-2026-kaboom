@@ -23,6 +23,14 @@ interface MatchIntroCardProps {
     reason: 'strict_filters' | 'prefer_filters' | 'random';
     confidence: number;
     matchedBy: string[];
+    matchedByDetails?: {
+      university?: string;
+      city?: string;
+      languages?: string[];
+      interests?: string[];
+      state?: string;
+      country?: string;
+    };
   } | null;
   status: string;
   isChatOpen: boolean;
@@ -31,6 +39,7 @@ interface MatchIntroCardProps {
 
 export function MatchIntroCard({
   partnerProfile,
+  matchReasonMetadata,
   status,
   isChatOpen,
   onDismiss
@@ -99,34 +108,78 @@ export function MatchIntroCard({
   try { localInterests = JSON.parse(localStorage.getItem('kaboom_interest_tags') || '[]'); } catch {}
 
   const reasons: string[] = [];
+  const details = matchReasonMetadata?.matchedByDetails;
 
-  // University comparison
-  if (localUni && partnerUni && localUni.toLowerCase().trim() === partnerUni.toLowerCase().trim()) {
-    reasons.push('🏫 Same Campus');
+  if (details) {
+    // Priority 1: University
+    if (details.university) {
+      reasons.push(`🏫 ${details.university}`);
+    }
+    // Priority 2: City
+    if (details.city) {
+      reasons.push(`📍 ${details.city}`);
+    }
+    // Priority 3: Language
+    if (details.languages && Array.isArray(details.languages)) {
+      details.languages.forEach((lang: string) => {
+        reasons.push(`💬 ${lang}`);
+      });
+    }
+    // Priority 4: Interest
+    if (details.interests && Array.isArray(details.interests)) {
+      details.interests.forEach((interest: string) => {
+        reasons.push(`🎮 ${interest}`);
+      });
+    }
+    // Priority 5: State
+    if (details.state) {
+      reasons.push(`📍 ${details.state}`);
+    }
+    // Priority 6: Country
+    if (details.country) {
+      reasons.push(`🌎 ${details.country}`);
+    }
   }
 
-  // City comparison
-  const localCity = localStorage.getItem('kaboom_city') || '';
-  const partnerCity = partnerProfile.matchAttributes?.city?.[0] || (partnerProfile as any).city || '';
-  if (localCity && partnerCity && localCity.toLowerCase().trim() === partnerCity.toLowerCase().trim()) {
-    reasons.push('📍 Same City');
-  }
-
-  // Language comparison
-  const matchedLang = localLangs.find(l => partnerLangs.some(pl => pl.toLowerCase().trim() === l.toLowerCase().trim()));
-  if (matchedLang) {
-    reasons.push(`💬 ${matchedLang}`);
-  }
-
-  // Interest comparison
-  const matchedInterest = localInterests.find(i => partnerInterests.some(pi => pi.toLowerCase().trim() === i.toLowerCase().trim()));
-  if (matchedInterest) {
-    reasons.push(`🎮 ${matchedInterest}`);
-  }
-
-  // Fallback to random mode if no filters overlap
+  // Fallback to local dynamic check if details are empty or not present
   if (reasons.length === 0) {
-    reasons.push('🎲 Surprise Match');
+    // Priority 1: University comparison
+    if (localUni && partnerUni && localUni.toLowerCase().trim() === partnerUni.toLowerCase().trim()) {
+      reasons.push(`🏫 ${partnerUni}`);
+    }
+    // Priority 2: City comparison
+    const localCity = localStorage.getItem('kaboom_city') || '';
+    const partnerCity = partnerProfile.matchAttributes?.city?.[0] || (partnerProfile as any).city || '';
+    if (localCity && partnerCity && localCity.toLowerCase().trim() === partnerCity.toLowerCase().trim()) {
+      reasons.push(`📍 ${partnerCity}`);
+    }
+    // Priority 3: Language comparison
+    const matchedLang = localLangs.find(l => partnerLangs.some(pl => pl.toLowerCase().trim() === l.toLowerCase().trim()));
+    if (matchedLang) {
+      reasons.push(`💬 ${matchedLang}`);
+    }
+    // Priority 4: Interest comparison
+    const matchedInterest = localInterests.find(i => partnerInterests.some(pi => pi.toLowerCase().trim() === i.toLowerCase().trim()));
+    if (matchedInterest) {
+      reasons.push(`🎮 ${matchedInterest}`);
+    }
+    // Priority 5: State comparison
+    const localState = localStorage.getItem('kaboom_state') || '';
+    const partnerState = (partnerProfile.matchAttributes as any)?.state?.[0] || partnerProfile.state || '';
+    if (localState && partnerState && localState.toLowerCase().trim() === partnerState.toLowerCase().trim()) {
+      reasons.push(`📍 ${partnerState}`);
+    }
+    // Priority 6: Country comparison
+    const localCountry = localStorage.getItem('kaboom_country') || '';
+    const partnerCountry = (partnerProfile.matchAttributes as any)?.country?.[0] || partnerProfile.country || '';
+    if (localCountry && partnerCountry && localCountry.toLowerCase().trim() === partnerCountry.toLowerCase().trim()) {
+      reasons.push(`🌎 ${partnerCountry}`);
+    }
+  }
+
+  // Fallback to compatibility text if no filters overlap
+  if (reasons.length === 0) {
+    reasons.push('⚡ Smart Match');
   }
 
   return (

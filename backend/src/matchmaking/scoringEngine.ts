@@ -210,18 +210,31 @@ export function calculateCompatibility(
   }
 
   // Record other match explanation labels
+  const matchedByDetails: Record<string, any> = {};
+
+  if (hasSharedUni) {
+    const sharedUni = selfUni.filter(u => partUni.includes(u));
+    if (sharedUni.length > 0) {
+      matchedByDetails.university = sharedUni[0];
+    }
+  }
+
   if (self.city && partner.city && self.city === partner.city) {
     matchedBy.push('📍 Same City');
+    matchedByDetails.city = self.city;
   } else if (self.state && partner.state && self.state === partner.state) {
     matchedBy.push('📍 Same State');
+    matchedByDetails.state = self.state;
   } else if (self.country && partner.country && self.country === partner.country) {
     matchedBy.push('🌎 Same Country');
+    matchedByDetails.country = self.country;
   }
 
   if (self.interest_tags && partner.interest_tags) {
     const sharedInts = self.interest_tags.filter(t => partner.interest_tags!.includes(t));
     if (sharedInts.length > 0) {
       matchedBy.push('💻 Shared Interests');
+      matchedByDetails.interests = sharedInts;
     }
   }
 
@@ -229,6 +242,7 @@ export function calculateCompatibility(
     const sharedLangs = self.languages.filter(t => partner.languages!.includes(t));
     if (sharedLangs.length > 0) {
       matchedBy.push('🗣 Same Language');
+      matchedByDetails.languages = sharedLangs;
     }
   }
 
@@ -243,10 +257,11 @@ export function calculateCompatibility(
   // Determine structured match reason
   const isStrictMatch = self.match_mode === 'STRICT' || partner.match_mode === 'STRICT';
   const confidence = rawScore > 0 ? Math.min(Math.round((rawScore / 200) * 100), 100) : 41;
-  const reasonMetadata: ScoreResult['reasonMetadata'] = {
+  const reasonMetadata: any = {
     reason: isStrictMatch ? 'strict_filters' : (matchedBy.length > 0 ? 'prefer_filters' : 'random'),
     confidence,
-    matchedBy: matchedBy.length > 0 ? matchedBy : ['🎲 Random Match']
+    matchedBy: matchedBy.length > 0 ? matchedBy : ['🎲 Random Match'],
+    matchedByDetails
   };
 
   return {

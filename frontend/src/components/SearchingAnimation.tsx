@@ -23,18 +23,6 @@ export function SearchingAnimation({
   const [fadingText, setFadingText] = useState('Starting search...');
   const [fadeOpacity, setFadeOpacity] = useState(1);
 
-  const [elapsedSec, setElapsedSec] = useState(0);
-
-  // Increment counter every second
-  useEffect(() => {
-    if (status === 'PARTNER_LEFT' || isQueuePaused) return;
-    setElapsedSec(0);
-    const interval = setInterval(() => {
-      setElapsedSec((prev) => prev + 1);
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [status, isQueuePaused]);
-
   const getSearchMessage = () => {
     const uni = localStorage.getItem('kaboom_university') || '';
     
@@ -46,40 +34,32 @@ export function SearchingAnimation({
 
     const cityPref = localStorage.getItem('kaboom_city') || '';
 
-    // Stage 1: Campus Match (0-15s)
-    if (elapsedSec < 15) {
-      if (uni) {
-        return `Searching ${uni.split(' ')[0]} student network...`;
-      }
-      return 'Checking nearby campuses...';
+    if (isQueuePaused) {
+      return 'Search paused...';
     }
 
-    // Stage 2: Interests / Hobbies (15-30s)
-    if (elapsedSec < 30) {
-      if (interests.length > 0) {
-        return `Finding ${interests[0].toLowerCase()} fans...`;
-      }
-      return 'Checking shared interests...';
+    // 1. Both Interest and City
+    if (interests.length > 0 && cityPref) {
+      return `Looking for ${interests[0].toLowerCase()} in ${cityPref}...`;
+    }
+    // 2. University/Campus
+    if (uni) {
+      return `Searching ${uni}...`;
+    }
+    // 3. Languages
+    if (langs.length > 0) {
+      return `Finding ${langs[0]} speakers...`;
+    }
+    // 4. City only
+    if (cityPref) {
+      return `Looking around ${cityPref}...`;
+    }
+    // 5. Interest only
+    if (interests.length > 0) {
+      return `Finding ${interests[0].toLowerCase()} fans...`;
     }
 
-    // Stage 3: Languages (30-45s)
-    if (elapsedSec < 45) {
-      const nonEnglish = langs.filter(l => l !== 'English');
-      if (nonEnglish.length > 0) {
-        return `Finding ${nonEnglish[0]} speakers...`;
-      }
-      return 'Expanding languages check...';
-    }
-
-    // Stage 4: Location / Nearby (45-60s)
-    if (elapsedSec < 60) {
-      if (cityPref) {
-        return `Looking around ${cityPref}...`;
-      }
-      return 'Searching nearby conversations...';
-    }
-
-    // Stage 5: Fallback search (60+s)
+    // Default fallback
     return 'Finding someone interesting...';
   };
 

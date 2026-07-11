@@ -398,54 +398,61 @@ export function useVideoChat(
         matchTextLines.push(`✨ Great Match • ${ratingBadge}`);
         
         // List the matches
-        const bullets: string[] = [];
+        const details = data.matchReasonMetadata?.matchedByDetails;
+        let finalNarrative = '';
+
         const myUni = localStorage.getItem('kaboom_university');
         const pUni = data.partnerProfile?.match_attributes?.university?.[0] || data.partnerProfile?.university;
-        if (myUni && pUni && myUni.toLowerCase() === pUni.toLowerCase()) {
-          bullets.push(`🎓 You both selected ${myUni}`);
-        }
+        const matchedUni = details?.university || (myUni && pUni && myUni.toLowerCase() === pUni.toLowerCase() ? myUni : null);
 
         const myCity = localStorage.getItem('kaboom_city');
         const pCity = data.partnerProfile?.match_attributes?.city?.[0] || data.partnerProfile?.city;
-        if (myCity && pCity && myCity.toLowerCase() === pCity.toLowerCase()) {
-          bullets.push(`📍 Both of you are from ${myCity}`);
-        }
-
-        const myCountry = localStorage.getItem('kaboom_country');
-        const pCountry = data.partnerProfile?.match_attributes?.country?.[0] || data.partnerProfile?.country;
-        if (myCountry && pCountry && myCountry.toLowerCase() === pCountry.toLowerCase()) {
-          bullets.push(`🌎 Both of you are from ${myCountry}`);
-        }
+        const matchedCity = details?.city || (myCity && pCity && myCity.toLowerCase() === pCity.toLowerCase() ? myCity : null);
 
         let myLanguages: string[] = [];
         try { myLanguages = JSON.parse(localStorage.getItem('kaboom_languages') || '[]'); } catch {}
         const pLanguages = data.partnerProfile?.match_attributes?.languages || data.partnerProfile?.languages || [];
         const sharedLanguages = myLanguages.filter(x => pLanguages.some((y: string) => y.toLowerCase() === x.toLowerCase()));
-        if (sharedLanguages.length > 0) {
-          bullets.push(`🗣 You both speak ${sharedLanguages.join(', ')}`);
-        }
+        const matchedLangsList = details?.languages || sharedLanguages;
 
         let myInterests: string[] = [];
         try { myInterests = JSON.parse(localStorage.getItem('kaboom_interest_tags') || '[]'); } catch {}
         const pInterests = data.partnerProfile?.match_attributes?.interests || data.partnerProfile?.interest_tags || [];
         const sharedInterests = myInterests.filter(x => pInterests.some((y: string) => y.toLowerCase() === x.toLowerCase()));
-        if (sharedInterests.length > 0) {
-          bullets.push(`🎵 Shared interests found: ${sharedInterests.join(', ')}`);
-        }
+        const matchedInterestsList = details?.interests || sharedInterests;
 
-        let myTags: string[] = [];
-        try { myTags = JSON.parse(localStorage.getItem('kaboom_education_tags') || '[]'); } catch {}
-        const pTags = data.partnerProfile?.match_attributes?.education_tags || [];
-        const sharedTags = myTags.filter(x => pTags.some((y: string) => y.toLowerCase() === x.toLowerCase()));
-        if (sharedTags.length > 0) {
-          bullets.push(`🎓 Shared campus tags: ${sharedTags.join(', ')}`);
-        }
+        const hasUni = !!matchedUni;
+        const hasCity = !!matchedCity;
+        const hasLang = matchedLangsList && matchedLangsList.length > 0;
+        const hasInterest = matchedInterestsList && matchedInterestsList.length > 0;
 
-        if (bullets.length > 0) {
-          matchTextLines.push(bullets.join('\n'));
+        if (hasUni && hasLang) {
+          finalNarrative = `Both of you are from ${matchedUni} and speak ${matchedLangsList[0]}.`;
+        } else if (hasUni && hasInterest) {
+          finalNarrative = `${matchedInterestsList[0]} students from ${matchedUni} just matched.`;
+        } else if (hasCity && hasInterest) {
+          finalNarrative = `You matched because you both are from ${matchedCity} and enjoy ${matchedInterestsList[0]}.`;
+        } else if (hasUni) {
+          finalNarrative = `You both study at ${matchedUni}.\nLooks like you're from the same campus.`;
+        } else if (hasCity) {
+          finalNarrative = `You're both from ${matchedCity}.\nSomeone nearby just matched with you.`;
+        } else if (hasLang) {
+          finalNarrative = `Both of you speak ${matchedLangsList[0]}.\nYou can start chatting in ${matchedLangsList[0]}.`;
+        } else if (hasInterest) {
+          finalNarrative = `Looks like you both enjoy ${matchedInterestsList[0]}.\nShared hobbies make conversations easier.`;
         } else {
-          matchTextLines.push(`You share several preferences.\nSome filters were relaxed to help you meet faster.\nEnjoy!`);
+          const matchedState = details?.state || (localStorage.getItem('kaboom_state') === data.partnerProfile?.state ? data.partnerProfile?.state : null);
+          const matchedCountry = details?.country || (localStorage.getItem('kaboom_country') === data.partnerProfile?.country ? data.partnerProfile?.country : null);
+          if (matchedState) {
+            finalNarrative = `Both of you are from the state of ${matchedState}.`;
+          } else if (matchedCountry) {
+            finalNarrative = `Both of you are from the same country: ${matchedCountry}.`;
+          } else {
+            finalNarrative = `You share several preferences.\nSome filters were relaxed to help you meet faster.\nEnjoy!`;
+          }
         }
+
+        matchTextLines.push(finalNarrative);
       } else {
         matchTextLines.push(`🎲 Random Match • ${ratingBadge}`);
         matchTextLines.push(`No common filters were found.\nMeet someone completely new today!\nSometimes the best conversations are unexpected.`);
