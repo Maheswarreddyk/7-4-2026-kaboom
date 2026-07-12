@@ -152,7 +152,8 @@ export async function runGlobalMatchCycle(supabase: SupabaseClient): Promise<voi
     if (matchedOrReservedInCycle.has(sessionIdA) || reservedIds.has(sessionIdA)) continue;
 
     const profileA = entryA.visitor_sessions;
-    if (!profileA || profileA.status !== 'waiting') continue;
+    // Phase 3: Check for 'SEARCHING' (FSM uppercase) — Phase 2 corrected join to write 'SEARCHING'
+    if (!profileA || profileA.status !== 'SEARCHING') continue;
 
     // Load recent matches and reports for user A to build exclusion sets
     const { recentPartners, reportedIds } = await loadExclusionSets(supabase, sessionIdA);
@@ -170,7 +171,8 @@ export async function runGlobalMatchCycle(supabase: SupabaseClient): Promise<voi
       if (matchedOrReservedInCycle.has(sessionIdB) || reservedIds.has(sessionIdB)) continue;
 
       const profileB = entryB.visitor_sessions;
-      if (!profileB || profileB.status !== 'waiting') continue;
+      // Phase 3: Check for 'SEARCHING' (FSM uppercase)
+      if (!profileB || profileB.status !== 'SEARCHING') continue;
 
       const score = calculateCompatibility(
         profileA,
@@ -245,13 +247,14 @@ export async function runGlobalMatchCycle(supabase: SupabaseClient): Promise<voi
         .update({ status: 'matched' })
         .in('session_id', [userA, userB])
         .eq('status', 'waiting'),
+      // Phase 3: Corrected from lowercase 'matched' to uppercase 'MATCHED' (FSM consistency)
       supabase
         .from('visitor_sessions')
-        .update({ status: 'matched', last_partner: userB })
+        .update({ status: 'MATCHED', last_partner: userB })
         .eq('id', userA),
       supabase
         .from('visitor_sessions')
-        .update({ status: 'matched', last_partner: userA })
+        .update({ status: 'MATCHED', last_partner: userA })
         .eq('id', userB),
     ]);
 
@@ -274,6 +277,7 @@ export async function runGlobalMatchCycle(supabase: SupabaseClient): Promise<voi
     ]);
 
     // Broadcast matched event to both sessions
+    // Phase 3: Added .catch() guards — a broadcast failure must not corrupt match state
     const iceServers = getIceServers();
     await Promise.all([
       broadcastToSession(userA, 'matched', {
@@ -281,13 +285,13 @@ export async function runGlobalMatchCycle(supabase: SupabaseClient): Promise<voi
         partnerSessionId: userB,
         isInitiator: userA === sessionIdA,
         iceServers,
-      }),
+      }).catch((e) => console.error(`[Matchmaker] Broadcast to ${userA} failed:`, e?.message)),
       broadcastToSession(userB, 'matched', {
         matchId: match.id,
         partnerSessionId: userA,
         isInitiator: userB === sessionIdA,
         iceServers,
-      }),
+      }).catch((e) => console.error(`[Matchmaker] Broadcast to ${userB} failed:`, e?.message)),
     ]);
 
     // Mark both as processed in this matchmaking pass

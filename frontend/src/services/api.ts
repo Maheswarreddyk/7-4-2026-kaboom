@@ -20,6 +20,15 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+export class ApiError extends Error {
+  status?: number;
+  constructor(message: string, status?: number) {
+    super(message);
+    this.status = status;
+    this.name = 'ApiError';
+  }
+}
+
 api.interceptors.response.use(
   (response) => response,
   (error) => {
@@ -29,9 +38,10 @@ api.interceptors.response.use(
       (status === 404 ? `Endpoint not found: ${error.config?.url}` : null) ||
       error.message ||
       'An unexpected error occurred';
-    return Promise.reject(new Error(message));
+    return Promise.reject(new ApiError(message, status));
   }
 );
+
 
 export const apiService = {
   async getHealth(): Promise<{ status: string; database: string }> {

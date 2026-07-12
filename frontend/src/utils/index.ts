@@ -38,6 +38,13 @@ export async function retry<T>(
       return await fn();
     } catch (error) {
       lastError = error;
+      // Phase 5: Abort retries immediately if we are rate-limited (HTTP 429)
+      if (error && typeof error === 'object' && ('status' in error || 'statusCode' in error)) {
+        const status = (error as any).status || (error as any).statusCode;
+        if (status === 429) {
+          throw error;
+        }
+      }
       if (attempt < maxAttempts) {
         await new Promise((resolve) => setTimeout(resolve, delayMs * attempt));
       }
@@ -46,6 +53,7 @@ export async function retry<T>(
 
   throw lastError;
 }
+
 
 export function cn(...classes: (string | boolean | undefined | null)[]): string {
   return classes.filter(Boolean).join(' ');

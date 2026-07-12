@@ -1,5 +1,6 @@
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import { Layout } from './components/Layout.js';
+import { ErrorBoundary } from './components/ErrorBoundary.js';
 import { SessionProvider } from './contexts/SessionContext.js';
 import { ToastProvider } from './contexts/ToastContext.js';
 import { FloatingLayoutProvider } from './contexts/FloatingLayoutContext.js';
@@ -37,12 +38,14 @@ const router = createBrowserRouter([
 
 export default function App() {
   return (
-    <ToastProvider>
-      <SessionProvider>
-        <FloatingLayoutProvider>
-          <RouterProvider router={router} />
-        </FloatingLayoutProvider>
-      </SessionProvider>
-    </ToastProvider>
+    <ErrorBoundary>
+      <ToastProvider>
+        <SessionProvider>
+          <FloatingLayoutProvider>
+            <RouterProvider router={router} />
+          </FloatingLayoutProvider>
+        </SessionProvider>
+      </ToastProvider>
+    </ErrorBoundary>
   );
 }

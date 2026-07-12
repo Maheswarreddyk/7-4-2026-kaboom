@@ -42,12 +42,14 @@ export async function joinQueueEntry(
     queueEnteredAt = now;
   }
 
+  // Update heartbeat + ensure status is 'SEARCHING' (FSM V4.1 Requirement 1)
+  // Phase 2: Corrected status from 'waiting' to 'SEARCHING' to match backend FSM and healQueue
   await supabase
     .from('visitor_sessions')
     .update({
       queue_entered_at: queueEnteredAt,
       last_activity: now,
-      status: 'waiting',
+      status: 'SEARCHING',
     })
     .eq('id', sessionId);
 
@@ -65,9 +67,10 @@ export async function joinQueueEntry(
       (Date.now() - new Date(queueEnteredAt).getTime()) / 1000
     );
 
+    // Phase 2: Corrected column from 'search_started' to 'last_seen' — matching backend queueEngine
     await supabase
       .from('waiting_queue')
-      .update({ search_started: now })
+      .update({ last_seen: now })
       .eq('id', existing.id);
 
     logEngine({
@@ -142,9 +145,10 @@ export async function leaveQueueEntry(supabase: SupabaseClient, sessionId: strin
     .eq('session_id', sessionId)
     .eq('status', 'waiting');
 
+  // Phase 2: Corrected status from 'active' to 'READY' — matching backend FSM
   await supabase
     .from('visitor_sessions')
-    .update({ status: 'active' })
+    .update({ status: 'READY', queue_entered_at: null })
     .eq('id', sessionId);
 
   await logToDb(supabase, sessionId, 'queue_leave', {});
@@ -201,20 +205,28 @@ export async function loadWaitingCandidates(
   });
 }
 
+/**
+ * Load reserved session IDs from the reservations table.
+ * Phase 2: Reads BOTH column variants (user_a/user_b from migration 005,
+ * initiator/partner_session_id from 006) to match backend queueEngine.
+ */
 export async function getReservedSessionIds(supabase: SupabaseClient): Promise<Set<string>> {
   try {
     const now = new Date().toISOString();
     const { data, error } = await supabase
       .from('reservations')
-      .select('initiator_session_id, partner_session_id')
+      .select('user_a, user_b, initiator_session_id, partner_session_id')
       .eq('status', 'pending')
       .gt('expires_at', now);
 
     if (error) return new Set();
     const ids = new Set<string>();
     data?.forEach((r) => {
-      ids.add(r.initiator_session_id);
-      ids.add(r.partner_session_id);
+      // Support both migration 005 (user_a/user_b) and 006 (initiator/partner) columns
+      if (r.user_a) ids.add(r.user_a);
+      if (r.user_b) ids.add(r.user_b);
+      if (r.initiator_session_id) ids.add(r.initiator_session_id);
+      if (r.partner_session_id) ids.add(r.partner_session_id);
     });
     return ids;
   } catch {
@@ -227,7 +239,7 @@ export async function expireStaleReservations(supabase: SupabaseClient): Promise
     const now = new Date().toISOString();
     const { data: expired } = await supabase
       .from('reservations')
-      .select('id, initiator_session_id, partner_session_id')
+      .select('id, user_a, user_b, initiator_session_id, partner_session_id')
       .eq('status', 'pending')
       .lt('expires_at', now);
 
@@ -235,16 +247,30 @@ export async function expireStaleReservations(supabase: SupabaseClient): Promise
 
     for (const r of expired) {
       await supabase.from('reservations').update({ status: 'expired' }).eq('id', r.id);
-      await supabase
-        .from('waiting_queue')
-        .update({ status: 'waiting' })
-        .in('session_id', [r.initiator_session_id, r.partner_session_id])
-        .eq('status', 'matched');
 
-      await supabase
-        .from('visitor_sessions')
-        .update({ status: 'waiting' })
-        .in('id', [r.initiator_session_id, r.partner_session_id]);
+      // Collect affected session IDs from either column set (migration 005 or 006)
+      const sessionIds = Array.from(new Set([
+        r.user_a,
+        r.user_b,
+        r.initiator_session_id,
+        r.partner_session_id,
+      ].filter(Boolean))) as string[];
+
+      if (sessionIds.length) {
+        await supabase
+          .from('waiting_queue')
+          .update({ status: 'waiting' })
+          .in('session_id', sessionIds)
+          .eq('status', 'matched');
+
+        // Phase 2: Corrected recovery status from 'waiting' to 'SEARCHING' to match FSM
+        await supabase
+          .from('visitor_sessions')
+          .update({ status: 'SEARCHING' })
+          .in('id', sessionIds);
+      }
+
+      console.log(`[QueueEngine] Expired stale reservation ${r.id} — returned ${sessionIds.length} sessions to queue`);
     }
     return expired.length;
   } catch {

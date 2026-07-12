@@ -1161,8 +1161,13 @@ export function useVideoChat(
     window.addEventListener('pagehide', handleUnloadOrHide);
     document.addEventListener('visibilitychange', handleVisibilityChange);
     document.addEventListener('freeze', handleUnloadOrHide);
-    document.addEventListener('resume', () => void handleResumeOrFocus());
-    window.addEventListener('focus', () => void handleResumeOrFocus());
+
+    // Phase 4: Extract named handlers so removeEventListener can match the SAME reference.
+    // Passing new arrow functions to removeEventListener never removes the original listener.
+    const handleResume = () => void handleResumeOrFocus();
+    const handleFocus = () => void handleResumeOrFocus();
+    document.addEventListener('resume', handleResume);
+    window.addEventListener('focus', handleFocus);
     window.addEventListener('online', handleOnline);
 
     return () => {
@@ -1170,8 +1175,8 @@ export function useVideoChat(
       window.removeEventListener('pagehide', handleUnloadOrHide);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       document.removeEventListener('freeze', handleUnloadOrHide);
-      document.removeEventListener('resume', () => void handleResumeOrFocus());
-      window.removeEventListener('focus', () => void handleResumeOrFocus());
+      document.removeEventListener('resume', handleResume);
+      window.removeEventListener('focus', handleFocus);
       window.removeEventListener('online', handleOnline);
       
       clearSignalingRetryTimers();
@@ -1179,6 +1184,7 @@ export function useVideoChat(
       disconnectRealtime();
     };
   }, []);
+
 
   // Synchronize internal full-screen state with native browser events (e.g. Esc key)
   useEffect(() => {
