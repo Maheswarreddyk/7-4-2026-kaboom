@@ -210,7 +210,10 @@ export class WebRTCManager {
       this.peerConnection.close();
       this.peerConnection = null;
     }
-    this.remoteStream = null;
+    if (this.remoteStream) {
+      this.remoteStream.getTracks().forEach((track) => track.stop());
+      this.remoteStream = null;
+    }
   }
 
   cleanup(): void {

@@ -69,7 +69,9 @@ export function VideoPlayer({
 
   useEffect(() => {
     const video = videoRef.current;
-    if (video && stream) {
+    if (!video) return;
+
+    if (stream) {
       video.srcObject = stream;
       
       // Explicitly call play() to trigger stream presentation.
@@ -86,7 +88,13 @@ export function VideoPlayer({
         document.addEventListener('click', forcePlay);
         document.addEventListener('touchstart', forcePlay);
       });
+    } else {
+      video.srcObject = null;
     }
+
+    return () => {
+      video.srcObject = null;
+    };
   }, [stream]);
 
   return (

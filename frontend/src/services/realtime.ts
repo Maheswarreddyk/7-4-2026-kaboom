@@ -126,27 +126,26 @@ function subscribeToMatchChannel(matchId: string, callbacks: RealtimeCallbacks):
         callbacks.onPartnerSkipCancelled?.();
       });
 
-    matchChannel.subscribe((status) => {
-      if (status === 'SUBSCRIBED') {
-        subscribed = true;
-        console.log(`[Realtime] Subscribed to match channel: ${matchId}`);
-        resolve();
-      }
-      if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-        console.warn(`[Realtime] Match channel ${matchId} status: ${status} — resolving with fallback`);
-        resolve();
-      }
-    });
-
-    // Fallback: if channel hasn't confirmed subscription within SUBSCRIBE_TIMEOUT_MS,
-    // resolve anyway so markReady() can proceed. The channel will still receive events
-    // once it eventually subscribes — we just don't block on it.
-    setTimeout(() => {
+    const subscribeTimeout = setTimeout(() => {
       if (!subscribed) {
         console.warn(`[Realtime] Match channel ${matchId} subscribe timeout after ${SUBSCRIBE_TIMEOUT_MS}ms — proceeding`);
         resolve();
       }
     }, SUBSCRIBE_TIMEOUT_MS);
+
+    matchChannel.subscribe((status) => {
+      if (status === 'SUBSCRIBED') {
+        clearTimeout(subscribeTimeout);
+        subscribed = true;
+        console.log(`[Realtime] Subscribed to match channel: ${matchId}`);
+        resolve();
+      }
+      if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+        clearTimeout(subscribeTimeout);
+        console.warn(`[Realtime] Match channel ${matchId} status: ${status} — resolving with fallback`);
+        resolve();
+      }
+    });
   });
 }
 
