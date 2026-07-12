@@ -10,6 +10,7 @@ import {
 import { apiService } from '../services/api.js';
 import type { SessionData, StatsData } from '../types/index.js';
 import { STORAGE_KEYS } from '../types/index.js';
+import { safeLocalStorage } from '../utils/index.js';
 
 interface SessionLifecycle {
   state: 'CONNECTED' | 'QUEUE' | 'IDLE' | 'LEAVING' | 'DESTROYED';
@@ -62,12 +63,12 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       matchId,
       partnerSessionId
     };
-    localStorage.setItem('kaboom_session_lifecycle', JSON.stringify(data));
+    safeLocalStorage.setItem('kaboom_session_lifecycle', JSON.stringify(data));
   }, []);
 
   const cleanupSearchSession = useCallback(() => {
     console.log('[Lifecycle] Cleanup Complete');
-    const storedId = localStorage.getItem(STORAGE_KEYS.SESSION_ID);
+    const storedId = safeLocalStorage.getItem(STORAGE_KEYS.SESSION_ID);
     if (storedId) {
       apiService.endSession(storedId).catch(() => {});
     }
@@ -98,13 +99,13 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       'kaboom_match_policy',
       'kaboom_current_state'
     ];
-    keysToRemove.forEach(key => localStorage.removeItem(key));
+    keysToRemove.forEach(key => safeLocalStorage.removeItem(key));
   }, []);
 
   useEffect(() => {
-    const storedId = localStorage.getItem(STORAGE_KEYS.SESSION_ID);
-    const storedToken = localStorage.getItem(STORAGE_KEYS.SESSION_TOKEN);
-    const lifecycleRaw = localStorage.getItem('kaboom_session_lifecycle');
+    const storedId = safeLocalStorage.getItem(STORAGE_KEYS.SESSION_ID);
+    const storedToken = safeLocalStorage.getItem(STORAGE_KEYS.SESSION_TOKEN);
+    const lifecycleRaw = safeLocalStorage.getItem('kaboom_session_lifecycle');
 
     // Differentiate Page Refresh / Crash Recovery vs New Visit / Cold Start
     const isReload = (() => {
@@ -137,7 +138,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     }
 
     // Always clear the temporary flag on boot
-    localStorage.removeItem('kaboom_session_lifecycle');
+    safeLocalStorage.removeItem('kaboom_session_lifecycle');
 
     if (storedId && storedToken) {
       if (shouldRestore) {
@@ -147,7 +148,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         apiService.restoreSession(storedId, storedToken)
           .then((data) => {
             setSession(data);
-            localStorage.setItem('kaboom_session_restored', 'true');
+            safeLocalStorage.setItem('kaboom_session_restored', 'true');
           })
           .catch(() => {
             console.log('[Lifecycle] Session Destroyed (restore failed)');
@@ -171,13 +172,13 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     console.log('[Lifecycle] Fresh Session Started');
     try {
       // Clear previous credentials only (filters were already wiped on exit/load)
-      localStorage.removeItem(STORAGE_KEYS.SESSION_ID);
-      localStorage.removeItem(STORAGE_KEYS.SESSION_TOKEN);
+      safeLocalStorage.removeItem(STORAGE_KEYS.SESSION_ID);
+      safeLocalStorage.removeItem(STORAGE_KEYS.SESSION_TOKEN);
 
       const data = await apiService.startSession();
       setSession(data);
-      localStorage.setItem(STORAGE_KEYS.SESSION_ID, data.sessionId);
-      localStorage.setItem(STORAGE_KEYS.SESSION_TOKEN, data.sessionToken);
+      safeLocalStorage.setItem(STORAGE_KEYS.SESSION_ID, data.sessionId);
+      safeLocalStorage.setItem(STORAGE_KEYS.SESSION_TOKEN, data.sessionToken);
       updateSessionLifecycleState('IDLE');
       console.log('[Lifecycle] Session Created. sessionId:', data.sessionId);
       return data;

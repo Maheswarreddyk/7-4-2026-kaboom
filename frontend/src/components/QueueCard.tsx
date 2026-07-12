@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { cn } from '../utils/index.js';
+import { cn, safeLocalStorage } from '../utils/index.js';
 
 interface QueueCardProps {
   elapsed: number;
@@ -27,26 +27,15 @@ export function QueueCard({
   const [expanded, setExpanded] = useState(false);
 
   // Expose local preferences
-  const displayName = localStorage.getItem('kaboom_display_name') || 'Guest';
-  const country = localStorage.getItem('kaboom_country') || '';
-  const city = localStorage.getItem('kaboom_city') || '';
-  const university = localStorage.getItem('kaboom_university') || '';
-  const bio = localStorage.getItem('kaboom_bio') || '';
+  // Expose local preferences
+  const displayName = safeLocalStorage.getItem('kaboom_display_name') || 'Guest';
+  const country = safeLocalStorage.getItem('kaboom_country') || '';
+  const city = safeLocalStorage.getItem('kaboom_city') || '';
+  const university = safeLocalStorage.getItem('kaboom_university') || '';
+  const bio = safeLocalStorage.getItem('kaboom_bio') || '';
   
-  const interests: string[] = (() => {
-    try {
-      return JSON.parse(localStorage.getItem('kaboom_interest_tags') || '[]');
-    } catch {
-      return [];
-    }
-  })();
-  const languages: string[] = (() => {
-    try {
-      return JSON.parse(localStorage.getItem('kaboom_languages') || '[]');
-    } catch {
-      return [];
-    }
-  })();
+  const interests: string[] = safeLocalStorage.getJSON('kaboom_interest_tags', []);
+  const languages: string[] = safeLocalStorage.getJSON('kaboom_languages', []);
 
   const formatTimer = (secs: number) => {
     const m = Math.floor(secs / 60).toString().padStart(2, '0');

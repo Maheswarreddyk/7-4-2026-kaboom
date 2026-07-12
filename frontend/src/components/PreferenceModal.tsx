@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { apiService } from '../services/api.js';
-import { cn } from '../utils/index.js';
+import { cn, safeLocalStorage } from '../utils/index.js';
 import { COLLEGE_SUGGESTIONS } from '../utils/collegeSuggestions.js';
 
 // ─────────────────────────────────────────────────────────────
@@ -453,10 +453,10 @@ export function PreferenceModal({
 
   // ── Primary fields (always collected) ─────────────────────
   const [displayName, setDisplayName] = useState(() =>
-    currentPreferences.display_name || localStorage.getItem('kaboom_display_name') || '',
+    currentPreferences.display_name || safeLocalStorage.getItem('kaboom_display_name') || '',
   );
   const [bio, setBio] = useState(() =>
-    currentPreferences.bio || localStorage.getItem('kaboom_bio') || '',
+    currentPreferences.bio || safeLocalStorage.getItem('kaboom_bio') || '',
   );
   const [gender, setGender] = useState<string>(
     currentPreferences.gender || 'Prefer not to say',
@@ -468,17 +468,17 @@ export function PreferenceModal({
   // ── Advanced filter fields ─────────────────────────────────
   const [university, setUniversity] = useState(() => {
     const attrs = currentPreferences.match_attributes || {};
-    return attrs.university?.[0] || localStorage.getItem('kaboom_university') || '';
+    return attrs.university?.[0] || safeLocalStorage.getItem('kaboom_university') || '';
   });
   const [country, setCountry] = useState(currentPreferences.country || '');
   const [state, setState] = useState(currentPreferences.state || '');
   const [district, setDistrict] = useState(currentPreferences.district || '');
   const [city, setCity] = useState(currentPreferences.city || '');
   const [languages, setLanguages] = useState<string[]>(() => {
-    try { return JSON.parse(localStorage.getItem('kaboom_languages') || '["English"]'); } catch { return ['English']; }
+    return safeLocalStorage.getJSON('kaboom_languages', ['English']);
   });
   const [interestTags, setInterestTags] = useState<string[]>(() => {
-    try { return JSON.parse(localStorage.getItem('kaboom_interest_tags') || '[]'); } catch { return []; }
+    return safeLocalStorage.getJSON('kaboom_interest_tags', []);
   });
 
   // ── UI states ──────────────────────────────────────────────
@@ -701,13 +701,13 @@ export function PreferenceModal({
   });
 
   const persistLocals = (name: string) => {
-    localStorage.setItem('kaboom_display_name', name);
-    localStorage.setItem('kaboom_bio', bio.trim());
-    localStorage.setItem('kaboom_university', university);
-    localStorage.setItem('kaboom_interest_tags', JSON.stringify(interestTags));
-    localStorage.setItem('kaboom_languages', JSON.stringify(languages));
-    localStorage.setItem('kaboom_country', country);
-    localStorage.setItem('kaboom_city', city);
+    safeLocalStorage.setItem('kaboom_display_name', name);
+    safeLocalStorage.setItem('kaboom_bio', bio.trim());
+    safeLocalStorage.setItem('kaboom_university', university);
+    safeLocalStorage.setJSON('kaboom_interest_tags', interestTags);
+    safeLocalStorage.setJSON('kaboom_languages', languages);
+    safeLocalStorage.setItem('kaboom_country', country);
+    safeLocalStorage.setItem('kaboom_city', city);
   };
 
   const executeJoin = async (payload: any, label: string) => {

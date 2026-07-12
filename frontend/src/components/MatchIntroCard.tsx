@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { cn } from '../utils/index.js';
+import { cn, safeLocalStorage } from '../utils/index.js';
 
 interface MatchIntroCardProps {
   partnerProfile: {
@@ -101,11 +101,9 @@ export function MatchIntroCard({
   const partnerLangs = partnerProfile.languages || partnerProfile.matchAttributes?.languages || [];
   const partnerInterests = partnerProfile.interestTags || partnerProfile.matchAttributes?.interests || [];
 
-  const localUni = localStorage.getItem('kaboom_university') || '';
-  let localLangs: string[] = [];
-  try { localLangs = JSON.parse(localStorage.getItem('kaboom_languages') || '[]'); } catch {}
-  let localInterests: string[] = [];
-  try { localInterests = JSON.parse(localStorage.getItem('kaboom_interest_tags') || '[]'); } catch {}
+  const localUni = safeLocalStorage.getItem('kaboom_university') || '';
+  const localLangs = safeLocalStorage.getJSON<string[]>('kaboom_languages', []);
+  const localInterests = safeLocalStorage.getJSON<string[]>('kaboom_interest_tags', []);
 
   const reasons: string[] = [];
   const details = matchReasonMetadata?.matchedByDetails;
@@ -148,7 +146,7 @@ export function MatchIntroCard({
       reasons.push(`🏫 ${partnerUni}`);
     }
     // Priority 2: City comparison
-    const localCity = localStorage.getItem('kaboom_city') || '';
+    const localCity = safeLocalStorage.getItem('kaboom_city') || '';
     const partnerCity = partnerProfile.matchAttributes?.city?.[0] || (partnerProfile as any).city || '';
     if (localCity && partnerCity && localCity.toLowerCase().trim() === partnerCity.toLowerCase().trim()) {
       reasons.push(`📍 ${partnerCity}`);
@@ -164,13 +162,13 @@ export function MatchIntroCard({
       reasons.push(`🎮 ${matchedInterest}`);
     }
     // Priority 5: State comparison
-    const localState = localStorage.getItem('kaboom_state') || '';
+    const localState = safeLocalStorage.getItem('kaboom_state') || '';
     const partnerState = (partnerProfile.matchAttributes as any)?.state?.[0] || partnerProfile.state || '';
     if (localState && partnerState && localState.toLowerCase().trim() === partnerState.toLowerCase().trim()) {
       reasons.push(`📍 ${partnerState}`);
     }
     // Priority 6: Country comparison
-    const localCountry = localStorage.getItem('kaboom_country') || '';
+    const localCountry = safeLocalStorage.getItem('kaboom_country') || '';
     const partnerCountry = (partnerProfile.matchAttributes as any)?.country?.[0] || partnerProfile.country || '';
     if (localCountry && partnerCountry && localCountry.toLowerCase().trim() === partnerCountry.toLowerCase().trim()) {
       reasons.push(`🌎 ${partnerCountry}`);

@@ -17,7 +17,7 @@ import { useFloatingLayout } from '../contexts/FloatingLayoutContext.js';
 import { apiService } from '../services/api.js';
 import type { ReportReason } from '../types/index.js';
 import { formatDuration } from '../utils/index.js';
-import { cn } from '../utils/index.js';
+import { cn, safeLocalStorage as localStorage } from '../utils/index.js';
 import { playTapSound } from '../utils/audio.js';
 import { useResponsiveLayout } from '../hooks/useResponsiveLayout.js';
 import { AdaptiveControlsDock } from '../components/AdaptiveControlsDock.js';
@@ -568,17 +568,17 @@ export function ChatPage() {
     
     // Read local fields
     const savedGender = localStorage.getItem('kaboom_gender') || 'Prefer not to say';
-    const savedLooking = JSON.parse(localStorage.getItem('kaboom_looking') || '["Anyone"]');
-    const savedLangs = JSON.parse(localStorage.getItem('kaboom_languages') || '["English"]');
+    const savedLooking = localStorage.getJSON<string[]>('kaboom_looking', ["Anyone"]);
+    const savedLangs = localStorage.getJSON<string[]>('kaboom_languages', ["English"]);
     const savedCountry = localStorage.getItem('kaboom_country') || '';
     const savedState = localStorage.getItem('kaboom_state') || '';
     const savedCity = localStorage.getItem('kaboom_city') || '';
-    const savedInterests = JSON.parse(localStorage.getItem('kaboom_interest_tags') || '[]');
+    const savedInterests = localStorage.getJSON<string[]>('kaboom_interest_tags', []);
     const savedName = localStorage.getItem('kaboom_display_name') || 'Guest';
     const savedBio = localStorage.getItem('kaboom_bio') || '';
-    const savedConstraints = JSON.parse(localStorage.getItem('kaboom_match_constraints') || '{}');
+    const savedConstraints = localStorage.getJSON<any>('kaboom_match_constraints', {});
     const savedUni = localStorage.getItem('kaboom_university') || '';
-    const savedEduTags = JSON.parse(localStorage.getItem('kaboom_education_tags') || '[]');
+    const savedEduTags = localStorage.getJSON<string[]>('kaboom_education_tags', []);
 
     await updatePreferences({
       gender: savedGender,
@@ -949,15 +949,11 @@ export function ChatPage() {
     const country = localStorage.getItem('kaboom_country');
     if (country) list.push(`🌍 ${country}`);
 
-    try {
-      const interests = JSON.parse(localStorage.getItem('kaboom_interest_tags') || '[]');
-      interests.forEach((item: string) => list.push(`🎵 ${item}`));
-    } catch {}
+    const interests = localStorage.getJSON<string[]>('kaboom_interest_tags', []);
+    interests.forEach((item: string) => list.push(`🎵 ${item}`));
 
-    try {
-      const langs = JSON.parse(localStorage.getItem('kaboom_languages') || '[]');
-      langs.forEach((item: string) => list.push(`💬 ${item}`));
-    } catch {}
+    const langs = localStorage.getJSON<string[]>('kaboom_languages', []);
+    langs.forEach((item: string) => list.push(`💬 ${item}`));
 
     return list;
   };
@@ -1444,22 +1440,10 @@ export function ChatPage() {
           display_name: localStorage.getItem('kaboom_display_name') || '',
           bio: localStorage.getItem('kaboom_bio') || '',
           match_mode: localStorage.getItem('kaboom_match_mode') || 'RANDOM',
-          match_constraints: (() => {
-            try {
-              return JSON.parse(localStorage.getItem('kaboom_match_constraints') || '{}');
-            } catch {
-              return {};
-            }
-          })(),
+          match_constraints: localStorage.getJSON<any>('kaboom_match_constraints', {}),
           match_attributes: {
             university: localStorage.getItem('kaboom_university') ? [localStorage.getItem('kaboom_university') || ''] : [],
-            education_tags: (() => {
-              try {
-                return JSON.parse(localStorage.getItem('kaboom_education_tags') || '[]');
-              } catch {
-                return [];
-              }
-            })(),
+            education_tags: localStorage.getJSON<string[]>('kaboom_education_tags', []),
             city: chatState.city ? [chatState.city] : [],
             state: chatState.state ? [chatState.state] : [],
             country: chatState.country ? [chatState.country] : [],

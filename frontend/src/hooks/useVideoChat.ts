@@ -23,6 +23,7 @@ import {
 import { webrtcManager } from '../webrtc/index.js';
 import type { ChatState, ConnectionStatus, SessionStatus } from '../types/index.js';
 import { environment } from 'config';
+import { safeLocalStorage } from '../utils/index.js';
 
 const initialChatState: ChatState = {
   status: 'IDLE',
@@ -401,22 +402,20 @@ export function useVideoChat(
         const details = data.matchReasonMetadata?.matchedByDetails;
         let finalNarrative = '';
 
-        const myUni = localStorage.getItem('kaboom_university');
+        const myUni = safeLocalStorage.getItem('kaboom_university');
         const pUni = data.partnerProfile?.match_attributes?.university?.[0] || data.partnerProfile?.university;
         const matchedUni = details?.university || (myUni && pUni && myUni.toLowerCase() === pUni.toLowerCase() ? myUni : null);
 
-        const myCity = localStorage.getItem('kaboom_city');
+        const myCity = safeLocalStorage.getItem('kaboom_city');
         const pCity = data.partnerProfile?.match_attributes?.city?.[0] || data.partnerProfile?.city;
         const matchedCity = details?.city || (myCity && pCity && myCity.toLowerCase() === pCity.toLowerCase() ? myCity : null);
 
-        let myLanguages: string[] = [];
-        try { myLanguages = JSON.parse(localStorage.getItem('kaboom_languages') || '[]'); } catch {}
+        const myLanguages = safeLocalStorage.getJSON<string[]>('kaboom_languages', []);
         const pLanguages = data.partnerProfile?.match_attributes?.languages || data.partnerProfile?.languages || [];
         const sharedLanguages = myLanguages.filter(x => pLanguages.some((y: string) => y.toLowerCase() === x.toLowerCase()));
         const matchedLangsList = details?.languages || sharedLanguages;
 
-        let myInterests: string[] = [];
-        try { myInterests = JSON.parse(localStorage.getItem('kaboom_interest_tags') || '[]'); } catch {}
+        const myInterests = safeLocalStorage.getJSON<string[]>('kaboom_interest_tags', []);
         const pInterests = data.partnerProfile?.match_attributes?.interests || data.partnerProfile?.interest_tags || [];
         const sharedInterests = myInterests.filter(x => pInterests.some((y: string) => y.toLowerCase() === x.toLowerCase()));
         const matchedInterestsList = details?.interests || sharedInterests;
@@ -441,8 +440,8 @@ export function useVideoChat(
         } else if (hasInterest) {
           finalNarrative = `Looks like you both enjoy ${matchedInterestsList[0]}.\nShared hobbies make conversations easier.`;
         } else {
-          const matchedState = details?.state || (localStorage.getItem('kaboom_state') === data.partnerProfile?.state ? data.partnerProfile?.state : null);
-          const matchedCountry = details?.country || (localStorage.getItem('kaboom_country') === data.partnerProfile?.country ? data.partnerProfile?.country : null);
+          const matchedState = details?.state || (safeLocalStorage.getItem('kaboom_state') === data.partnerProfile?.state ? data.partnerProfile?.state : null);
+          const matchedCountry = details?.country || (safeLocalStorage.getItem('kaboom_country') === data.partnerProfile?.country ? data.partnerProfile?.country : null);
           if (matchedState) {
             finalNarrative = `Both of you are from the state of ${matchedState}.`;
           } else if (matchedCountry) {

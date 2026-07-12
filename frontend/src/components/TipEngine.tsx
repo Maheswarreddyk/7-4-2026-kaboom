@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { cn } from '../utils/index.js';
+import { cn, safeLocalStorage } from '../utils/index.js';
 
 const TIPS = [
   "💬 Tap chat to send messages.",
@@ -17,7 +17,7 @@ export function TipEngine() {
   useEffect(() => {
     // Check if suggestions are enabled (default to 'ON')
     const checkEnabled = () => {
-      return localStorage.getItem('kaboom_suggestions_enabled') !== 'OFF';
+      return safeLocalStorage.getItem('kaboom_suggestions_enabled') !== 'OFF';
     };
 
     if (!checkEnabled()) return;

@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { useResponsiveLayout } from '../hooks/useResponsiveLayout.js';
-import { cn } from '../utils/index.js';
+import { cn, safeLocalStorage } from '../utils/index.js';
 
 interface SearchingAnimationProps {
   status?: string;
@@ -24,15 +24,10 @@ export function SearchingAnimation({
   const [fadeOpacity, setFadeOpacity] = useState(1);
 
   const getSearchMessage = () => {
-    const uni = localStorage.getItem('kaboom_university') || '';
-    
-    let langs: string[] = [];
-    try { langs = JSON.parse(localStorage.getItem('kaboom_languages') || '[]'); } catch {}
-
-    let interests: string[] = [];
-    try { interests = JSON.parse(localStorage.getItem('kaboom_interest_tags') || '[]'); } catch {}
-
-    const cityPref = localStorage.getItem('kaboom_city') || '';
+    const uni = safeLocalStorage.getItem('kaboom_university') || '';
+    const langs = safeLocalStorage.getJSON<string[]>('kaboom_languages', []);
+    const interests = safeLocalStorage.getJSON<string[]>('kaboom_interest_tags', []);
+    const cityPref = safeLocalStorage.getItem('kaboom_city') || '';
 
     if (isQueuePaused) {
       return 'Search paused...';

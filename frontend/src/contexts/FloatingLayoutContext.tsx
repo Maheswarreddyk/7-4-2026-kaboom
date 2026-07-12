@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useResponsiveLayout } from '../hooks/useResponsiveLayout.js';
+import { safeLocalStorage } from '../utils/index.js';
 
 export type ScreenPosition = 'TL' | 'TC' | 'TR' | 'BL' | 'BC' | 'BR' | 'CC';
 
@@ -74,7 +75,7 @@ export function FloatingLayoutProvider({ children }: { children: React.ReactNode
   const [isSearching, setIsSearching] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
   const [videoLayout, setVideoLayout] = useState<'focus' | 'split' | 'pip'>(() => {
-    return (localStorage.getItem('kaboom_video_layout') as any) || 'focus';
+    return (safeLocalStorage.getItem('kaboom_video_layout') as any) || 'focus';
   });
 
   const hideTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -121,7 +122,7 @@ export function FloatingLayoutProvider({ children }: { children: React.ReactNode
 
   const handleSetVideoLayout = useCallback((layout: 'focus' | 'split' | 'pip') => {
     setVideoLayout(layout);
-    localStorage.setItem('kaboom_video_layout', layout);
+    safeLocalStorage.setItem('kaboom_video_layout', layout);
   }, []);
 
   // Parse Safe Area Insets ( Notch/Dynamic Island support )

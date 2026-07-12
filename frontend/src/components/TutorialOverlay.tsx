@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { cn } from '../utils/index.js';
+import { cn, safeLocalStorage } from '../utils/index.js';
 import { playTapSound } from '../utils/audio.js';
 
 interface TutorialOverlayProps {
@@ -30,7 +30,7 @@ const TUTORIAL_CARDS = [
 export function TutorialOverlay({ onClose }: TutorialOverlayProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [dismissed, setDismissed] = useState(() => {
-    return localStorage.getItem('kaboom_tutorial_dismissed') === 'true';
+    return safeLocalStorage.getItem('kaboom_tutorial_dismissed') === 'true';
   });
 
   if (dismissed) return null;
@@ -40,7 +40,7 @@ export function TutorialOverlay({ onClose }: TutorialOverlayProps) {
     if (currentIndex < TUTORIAL_CARDS.length - 1) {
       setCurrentIndex(prev => prev + 1);
     } else {
-      localStorage.setItem('kaboom_tutorial_dismissed', 'true');
+      safeLocalStorage.setItem('kaboom_tutorial_dismissed', 'true');
       setDismissed(true);
       onClose();
     }
