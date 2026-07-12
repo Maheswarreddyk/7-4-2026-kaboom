@@ -173,8 +173,13 @@ export const apiService = {
     return data.data;
   },
 
-  async getChatMessages(matchId: string): Promise<any[]> {
-    const { data } = await api.get(`/chat/${matchId}`);
+  async getChatMessages(matchId: string, sessionId: string, sessionToken: string): Promise<any[]> {
+    const { data } = await api.get(`/chat/${matchId}`, {
+      headers: {
+        'x-session-id': sessionId,
+        'x-session-token': sessionToken,
+      },
+    });
     return data.data || [];
   },
 

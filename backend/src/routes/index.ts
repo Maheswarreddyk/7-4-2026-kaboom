@@ -16,6 +16,7 @@ import { getSupabase } from '../database/client.js';
 import matchRoutes from './match.js';
 import { matchmakerMetrics } from '../matchmaking/matchingEngine.js';
 import { broadcastToSession } from '../services/broadcast.js';
+import { validateSession } from '../services/matchService.js';
 
 const router = Router();
 
@@ -113,6 +114,9 @@ const universityCache = new Map<string, any[]>();
 router.post('/preferences', async (req, res, next) => {
   try {
     const { sessionId, sessionToken, preferences } = req.body;
+    const session = await validateSession(sessionId, sessionToken);
+    if (!session) return res.status(401).json({ error: 'Invalid or expired session' });
+
     const { error } = await getSupabase()
       .from('visitor_sessions')
       .update({
@@ -241,9 +245,15 @@ router.get('/interests', async (req, res, next) => {
 router.post('/like', async (req, res, next) => {
   try {
     const { sessionId, sessionToken, matchId } = req.body;
+    const session = await validateSession(sessionId, sessionToken);
+    if (!session) return res.status(401).json({ error: 'Invalid or expired session' });
+
     const supabase = getSupabase();
     const { data: match } = await supabase.from('matches').select('*').eq('id', matchId).single();
     if (!match) return res.status(404).json({ error: 'Match not found' });
+    if (match.user_a !== sessionId && match.user_b !== sessionId) {
+      return res.status(403).json({ error: 'Unauthorized match participant' });
+    }
     
     await supabase.from('likes').insert({ match_id: matchId, session_id: sessionId });
     
@@ -276,8 +286,24 @@ router.post('/like', async (req, res, next) => {
 router.post('/chat', async (req, res, next) => {
   try {
     const { sessionId, sessionToken, matchId, message } = req.body;
+    const session = await validateSession(sessionId, sessionToken);
+    if (!session) return res.status(401).json({ error: 'Invalid or expired session' });
+
+    const supabase = getSupabase();
+    // Validate match participation first
+    const { data: match } = await supabase
+      .from('matches')
+      .select('user_a, user_b')
+      .eq('id', matchId)
+      .single();
+
+    if (!match) return res.status(404).json({ error: 'Match not found' });
+    if (match.user_a !== sessionId && match.user_b !== sessionId) {
+      return res.status(403).json({ error: 'Unauthorized match participant' });
+    }
+
     const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString();
-    const { data } = await getSupabase()
+    const { data } = await supabase
       .from('temporary_messages')
       .insert({
         match_id: matchId,
@@ -289,12 +315,6 @@ router.post('/chat', async (req, res, next) => {
       .single();
 
     // Broadcast the new message event to the partner in the match
-    const { data: match } = await getSupabase()
-      .from('matches')
-      .select('user_a, user_b')
-      .eq('id', matchId)
-      .single();
-
     if (match) {
       const partnerId = match.user_a === sessionId ? match.user_b : match.user_a;
       broadcastToSession(partnerId, 'new_message', {
@@ -316,7 +336,30 @@ router.post('/chat', async (req, res, next) => {
 router.get('/chat/:matchId', async (req, res, next) => {
   try {
     const { matchId } = req.params;
-    const { data } = await getSupabase()
+    const sessionId = req.headers['x-session-id'] as string;
+    const sessionToken = req.headers['x-session-token'] as string;
+
+    if (!sessionId || !sessionToken) {
+      return res.status(401).json({ error: 'Missing session authentication headers' });
+    }
+
+    const session = await validateSession(sessionId, sessionToken);
+    if (!session) return res.status(401).json({ error: 'Invalid or expired session' });
+
+    const supabase = getSupabase();
+    // Validate match participation
+    const { data: match } = await supabase
+      .from('matches')
+      .select('user_a, user_b')
+      .eq('id', matchId)
+      .single();
+
+    if (!match) return res.status(404).json({ error: 'Match not found' });
+    if (match.user_a !== sessionId && match.user_b !== sessionId) {
+      return res.status(403).json({ error: 'Unauthorized match participant' });
+    }
+
+    const { data } = await supabase
       .from('temporary_messages')
       .select('*')
       .eq('match_id', matchId)

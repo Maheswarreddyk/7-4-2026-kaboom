@@ -185,6 +185,10 @@ export function setupSocketHandlers(io: Server): void {
     socket.on('like_partner', async (data: { matchId: string }) => {
       try {
         if (!user.currentMatchId || !user.partnerSessionId) return;
+        if (data.matchId !== user.currentMatchId) {
+          console.warn('[Socket Security] User attempted to like a match different from their active match');
+          return;
+        }
         const partner = matchingEngine.getUserBySessionId(user.partnerSessionId);
         
         const supabase = getSupabase();
@@ -228,6 +232,10 @@ export function setupSocketHandlers(io: Server): void {
     socket.on('chat_message', async (data: { matchId: string; message: string }) => {
       try {
         if (!user.currentMatchId || !user.partnerSessionId) return;
+        if (data.matchId !== user.currentMatchId) {
+          console.warn('[Socket Security] User attempted to send message to a match different from their active match');
+          return;
+        }
         const partner = matchingEngine.getUserBySessionId(user.partnerSessionId);
         
         const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString();
@@ -278,6 +286,10 @@ export function setupSocketHandlers(io: Server): void {
     });
 
     socket.on('offer', (data: { targetSessionId: string; offer: unknown }) => {
+      if (data.targetSessionId !== user.partnerSessionId) {
+        console.warn('[Socket Security] User attempted to send offer to a target session different from their partner.');
+        return;
+      }
       const partner = matchingEngine.getUserBySessionId(data.targetSessionId);
       if (partner) {
         io.to(partner.socketId).emit('offer', {
@@ -288,6 +300,10 @@ export function setupSocketHandlers(io: Server): void {
     });
 
     socket.on('answer', (data: { targetSessionId: string; answer: unknown }) => {
+      if (data.targetSessionId !== user.partnerSessionId) {
+        console.warn('[Socket Security] User attempted to send answer to a target session different from their partner.');
+        return;
+      }
       const partner = matchingEngine.getUserBySessionId(data.targetSessionId);
       if (partner) {
         io.to(partner.socketId).emit('answer', {
@@ -298,6 +314,10 @@ export function setupSocketHandlers(io: Server): void {
     });
 
     socket.on('ice_candidate', (data: { targetSessionId: string; candidate: unknown }) => {
+      if (data.targetSessionId !== user.partnerSessionId) {
+        console.warn('[Socket Security] User attempted to send ICE candidate to a target session different from their partner.');
+        return;
+      }
       const partner = matchingEngine.getUserBySessionId(data.targetSessionId);
       if (partner) {
         io.to(partner.socketId).emit('ice_candidate', {

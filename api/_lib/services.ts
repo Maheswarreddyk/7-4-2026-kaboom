@@ -331,6 +331,10 @@ export async function submitLike(sessionId: string, sessionToken: string, matchI
     throw new Error('Active match not found');
   }
 
+  if (match.user_a !== sessionId && match.user_b !== sessionId) {
+    throw new Error('Unauthorized: Session is not a participant of this match');
+  }
+
   // Insert like
   const { error: likeError } = await supabase
     .from('likes')
@@ -391,6 +395,10 @@ export async function submitChatMessage(
     .maybeSingle();
 
   if (matchError || !match) throw new Error('Match not found');
+
+  if (match.user_a !== sessionId && match.user_b !== sessionId) {
+    throw new Error('Unauthorized: Session is not a participant of this match');
+  }
 
   const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString(); // 1 hour expiration
 

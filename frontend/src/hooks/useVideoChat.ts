@@ -439,7 +439,7 @@ export function useVideoChat(
 
       let existingMessages: any[] = [];
       try {
-        const msgs = await apiService.getChatMessages(data.matchId);
+        const msgs = await apiService.getChatMessages(data.matchId, sessionId || '', sessionToken || '');
         existingMessages = msgs.map((m: any) => ({
           id: m.id,
           senderSessionId: m.sender_session,
