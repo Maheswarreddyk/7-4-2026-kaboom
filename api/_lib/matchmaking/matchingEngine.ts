@@ -301,7 +301,14 @@ export async function runGlobalMatchCycle(supabase: SupabaseClient): Promise<voi
 }
 
 /**
- * Event-driven match cycle: load → filter → score → reserve → confirm → publish.
+ * Per-request match status check: join queue → check for active match → return status.
+ *
+ * Phase 1B: runGlobalMatchCycle() has been removed from this function.
+ * Reason: Running a full O(n²) scoring pass on every /match/join heartbeat (every 4s per user)
+ * causes quadratic DB load at scale. The global match cycle is now run exclusively by the
+ * persistent backend MatchScheduler (1,500ms interval) which uses a mutex and advisory DB lock.
+ * Users will be matched within 1,500ms of the scheduler's next tick — well within the 4,000ms
+ * frontend polling interval. API contract and response shape are unchanged.
  */
 export async function runMatchCycle(
   supabase: SupabaseClient,
@@ -327,11 +334,11 @@ export async function runMatchCycle(
     throw new Error('Invalid session');
   }
 
-  // 1. Join queue (idempotent)
+  // 1. Join queue (idempotent — safe to call on every heartbeat)
   const queueResult = await joinQueueEntry(supabase, sessionId);
   const waitingSeconds = queueResult.waitingSeconds;
 
-  // 2. If they already have an active match, return it
+  // 2. Check if this user was matched by the backend scheduler
   const existingMatch = await findActiveMatch(supabase, sessionId);
   if (existingMatch) {
     const partnerId = existingMatch.user_a === sessionId ? existingMatch.user_b : existingMatch.user_a;
@@ -346,25 +353,7 @@ export async function runMatchCycle(
     };
   }
 
-  // 3. Run the global matching cycle to try matching users
-  await runGlobalMatchCycle(supabase);
-
-  // 4. Re-check if this user got matched during the global matching cycle
-  const newMatch = await findActiveMatch(supabase, sessionId);
-  if (newMatch) {
-    const partnerId = newMatch.user_a === sessionId ? newMatch.user_b : newMatch.user_a;
-    return {
-      status: 'matched',
-      matchId: newMatch.id,
-      partnerSessionId: partnerId,
-      isInitiator: newMatch.user_a === sessionId,
-      iceServers: getIceServers(),
-      queuePosition: 0,
-      waitingSeconds,
-    };
-  }
-
-  // 5. Still waiting
+  // 3. Still waiting — return queue position
   const { count } = await supabase
     .from('waiting_queue')
     .select('*', { count: 'exact', head: true })
@@ -380,10 +369,16 @@ export async function runMatchCycle(
 
 export { leaveQueueEntry };
 
-const readySessionsByMatch = new Map<string, Set<string>>();
+// Phase 1A: readySessionsByMatch in-memory Map removed.
+// Reason: module-level Maps are reset on every Vercel function invocation.
+// DB columns user_a_ready / user_b_ready are the authoritative source.
 
 /**
  * Mark user READY; when both ready, broadcast START_NEGOTIATION to both sessions.
+ *
+ * Phase 1A: Uses DB-only state (user_a_ready / user_b_ready columns).
+ * The in-memory readySessionsByMatch Map has been removed because module-level
+ * state does not persist across Vercel function invocations.
  */
 export async function markUserReady(
   supabase: SupabaseClient,
@@ -391,6 +386,7 @@ export async function markUserReady(
   sessionToken: string,
   matchId: string
 ): Promise<{ bothReady: boolean; isInitiator: boolean }> {
+  // 1. Validate session
   const { data: session } = await supabase
     .from('visitor_sessions')
     .select('session_token')
@@ -401,9 +397,10 @@ export async function markUserReady(
     throw new Error('Invalid session');
   }
 
+  // 2. Load match — also check if negotiation already started (handles refresh/retry)
   const { data: match, error } = await supabase
     .from('matches')
-    .select('*')
+    .select('id, user_a, user_b, user_a_ready, user_b_ready, negotiation_started')
     .eq('id', matchId)
     .is('ended_at', null)
     .maybeSingle();
@@ -414,39 +411,57 @@ export async function markUserReady(
   const isUserB = match.user_b === sessionId;
   if (!isUserA && !isUserB) throw new Error('Not a participant');
 
+  // If negotiation already started, re-broadcast to handle the case where
+  // one peer refreshed and missed the original start_negotiation event.
+  if (match.negotiation_started) {
+    const partnerId = isUserA ? match.user_b : match.user_a;
+    const iceServers = getIceServers();
+    await Promise.all([
+      broadcastToSession(sessionId, 'start_negotiation', {
+        matchId,
+        partnerSessionId: partnerId,
+        isInitiator: isUserA,
+        iceServers,
+      }).catch(() => { /* best-effort re-broadcast */ }),
+      broadcastToSession(partnerId, 'start_negotiation', {
+        matchId,
+        partnerSessionId: sessionId,
+        isInitiator: !isUserA,
+        iceServers,
+      }).catch(() => { /* best-effort re-broadcast */ }),
+    ]);
+    return { bothReady: true, isInitiator: isUserA };
+  }
+
   await logToDb(supabase, sessionId, 'ready', { matchId });
 
-  if (!readySessionsByMatch.has(matchId)) {
-    readySessionsByMatch.set(matchId, new Set());
-  }
-  readySessionsByMatch.get(matchId)!.add(sessionId);
+  // 3. Write THIS user's ready flag and read back both flags in one round-trip
+  const readyUpdate = isUserA ? { user_a_ready: true } : { user_b_ready: true };
+  const { data: updated, error: updateErr } = await supabase
+    .from('matches')
+    .update(readyUpdate)
+    .eq('id', matchId)
+    .select('user_a_ready, user_b_ready')
+    .single();
 
-  let dbBothReady = false;
-  try {
-    const readyUpdate = isUserA ? { user_a_ready: true } : { user_b_ready: true };
-    const { data: updated, error: updateErr } = await supabase
-      .from('matches')
-      .update(readyUpdate)
-      .eq('id', matchId)
-      .select()
-      .single();
-    if (!updateErr && updated) {
-      dbBothReady = Boolean(updated.user_a_ready && updated.user_b_ready);
-    }
-  } catch {
-    // READY columns optional until migration 005
+  if (updateErr || !updated) {
+    throw new Error('Failed to record ready state');
   }
 
-  const memoryReady = readySessionsByMatch.get(matchId)!;
-  const bothReady =
-    dbBothReady ||
-    (memoryReady.has(match.user_a) && memoryReady.has(match.user_b));
+  const bothReady = Boolean(updated.user_a_ready && updated.user_b_ready);
 
   if (bothReady) {
-    try {
-      await supabase.from('matches').update({ negotiation_started: true }).eq('id', matchId);
-    } catch {
-      // optional column
+    // 4. Atomically mark negotiation_started to prevent double-broadcast
+    //    on concurrent ready calls. Only proceed if we set the flag.
+    const { error: flagErr } = await supabase
+      .from('matches')
+      .update({ negotiation_started: true })
+      .eq('id', matchId)
+      .eq('negotiation_started', false); // Only update if not already set
+
+    if (flagErr) {
+      // Another instance already handled this — do not double-broadcast
+      return { bothReady: true, isInitiator: isUserA };
     }
 
     const partnerId = isUserA ? match.user_b : match.user_a;
@@ -468,7 +483,6 @@ export async function markUserReady(
     ]);
 
     await logToDb(supabase, sessionId, 'negotiation_start', { matchId });
-    readySessionsByMatch.delete(matchId);
   }
 
   return { bothReady, isInitiator: isUserA };

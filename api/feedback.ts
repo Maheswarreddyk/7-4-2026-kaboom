@@ -1,11 +1,13 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { AppError, json, withHandler } from './_lib/handler.js';
 import { submitFeedback } from './_lib/services.js';
+import { applyRateLimit, RateLimits } from './_lib/rateLimiter.js';
 
 export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
   if (req.method !== 'POST') {
     throw new AppError(405, 'Method not allowed');
   }
+  if (!applyRateLimit(req, res, 'feedback', RateLimits.feedback.maxReqs, RateLimits.feedback.windowMs)) return;
 
   const { sessionId, rating, feedback } = req.body ?? {};
 

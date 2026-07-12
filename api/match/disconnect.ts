@@ -1,11 +1,13 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { AppError, json, withHandler } from '../_lib/handler.js';
 import { notifyPartnerLeft } from '../_lib/services.js';
+import { applyRateLimit, RateLimits } from '../_lib/rateLimiter.js';
 
 export default withHandler(async (req: VercelRequest, res: VercelResponse) => {
   if (req.method !== 'POST') {
     throw new AppError(405, 'Method not allowed');
   }
+  if (!applyRateLimit(req, res, 'match-disconnect', RateLimits.matchLifecycle.maxReqs, RateLimits.matchLifecycle.windowMs)) return;
 
   const { sessionId, sessionToken, reason } = req.body ?? {};
   if (!sessionId || !sessionToken) {
