@@ -79,6 +79,30 @@ export function useVideoChat(
   const reconnectIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const activeHeartbeatIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // Hardening Phase A2: Timer Refs to prevent zombie reconnection loops
+  const partnerLeftTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const rejoinRetryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const connectRetryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Hardening Phase A2: Latest-Value Refs to prevent stale closures in signaling callbacks
+  const onReactionRef = useRef(onReaction);
+  const handleMatchedRef = useRef<any>(null);
+  const handleStartNegotiationRef = useRef<any>(null);
+  const executePartnerLeftTeardownRef = useRef<any>(null);
+  const startReconnectCountdownRef = useRef<any>(null);
+  const startChatRef = useRef<any>(null);
+  const updateSessionLifecycleStateRef = useRef<any>(null);
+
+  useEffect(() => {
+    onReactionRef.current = onReaction;
+    handleMatchedRef.current = handleMatched;
+    handleStartNegotiationRef.current = handleStartNegotiation;
+    executePartnerLeftTeardownRef.current = executePartnerLeftTeardown;
+    startReconnectCountdownRef.current = startReconnectCountdown;
+    startChatRef.current = startChat;
+    updateSessionLifecycleStateRef.current = updateSessionLifecycleState;
+  });
+
   const playConnectChime = useCallback(() => {
     try {
       const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
@@ -181,8 +205,8 @@ export function useVideoChat(
     } else {
       lifecycleState = 'IDLE';
     }
-    updateSessionLifecycleState(lifecycleState, matchIdRef.current, partnerSessionIdRef.current);
-  }, [clearWebRTCTimeout, updateSessionLifecycleState]);
+    updateSessionLifecycleStateRef.current(lifecycleState, matchIdRef.current, partnerSessionIdRef.current);
+  }, [clearWebRTCTimeout]);
 
   const executePartnerLeftTeardown = useCallback(() => {
     setSignalingState('PARTNER_LEFT');
@@ -193,7 +217,8 @@ export function useVideoChat(
     
     showToast('info', 'Partner left. Finding someone new...');
     // Wait 2.5 seconds to show the left animation overlay, then automatically rejoin the queue
-    setTimeout(() => {
+    if (partnerLeftTimeoutRef.current) clearTimeout(partnerLeftTimeoutRef.current);
+    partnerLeftTimeoutRef.current = setTimeout(() => {
       void triggerAutoRejoinRef.current();
     }, 2500);
   }, [showToast, setSignalingState]);
@@ -244,6 +269,31 @@ export function useVideoChat(
       answerRetryTimerRef.current = null;
     }
   }, []);
+
+  const clearAllTimers = useCallback(() => {
+    clearSignalingRetryTimers();
+    clearWebRTCTimeout();
+    if (partnerReconnectTimerRef.current) {
+      clearTimeout(partnerReconnectTimerRef.current);
+      partnerReconnectTimerRef.current = null;
+    }
+    if (reconnectIntervalRef.current) {
+      clearInterval(reconnectIntervalRef.current);
+      reconnectIntervalRef.current = null;
+    }
+    if (partnerLeftTimeoutRef.current) {
+      clearTimeout(partnerLeftTimeoutRef.current);
+      partnerLeftTimeoutRef.current = null;
+    }
+    if (rejoinRetryTimeoutRef.current) {
+      clearTimeout(rejoinRetryTimeoutRef.current);
+      rejoinRetryTimeoutRef.current = null;
+    }
+    if (connectRetryTimeoutRef.current) {
+      clearTimeout(connectRetryTimeoutRef.current);
+      connectRetryTimeoutRef.current = null;
+    }
+  }, [clearSignalingRetryTimers, clearWebRTCTimeout]);
 
   const handleIceRestart = useCallback(async () => {
     try {
@@ -588,7 +638,8 @@ export function useVideoChat(
     } catch (error) {
       console.error('[Queue] Auto-rejoin failed:', error);
       // Retry in 3 seconds if failed
-      setTimeout(() => {
+      if (rejoinRetryTimeoutRef.current) clearTimeout(rejoinRetryTimeoutRef.current);
+      rejoinRetryTimeoutRef.current = setTimeout(() => {
         skipInProgressRef.current = false;
         void triggerAutoRejoin();
       }, 3000);
@@ -611,7 +662,7 @@ export function useVideoChat(
       },
       onReaction: (data: { emoji: string }) => {
         if (skipInProgressRef.current) return;
-        onReaction?.(data.emoji);
+        onReactionRef.current?.(data.emoji);
       },
       onMatched: (data: any) => {
         if (skipInProgressRef.current) return;
@@ -625,7 +676,7 @@ export function useVideoChat(
           console.log('[Signaling] Already connected. Ignoring duplicate matched event.');
           return;
         }
-        handleMatched(data);
+        handleMatchedRef.current?.(data);
       },
       onStartNegotiation: (data: any) => {
         if (skipInProgressRef.current) return;
@@ -639,7 +690,7 @@ export function useVideoChat(
           console.log('[Signaling] Already connected. Ignoring duplicate startNegotiation event.');
           return;
         }
-        handleStartNegotiation(data);
+        handleStartNegotiationRef.current?.(data);
       },
       onPartnerLeft: (data?: { reason: string; eventId?: string }) => {
         if (skipInProgressRef.current) return;
@@ -652,11 +703,11 @@ export function useVideoChat(
         if (data?.reason === 'disconnect') {
           console.log('[Grace Period] Partner disconnected accidentally. Starting 10s grace period...');
           updateChatState({ partnerSkipPending: false });
-          startReconnectCountdown();
+          startReconnectCountdownRef.current?.();
           return;
         }
 
-        executePartnerLeftTeardown();
+        executePartnerLeftTeardownRef.current?.();
       },
       onSearching: (data: { message: string }) => {
         if (skipInProgressRef.current) return;
@@ -670,8 +721,9 @@ export function useVideoChat(
 
         if (data.message.includes('lost') || data.message.includes('Reconnecting')) {
           console.log('[Websocket Reconnect] Connection lost. Attempting automatic reconnection...');
-          setTimeout(() => {
-            void startChat();
+          if (connectRetryTimeoutRef.current) clearTimeout(connectRetryTimeoutRef.current);
+          connectRetryTimeoutRef.current = setTimeout(() => {
+            void startChatRef.current?.();
           }, 3000);
         }
       },
@@ -882,7 +934,7 @@ export function useVideoChat(
   }, [sessionId, sessionToken, showToast, setupWebRTC, handleMatched, handleStartNegotiation, updateChatState, setSignalingState]);
 
   const stopChat = useCallback(async () => {
-    clearSignalingRetryTimers();
+    clearAllTimers();
     setSignalingState('ENDED');
     if (sessionIdRef.current && sessionTokenRef.current) {
       await notifyDisconnect(sessionIdRef.current, sessionTokenRef.current, 'leave');
@@ -898,7 +950,7 @@ export function useVideoChat(
     setChatState(initialChatState);
     partnerSessionIdRef.current = null;
     matchIdRef.current = null;
-  }, [clearSignalingRetryTimers, setSignalingState]);
+  }, [clearAllTimers, setSignalingState]);
 
   const handleNext = useCallback(async () => {
     if (!sessionIdRef.current || !sessionTokenRef.current || !callbacksRef.current) return;
@@ -908,7 +960,7 @@ export function useVideoChat(
     console.log('[Queue] handleNext: switching to next partner...');
     setSignalingState('REQUEUEING');
 
-    clearSignalingRetryTimers();
+    clearAllTimers();
     setRemoteStream(null);
     webrtcManager.resetConnection();
     lastProcessedOfferSdpRef.current = null;
@@ -1178,7 +1230,7 @@ export function useVideoChat(
       window.removeEventListener('focus', handleFocus);
       window.removeEventListener('online', handleOnline);
       
-      clearSignalingRetryTimers();
+      clearAllTimers();
       webrtcManager.cleanup();
       disconnectRealtime();
     };
