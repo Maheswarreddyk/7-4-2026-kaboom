@@ -41,6 +41,22 @@ const initialChatState: ChatState = {
   reconnectCountdown: null,
 };
 
+const VALID_TRANSITIONS: Record<SessionStatus, SessionStatus[]> = {
+  IDLE: ['REQUESTING_MEDIA', 'CONNECTING_REALTIME', 'SEARCHING'],
+  REQUESTING_MEDIA: ['MEDIA_READY', 'IDLE'],
+  MEDIA_READY: ['CONNECTING_REALTIME', 'IDLE'],
+  CONNECTING_REALTIME: ['SEARCHING', 'IDLE', 'ENDED'],
+  SEARCHING: ['MATCH_FOUND', 'IDLE', 'REQUEUEING', 'ENDED', 'SEARCHING'],
+  MATCH_FOUND: ['READY', 'REQUEUEING', 'ENDED', 'SEARCHING'],
+  READY: ['NEGOTIATING', 'ICE_CONNECTING', 'CONNECTED', 'PARTNER_LEFT', 'REQUEUEING', 'ENDED'],
+  NEGOTIATING: ['ICE_CONNECTING', 'CONNECTED', 'PARTNER_LEFT', 'REQUEUEING', 'ENDED'],
+  ICE_CONNECTING: ['CONNECTED', 'PARTNER_LEFT', 'REQUEUEING', 'ENDED'],
+  CONNECTED: ['PARTNER_LEFT', 'REQUEUEING', 'ENDED'],
+  PARTNER_LEFT: ['REQUEUEING', 'ENDED'],
+  REQUEUEING: ['SEARCHING', 'MATCH_FOUND', 'ENDED'],
+  ENDED: ['IDLE', 'SEARCHING', 'CONNECTING_REALTIME', 'REQUESTING_MEDIA'],
+};
+
 export function useVideoChat(
   sessionId: string | null,
   sessionToken: string | null,
@@ -167,6 +183,13 @@ export function useVideoChat(
   const setSignalingState = useCallback((state: SessionStatus) => {
     const current = signalingStateRef.current;
     if (current === state) return;
+
+    // Validate state transition against FSM rules
+    const allowed = VALID_TRANSITIONS[current];
+    if (allowed && !allowed.includes(state)) {
+      console.warn(`[FSM GATES] Rejected invalid state transition attempt: ${current} -> ${state}`);
+      return;
+    }
 
     // V6.15: Transition Logger
     const logTime = new Date().toLocaleTimeString();
@@ -720,11 +743,16 @@ export function useVideoChat(
         showToast('error', data.message);
 
         if (data.message.includes('lost') || data.message.includes('Reconnecting')) {
-          console.log('[Websocket Reconnect] Connection lost. Attempting automatic reconnection...');
-          if (connectRetryTimeoutRef.current) clearTimeout(connectRetryTimeoutRef.current);
-          connectRetryTimeoutRef.current = setTimeout(() => {
-            void startChatRef.current?.();
-          }, 3000);
+          const status = signalingStateRef.current;
+          if (status !== 'CONNECTED' && status !== 'ENDED' && status !== 'IDLE') {
+            console.log('[Websocket Reconnect] Connection lost. Attempting automatic reconnection...');
+            if (connectRetryTimeoutRef.current) clearTimeout(connectRetryTimeoutRef.current);
+            connectRetryTimeoutRef.current = setTimeout(() => {
+              void startChatRef.current?.();
+            }, 3000);
+          } else {
+            console.log('[Websocket Reconnect] Connection lost but status is stable or closed. Skipping auto-reconnect retry.');
+          }
         }
       },
       onPartnerLiked: () => {
