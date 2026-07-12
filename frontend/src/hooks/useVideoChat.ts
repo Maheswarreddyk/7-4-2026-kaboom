@@ -95,6 +95,10 @@ export function useVideoChat(
   const reconnectIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const activeHeartbeatIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // Hardening Phase D: Refs for stalled video track detection
+  const lastFramesDecodedRef = useRef<number>(0);
+  const stalledCountRef = useRef<number>(0);
+
   // Hardening Phase A2: Timer Refs to prevent zombie reconnection loops
   const partnerLeftTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const rejoinRetryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -1074,13 +1078,21 @@ export function useVideoChat(
         const stats = await getStatsPromise;
         let rtt = 0;
         let packetsLost = 0;
+        let currentFramesDecoded = 0;
+        let hasVideoReport = false;
 
         stats.forEach((report) => {
           if (report.type === 'remote-inbound-rtp' && report.roundTripTime) {
             rtt = report.roundTripTime * 1000;
           }
-          if (report.type === 'inbound-rtp' && report.packetsLost) {
-            packetsLost = report.packetsLost;
+          if (report.type === 'inbound-rtp') {
+            if (report.packetsLost !== undefined) {
+              packetsLost = report.packetsLost;
+            }
+            if (report.mediaType === 'video' && report.framesDecoded !== undefined) {
+              currentFramesDecoded = report.framesDecoded;
+              hasVideoReport = true;
+            }
           }
         });
 
@@ -1092,13 +1104,33 @@ export function useVideoChat(
         }
 
         updateChatState({ connectionQuality: quality });
+
+        // Stall detection logic
+        if (hasVideoReport) {
+          const track = webrtcManager.getRemoteStream()?.getVideoTracks()?.[0];
+          if (track && track.readyState === 'live' && !track.muted) {
+            if (currentFramesDecoded === lastFramesDecodedRef.current) {
+              stalledCountRef.current += 1;
+              console.warn(`[WebRTC Stall Detection] Remote video track active but framesDecoded flat for ${stalledCountRef.current * 4}s`);
+              
+              if (stalledCountRef.current >= 3) { // 12 seconds of consecutive flat frames
+                console.log('[WebRTC Recovery] Stream stalled. Initiating ICE restart...');
+                stalledCountRef.current = 0;
+                void handleIceRestart();
+              }
+            } else {
+              stalledCountRef.current = 0;
+            }
+            lastFramesDecodedRef.current = currentFramesDecoded;
+          }
+        }
       } catch (err) {
         console.warn('[WebRTC Stats] Failed to query stats:', err);
       }
     }, 4000);
 
     return () => clearInterval(interval);
-  }, [chatState.status, updateChatState]);
+  }, [chatState.status, updateChatState, handleIceRestart]);
 
   // Queue Polling Heartbeat: Runs ONLY when searching/waiting
   useEffect(() => {
