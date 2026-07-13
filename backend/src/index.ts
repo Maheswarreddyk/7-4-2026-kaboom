@@ -10,7 +10,7 @@ import { config } from './config/index.js';
 import { checkDatabaseConnection, getSupabase } from './database/client.js';
 import { globalErrorHandler, notFoundHandler } from './middleware/errorHandler.js';
 import routes from './routes/index.js';
-import adminRouter from './admin/routes/adminRoutes.js';
+import analyticsRouter from './analytics/routes.js';
 import { setupSocketHandlers } from './socket/index.js';
 import { cleanupService, statsService } from './services/index.js';
 import { matchingEngine } from './services/matchingEngine.js';
@@ -123,29 +123,17 @@ app.use((req, res, next) => {
 });
 
 app.use('/api', routes);
-app.use('/api/admin', adminRouter);
+app.use('/api/analytics', analyticsRouter);
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const distPath = path.resolve(__dirname, '../../dist');
-const adminPath = path.resolve(__dirname, '../../../frontend/admin');
 
 // Serve static assets from frontend build if it exists
 app.use(express.static(distPath));
 
-// ── Admin Dashboard — completely isolated from SPA ──
-// Serves from frontend/admin/index.html at /admin/
-// No React. No user app context. No shared state.
-app.use('/admin', express.static(adminPath));
-app.get('/admin', (req, res) => {
-  res.sendFile(path.join(adminPath, 'index.html'));
-});
-app.get('/admin/', (req, res) => {
-  res.sendFile(path.join(adminPath, 'index.html'));
-});
-
 // For SPA routes, fallback to index.html
 app.get('*', (req, res, next) => {
-  if (req.path.startsWith('/api') || req.path.startsWith('/socket.io') || req.path.startsWith('/admin')) {
+  if (req.path.startsWith('/api') || req.path.startsWith('/socket.io')) {
     return next();
   }
   res.sendFile(path.join(distPath, 'index.html'));

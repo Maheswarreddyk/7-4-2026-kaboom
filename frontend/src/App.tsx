@@ -15,8 +15,33 @@ import { TermsPage } from './pages/TermsPage.js';
 import { ContentHubPage } from './pages/ContentHubPage.js';
 import { TagPage } from './pages/TagPage.js';
 import { DynamicSeoPage } from './pages/DynamicSeoPage.js';
+import { AdminAuthProvider, AdminLogin, useAdminAuth } from './admin/AdminAuth.js';
+import { AdminLayout } from './admin/AdminLayout.js';
+import { Dashboard as AdminDashboard } from './admin/pages/Dashboard.js';
+import { CampusAnalytics as AdminCampus } from './admin/pages/CampusAnalytics.js';
+
+function ProtectedAdminRoute({ children }: { children: React.ReactNode }) {
+  const { token } = useAdminAuth();
+  if (!token) return <AdminLogin />;
+  return <>{children}</>;
+}
 
 const router = createBrowserRouter([
+  {
+    path: "/admin",
+    element: (
+      <AdminAuthProvider>
+        <ProtectedAdminRoute>
+          <AdminLayout />
+        </ProtectedAdminRoute>
+      </AdminAuthProvider>
+    ),
+    children: [
+      { index: true, element: <AdminDashboard /> },
+      { path: "campus", element: <AdminCampus /> },
+      { path: "*", element: <AdminDashboard /> },
+    ]
+  },
   {
     element: <Layout />,
     children: [
