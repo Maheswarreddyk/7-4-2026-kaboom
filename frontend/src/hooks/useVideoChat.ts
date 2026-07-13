@@ -766,8 +766,23 @@ export function useVideoChat(
       },
       onMutualLike: () => {
         if (skipInProgressRef.current) return;
-        updateChatState({ mutualLike: true });
-        showToast('success', "It's a Match! ❤️");
+        setChatState((prev) => {
+          const newMessages = prev.messages ? [...prev.messages] : [];
+          const hasMutualMsg = newMessages.some((m) => m.id.startsWith('system-mutual-like'));
+          if (!hasMutualMsg) {
+            newMessages.push({
+              id: 'system-mutual-like-' + Math.random().toString(),
+              senderSessionId: 'system',
+              message: '❤️ You both liked each other\nLooks like there\'s mutual interest.',
+              createdAt: Date.now(),
+            });
+          }
+          return {
+            ...prev,
+            mutualLike: true,
+            messages: newMessages,
+          };
+        });
       },
       onPartnerSkipPending: () => {
         if (skipInProgressRef.current) return;
@@ -1344,10 +1359,26 @@ export function useVideoChat(
     } catch {}
     try {
       const result = await apiService.submitLike(sessionId, sessionToken, chatState.matchId);
-      setChatState((prev) => ({ ...prev, liked: true, mutualLike: result.mutual }));
-      if (result.mutual) {
-        showToast('success', "It's a Match! ❤️");
-      }
+      setChatState((prev) => {
+        const newMessages = prev.messages ? [...prev.messages] : [];
+        if (result.mutual) {
+          const hasMutualMsg = newMessages.some((m) => m.id.startsWith('system-mutual-like'));
+          if (!hasMutualMsg) {
+            newMessages.push({
+              id: 'system-mutual-like-' + Math.random().toString(),
+              senderSessionId: 'system',
+              message: '❤️ You both liked each other\nLooks like there\'s mutual interest.',
+              createdAt: Date.now(),
+            });
+          }
+        }
+        return {
+          ...prev,
+          liked: true,
+          mutualLike: result.mutual,
+          messages: newMessages,
+        };
+      });
     } catch (error) {
       showToast('error', 'Failed to like partner');
     }

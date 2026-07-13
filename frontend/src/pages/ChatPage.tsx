@@ -79,7 +79,10 @@ export function ChatPage() {
   // Onboarding Hint state
   const [activeHint, setActiveHint] = useState<string | null>(null);
   const [hintDismissed, setHintDismissed] = useState(false);
-  const [showMutualMatchPopup, setShowMutualMatchPopup] = useState(false);
+  const [showMutualBanner, setShowMutualBanner] = useState(false);
+  const [showSkipConfirm, setShowSkipConfirm] = useState(false);
+  const [confirmCountdown, setConfirmCountdown] = useState(5);
+  const confirmTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
 
 
@@ -182,9 +185,43 @@ export function ChatPage() {
     handleNext();
   }, [handleNext]);
 
+  const handleConfirmStay = useCallback(() => {
+    if (confirmTimerRef.current) clearInterval(confirmTimerRef.current);
+    setShowSkipConfirm(false);
+  }, []);
+
+  const handleConfirmSkip = useCallback(() => {
+    if (confirmTimerRef.current) clearInterval(confirmTimerRef.current);
+    setShowSkipConfirm(false);
+    startSkipCountdown();
+  }, [startSkipCountdown]);
+
+  const triggerSkipConfirmation = useCallback(() => {
+    if (chatState.status !== 'CONNECTED') {
+      handleNext();
+      return;
+    }
+
+    setShowSkipConfirm(true);
+    setConfirmCountdown(5);
+
+    if (confirmTimerRef.current) clearInterval(confirmTimerRef.current);
+    confirmTimerRef.current = setInterval(() => {
+      setConfirmCountdown((prev) => {
+        if (prev <= 1) {
+          if (confirmTimerRef.current) clearInterval(confirmTimerRef.current);
+          setShowSkipConfirm(false);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  }, [chatState.status, handleNext, startSkipCountdown]);
+
   useEffect(() => {
     return () => {
       if (skipTimerRef.current) clearInterval(skipTimerRef.current);
+      if (confirmTimerRef.current) clearInterval(confirmTimerRef.current);
     };
   }, []);
 
@@ -636,13 +673,13 @@ export function ChatPage() {
   // Mutual Match Auto-Dismiss Logic
   useEffect(() => {
     if (chatState.mutualLike) {
-      setShowMutualMatchPopup(true);
+      setShowMutualBanner(true);
       const timer = setTimeout(() => {
-        setShowMutualMatchPopup(false);
-      }, 6000);
+        setShowMutualBanner(false);
+      }, 4500); // 4.5 seconds
       return () => clearTimeout(timer);
     } else {
-      setShowMutualMatchPopup(false);
+      setShowMutualBanner(false);
     }
   }, [chatState.mutualLike]);
 
@@ -865,7 +902,7 @@ export function ChatPage() {
           toggleMute();
           break;
         case 'n':
-          handleNext();
+          triggerSkipConfirmation();
           break;
         case 'l':
           likePartner();
@@ -878,7 +915,7 @@ export function ChatPage() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [toggleMute, handleNext, likePartner, setChatOpen]);
+  }, [toggleMute, triggerSkipConfirmation, likePartner, setChatOpen]);
 
   // Hint Engine Updates
   useEffect(() => {
@@ -1064,7 +1101,7 @@ export function ChatPage() {
       {/* ── VIDEO SCENE (Unified layouts: Focus, Split, PiP) ── */}
       {isMobile ? (
         <GestureLayer
-          onSwipeLeft={startSkipCountdown}
+          onSwipeLeft={triggerSkipConfirmation}
           disabled={chatState.isChatOpen || isDragging}
         >
           <div className="absolute inset-0 z-0 bg-stone-950 overflow-hidden">
@@ -1373,7 +1410,7 @@ export function ChatPage() {
           isFullscreen={chatState.isFullscreen}
           onToggleMute={toggleMute}
           onToggleCamera={toggleCamera}
-          onNext={startSkipCountdown}
+          onNext={triggerSkipConfirmation}
           onReport={() => setShowReportModal(true)}
           onLeave={handleLeave}
           onToggleFullscreen={toggleFullscreen}
@@ -1465,35 +1502,65 @@ export function ChatPage() {
       )}
 
       {/* ── MUTUAL MATCH OVERLAY ──────────────────────────── */}
-      {showMutualMatchPopup && (
+      {/* ── MUTUAL MATCH OVERLAY (iPhone dynamic floating banner) ── */}
+      {showMutualBanner && (
         <div
-          className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 backdrop-blur-2xl animate-fade-in"
-          style={{ zIndex: 'var(--z-confetti)' as any }}
+          className="fixed top-6 left-1/2 -translate-x-1/2 z-50 pointer-events-none animate-slide-down-fade w-[360px] max-w-[90vw]"
         >
-          <div className="p-8 bg-surface-2 border border-white/10 rounded-3xl text-center shadow-2xl max-w-sm animate-spring-in glass relative overflow-hidden">
-            <span className="text-6xl animate-bounce block">🎉</span>
-            <span className="text-4xl animate-pulse block mt-2">❤️</span>
-            <h3 className="text-2xl font-bold text-white mt-4 bg-gradient-to-r from-accent to-pink-500 bg-clip-text text-transparent">Mutual Match!</h3>
-            <p className="text-sm text-white/70 mt-2">Both of you liked each other! Start chatting.</p>
-            <div className="flex gap-3 justify-center mt-6">
+          <div className="pointer-events-auto flex items-center gap-4 bg-black/85 backdrop-blur-xl border border-white/[0.08] rounded-2xl p-4 shadow-[0_8px_32px_rgba(0,0,0,0.5)] relative overflow-hidden">
+            <div className="w-12 h-12 rounded-full bg-pink-500/10 border border-pink-500/30 flex items-center justify-center text-2xl shrink-0 animate-pulse-ring">
+              ❤️
+            </div>
+            <div className="flex-1 min-w-0 text-left">
+              <h4 className="text-pink-400 text-xs font-black tracking-wide uppercase">Mutual Like!</h4>
+              <p className="text-white font-extrabold text-sm mt-0.5">You both liked each other</p>
+              <p className="text-white/60 text-[11px] mt-0.5">Great start! Keep the conversation going.</p>
+            </div>
+            <button
+              onClick={() => setShowMutualBanner(false)}
+              className="w-7 h-7 rounded-lg hover:bg-white/10 flex items-center justify-center text-white/40 hover:text-white transition-colors"
+              aria-label="Dismiss banner"
+            >
+              ✕
+            </button>
+            <div className="absolute bottom-0 left-0 h-1 bg-gradient-to-r from-accent to-pink-500 animate-banner-progress" style={{ animationDuration: '4.5s' }} />
+          </div>
+        </div>
+      )}
+
+      {/* ── SKIP CALL CONFIRMATION DIALOG ───────────────── */}
+      {showSkipConfirm && (
+        <div 
+          className="absolute inset-0 flex items-center justify-center bg-black/85 backdrop-blur-md z-50 p-6 text-center animate-fade-in"
+          style={{ zIndex: 'calc(var(--z-overlay) + 20)' as any }}
+        >
+          <div className="max-w-xs w-full bg-stone-900 border border-white/10 rounded-3xl p-6 shadow-2xl space-y-6 text-center animate-spring-in">
+            <div className="space-y-2">
+              <div className="w-12 h-12 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-500 flex items-center justify-center text-xl mx-auto animate-bounce">
+                ⏭️
+              </div>
+              <h3 className="text-lg font-black text-white">Skip this conversation?</h3>
+              <p className="text-stone-400 text-xs leading-relaxed">
+                You will leave this chat and start searching for someone new.
+              </p>
+              <p className="text-stone-500 text-[10px] tracking-wider uppercase font-extrabold mt-1">
+                Staying connected in {confirmCountdown}...
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-2 pt-2">
               <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setShowMutualMatchPopup(false);
-                  setChatOpen(true);
-                }}
-                className="btn-primary text-sm px-6 py-2.5"
+                onClick={handleConfirmStay}
+                autoFocus
+                className="w-full py-3 rounded-xl bg-white/10 hover:bg-white/15 text-white font-bold text-xs border border-white/10 transition-all active:scale-95 shadow-md"
               >
-                Start Chatting
+                Stay
               </button>
               <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setShowMutualMatchPopup(false);
-                }}
-                className="btn-secondary text-sm px-4 py-2.5"
+                onClick={handleConfirmSkip}
+                className="w-full py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-stone-950 font-black text-xs transition-all active:scale-95 shadow-md"
               >
-                Dismiss
+                Find Next
               </button>
             </div>
           </div>
