@@ -4,11 +4,19 @@ import { NotificationEngine } from './NotificationEngine.js';
 
 export class CampaignManager {
   static init() {
-    webPush.setVapidDetails(
-      'mailto:admin@kaboom.tv',
-      process.env.VAPID_PUBLIC_KEY || '',
-      process.env.VAPID_PRIVATE_KEY || ''
-    );
+    const pubKey = process.env.VAPID_PUBLIC_KEY;
+    const privKey = process.env.VAPID_PRIVATE_KEY;
+
+    if (pubKey && privKey) {
+      webPush.setVapidDetails(
+        'mailto:admin@kaboom.tv',
+        pubKey,
+        privKey
+      );
+      console.log('[CampaignManager] Web Push initialized successfully.');
+    } else {
+      console.warn('[CampaignManager] Missing VAPID_PUBLIC_KEY or VAPID_PRIVATE_KEY. Push notifications will not work.');
+    }
   }
 
   // Broadcast to audience
