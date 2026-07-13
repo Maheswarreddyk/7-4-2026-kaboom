@@ -1,31 +1,53 @@
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
+import { lazy, Suspense } from 'react';
+
+// Eager imports for critical shell
 import { Layout } from './components/Layout.js';
 import { ErrorBoundary } from './components/ErrorBoundary.js';
 import { SessionProvider } from './contexts/SessionContext.js';
 import { ToastProvider } from './contexts/ToastContext.js';
 import { FloatingLayoutProvider } from './contexts/FloatingLayoutContext.js';
-import { AboutPage } from './pages/AboutPage.js';
-import { ChatPage } from './pages/ChatPage.js';
-import { ContactPage } from './pages/ContactPage.js';
-import { FaqPage } from './pages/FaqPage.js';
-import { LandingPage } from './pages/LandingPage.js';
-import { NotFoundPage } from './pages/NotFoundPage.js';
-import { PrivacyPage } from './pages/PrivacyPage.js';
-import { TermsPage } from './pages/TermsPage.js';
-import { ContentHubPage } from './pages/ContentHubPage.js';
-import { TagPage } from './pages/TagPage.js';
-import { DynamicSeoPage } from './pages/DynamicSeoPage.js';
 import { AdminAuthProvider, useAdminAuth, AdminLogin } from './admin/AdminAuth.js';
 import { AdminLayout } from './admin/AdminLayout.js';
-import { Dashboard } from './admin/pages/Dashboard.js';
-import { LiveOperations } from './admin/pages/LiveOperations.js';
-import { CampusAnalytics as AdminCampus } from './admin/pages/CampusAnalytics.js';
-import { NotificationsAdmin } from './admin/pages/Notifications.js';
+
+// Lazy imports for chunk splitting
+const LandingPage = lazy(() => import('./pages/LandingPage.js').then(m => ({ default: m.LandingPage })));
+const ChatPage = lazy(() => import('./pages/ChatPage.js').then(m => ({ default: m.ChatPage })));
+const AboutPage = lazy(() => import('./pages/AboutPage.js').then(m => ({ default: m.AboutPage })));
+const FaqPage = lazy(() => import('./pages/FaqPage.js').then(m => ({ default: m.FaqPage })));
+const PrivacyPage = lazy(() => import('./pages/PrivacyPage.js').then(m => ({ default: m.PrivacyPage })));
+const TermsPage = lazy(() => import('./pages/TermsPage.js').then(m => ({ default: m.TermsPage })));
+const ContactPage = lazy(() => import('./pages/ContactPage.js').then(m => ({ default: m.ContactPage })));
+const ContentHubPage = lazy(() => import('./pages/ContentHubPage.js').then(m => ({ default: m.ContentHubPage })));
+const TagPage = lazy(() => import('./pages/TagPage.js').then(m => ({ default: m.TagPage })));
+const DynamicSeoPage = lazy(() => import('./pages/DynamicSeoPage.js').then(m => ({ default: m.DynamicSeoPage })));
+const NotFoundPage = lazy(() => import('./pages/NotFoundPage.js').then(m => ({ default: m.NotFoundPage })));
+
+// Admin Lazy Imports
+const Dashboard = lazy(() => import('./admin/pages/Dashboard.js').then(m => ({ default: m.Dashboard })));
+const LiveOperations = lazy(() => import('./admin/pages/LiveOperations.js').then(m => ({ default: m.LiveOperations })));
+const AdminCampus = lazy(() => import('./admin/pages/CampusAnalytics.js').then(m => ({ default: m.CampusAnalytics })));
+const NotificationsAdmin = lazy(() => import('./admin/pages/Notifications.js').then(m => ({ default: m.NotificationsAdmin })));
 
 function ProtectedAdminRoute({ children }: { children: React.ReactNode }) {
   const { token } = useAdminAuth();
   if (!token) return <AdminLogin />;
   return <>{children}</>;
+}
+
+function SuspenseWrapper({ children }: { children: React.ReactNode }) {
+  return (
+    <Suspense fallback={
+      <div className="flex h-screen items-center justify-center bg-[#0B0F19]">
+        <div className="flex flex-col items-center">
+          <div className="h-12 w-12 animate-spin rounded-full border-4 border-blue-500/20 border-t-blue-500" />
+          <span className="mt-4 text-sm text-slate-400 font-mono tracking-widest uppercase">Loading Kaboom...</span>
+        </div>
+      </div>
+    }>
+      {children}
+    </Suspense>
+  );
 }
 
 const router = createBrowserRouter([
@@ -34,7 +56,9 @@ const router = createBrowserRouter([
     element: (
       <AdminAuthProvider>
         <ProtectedAdminRoute>
-          <AdminLayout />
+          <SuspenseWrapper>
+            <AdminLayout />
+          </SuspenseWrapper>
         </ProtectedAdminRoute>
       </AdminAuthProvider>
     ),
@@ -50,7 +74,7 @@ const router = createBrowserRouter([
     ]
   },
   {
-    element: <Layout />,
+    element: <SuspenseWrapper><Layout /></SuspenseWrapper>,
     children: [
       { path: "/", element: <LandingPage /> },
       { path: "/chat", element: <ChatPage /> },

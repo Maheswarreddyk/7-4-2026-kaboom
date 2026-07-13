@@ -11,6 +11,7 @@ export interface WebRTCCallbacks {
   onConnectionStateChange?: (state: RTCPeerConnectionState) => void;
   onIceCandidate?: (candidate: RTCIceCandidateInit) => void;
   onNegotiationNeeded?: () => void;
+  onIceRestart?: (offer: RTCSessionDescriptionInit) => void;
 }
 
 export class WebRTCManager {
@@ -106,7 +107,14 @@ export class WebRTCManager {
 
     this.peerConnection.onconnectionstatechange = () => {
       if (this.peerConnection) {
-        this.callbacks.onConnectionStateChange?.(this.peerConnection.connectionState);
+        const state = this.peerConnection.connectionState;
+        this.callbacks.onConnectionStateChange?.(state);
+
+        // Phase 2: High-End WebRTC Resiliency (ICE Restart)
+        if (state === 'failed') {
+          console.warn('[WebRTC] Connection failed. Triggering ICE Restart...');
+          this.triggerIceRestart();
+        }
       }
     };
 
@@ -128,6 +136,18 @@ export class WebRTCManager {
 
     await this.peerConnection!.setLocalDescription(offer);
     return offer;
+  }
+
+  async triggerIceRestart(): Promise<void> {
+    if (!this.peerConnection) return;
+    try {
+      console.log('[WebRTC] Generating ICE Restart Offer...');
+      const offer = await this.peerConnection.createOffer({ iceRestart: true });
+      await this.peerConnection.setLocalDescription(offer);
+      this.callbacks.onIceRestart?.(offer);
+    } catch (e) {
+      console.error('[WebRTC] ICE Restart failed:', e);
+    }
   }
 
   async handleOffer(offer: RTCSessionDescriptionInit): Promise<RTCSessionDescriptionInit> {
