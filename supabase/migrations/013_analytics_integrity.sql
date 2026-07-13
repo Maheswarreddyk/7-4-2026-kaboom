@@ -81,7 +81,7 @@ BEGIN
       COUNT(*) FILTER (WHERE event_type = 'MATCH_FOUND') * 2 AS users_count,
       COUNT(*) FILTER (WHERE event_type = 'MUTUAL_LIKE') AS likes_count,
       AVG((payload->>'wait_time_sec')::NUMERIC) FILTER (WHERE event_type = 'MATCH_FOUND') AS wait_sec,
-      AVG((payload->>'duration_sec')::NUMERIC) / 60.0 FILTER (WHERE event_type = 'CALL_ENDED') AS duration_min
+      AVG((payload->>'duration_sec')::NUMERIC) FILTER (WHERE event_type = 'CALL_ENDED') / 60.0 AS duration_min
     FROM analytics_events
     WHERE created_at >= NOW() - (interval_hours || ' hours')::interval
       AND event_type IN ('MATCH_FOUND', 'MUTUAL_LIKE', 'CALL_ENDED')
