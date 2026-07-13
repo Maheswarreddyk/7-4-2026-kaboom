@@ -52,7 +52,7 @@ export function AdminLogin() {
 
     try {
       const API_URL = import.meta.env.VITE_API_URL || '';
-      const res = await fetch(`${API_URL}/api/analytics/live-overview`, {
+      const res = await fetch(`${API_URL}/api/analytics/mission-control`, {
         headers: { 'Authorization': `Bearer ${input}` }
       });
       
