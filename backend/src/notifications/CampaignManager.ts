@@ -6,10 +6,11 @@ export class CampaignManager {
   static init() {
     const pubKey = process.env.VAPID_PUBLIC_KEY;
     const privKey = process.env.VAPID_PRIVATE_KEY;
+    const subject = process.env.VAPID_SUBJECT || 'mailto:admin@kaboom-tv.com';
 
     if (pubKey && privKey) {
       webPush.setVapidDetails(
-        'mailto:admin@kaboom.tv',
+        subject,
         pubKey,
         privKey
       );
