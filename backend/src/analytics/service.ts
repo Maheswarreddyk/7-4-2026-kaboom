@@ -199,7 +199,7 @@ class AnalyticsService {
 
     return (todayData || []).map((row: any, i: number) => {
       let growth = 0;
-      const twoDays = twoDaysMap.get(row.campus);
+      const twoDays: any = twoDaysMap.get(row.campus);
       
       if (twoDays) {
         // Yesterday's users = (last 48h users) - (last 24h users)
