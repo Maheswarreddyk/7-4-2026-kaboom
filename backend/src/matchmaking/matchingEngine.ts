@@ -21,6 +21,7 @@ import {
   rollbackReservation,
 } from './reservationEngine.js';
 import { logEngine, logToDb } from './logger.js';
+import { AnalyticsLogger } from '../analytics/logger.js';
 
 // ============================================================
 // Concurrency Advisory Lock Configuration
@@ -673,6 +674,17 @@ export async function runGlobalMatchCycle(supabase: SupabaseClient): Promise<voi
       matchedOrReservedInCycle.add(sessionIdB);
 
       console.log(`[Matchmaker] Successfully created match ${match.id} for ${sessionIdA} and ${sessionIdB}`);
+
+      // Emit exactly-once Analytics Events with Idempotency Keys
+      AnalyticsLogger.logEvent('MATCH_FOUND', sessionIdA, match.id, {
+        matchMode: pA?.match_mode || 'QUICK',
+        campus: pA?.campus
+      }, `${match.id}_found_${sessionIdA}`);
+
+      AnalyticsLogger.logEvent('MATCH_FOUND', sessionIdB, match.id, {
+        matchMode: pB?.match_mode || 'QUICK',
+        campus: pB?.campus
+      }, `${match.id}_found_${sessionIdB}`);
     }
   } finally {
     // 6. Release advisory lock (V4.1 Requirement 16)
@@ -935,6 +947,9 @@ export async function markUserReady(
     const iceServers = getIceServers();
 
     console.log(`[/ready] [${requestId}] Both ready — broadcasting start_negotiation to ${sessionId} and ${partnerId}`);
+
+    // Emit exactly-once Analytics Event
+    AnalyticsLogger.logEvent('CALL_CONNECTED', sessionId, matchId, {}, `${matchId}_call_connected`);
 
     // Fetch profile details for both sessions
     const [sessSelfQuery, sessPartnerQuery] = await Promise.all([

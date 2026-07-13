@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAdminAuth } from '../AdminAuth.js';
 
 export function NotificationsAdmin() {
@@ -6,6 +6,28 @@ export function NotificationsAdmin() {
   const [template, setTemplate] = useState('campus_active');
   const [campus, setCampus] = useState('');
   const [status, setStatus] = useState('');
+  const [stats, setStats] = useState({ activeSubs: 0, avgCtr: 0 });
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const API_URL = import.meta.env.VITE_API_URL || '';
+        const res = await fetch(`${API_URL}/api/admin/notifications/stats`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setStats(data);
+        }
+      } catch (e) {
+        console.error('Failed to fetch stats:', e);
+      }
+    };
+    fetchStats();
+    // Refresh every 60 seconds
+    const timer = setInterval(fetchStats, 60000);
+    return () => clearInterval(timer);
+  }, [token]);
 
   const handleTest = async () => {
     setStatus('Sending test...');
@@ -125,11 +147,11 @@ export function NotificationsAdmin() {
             <div className="space-y-3">
               <div className="flex justify-between">
                 <span className="text-slate-400">Active Subs</span>
-                <span className="text-white font-mono">1,204</span>
+                <span className="text-white font-mono">{stats.activeSubs.toLocaleString()}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-400">Avg CTR</span>
-                <span className="text-white font-mono">14.2%</span>
+                <span className="text-white font-mono">{stats.avgCtr.toFixed(1)}%</span>
               </div>
             </div>
           </div>

@@ -54,165 +54,66 @@ class AnalyticsService {
    */
   async getSearchDemand() {
     const supabase = getSupabase();
-    const last24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-    
-    const { data: events } = await supabase
-      .from('analytics_events')
-      .select('event_type, payload')
-      .in('event_type', ['QUEUE_JOINED', 'MATCH_FOUND'])
-      .gte('created_at', last24h);
-
-    if (!events) return [];
-
-    const campusMap = new Map<string, { demand: number, supply: number }>();
-
-    events.forEach(ev => {
-      const campus = ev.payload?.campus as string || 'Unknown';
-      if (!campusMap.has(campus)) {
-        campusMap.set(campus, { demand: 0, supply: 0 });
-      }
-      
-      const stats = campusMap.get(campus)!;
-      if (ev.event_type === 'QUEUE_JOINED') {
-        stats.demand += 1;
-      } else if (ev.event_type === 'MATCH_FOUND') {
-        stats.supply += 1;
-      }
-    });
-
-    const result = Array.from(campusMap.entries()).map(([campus, stats]) => ({
-      campus,
-      demand: stats.demand,
-      supply: stats.supply,
-      gap: Math.max(0, stats.demand - stats.supply)
-    }));
-
-    return result.sort((a, b) => b.demand - a.demand).slice(0, 5);
+    const { data, error } = await supabase.rpc('get_search_demand', { interval_hours: 24 });
+    if (error) {
+      console.error('[AnalyticsService] Error calling get_search_demand', error);
+      return [];
+    }
+    return data || [];
   }
 
   async getMatchQuality() {
     const supabase = getSupabase();
-    const last24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-    
-    // Fetch MATCH_FOUND events for the modes
-    const { data: matchEvents } = await supabase
-      .from('analytics_events')
-      .select('payload')
-      .eq('event_type', 'MATCH_FOUND')
-      .gte('created_at', last24h);
-
-    // Fetch MUTUAL_LIKE events to calculate percentage
-    const { data: likeEvents } = await supabase
-      .from('analytics_events')
-      .select('payload')
-      .eq('event_type', 'MUTUAL_LIKE')
-      .gte('created_at', last24h);
-
-    const matchModes = ['SMART', 'EXACT', 'QUICK'];
-    const results = matchModes.map(mode => {
-      // Find matches for this mode (defaulting to QUICK if undefined)
-      const modeMatches = (matchEvents || []).filter(e => {
-        const payloadMode = e.payload?.matchMode || 'QUICK';
-        return payloadMode === mode;
-      });
-      
-      const users = modeMatches.length * 2; // 2 users per match event
-      
-      // Mutual likes for this mode
-      const modeLikes = (likeEvents || []).filter(e => {
-        const payloadMode = e.payload?.matchMode || 'QUICK';
-        return payloadMode === mode;
-      });
-
-      const mutualLikePct = modeMatches.length > 0 
-        ? Math.round((modeLikes.length / modeMatches.length) * 100) 
-        : 0;
-
-      // Calculate pseudo-durations based on actual matches vs drops
-      // In a fully live environment, we'd subtract CALL_ENDED time from MATCH_FOUND
-      const avgWaitSec = mode === 'EXACT' ? 45 : (mode === 'SMART' ? 12 : 3);
-      const avgDurationMin = mode === 'EXACT' ? 12 : (mode === 'SMART' ? 8 : 2);
-
-      return {
-        mode,
-        users,
-        avgWaitSec,
-        avgDurationMin,
-        mutualLikePct
-      };
-    });
-
-    return results;
+    const { data, error } = await supabase.rpc('get_match_quality', { interval_hours: 24 });
+    if (error) {
+      console.error('[AnalyticsService] Error calling get_match_quality', error);
+      return [];
+    }
+    // Map DB fields to what frontend expects
+    return (data || []).map((row: any) => ({
+      mode: row.mode,
+      users: row.users,
+      avgWaitSec: row.avg_wait_sec,
+      avgDurationMin: row.avg_duration_min,
+      mutualLikePct: row.mutual_like_pct
+    }));
   }
 
   async getCampusLeaderboard() {
     const supabase = getSupabase();
-    const last24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-
-    const { data: events } = await supabase
-      .from('analytics_events')
-      .select('event_type, payload')
-      .in('event_type', ['QUEUE_JOINED', 'MATCH_FOUND', 'MUTUAL_LIKE'])
-      .gte('created_at', last24h);
-
-    if (!events) return [];
-
-    const campusMap = new Map<string, { users: Set<string>, connections: number, mutualLikes: number }>();
-
-    events.forEach(ev => {
-      const campus = ev.payload?.campus as string || 'Unknown';
-      if (!campusMap.has(campus)) {
-        campusMap.set(campus, { users: new Set(), connections: 0, mutualLikes: 0 });
-      }
-      
-      const stats = campusMap.get(campus)!;
-      if (ev.payload?.sessionId) {
-        stats.users.add(ev.payload.sessionId as string);
-      }
-      
-      if (ev.event_type === 'MATCH_FOUND') {
-        stats.connections += 1;
-      } else if (ev.event_type === 'MUTUAL_LIKE') {
-        stats.mutualLikes += 1;
-      }
-    });
-
-    const result = Array.from(campusMap.entries()).map(([campus, stats]) => ({
-      campus,
-      users: stats.users.size,
-      connections: stats.connections,
-      mutualLikes: stats.mutualLikes,
-      growth: Math.round(Math.random() * 20) // Growth requires day-over-day tracking, stubbing random positive growth for MVP
+    const { data, error } = await supabase.rpc('get_campus_leaderboard', { interval_hours: 24 });
+    if (error) {
+      console.error('[AnalyticsService] Error calling get_campus_leaderboard', error);
+      return [];
+    }
+    return (data || []).map((row: any, i: number) => ({
+      rank: i + 1,
+      campus: row.campus,
+      users: row.users,
+      connections: row.connections,
+      mutualLikes: row.mutual_likes,
+      growth: 0 // Stubbed until day-over-day tracking is available
     }));
-
-    // Sort by active users and connections
-    result.sort((a, b) => b.users + b.connections - (a.users + a.connections));
-
-    // Add rank
-    return result.slice(0, 5).map((r, i) => ({ rank: i + 1, ...r }));
   }
 
   async getFunnel() {
     const supabase = getSupabase();
-    const last24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-
-    const { data: events } = await supabase
-      .from('analytics_events')
-      .select('event_type')
-      .gte('created_at', last24h);
-
-    if (!events) return [];
+    const { data, error } = await supabase.rpc('get_funnel_metrics', { interval_hours: 24 });
+    
+    if (error || !data) {
+      console.error('[AnalyticsService] Error calling get_funnel_metrics', error);
+      return [];
+    }
 
     const counts = {
-      landing: events.filter(e => e.event_type === 'SESSION_STARTED').length,
-      queue: events.filter(e => e.event_type === 'QUEUE_JOINED').length,
-      matched: events.filter(e => e.event_type === 'MATCH_FOUND').length,
-      connected: events.filter(e => e.event_type === 'CALL_CONNECTED').length,
-      liked: events.filter(e => e.event_type === 'MUTUAL_LIKE').length,
-      feedback: events.filter(e => e.event_type === 'FEEDBACK_SUBMITTED').length
+      landing: data.find((r: any) => r.event_type === 'SESSION_STARTED')?.event_count || 0,
+      queue: data.find((r: any) => r.event_type === 'QUEUE_JOINED')?.event_count || 0,
+      matched: data.find((r: any) => r.event_type === 'MATCH_FOUND')?.event_count || 0,
+      connected: data.find((r: any) => r.event_type === 'CALL_CONNECTED')?.event_count || 0,
+      liked: data.find((r: any) => r.event_type === 'MUTUAL_LIKE')?.event_count || 0,
+      feedback: data.find((r: any) => r.event_type === 'FEEDBACK_SUBMITTED')?.event_count || 0
     };
 
-    // Calculate dropoffs from the previous step
     const calcDropoff = (current: number, previous: number) => {
       if (previous === 0) return 0;
       return Math.round(((previous - current) / previous) * 100);

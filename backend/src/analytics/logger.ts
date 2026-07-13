@@ -43,11 +43,12 @@ class AnalyticsLoggerService {
     eventType: AnalyticsEventType,
     sessionId?: string,
     matchId?: string,
-    payload: AnalyticsEventPayload = {}
+    payload: AnalyticsEventPayload = {},
+    idempotencyKey?: string
   ): void {
     // Detach from current execution context
     setTimeout(() => {
-      this.asyncLog(eventType, sessionId, matchId, payload).catch((err) => {
+      this.asyncLog(eventType, sessionId, matchId, payload, idempotencyKey).catch((err) => {
         // Silently swallow analytics errors to protect production
         console.error(`[AnalyticsLogger] Failed to log ${eventType}:`, err.message);
       });
@@ -58,7 +59,8 @@ class AnalyticsLoggerService {
     eventType: AnalyticsEventType,
     sessionId?: string,
     matchId?: string,
-    payload: AnalyticsEventPayload = {}
+    payload: AnalyticsEventPayload = {},
+    idempotencyKey?: string
   ): Promise<void> {
     const supabase = getSupabase();
     
@@ -70,9 +72,15 @@ class AnalyticsLoggerService {
       session_id: sessionId || null,
       match_id: matchId || null,
       payload: cleanPayload,
+      idempotency_key: idempotencyKey || null
     });
 
     if (error) {
+      // 23505 is PostgreSQL unique violation code
+      if (error.code === '23505') {
+        // Silently ignore duplicates to enforce exactly-once semantics
+        return;
+      }
       throw new Error(error.message);
     }
   }

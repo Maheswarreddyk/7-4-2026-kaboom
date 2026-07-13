@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { HEARTBEAT_STALE_MS } from './config.js';
 import { logEngine, logToDb } from './logger.js';
+import { AnalyticsLogger } from '../analytics/logger.js';
 
 export interface JoinQueueResult {
   queueId: string;
@@ -114,6 +115,11 @@ export async function joinQueueEntry(
   if (insertErr || !inserted) throw insertErr ?? new Error('Failed to insert queue entry');
 
   await logToDb(supabase, sessionId, 'queue_join', { queueId: inserted.id, queuePosition });
+
+  AnalyticsLogger.logEvent('QUEUE_JOINED', sessionId, undefined, {
+    queuePosition,
+    campus: 'Unknown', // In a full implementation, we would look up their campus here from visitor_sessions
+  }, `${inserted.id}_joined`);
 
   const waitingSeconds = Math.floor(
     (Date.now() - new Date(queueEnteredAt).getTime()) / 1000

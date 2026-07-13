@@ -12,37 +12,65 @@ export function Dashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchData = async () => {
+    let missionTimer: number;
+    let slowTimer: number;
+
+    const fetchMission = async () => {
+      try {
+        const API_URL = import.meta.env.VITE_API_URL || '';
+        const headers = { 'Authorization': `Bearer ${token}` };
+        const missionRes = await fetch(`${API_URL}/api/analytics/mission-control`, { headers });
+        if (missionRes.ok) {
+          const missionData = await missionRes.json();
+          setData((prev: any) => ({ ...prev, mission: missionData }));
+        }
+      } catch (err) {
+        console.error('Failed to fetch mission control', err);
+      }
+    };
+
+    const fetchSlowData = async () => {
       try {
         const API_URL = import.meta.env.VITE_API_URL || '';
         const headers = { 'Authorization': `Bearer ${token}` };
         
-        // Fetch all widget data from the backend APIs
-        const [missionRes, funnelRes, demandRes, campusRes, matchRes] = await Promise.all([
-          fetch(`${API_URL}/api/analytics/mission-control`, { headers }),
+        const [funnelRes, demandRes, campusRes, matchRes] = await Promise.all([
           fetch(`${API_URL}/api/analytics/funnel`, { headers }),
           fetch(`${API_URL}/api/analytics/search-demand`, { headers }),
           fetch(`${API_URL}/api/analytics/campus-leaderboard`, { headers }),
           fetch(`${API_URL}/api/analytics/match-quality`, { headers })
         ]);
 
-        if (missionRes.ok && funnelRes.ok && demandRes.ok && campusRes.ok && matchRes.ok) {
-          setData({
-            mission: await missionRes.json(),
-            funnel: await funnelRes.json(),
-            demand: await demandRes.json(),
-            campus: await campusRes.json(),
-            matchQuality: await matchRes.json()
-          });
+        if (funnelRes.ok && demandRes.ok && campusRes.ok && matchRes.ok) {
+          const [funnel, demand, campus, matchQuality] = await Promise.all([
+            funnelRes.json(),
+            demandRes.json(),
+            campusRes.json(),
+            matchRes.json()
+          ]);
+          setData((prev: any) => ({ ...prev, funnel, demand, campus, matchQuality }));
         }
       } catch (err) {
-        console.error('Failed to fetch dashboard data', err);
-      } finally {
-        setLoading(false);
+        console.error('Failed to fetch slow data', err);
       }
     };
 
-    fetchData();
+    const initialFetch = async () => {
+      setLoading(true);
+      await Promise.all([fetchMission(), fetchSlowData()]);
+      setLoading(false);
+      
+      // Setup polling: Mission Control (5s), Others (60s)
+      missionTimer = window.setInterval(fetchMission, 5000);
+      slowTimer = window.setInterval(fetchSlowData, 60000);
+    };
+
+    initialFetch();
+
+    return () => {
+      window.clearInterval(missionTimer);
+      window.clearInterval(slowTimer);
+    };
   }, [token]);
 
   if (loading) {

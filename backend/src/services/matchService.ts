@@ -2,6 +2,7 @@ import { getSupabase, handleSupabaseError } from '../database/client.js';
 import { getIceServers } from '../config/index.js';
 import { broadcastToSession } from './broadcast.js';
 import { leaveQueueEntry, joinQueueEntry, markUserReady, runMatchCycle, runGlobalMatchCycle, invalidateMatchmakerCache, transitionSessionStatus } from '../matchmaking/matchingEngine.js';
+import { AnalyticsLogger } from '../analytics/logger.js';
 
 export type MatchEndReason = 'next' | 'leave' | 'disconnect' | 'report';
 
@@ -74,6 +75,11 @@ export async function endActiveMatch(sessionId: string, reason: MatchEndReason) 
     .eq('id', match.id);
 
   if (error) handleSupabaseError(error, 'Failed to end match');
+
+  AnalyticsLogger.logEvent('CALL_ENDED', sessionId, match.id, {
+    duration_sec: durationSeconds,
+    reason
+  }, `${match.id}_ended`);
 
   await getSupabase()
     .from('connection_logs')
