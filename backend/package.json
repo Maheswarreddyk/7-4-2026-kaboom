@@ -29,7 +29,8 @@
     "socket.io": "^4.8.1",
     "typescript": "^5.8.2",
     "uuid": "^11.1.0",
-    "web-push": "^3.6.7"
+    "web-push": "^3.6.7",
+    "@types/web-push": "^3.6.4"
   },
   "devDependencies": {
     "@types/pg": "^8.20.0",
