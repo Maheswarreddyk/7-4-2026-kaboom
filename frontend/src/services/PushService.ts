@@ -63,6 +63,7 @@ export class PushService {
       
       // Mark locally that we have successfully subscribed
       safeLocalStorage.setItem('kaboom_push_subscribed', 'true');
+      safeLocalStorage.setItem('kaboom_push_subscribed_data', JSON.stringify(subscription));
     } catch (err) {
       console.error('Failed to send subscription to backend:', err);
     }

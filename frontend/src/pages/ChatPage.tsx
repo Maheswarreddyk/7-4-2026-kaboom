@@ -10,6 +10,7 @@ import { PreferenceModal } from '../components/PreferenceModal.js';
 import { TemporaryChat } from '../components/TemporaryChat.js';
 import { OnboardingModal } from '../components/OnboardingModal.js';
 import { MatchIntroCard } from '../components/MatchIntroCard.js';
+import { MatchRadarPrompt } from '../components/MatchRadarPrompt.js';
 import { useSession } from '../contexts/SessionContext.js';
 import { useToast } from '../contexts/ToastContext.js';
 import { useVideoChat } from '../hooks/useVideoChat.js';
@@ -398,14 +399,23 @@ export function ChatPage() {
 
   // Search Elapsed timer state
   const [searchElapsed, setSearchElapsed] = useState(0);
+  const [showMatchRadar, setShowMatchRadar] = useState(false);
+
   useEffect(() => {
     if (isSearching) {
       const timer = setInterval(() => {
-        setSearchElapsed((prev) => prev + 1);
+        setSearchElapsed((prev) => {
+          const next = prev + 1;
+          if (next === 10 && !localStorage.getItem('kaboom_push_subscribed')) {
+            setShowMatchRadar(true);
+          }
+          return next;
+        });
       }, 1000);
       return () => clearInterval(timer);
     } else {
       setSearchElapsed(0);
+      setShowMatchRadar(false);
     }
   }, [isSearching]);
 
@@ -1323,6 +1333,12 @@ export function ChatPage() {
           style={getStyle('queue-card')}
           data-layout-id="queue-card"
         >
+          {showMatchRadar && (
+            <MatchRadarPrompt
+              onDismiss={() => setShowMatchRadar(false)}
+              sessionId={session?.sessionId}
+            />
+          )}
           <QueueCard
             elapsed={searchElapsed}
             matchMode={activeMatchMode}

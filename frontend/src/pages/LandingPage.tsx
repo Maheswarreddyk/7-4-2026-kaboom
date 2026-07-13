@@ -5,7 +5,9 @@ import { useToast } from '../contexts/ToastContext.js';
 import { LoadingScreen } from '../components/LoadingScreen.js';
 import { MetaManager } from '../components/MetaManager.js';
 import { PreferenceModal } from '../components/PreferenceModal.js';
+
 import { apiService } from '../services/api.js';
+import { MissedConnectionsToast } from '../components/MissedConnectionsToast.js';
 import { cn } from '../utils/index.js';
 
 // Mascot SVG Component - "Kaboomey" (stylized speech bubble comet)
@@ -1375,6 +1377,8 @@ export function LandingPage() {
           }}
         />
       )}
+
+      <MissedConnectionsToast />
     </div>
   );
 }
