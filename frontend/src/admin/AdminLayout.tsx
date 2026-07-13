@@ -4,7 +4,6 @@ import { useAdminAuth } from './AdminAuth.js';
 import { 
   BarChart3, 
   TrendingUp,
-  Settings,
   LogOut,
   Target,
   Activity,
