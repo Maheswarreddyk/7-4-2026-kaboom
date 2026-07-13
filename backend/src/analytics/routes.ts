@@ -1,63 +1,68 @@
-import { Router, type Request, type Response, type NextFunction } from 'express';
+import { Router } from 'express';
 import { analyticsService } from './service.js';
-import { environment } from 'config';
+import { requireAdminToken } from '../middleware/adminAuth.js';
 
-const analyticsRouter = Router();
+const router = Router();
 
-// ============================================================
-// Simple MVP Auth Guard (Mahes@123)
-// ============================================================
-function requireAnalyticsAuth(req: Request, res: Response, next: NextFunction) {
-  const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({ error: 'Missing Authorization header' });
-  }
+// MVP Auth Guard for all admin routes
+router.use(requireAdminToken);
 
-  const token = authHeader.slice(7);
-  // MVP hardcoded password as requested
-  if (token !== 'Mahes@123' && token !== environment.admin?.adminToken) {
-    return res.status(403).json({ error: 'Invalid credentials' });
-  }
-
-  next();
-}
-
-analyticsRouter.use(requireAnalyticsAuth);
-
-analyticsRouter.get('/live-overview', async (req, res, next) => {
+// I. Platform Overview (Mission Control)
+router.get('/mission-control', async (req, res) => {
   try {
-    const data = await analyticsService.getLiveOverview();
-    res.json({ success: true, data });
-  } catch (err) {
-    next(err);
+    const data = await analyticsService.getMissionControl();
+    res.json(data);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
   }
 });
 
-analyticsRouter.get('/live-users', async (req, res, next) => {
+// II. Product Intelligence
+router.get('/search-demand', async (req, res) => {
   try {
-    const data = await analyticsService.getLiveUsers();
-    res.json({ success: true, data });
-  } catch (err) {
-    next(err);
+    const data = await analyticsService.getSearchDemand();
+    res.json(data);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
   }
 });
 
-analyticsRouter.get('/historical-overview', async (req, res, next) => {
+router.get('/match-quality', async (req, res) => {
   try {
-    const data = await analyticsService.getHistoricalOverview();
-    res.json({ success: true, data });
-  } catch (err) {
-    next(err);
+    const data = await analyticsService.getMatchQuality();
+    res.json(data);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
   }
 });
 
-analyticsRouter.get('/campus', async (req, res, next) => {
+router.get('/campus-leaderboard', async (req, res) => {
   try {
-    const data = await analyticsService.getCampusAnalytics();
-    res.json({ success: true, data });
-  } catch (err) {
-    next(err);
+    const data = await analyticsService.getCampusLeaderboard();
+    res.json(data);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
   }
 });
 
-export default analyticsRouter;
+// III. Growth & Campaigns
+router.get('/funnel', async (req, res) => {
+  try {
+    const data = await analyticsService.getFunnel();
+    res.json(data);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// IV. Operations (Live Data)
+router.get('/live-sessions', async (req, res) => {
+  try {
+    const data = await analyticsService.getLiveSessions();
+    res.json(data);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+export default router;

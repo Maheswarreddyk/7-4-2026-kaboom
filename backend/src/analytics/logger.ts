@@ -1,4 +1,5 @@
 import { getSupabase } from '../database/client.js';
+import { AnalyticsEventPayload } from './schema.js';
 
 /**
  * Analytics Event Types (must match DB enum)
@@ -21,9 +22,7 @@ export type AnalyticsEventType =
   | 'FEEDBACK_SUBMITTED'
   | 'REPORT_SUBMITTED';
 
-interface AnalyticsPayload {
-  [key: string]: string | number | boolean | null | undefined | object;
-}
+// AnalyticsPayload definition removed, imported from schema.js
 
 /**
  * AnalyticsLogger
@@ -44,7 +43,7 @@ class AnalyticsLoggerService {
     eventType: AnalyticsEventType,
     sessionId?: string,
     matchId?: string,
-    payload: AnalyticsPayload = {}
+    payload: AnalyticsEventPayload = {}
   ): void {
     // Detach from current execution context
     setTimeout(() => {
@@ -59,7 +58,7 @@ class AnalyticsLoggerService {
     eventType: AnalyticsEventType,
     sessionId?: string,
     matchId?: string,
-    payload: AnalyticsPayload = {}
+    payload: AnalyticsEventPayload = {}
   ): Promise<void> {
     const supabase = getSupabase();
     

@@ -15,9 +15,10 @@ import { TermsPage } from './pages/TermsPage.js';
 import { ContentHubPage } from './pages/ContentHubPage.js';
 import { TagPage } from './pages/TagPage.js';
 import { DynamicSeoPage } from './pages/DynamicSeoPage.js';
-import { AdminAuthProvider, AdminLogin, useAdminAuth } from './admin/AdminAuth.js';
+import { AdminAuthProvider, useAdminAuth, AdminLogin } from './admin/AdminAuth.js';
 import { AdminLayout } from './admin/AdminLayout.js';
-import { Dashboard as AdminDashboard } from './admin/pages/Dashboard.js';
+import { Dashboard } from './admin/pages/Dashboard.js';
+import { LiveOperations } from './admin/pages/LiveOperations.js';
 import { CampusAnalytics as AdminCampus } from './admin/pages/CampusAnalytics.js';
 
 function ProtectedAdminRoute({ children }: { children: React.ReactNode }) {
@@ -37,9 +38,13 @@ const router = createBrowserRouter([
       </AdminAuthProvider>
     ),
     children: [
-      { index: true, element: <AdminDashboard /> },
+      { index: true, element: <Dashboard /> },
+      { path: "growth", element: <Dashboard /> },
+      { path: "product", element: <Dashboard /> },
+      { path: "operations", element: <LiveOperations /> },
+      { path: "engineering", element: <div className="p-8 text-slate-400">Engineering Diagnostics (Postponed for MVP)</div> },
       { path: "campus", element: <AdminCampus /> },
-      { path: "*", element: <AdminDashboard /> },
+      { path: "*", element: <Dashboard /> },
     ]
   },
   {
