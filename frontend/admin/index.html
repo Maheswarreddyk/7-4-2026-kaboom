@@ -1,0 +1,1462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kaboom Admin — Operations Dashboard</title>
+  <meta name="robots" content="noindex, nofollow" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    /* ───────────────────────────────────────────────────────
+       Design System Tokens
+    ─────────────────────────────────────────────────────── */
+    :root {
+      --bg-base:       #080c14;
+      --bg-surface:    #0d1420;
+      --bg-card:       #111827;
+      --bg-card-hover: #141f30;
+      --bg-glass:      rgba(13, 20, 32, 0.85);
+      --border-subtle: rgba(255, 255, 255, 0.06);
+      --border-card:   rgba(255, 255, 255, 0.08);
+      --border-active: rgba(99, 179, 237, 0.35);
+      
+      --accent-blue:   #3b82f6;
+      --accent-cyan:   #06b6d4;
+      --accent-amber:  #f59e0b;
+      --accent-green:  #10b981;
+      --accent-rose:   #f43f5e;
+      --accent-violet: #8b5cf6;
+      --accent-orange: #f97316;
+      
+      --text-primary:   #f1f5f9;
+      --text-secondary: #94a3b8;
+      --text-tertiary:  #4b5563;
+      --text-accent:    #63b3ed;
+      
+      --sidebar-w: 240px;
+      --header-h:  64px;
+      
+      --radius-sm:  6px;
+      --radius-md:  10px;
+      --radius-lg:  14px;
+      --radius-xl:  20px;
+      
+      --shadow-card: 0 4px 24px rgba(0, 0, 0, 0.4);
+      --shadow-glow: 0 0 32px rgba(59, 130, 246, 0.12);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      height: 100%;
+      background: var(--bg-base);
+      color: var(--text-primary);
+      font-family: 'Inter', sans-serif;
+      font-size: 14px;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ─── Scrollbar ─── */
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+
+    /* ───────────────────────────────────────────────────────
+       Login Screen
+    ─────────────────────────────────────────────────────── */
+    #login-screen {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      background: var(--bg-base);
+      background-image:
+        radial-gradient(ellipse 80% 50% at 50% 0%, rgba(59, 130, 246, 0.08) 0%, transparent 70%);
+    }
+
+    .login-card {
+      width: 360px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-card);
+      border-radius: var(--radius-xl);
+      padding: 40px 36px;
+      box-shadow: var(--shadow-card), var(--shadow-glow);
+    }
+
+    .login-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 28px;
+    }
+
+    .login-logo-icon {
+      width: 40px;
+      height: 40px;
+      background: linear-gradient(135deg, var(--accent-blue) 0%, var(--accent-cyan) 100%);
+      border-radius: var(--radius-md);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      box-shadow: 0 4px 16px rgba(59, 130, 246, 0.35);
+    }
+
+    .login-logo-text {
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+    }
+
+    .login-logo-text span {
+      color: var(--text-secondary);
+      font-weight: 400;
+      font-size: 13px;
+      display: block;
+    }
+
+    .login-title { font-size: 22px; font-weight: 800; margin-bottom: 6px; letter-spacing: -0.5px; }
+    .login-subtitle { color: var(--text-secondary); font-size: 13px; margin-bottom: 28px; }
+
+    .form-group { margin-bottom: 16px; }
+    .form-label { display: block; font-size: 12px; font-weight: 500; color: var(--text-secondary); margin-bottom: 7px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .form-input {
+      width: 100%;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border-card);
+      border-radius: var(--radius-sm);
+      padding: 11px 14px;
+      color: var(--text-primary);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .form-input:focus { border-color: var(--accent-blue); box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12); }
+    .form-input::placeholder { color: var(--text-tertiary); }
+
+    .login-btn {
+      width: 100%;
+      background: linear-gradient(135deg, var(--accent-blue) 0%, #2563eb 100%);
+      border: none;
+      border-radius: var(--radius-sm);
+      padding: 12px;
+      color: white;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.15s;
+      margin-top: 6px;
+    }
+    .login-btn:hover { opacity: 0.92; }
+    .login-btn:active { transform: scale(0.99); }
+    .login-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .login-error {
+      background: rgba(244, 63, 94, 0.1);
+      border: 1px solid rgba(244, 63, 94, 0.25);
+      border-radius: var(--radius-sm);
+      padding: 10px 14px;
+      color: #fb7185;
+      font-size: 13px;
+      margin-top: 12px;
+      display: none;
+    }
+    .login-error.visible { display: block; }
+
+    .login-note {
+      margin-top: 16px;
+      color: var(--text-tertiary);
+      font-size: 12px;
+      text-align: center;
+    }
+
+    /* ───────────────────────────────────────────────────────
+       App Shell
+    ─────────────────────────────────────────────────────── */
+    #app { display: none; height: 100vh; overflow: hidden; }
+    #app.visible { display: flex; }
+
+    /* ─── Sidebar ─── */
+    .sidebar {
+      width: var(--sidebar-w);
+      min-width: var(--sidebar-w);
+      height: 100vh;
+      background: var(--bg-surface);
+      border-right: 1px solid var(--border-subtle);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      position: relative;
+      z-index: 10;
+    }
+
+    .sidebar-header {
+      padding: 20px 20px 16px;
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .sidebar-logo-icon {
+      width: 34px;
+      height: 34px;
+      background: linear-gradient(135deg, var(--accent-blue) 0%, var(--accent-cyan) 100%);
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      flex-shrink: 0;
+    }
+
+    .sidebar-logo-name {
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+    }
+
+    .sidebar-logo-sub {
+      font-size: 10px;
+      color: var(--text-tertiary);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      font-weight: 500;
+    }
+
+    .sidebar-nav {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px 10px;
+    }
+
+    .nav-section-label {
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-tertiary);
+      padding: 8px 10px 4px;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 12px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      color: var(--text-secondary);
+      font-size: 13.5px;
+      font-weight: 500;
+      transition: background 0.15s, color 0.15s;
+      margin-bottom: 1px;
+      border: none;
+      background: none;
+      width: 100%;
+      text-align: left;
+    }
+
+    .nav-item:hover { background: rgba(255,255,255,0.05); color: var(--text-primary); }
+
+    .nav-item.active {
+      background: rgba(59, 130, 246, 0.12);
+      color: var(--text-accent);
+    }
+
+    .nav-item.active .nav-dot {
+      background: var(--accent-blue);
+      box-shadow: 0 0 8px rgba(59,130,246,0.6);
+    }
+
+    .nav-icon { font-size: 16px; min-width: 20px; text-align: center; }
+
+    .sidebar-footer {
+      padding: 14px 16px;
+      border-top: 1px solid var(--border-subtle);
+    }
+
+    .live-badge {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .live-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--accent-green);
+      box-shadow: 0 0 8px rgba(16, 185, 129, 0.7);
+      animation: pulse-dot 2s infinite;
+    }
+
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.7; transform: scale(1.2); }
+    }
+
+    .logout-btn {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      color: var(--text-tertiary);
+      background: none;
+      border: none;
+      cursor: pointer;
+      margin-top: 10px;
+      padding: 0;
+      transition: color 0.2s;
+    }
+    .logout-btn:hover { color: var(--accent-rose); }
+
+    /* ─── Main Content ─── */
+    .main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* ─── Top Bar ─── */
+    .topbar {
+      height: var(--header-h);
+      min-height: var(--header-h);
+      background: var(--bg-surface);
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      padding: 0 24px;
+      gap: 12px;
+    }
+
+    .topbar-title {
+      flex: 1;
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+    }
+
+    .topbar-subtitle {
+      color: var(--text-secondary);
+      font-size: 13px;
+      font-weight: 400;
+    }
+
+    .topbar-actions { display: flex; align-items: center; gap: 8px; }
+
+    .refresh-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--border-card);
+      border-radius: var(--radius-sm);
+      padding: 7px 14px;
+      color: var(--text-secondary);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.2s, color 0.2s;
+    }
+    .refresh-btn:hover { background: rgba(255,255,255,0.08); color: var(--text-primary); }
+    .refresh-btn.loading .refresh-icon { animation: spin 0.8s linear infinite; }
+
+    @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+    .last-updated {
+      font-size: 11px;
+      color: var(--text-tertiary);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* ─── Page Content ─── */
+    .page-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px;
+    }
+
+    /* ─── Pages ─── */
+    .page { display: none; }
+    .page.active { display: block; }
+
+    /* ─── Stat Cards Grid ─── */
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+      gap: 14px;
+      margin-bottom: 24px;
+    }
+
+    .stat-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-card);
+      border-radius: var(--radius-lg);
+      padding: 18px 20px;
+      transition: background 0.2s, border-color 0.2s, transform 0.2s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: var(--card-accent, var(--accent-blue));
+      opacity: 0.6;
+    }
+
+    .stat-card:hover { background: var(--bg-card-hover); border-color: var(--border-active); transform: translateY(-1px); }
+
+    .stat-card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+    .stat-card-label { font-size: 11.5px; font-weight: 500; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; }
+    .stat-card-icon { font-size: 18px; opacity: 0.7; }
+    .stat-card-value { font-size: 28px; font-weight: 800; letter-spacing: -1px; line-height: 1; }
+    .stat-card-sub { font-size: 11.5px; color: var(--text-secondary); margin-top: 4px; }
+
+    /* ─── Cards ─── */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-card);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+    }
+
+    .card-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .card-title { font-size: 14px; font-weight: 600; letter-spacing: -0.2px; }
+    .card-subtitle { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+    .card-body { padding: 16px 20px; }
+
+    /* ─── Two column grid ─── */
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+    .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+
+    @media (max-width: 1100px) { .grid-2 { grid-template-columns: 1fr; } .grid-3 { grid-template-columns: 1fr; } }
+
+    /* ─── Bar Chart ─── */
+    .bar-list { display: flex; flex-direction: column; gap: 10px; }
+
+    .bar-item { display: flex; flex-direction: column; gap: 4px; }
+    .bar-meta { display: flex; justify-content: space-between; align-items: center; }
+    .bar-name { font-size: 13px; color: var(--text-primary); font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 60%; }
+    .bar-count { font-size: 12px; color: var(--text-secondary); font-family: 'JetBrains Mono', monospace; font-weight: 500; }
+    .bar-track { height: 6px; background: rgba(255,255,255,0.06); border-radius: 10px; overflow: hidden; }
+    .bar-fill {
+      height: 100%;
+      border-radius: 10px;
+      background: var(--bar-color, var(--accent-blue));
+      transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* ─── Table ─── */
+    .data-table { width: 100%; border-collapse: collapse; }
+    .data-table th {
+      text-align: left;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-tertiary);
+      padding: 10px 16px;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .data-table td {
+      padding: 10px 16px;
+      font-size: 13px;
+      border-bottom: 1px solid rgba(255,255,255,0.03);
+      color: var(--text-secondary);
+    }
+    .data-table td:first-child { color: var(--text-primary); font-weight: 500; }
+    .data-table tr:last-child td { border-bottom: none; }
+    .data-table tr:hover td { background: rgba(255,255,255,0.02); }
+
+    /* ─── Status Badge ─── */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 9px;
+      border-radius: 20px;
+      font-size: 11.5px;
+      font-weight: 600;
+    }
+    .badge-blue   { background: rgba(59,130,246,0.15); color: #93c5fd; }
+    .badge-green  { background: rgba(16,185,129,0.15); color: #6ee7b7; }
+    .badge-amber  { background: rgba(245,158,11,0.15); color: #fcd34d; }
+    .badge-rose   { background: rgba(244,63,94,0.15);  color: #fda4af; }
+    .badge-violet { background: rgba(139,92,246,0.15); color: #c4b5fd; }
+    .badge-gray   { background: rgba(100,116,139,0.15); color: #94a3b8; }
+
+    /* ─── Metric sparkline / activity rows ─── */
+    .metric-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .metric-row:last-child { border-bottom: none; }
+    .metric-row-label { font-size: 13px; color: var(--text-primary); font-weight: 500; }
+    .metric-row-value { font-size: 13px; color: var(--text-secondary); font-family: 'JetBrains Mono', monospace; }
+    .metric-row-value.accent { color: var(--accent-cyan); font-weight: 600; }
+
+    /* ─── Queue position table ─── */
+    .queue-table { width: 100%; }
+
+    /* ─── Loading skeleton ─── */
+    .skeleton {
+      background: linear-gradient(90deg,
+        rgba(255,255,255,0.04) 25%,
+        rgba(255,255,255,0.07) 50%,
+        rgba(255,255,255,0.04) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+      border-radius: 4px;
+    }
+    @keyframes shimmer {
+      0%   { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    .sk-line { height: 14px; margin-bottom: 8px; }
+    .sk-line.sm { width: 60%; }
+    .sk-line.md { width: 80%; }
+    .sk-line.lg { width: 100%; }
+
+    /* ─── Empty state ─── */
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 48px 24px;
+      color: var(--text-tertiary);
+      text-align: center;
+      gap: 10px;
+    }
+    .empty-state-icon { font-size: 36px; opacity: 0.4; }
+    .empty-state-text { font-size: 14px; }
+
+    /* ─── Error state ─── */
+    .error-state {
+      background: rgba(244,63,94,0.08);
+      border: 1px solid rgba(244,63,94,0.2);
+      border-radius: var(--radius-md);
+      padding: 16px 20px;
+      color: #fda4af;
+      font-size: 13px;
+      margin-bottom: 16px;
+      display: none;
+    }
+    .error-state.visible { display: block; }
+
+    /* ─── Section header ─── */
+    .section-header { margin-bottom: 16px; }
+    .section-title { font-size: 18px; font-weight: 700; letter-spacing: -0.4px; }
+    .section-desc { font-size: 13px; color: var(--text-secondary); margin-top: 4px; }
+
+    /* ─── Match log ─── */
+    .match-log-item {
+      display: grid;
+      grid-template-columns: 1fr auto auto auto;
+      gap: 10px;
+      align-items: center;
+      padding: 9px 0;
+      border-bottom: 1px solid var(--border-subtle);
+      font-size: 12px;
+    }
+    .match-log-item:last-child { border-bottom: none; }
+    .match-log-id { font-family: 'JetBrains Mono', monospace; color: var(--text-tertiary); font-size: 11px; }
+    .match-log-dur { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--text-secondary); }
+
+    /* ─── Donut-like text circle ─── */
+    .gauge {
+      display: flex;
+      align-items: baseline;
+      gap: 4px;
+    }
+    .gauge-val { font-size: 32px; font-weight: 800; letter-spacing: -1px; }
+    .gauge-unit { font-size: 14px; color: var(--text-secondary); font-weight: 400; }
+
+    /* ─── Animations ─── */
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    .animate-in { animation: fadeIn 0.3s ease; }
+
+    /* ─── Responsive ─── */
+    @media (max-width: 768px) {
+      .sidebar { width: 60px; min-width: 60px; }
+      .sidebar-logo-name, .sidebar-logo-sub, .nav-item-label, .nav-section-label, .sidebar-footer-text { display: none; }
+      .nav-item { justify-content: center; padding: 10px; }
+      .sidebar-header { justify-content: center; }
+      .sidebar-logo-icon { margin: 0; }
+      .live-badge { justify-content: center; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ─────────────────────────────────────────────────────────
+     LOGIN SCREEN
+──────────────────────────────────────────────────────────── -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="login-logo-icon">💥</div>
+      <div>
+        <div class="login-logo-text">
+          Kaboom TV
+          <span>Admin Dashboard</span>
+        </div>
+      </div>
+    </div>
+    <h1 class="login-title">Sign in</h1>
+    <p class="login-subtitle">Enter your admin token to access the operations dashboard.</p>
+    <div class="form-group">
+      <label class="form-label" for="admin-token-input">Admin Token</label>
+      <input
+        class="form-input"
+        type="password"
+        id="admin-token-input"
+        placeholder="Bearer token..."
+        autocomplete="current-password"
+      />
+    </div>
+    <button class="login-btn" id="login-btn" onclick="handleLogin()">Access Dashboard</button>
+    <div class="login-error" id="login-error">Incorrect admin token. Please try again.</div>
+    <p class="login-note">This page is not indexed by search engines and is for internal use only.</p>
+  </div>
+</div>
+
+<!-- ─────────────────────────────────────────────────────────
+     APP SHELL
+──────────────────────────────────────────────────────────── -->
+<div id="app">
+  <!-- Sidebar -->
+  <nav class="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-logo-icon">💥</div>
+      <div>
+        <div class="sidebar-logo-name">Kaboom</div>
+        <div class="sidebar-logo-sub">Admin</div>
+      </div>
+    </div>
+
+    <div class="sidebar-nav">
+      <div class="nav-section-label">Overview</div>
+      <button class="nav-item active" id="nav-dashboard" onclick="showPage('dashboard')">
+        <span class="nav-icon">📊</span>
+        <span class="nav-item-label">Dashboard</span>
+      </button>
+      <button class="nav-item" id="nav-live-users" onclick="showPage('live-users')">
+        <span class="nav-icon">👥</span>
+        <span class="nav-item-label">Live Users</span>
+      </button>
+      <button class="nav-item" id="nav-queue" onclick="showPage('queue')">
+        <span class="nav-icon">⏳</span>
+        <span class="nav-item-label">Queue</span>
+      </button>
+      <button class="nav-item" id="nav-matches" onclick="showPage('matches')">
+        <span class="nav-icon">🎯</span>
+        <span class="nav-item-label">Matches</span>
+      </button>
+
+      <div class="nav-section-label" style="margin-top: 12px">Audience</div>
+      <button class="nav-item" id="nav-locations" onclick="showPage('locations')">
+        <span class="nav-icon">🌍</span>
+        <span class="nav-item-label">Locations</span>
+      </button>
+      <button class="nav-item" id="nav-colleges" onclick="showPage('colleges')">
+        <span class="nav-icon">🎓</span>
+        <span class="nav-item-label">Colleges</span>
+      </button>
+      <button class="nav-item" id="nav-filters" onclick="showPage('filters')">
+        <span class="nav-icon">🎛️</span>
+        <span class="nav-item-label">Filters</span>
+      </button>
+      <button class="nav-item" id="nav-devices" onclick="showPage('devices')">
+        <span class="nav-icon">📱</span>
+        <span class="nav-item-label">Devices</span>
+      </button>
+    </div>
+
+    <div class="sidebar-footer">
+      <div class="live-badge">
+        <div class="live-dot"></div>
+        <span class="sidebar-footer-text">Live Data</span>
+      </div>
+      <button class="logout-btn" onclick="handleLogout()">
+        <span>↩</span>
+        <span class="sidebar-footer-text">Sign Out</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- Main -->
+  <div class="main">
+    <!-- Topbar -->
+    <header class="topbar">
+      <div style="flex:1">
+        <div class="topbar-title" id="topbar-title">Dashboard <span class="topbar-subtitle" id="topbar-subtitle">Overview</span></div>
+      </div>
+      <div class="topbar-actions">
+        <span class="last-updated" id="last-updated-label">Never</span>
+        <button class="refresh-btn" id="refresh-btn" onclick="refreshCurrentPage()">
+          <span class="refresh-icon" style="display:inline-block">↺</span>
+          Refresh
+        </button>
+      </div>
+    </header>
+
+    <!-- Page Content -->
+    <div class="page-content">
+      <div class="error-state" id="global-error"></div>
+
+      <!-- ─ DASHBOARD PAGE ─ -->
+      <div class="page active animate-in" id="page-dashboard">
+        <div class="section-header">
+          <div class="section-title">Platform Overview</div>
+          <div class="section-desc">Real-time operational snapshot of the Kaboom TV platform.</div>
+        </div>
+
+        <div class="stat-grid" id="overview-stats">
+          <!-- injected by JS -->
+        </div>
+
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">🤖 Matchmaker Engine</div>
+                <div class="card-subtitle">In-memory metrics since last restart</div>
+              </div>
+            </div>
+            <div class="card-body" id="matchmaker-metrics">
+              <div class="skeleton sk-line lg"></div>
+              <div class="skeleton sk-line md"></div>
+              <div class="skeleton sk-line sm"></div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">⚡ Queue Health</div>
+                <div class="card-subtitle">Current queue state</div>
+              </div>
+            </div>
+            <div class="card-body" id="queue-health-summary">
+              <div class="skeleton sk-line lg"></div>
+              <div class="skeleton sk-line md"></div>
+              <div class="skeleton sk-line sm"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">📍 Top Locations</div>
+                <div class="card-subtitle">By city / country</div>
+              </div>
+            </div>
+            <div class="card-body" id="dash-locations">
+              <div class="skeleton sk-line lg"></div>
+              <div class="skeleton sk-line md"></div>
+              <div class="skeleton sk-line sm"></div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">🎯 Top Interests</div>
+                <div class="card-subtitle">Most used filter tags</div>
+              </div>
+            </div>
+            <div class="card-body" id="dash-interests">
+              <div class="skeleton sk-line lg"></div>
+              <div class="skeleton sk-line md"></div>
+              <div class="skeleton sk-line sm"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ─ LIVE USERS PAGE ─ -->
+      <div class="page" id="page-live-users">
+        <div class="section-header">
+          <div class="section-title">👥 Live Users</div>
+          <div class="section-desc">Active sessions in the last 90 seconds.</div>
+        </div>
+        <div class="stat-grid" id="live-users-stats"></div>
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Session Status Breakdown</div>
+          </div>
+          <div class="card-body">
+            <div class="bar-list" id="live-users-status-bars"></div>
+          </div>
+        </div>
+        <div style="margin-top: 16px" class="card">
+          <div class="card-header">
+            <div class="card-title">Recent Sessions</div>
+          </div>
+          <div style="overflow-x: auto">
+            <table class="data-table" id="live-users-table">
+              <thead>
+                <tr>
+                  <th>Session ID</th>
+                  <th>Status</th>
+                  <th>Country</th>
+                  <th>City</th>
+                  <th>Device</th>
+                  <th>Browser</th>
+                  <th>Last Active</th>
+                </tr>
+              </thead>
+              <tbody id="live-users-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ─ QUEUE PAGE ─ -->
+      <div class="page" id="page-queue">
+        <div class="section-header">
+          <div class="section-title">⏳ Queue Monitor</div>
+          <div class="section-desc">Real-time snapshot of the waiting queue.</div>
+        </div>
+        <div class="stat-grid" id="queue-stats"></div>
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-header"><div class="card-title">Last 24 Hours</div></div>
+            <div class="card-body" id="queue-24h"></div>
+          </div>
+          <div class="card">
+            <div class="card-header"><div class="card-title">Wait Time Distribution</div></div>
+            <div class="card-body" id="queue-wait-dist"></div>
+          </div>
+        </div>
+        <div class="card" style="margin-top: 16px">
+          <div class="card-header"><div class="card-title">Current Queue</div></div>
+          <div style="overflow-x: auto">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Session ID</th>
+                  <th>Joined At</th>
+                  <th>Wait Time</th>
+                </tr>
+              </thead>
+              <tbody id="queue-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ─ MATCHES PAGE ─ -->
+      <div class="page" id="page-matches">
+        <div class="section-header">
+          <div class="section-title">🎯 Match Analytics</div>
+          <div class="section-desc">Today's match performance and end-reason breakdown.</div>
+        </div>
+        <div class="stat-grid" id="matches-stats"></div>
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-header"><div class="card-title">End Reason Breakdown</div></div>
+            <div class="card-body" id="matches-reasons"></div>
+          </div>
+          <div class="card">
+            <div class="card-header"><div class="card-title">Match Health Metrics</div></div>
+            <div class="card-body" id="matches-health"></div>
+          </div>
+        </div>
+        <div class="card" style="margin-top: 16px">
+          <div class="card-header"><div class="card-title">Recent Matches</div></div>
+          <div style="overflow-x: auto">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Match ID</th>
+                  <th>Started</th>
+                  <th>Duration</th>
+                  <th>End Reason</th>
+                  <th>Mutual Like</th>
+                </tr>
+              </thead>
+              <tbody id="matches-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ─ LOCATIONS PAGE ─ -->
+      <div class="page" id="page-locations">
+        <div class="section-header">
+          <div class="section-title">🌍 Geographic Distribution</div>
+          <div class="section-desc">Where your users are coming from.</div>
+        </div>
+        <div class="grid-3">
+          <div class="card">
+            <div class="card-header"><div class="card-title">Top Countries</div></div>
+            <div class="card-body"><div class="bar-list" id="loc-countries"></div></div>
+          </div>
+          <div class="card">
+            <div class="card-header"><div class="card-title">Top States</div></div>
+            <div class="card-body"><div class="bar-list" id="loc-states"></div></div>
+          </div>
+          <div class="card">
+            <div class="card-header"><div class="card-title">Top Cities</div></div>
+            <div class="card-body"><div class="bar-list" id="loc-cities"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ─ COLLEGES PAGE ─ -->
+      <div class="page" id="page-colleges">
+        <div class="section-header">
+          <div class="section-title">🎓 University Usage</div>
+          <div class="section-desc">Top universities by active user count.</div>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Top Universities</div>
+            </div>
+            <div id="colleges-total-badge"></div>
+          </div>
+          <div class="card-body"><div class="bar-list" id="colleges-list"></div></div>
+        </div>
+      </div>
+
+      <!-- ─ FILTERS PAGE ─ -->
+      <div class="page" id="page-filters">
+        <div class="section-header">
+          <div class="section-title">🎛️ Filter & Preference Analysis</div>
+          <div class="section-desc">What users are selecting when they start chat.</div>
+        </div>
+        <div class="grid-2" style="margin-bottom: 16px">
+          <div class="card">
+            <div class="card-header"><div class="card-title">Top Interests</div></div>
+            <div class="card-body"><div class="bar-list" id="filters-interests"></div></div>
+          </div>
+          <div class="card">
+            <div class="card-header"><div class="card-title">Top Languages</div></div>
+            <div class="card-body"><div class="bar-list" id="filters-languages"></div></div>
+          </div>
+        </div>
+        <div class="grid-3">
+          <div class="card">
+            <div class="card-header"><div class="card-title">Gender Breakdown</div></div>
+            <div class="card-body"><div class="bar-list" id="filters-genders"></div></div>
+          </div>
+          <div class="card">
+            <div class="card-header"><div class="card-title">Looking For</div></div>
+            <div class="card-body"><div class="bar-list" id="filters-looking-for"></div></div>
+          </div>
+          <div class="card">
+            <div class="card-header"><div class="card-title">Match Mode</div></div>
+            <div class="card-body"><div class="bar-list" id="filters-match-mode"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ─ DEVICES PAGE ─ -->
+      <div class="page" id="page-devices">
+        <div class="section-header">
+          <div class="section-title">📱 Device Analytics</div>
+          <div class="section-desc">Browser, device type, and OS platform breakdown.</div>
+        </div>
+        <div class="grid-3">
+          <div class="card">
+            <div class="card-header"><div class="card-title">Browsers</div></div>
+            <div class="card-body"><div class="bar-list" id="devices-browsers"></div></div>
+          </div>
+          <div class="card">
+            <div class="card-header"><div class="card-title">Device Types</div></div>
+            <div class="card-body"><div class="bar-list" id="devices-types"></div></div>
+          </div>
+          <div class="card">
+            <div class="card-header"><div class="card-title">Platforms / OS</div></div>
+            <div class="card-body"><div class="bar-list" id="devices-platforms"></div></div>
+          </div>
+        </div>
+      </div>
+    </div><!-- end page-content -->
+  </div><!-- end main -->
+</div><!-- end app -->
+
+<script>
+// ═══════════════════════════════════════════════════════════
+//  State
+// ═══════════════════════════════════════════════════════════
+let adminToken = '';
+let currentPage = 'dashboard';
+let pageData = {};
+
+const PAGE_TITLES = {
+  'dashboard':   ['Dashboard', 'Overview'],
+  'live-users':  ['Live Users', 'Active sessions (last 90 seconds)'],
+  'queue':       ['Queue Monitor', 'Real-time queue snapshot'],
+  'matches':     ['Match Analytics', 'Today\'s performance'],
+  'locations':   ['Geographic Distribution', 'User locations'],
+  'colleges':    ['University Usage', 'Top institutions'],
+  'filters':     ['Filter Analysis', 'User preference breakdown'],
+  'devices':     ['Device Analytics', 'Browser, device, platform'],
+};
+
+// ═══════════════════════════════════════════════════════════
+//  Auth
+// ═══════════════════════════════════════════════════════════
+async function handleLogin() {
+  const input = document.getElementById('admin-token-input');
+  const token = input.value.trim();
+  const btn   = document.getElementById('login-btn');
+  const err   = document.getElementById('login-error');
+
+  if (!token) return;
+
+  btn.disabled = true;
+  btn.textContent = 'Verifying…';
+  err.classList.remove('visible');
+
+  try {
+    const res = await fetch('/api/admin/overview', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (res.ok) {
+      adminToken = token;
+      sessionStorage.setItem('kaboom_admin_token', token);
+      showApp();
+      loadCurrentPage();
+    } else {
+      err.textContent = res.status === 403 ? 'Incorrect admin token.' : `Server error: ${res.status}`;
+      err.classList.add('visible');
+    }
+  } catch (e) {
+    err.textContent = 'Network error — is the backend running?';
+    err.classList.add('visible');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Access Dashboard';
+  }
+}
+
+function handleLogout() {
+  sessionStorage.removeItem('kaboom_admin_token');
+  adminToken = '';
+  document.getElementById('app').classList.remove('visible');
+  document.getElementById('login-screen').style.display = 'flex';
+}
+
+function showApp() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').classList.add('visible');
+}
+
+// Enter key on login
+document.getElementById('admin-token-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') handleLogin();
+});
+
+// Restore session
+(function tryRestore() {
+  const saved = sessionStorage.getItem('kaboom_admin_token');
+  if (saved) {
+    adminToken = saved;
+    showApp();
+    loadCurrentPage();
+  }
+})();
+
+// ═══════════════════════════════════════════════════════════
+//  Navigation
+// ═══════════════════════════════════════════════════════════
+function showPage(page) {
+  // Update nav
+  document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+  document.getElementById('nav-' + page)?.classList.add('active');
+
+  // Update pages
+  document.querySelectorAll('.page').forEach(el => el.classList.remove('active'));
+  const pageEl = document.getElementById('page-' + page);
+  if (pageEl) {
+    pageEl.classList.add('active', 'animate-in');
+    setTimeout(() => pageEl.classList.remove('animate-in'), 400);
+  }
+
+  // Update topbar
+  const [title, sub] = PAGE_TITLES[page] || [page, ''];
+  document.getElementById('topbar-title').innerHTML =
+    title + ' <span class="topbar-subtitle">' + sub + '</span>';
+
+  currentPage = page;
+  loadCurrentPage();
+}
+
+// ═══════════════════════════════════════════════════════════
+//  API Fetch Helper
+// ═══════════════════════════════════════════════════════════
+async function fetchAdmin(endpoint) {
+  const res = await fetch('/api/admin/' + endpoint, {
+    headers: { 'Authorization': `Bearer ${adminToken}` }
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const json = await res.json();
+  return json.data;
+}
+
+// ═══════════════════════════════════════════════════════════
+//  Refresh
+// ═══════════════════════════════════════════════════════════
+function refreshCurrentPage() {
+  loadCurrentPage(true);
+}
+
+function setRefreshing(loading) {
+  const btn = document.getElementById('refresh-btn');
+  if (loading) btn.classList.add('loading');
+  else btn.classList.remove('loading');
+}
+
+function updateLastUpdated() {
+  const now = new Date();
+  document.getElementById('last-updated-label').textContent =
+    now.toLocaleTimeString('en-IN', { hour12: false });
+}
+
+// ═══════════════════════════════════════════════════════════
+//  Render Helpers
+// ═══════════════════════════════════════════════════════════
+const COLORS = [
+  '#3b82f6','#06b6d4','#10b981','#f59e0b',
+  '#8b5cf6','#f97316','#f43f5e','#a78bfa',
+  '#34d399','#fbbf24','#60a5fa','#fb7185',
+];
+
+function renderBarList(containerId, items, labelKey = 'name', countKey = 'count', limit = 15) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  if (!items || items.length === 0) {
+    el.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📭</div><div class="empty-state-text">No data available</div></div>';
+    return;
+  }
+  const maxVal = Math.max(...items.map(i => i[countKey]));
+  el.innerHTML = items.slice(0, limit).map((item, idx) => {
+    const pct = maxVal > 0 ? Math.round((item[countKey] / maxVal) * 100) : 0;
+    return `<div class="bar-item">
+      <div class="bar-meta">
+        <span class="bar-name" title="${item[labelKey]}">${item[labelKey] || '—'}</span>
+        <span class="bar-count">${item[countKey].toLocaleString()}</span>
+      </div>
+      <div class="bar-track">
+        <div class="bar-fill" style="--bar-color:${COLORS[idx % COLORS.length]};width:${pct}%"></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderStatCards(containerId, cards) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  el.innerHTML = cards.map(c => `
+    <div class="stat-card" style="--card-accent:${c.color || 'var(--accent-blue)'}">
+      <div class="stat-card-header">
+        <div class="stat-card-label">${c.label}</div>
+        <div class="stat-card-icon">${c.icon}</div>
+      </div>
+      <div class="stat-card-value" style="color:${c.color || 'var(--text-primary)'}">${c.value}</div>
+      <div class="stat-card-sub">${c.sub || ''}</div>
+    </div>
+  `).join('');
+}
+
+function renderMetricRows(containerId, rows) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  el.innerHTML = rows.map(r => `
+    <div class="metric-row">
+      <span class="metric-row-label">${r.label}</span>
+      <span class="metric-row-value ${r.accent ? 'accent' : ''}">${r.value}</span>
+    </div>
+  `).join('');
+}
+
+function fmtDuration(sec) {
+  if (sec === null || sec === undefined) return '—';
+  if (sec < 60) return sec + 's';
+  const m = Math.floor(sec / 60), s = sec % 60;
+  return m + 'm ' + (s > 0 ? s + 's' : '');
+}
+
+function fmtAgo(ts) {
+  if (!ts) return '—';
+  const diffMs = Date.now() - new Date(ts).getTime();
+  const diffS = Math.floor(diffMs / 1000);
+  if (diffS < 60) return diffS + 's ago';
+  if (diffS < 3600) return Math.floor(diffS / 60) + 'm ago';
+  return Math.floor(diffS / 3600) + 'h ago';
+}
+
+function badgeForStatus(status) {
+  const map = {
+    'active': 'badge-green', 'SEARCHING': 'badge-amber', 'RESERVED': 'badge-violet',
+    'MATCHED': 'badge-blue', 'SIGNALING': 'badge-cyan', 'CONNECTED': 'badge-green',
+    'matched': 'badge-blue', 'waiting': 'badge-amber', 'ended': 'badge-gray',
+  };
+  return `<span class="badge ${map[status] || 'badge-gray'}">${status}</span>`;
+}
+
+function badgeForReason(reason) {
+  const map = { 'next': 'badge-amber', 'leave': 'badge-rose', 'disconnect': 'badge-rose', 'timeout': 'badge-gray', 'report': 'badge-rose' };
+  return `<span class="badge ${map[reason] || 'badge-gray'}">${reason || '—'}</span>`;
+}
+
+function showError(msg) {
+  const el = document.getElementById('global-error');
+  el.textContent = '⚠️ ' + msg;
+  el.classList.add('visible');
+  setTimeout(() => el.classList.remove('visible'), 6000);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  Page Loaders
+// ═══════════════════════════════════════════════════════════
+async function loadCurrentPage(force = false) {
+  setRefreshing(true);
+  try {
+    switch (currentPage) {
+      case 'dashboard':  await loadDashboard(); break;
+      case 'live-users': await loadLiveUsers(); break;
+      case 'queue':      await loadQueue(); break;
+      case 'matches':    await loadMatches(); break;
+      case 'locations':  await loadLocations(); break;
+      case 'colleges':   await loadColleges(); break;
+      case 'filters':    await loadFilters(); break;
+      case 'devices':    await loadDevices(); break;
+    }
+    updateLastUpdated();
+  } catch (e) {
+    showError(e.message || 'Failed to load data');
+  } finally {
+    setRefreshing(false);
+  }
+}
+
+// ── Dashboard ──
+async function loadDashboard() {
+  const [overview, filters, locations] = await Promise.all([
+    fetchAdmin('overview'),
+    fetchAdmin('filters'),
+    fetchAdmin('locations'),
+  ]);
+
+  renderStatCards('overview-stats', [
+    { label: 'Live Users',      icon: '🟢', value: overview.liveUsers,     color: 'var(--accent-green)',  sub: 'Active in last 90s' },
+    { label: 'In Queue',        icon: '⏳', value: overview.searching,      color: 'var(--accent-amber)',  sub: 'Searching for partner' },
+    { label: 'In Call',         icon: '🎥', value: overview.connected,      color: 'var(--accent-blue)',   sub: 'Currently connected' },
+    { label: 'Matches Today',   icon: '🎯', value: overview.matchesToday,   color: 'var(--accent-cyan)',   sub: 'Since midnight' },
+    { label: 'Likes Today',     icon: '❤️', value: overview.likesToday,     color: 'var(--accent-rose)',   sub: 'Total likes sent' },
+    { label: 'Avg Wait',        icon: '⏱️', value: fmtDuration(overview.avgWaitSeconds), color: 'var(--accent-violet)', sub: 'Current queue average' },
+  ]);
+
+  const mm = overview.matchmakerMetrics || {};
+  renderMetricRows('matchmaker-metrics', [
+    { label: 'Successful Matches',  value: mm.successfulMatches ?? 0,              accent: true },
+    { label: 'Failed Matches',      value: mm.failedMatches ?? 0 },
+    { label: 'Rematches',           value: mm.rematches ?? 0 },
+    { label: 'Abandoned Searches',  value: mm.abandonedSearches ?? 0 },
+    { label: 'Avg Wait (engine)',    value: fmtDuration(Math.round(mm.averageWaitTime / 1000 || 0)), accent: true },
+    { label: 'Max Wait (engine)',    value: fmtDuration(Math.round(mm.maximumWaitTime / 1000 || 0)) },
+    { label: 'Currently Searching', value: mm.totalSearchingUsers ?? 0,            accent: true },
+  ]);
+
+  renderMetricRows('queue-health-summary', [
+    { label: 'Queue Length',    value: overview.queueLength,                            accent: true },
+    { label: 'Avg Wait',        value: fmtDuration(overview.avgWaitSeconds),            accent: true },
+    { label: 'Max Wait',        value: fmtDuration(overview.maxWaitSeconds) },
+  ]);
+
+  // Top locations
+  const topLoc = [...(locations.topCities || []), ...(locations.topCountries || [])]
+    .slice(0, 8);
+  renderBarList('dash-locations', topLoc);
+
+  // Top interests
+  renderBarList('dash-interests', filters.topInterests);
+}
+
+// ── Live Users ──
+async function loadLiveUsers() {
+  const d = await fetchAdmin('live-users');
+
+  renderStatCards('live-users-stats', [
+    { label: 'Total Online', icon: '👥', value: d.total, color: 'var(--accent-green)', sub: 'Last 90 seconds' },
+  ]);
+
+  // Status bars
+  const statusItems = Object.entries(d.statusBreakdown || {}).map(([name, count]) => ({ name, count }));
+  renderBarList('live-users-status-bars', statusItems);
+
+  // Table
+  const tbody = document.getElementById('live-users-tbody');
+  if (!d.sessions || d.sessions.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-tertiary)">No active sessions</td></tr>';
+    return;
+  }
+  tbody.innerHTML = d.sessions.map(s => `<tr>
+    <td><span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-tertiary)">${s.id.slice(0, 12)}…</span></td>
+    <td>${badgeForStatus(s.status)}</td>
+    <td>${s.country || '—'}</td>
+    <td>${s.city || '—'}</td>
+    <td>${s.device || '—'}</td>
+    <td>${s.browser || '—'}</td>
+    <td>${fmtAgo(s.lastActivity)}</td>
+  </tr>`).join('');
+}
+
+// ── Queue ──
+async function loadQueue() {
+  const d = await fetchAdmin('queue');
+
+  renderStatCards('queue-stats', [
+    { label: 'Waiting Now',    icon: '⏳', value: d.currentlyWaiting,              color: 'var(--accent-amber)', sub: 'In queue right now' },
+    { label: 'Avg Wait',       icon: '⏱️', value: fmtDuration(d.avgWaitSeconds),   color: 'var(--accent-blue)',  sub: 'Current average' },
+    { label: 'Max Wait',       icon: '🔴', value: fmtDuration(d.maxWaitSeconds),   color: 'var(--accent-rose)',  sub: 'Longest in queue' },
+    { label: 'Matched (24h)',  icon: '✅', value: d.last24h?.matched ?? 0,         color: 'var(--accent-green)', sub: 'Last 24 hours' },
+    { label: 'Expired (24h)',  icon: '❌', value: d.last24h?.expired ?? 0,         color: 'var(--accent-rose)',  sub: 'Timed out' },
+  ]);
+
+  renderMetricRows('queue-24h', [
+    { label: 'Matched last 24h',   value: d.last24h?.matched ?? 0,  accent: true },
+    { label: 'Expired last 24h',   value: d.last24h?.expired ?? 0 },
+    { label: 'Current queue size', value: d.currentlyWaiting,       accent: true },
+  ]);
+
+  // Wait distribution buckets
+  const queue = d.queue || [];
+  const buckets = { '<10s': 0, '10-30s': 0, '30-60s': 0, '60-120s': 0, '>120s': 0 };
+  queue.forEach(e => {
+    if (e.waitSeconds < 10) buckets['<10s']++;
+    else if (e.waitSeconds < 30) buckets['10-30s']++;
+    else if (e.waitSeconds < 60) buckets['30-60s']++;
+    else if (e.waitSeconds < 120) buckets['60-120s']++;
+    else buckets['>120s']++;
+  });
+  renderBarList('queue-wait-dist', Object.entries(buckets).map(([name, count]) => ({ name, count })));
+
+  // Table
+  const tbody = document.getElementById('queue-tbody');
+  if (queue.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--text-tertiary)">Queue is empty</td></tr>';
+    return;
+  }
+  tbody.innerHTML = queue.map(e => `<tr>
+    <td>#${e.position}</td>
+    <td><span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-tertiary)">${e.sessionId.slice(0,12)}…</span></td>
+    <td>${new Date(e.joinedAt).toLocaleTimeString()}</td>
+    <td><span class="badge ${e.waitSeconds > 60 ? 'badge-rose' : e.waitSeconds > 30 ? 'badge-amber' : 'badge-green'}">${fmtDuration(e.waitSeconds)}</span></td>
+  </tr>`).join('');
+}
+
+// ── Matches ──
+async function loadMatches() {
+  const d = await fetchAdmin('matches');
+
+  renderStatCards('matches-stats', [
+    { label: 'Matches Today',   icon: '🎯', value: d.matchesToday,      color: 'var(--accent-blue)',   sub: 'Since midnight' },
+    { label: 'Active Now',      icon: '🟢', value: d.activeNow,         color: 'var(--accent-green)',  sub: 'Ongoing calls' },
+    { label: 'Ended Today',     icon: '✅', value: d.endedToday,        color: 'var(--accent-cyan)',   sub: 'Completed' },
+    { label: 'Mutual Likes',    icon: '❤️', value: d.mutualLikesToday,  color: 'var(--accent-rose)',   sub: 'Both liked today' },
+    { label: 'Avg Duration',    icon: '⏱️', value: fmtDuration(d.avgDurationSeconds), color: 'var(--accent-violet)', sub: 'Per call' },
+  ]);
+
+  // End reasons
+  const reasons = Object.entries(d.endReasonBreakdown || {}).map(([name, count]) => ({ name, count }));
+  renderBarList('matches-reasons', reasons);
+
+  // Health
+  renderMetricRows('matches-health', [
+    { label: 'Avg Call Duration', value: fmtDuration(d.avgDurationSeconds), accent: true },
+    { label: 'Mutual Like Rate', value: d.matchesToday > 0 ? Math.round((d.mutualLikesToday / d.matchesToday) * 100) + '%' : '—', accent: true },
+    { label: 'Active Now', value: d.activeNow },
+  ]);
+
+  // Table
+  const tbody = document.getElementById('matches-tbody');
+  const matches = d.recentMatches || [];
+  if (matches.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-tertiary)">No matches yet today</td></tr>';
+    return;
+  }
+  tbody.innerHTML = matches.map(m => `<tr>
+    <td><span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-tertiary)">${m.id.slice(0,12)}…</span></td>
+    <td>${fmtAgo(m.startedAt)}</td>
+    <td>${fmtDuration(m.durationSeconds)}</td>
+    <td>${badgeForReason(m.endedReason)}</td>
+    <td>${m.mutualLike ? '<span class="badge badge-rose">❤️ Yes</span>' : '<span class="badge badge-gray">No</span>'}</td>
+  </tr>`).join('');
+}
+
+// ── Locations ──
+async function loadLocations() {
+  const d = await fetchAdmin('locations');
+  renderBarList('loc-countries', d.topCountries);
+  renderBarList('loc-states', d.topStates);
+  renderBarList('loc-cities', d.topCities);
+}
+
+// ── Colleges ──
+async function loadColleges() {
+  const d = await fetchAdmin('colleges');
+  const badge = document.getElementById('colleges-total-badge');
+  if (badge) badge.innerHTML = `<span class="badge badge-blue">${d.total} unique</span>`;
+  renderBarList('colleges-list', d.topUniversities, 'name', 'count', 30);
+}
+
+// ── Filters ──
+async function loadFilters() {
+  const d = await fetchAdmin('filters');
+  renderBarList('filters-interests', d.topInterests);
+  renderBarList('filters-languages', d.topLanguages);
+  renderBarList('filters-genders', d.genderBreakdown);
+  renderBarList('filters-looking-for', d.lookingForBreakdown);
+  renderBarList('filters-match-mode', d.matchModeBreakdown);
+}
+
+// ── Devices ──
+async function loadDevices() {
+  const d = await fetchAdmin('devices');
+  renderBarList('devices-browsers', d.topBrowsers);
+  renderBarList('devices-types', d.topDevices);
+  renderBarList('devices-platforms', d.topPlatforms);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  Auto Refresh (every 30 seconds)
+// ═══════════════════════════════════════════════════════════
+setInterval(() => {
+  if (adminToken) loadCurrentPage();
+}, 30_000);
+</script>
+</body>
+</html>
