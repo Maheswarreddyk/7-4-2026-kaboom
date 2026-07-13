@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 
-// Hardcoded MVP Admin Token
-const MVP_ADMIN_TOKEN = 'Mahes@123';
+// Read from env var — fallback to local dev token
+const MVP_ADMIN_TOKEN = process.env.ADMIN_TOKEN || 'Mahes@123';
 
 export const requireAdminToken = (req: Request, res: Response, next: NextFunction) => {
   const authHeader = req.headers.authorization;
