@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useToast } from '../contexts/ToastContext.js';
 import { MetaManager } from '../components/MetaManager.js';
+import { BackgroundVideo } from '../components/BackgroundVideo.js';
 
 export function ContactPage() {
   const { showToast } = useToast();
@@ -26,8 +27,10 @@ export function ContactPage() {
   };
 
   return (
-    <main className="max-w-3xl mx-auto px-4 py-12 animate-fade-in" role="main">
-      <MetaManager page="contact" />
+    <div className="has-bg-video flex-1 flex flex-col">
+      <BackgroundVideo />
+      <main className="cinematic-container px-4 py-12 animate-fade-in flex-1" role="main">
+        <MetaManager page="contact" />
       <article>
         <h1 className="text-3xl sm:text-4xl font-bold text-white mb-2">Contact Us</h1>
         <p className="text-white/50 mb-10">
@@ -114,5 +117,6 @@ export function ContactPage() {
         </section>
       </article>
     </main>
+    </div>
   );
 }

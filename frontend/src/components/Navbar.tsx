@@ -46,7 +46,8 @@ export function Navbar({ isTransparent = false }: NavbarProps) {
       <header
         className={cn(
           'app-header',
-          isTransparent ? 'app-header--transparent' : 'glass border-b border-white/5'
+          isTransparent ? 'app-header--transparent' : 'glass border-b border-white/5',
+          ['/about', '/faq', '/contact'].includes(location.pathname) && 'app-header--cinematic'
         )}
       >
         <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 flex items-center justify-between h-full">

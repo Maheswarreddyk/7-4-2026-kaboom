@@ -1,4 +1,5 @@
 import { MetaManager } from '../components/MetaManager.js';
+import { BackgroundVideo } from '../components/BackgroundVideo.js';
 
 const faqs = [
   {
@@ -45,24 +46,27 @@ const faqs = [
 
 export function FaqPage() {
   return (
-    <main className="max-w-3xl mx-auto px-4 py-12 animate-fade-in" role="main">
-      <MetaManager page="faq" />
-      <article>
-        <h1 className="text-3xl sm:text-4xl font-bold text-white mb-2">Frequently Asked Questions</h1>
-        <p className="text-white/50 mb-10">Everything you need to know about using Kaboom TV.</p>
+    <div className="has-bg-video flex-1 flex flex-col">
+      <BackgroundVideo />
+      <main className="cinematic-container px-4 py-12 animate-fade-in flex-1" role="main">
+        <MetaManager page="faq" />
+        <article>
+          <h1 className="text-3xl sm:text-4xl font-bold text-white mb-2">Frequently Asked Questions</h1>
+          <p className="text-white/50 mb-10">Everything you need to know about using Kaboom TV.</p>
 
-        <section className="space-y-4">
-          {faqs.map((faq) => (
-            <details key={faq.question} className="glass-card group">
-              <summary className="font-semibold text-white cursor-pointer list-none flex items-center justify-between gap-4">
-                {faq.question}
-                <span className="text-white/40 group-open:rotate-180 transition-transform shrink-0">▼</span>
-              </summary>
-              <p className="mt-4 text-white/60 leading-relaxed">{faq.answer}</p>
-            </details>
-          ))}
-        </section>
-      </article>
-    </main>
+          <section className="space-y-4">
+            {faqs.map((faq) => (
+              <details key={faq.question} className="glass-card group">
+                <summary className="font-semibold text-white cursor-pointer list-none flex items-center justify-between gap-4">
+                  {faq.question}
+                  <span className="text-white/40 group-open:rotate-180 transition-transform shrink-0">▼</span>
+                </summary>
+                <p className="mt-4 text-white/60 leading-relaxed">{faq.answer}</p>
+              </details>
+            ))}
+          </section>
+        </article>
+      </main>
+    </div>
   );
 }

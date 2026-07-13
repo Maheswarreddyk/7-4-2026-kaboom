@@ -923,3 +923,78 @@
   }
 }
 
+/* =====================================================
+   KABOOM PREMIUM CINEMATIC BACKGROUND VIDEO
+   ===================================================== */
+
+.cinematic-bg-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -2;
+  overflow: hidden;
+  background-color: #050505;
+  background-image: radial-gradient(circle at 70% 40%, rgba(245, 166, 35, 0.08) 0%, transparent 60%);
+  pointer-events: none;
+}
+
+.cinematic-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  filter: brightness(0.55) contrast(1.1) saturate(0.95);
+  pointer-events: none;
+  transition: opacity 500ms ease;
+}
+
+.cinematic-video--ready {
+  opacity: 1;
+}
+
+.cinematic-video--fading {
+  will-change: opacity;
+}
+
+.cinematic-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -1;
+  background: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.82) 0%,
+    rgba(0, 0, 0, 0.65) 50%,
+    rgba(0, 0, 0, 0.90) 100%
+  );
+  pointer-events: none;
+}
+
+.cinematic-container {
+  max-width: 900px !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  padding-top: 8dvh !important;
+}
+
+.has-bg-video .glass-card {
+  background: rgba(10, 10, 10, 0.70) !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.04) !important;
+}
+
+.app-header--cinematic {
+  background: rgba(0, 0, 0, 0.75) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+  box-shadow: 
+    0 4px 20px rgba(0, 0, 0, 0.4),
+    0 1px 15px rgba(245, 166, 35, 0.03) !important;
+}
+
