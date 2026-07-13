@@ -662,7 +662,7 @@ export function ChatPage() {
 
     if (Math.abs(diffX) > Math.abs(diffY)) {
       if (diffX < -90) {
-        handleNext();
+        triggerSkipConfirmation();
       }
     }
 
