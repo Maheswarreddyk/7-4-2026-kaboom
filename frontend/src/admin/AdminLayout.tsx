@@ -7,7 +7,8 @@ import {
   Settings,
   LogOut,
   Target,
-  Activity
+  Activity,
+  Bell
 } from './Icons.js';
 
 interface NavCategory {
@@ -27,6 +28,7 @@ const NAV_CATEGORIES: NavCategory[] = [
     items: [
       { path: 'growth', label: 'Growth & Funnels', icon: TrendingUp },
       { path: 'product', label: 'Match Quality & Demand', icon: Target },
+      { path: 'notifications', label: 'Push Notifications', icon: Bell },
     ]
   },
   {

@@ -16,6 +16,10 @@ import { cleanupService, statsService } from './services/index.js';
 import { matchingEngine } from './services/matchingEngine.js';
 import { runGlobalMatchCycle } from './matchmaking/matchingEngine.js';
 import { MatchScheduler } from './matchmaking/MatchScheduler.js';
+import { CampaignManager } from './notifications/CampaignManager.js';
+
+// Initialize Web Push VAPID keys
+CampaignManager.init();
 import path from 'path';
 import { fileURLToPath } from 'url';
 

@@ -25,3 +25,4 @@ export const Globe = IconStub;
 export const Monitor = IconStub;
 export const Heart = IconStub;
 export const AlertTriangle = IconStub;
+export const Bell = IconStub;

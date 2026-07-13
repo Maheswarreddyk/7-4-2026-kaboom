@@ -14,6 +14,7 @@ import {
 
 import { getSupabase } from '../database/client.js';
 import matchRoutes from './match.js';
+import notificationRoutes from './notifications.js';
 import { matchmakerMetrics } from '../matchmaking/matchingEngine.js';
 import { broadcastToSession } from '../services/broadcast.js';
 import { validateSession } from '../services/matchService.js';
@@ -22,6 +23,9 @@ const router = Router();
 
 router.use(apiRateLimiter);
 router.use('/match', matchRoutes);
+router.use('/notifications', notificationRoutes);
+import adminNotificationRoutes from './admin-notifications.js';
+router.use('/admin/notifications', adminNotificationRoutes);
 
 router.get('/health', healthController.getHealth);
 router.get('/stats', statsController.getStats);
@@ -140,6 +144,34 @@ router.post('/preferences', async (req, res, next) => {
       })
       .eq('id', sessionId);
     if (error) throw error;
+
+    // Phase B: Cache preferences for push notifications if they have a subscription
+    const supabase = getSupabase();
+    const { data: subs } = await supabase
+      .from('push_subscriptions')
+      .select('id')
+      .eq('session_id', sessionId);
+      
+    if (subs && subs.length > 0) {
+      for (const sub of subs) {
+        await supabase
+          .from('user_preferences_cache')
+          .upsert({
+            subscription_id: sub.id,
+            display_name: preferences.display_name ?? 'Guest',
+            gender: preferences.gender ?? null,
+            looking_for: preferences.looking_for ?? null,
+            college: preferences.university ?? null, // Note: the frontend passes 'university'
+            city: preferences.city ?? null,
+            state: preferences.state ?? null,
+            country: preferences.country ?? null,
+            languages: preferences.languages ?? [],
+            interests: preferences.interest_tags ?? [],
+            match_mode: preferences.match_mode ?? 'SMART'
+          }, { onConflict: 'subscription_id' });
+      }
+    }
+
     res.json({ success: true });
   } catch (err) {
     next(err);
