@@ -27,6 +27,36 @@ router.get('/stats', async (req, res, next) => {
   }
 });
 
+router.get('/history', async (req, res, next) => {
+  try {
+    const supabase = getSupabase();
+    
+    // Group by campaignId from details payload
+    const { data } = await supabase
+      .from('analytics_events')
+      .select('created_at, payload')
+      .eq('event_type', 'NOTIFICATION_SENT')
+      .order('created_at', { ascending: false })
+      .limit(1000);
+
+    const historyMap = new Map();
+    if (data) {
+      for (const row of data) {
+        const campaignId = row.payload?.campaignId;
+        if (!campaignId) continue;
+        if (!historyMap.has(campaignId)) {
+          historyMap.set(campaignId, { campaignId, sentAt: row.created_at, delivered: 0 });
+        }
+        historyMap.get(campaignId).delivered++;
+      }
+    }
+
+    res.json(Array.from(historyMap.values()));
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.post('/broadcast', async (req, res, next) => {
   try {
     const { campaignId, templateType, context, deepLink, audienceSegments } = req.body;

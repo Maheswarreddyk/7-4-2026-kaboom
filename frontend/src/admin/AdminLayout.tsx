@@ -8,7 +8,8 @@ import {
   LogOut,
   Target,
   Activity,
-  Bell
+  Bell,
+  GraduationCap
 } from './Icons.js';
 
 interface NavCategory {
@@ -28,6 +29,7 @@ const NAV_CATEGORIES: NavCategory[] = [
     items: [
       { path: 'growth', label: 'Growth & Funnels', icon: TrendingUp },
       { path: 'product', label: 'Match Quality & Demand', icon: Target },
+      { path: 'campus', label: 'Campus Analytics', icon: GraduationCap },
       { path: 'notifications', label: 'Push Notifications', icon: Bell },
     ]
   },
@@ -35,12 +37,6 @@ const NAV_CATEGORIES: NavCategory[] = [
     title: 'Operations',
     items: [
       { path: 'operations', label: 'Live Operations', icon: Activity },
-    ]
-  },
-  {
-    title: 'System',
-    items: [
-      { path: 'engineering', label: 'Engineering Diagnostics', icon: Settings },
     ]
   }
 ];

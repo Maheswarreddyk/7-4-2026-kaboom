@@ -5,27 +5,33 @@ export function NotificationsAdmin() {
   const { token } = useAdminAuth();
   const [template, setTemplate] = useState('campus_active');
   const [campus, setCampus] = useState('');
+  const [targetAll, setTargetAll] = useState(true);
   const [status, setStatus] = useState('');
   const [stats, setStats] = useState({ activeSubs: 0, avgCtr: 0 });
+  const [history, setHistory] = useState<any[]>([]);
 
   useEffect(() => {
-    const fetchStats = async () => {
+    const fetchStatsAndHistory = async () => {
       try {
         const API_URL = import.meta.env.VITE_API_URL || '';
-        const res = await fetch(`${API_URL}/api/admin/notifications/stats`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        if (res.ok) {
-          const data = await res.json();
-          setStats(data);
+        const [statsRes, historyRes] = await Promise.all([
+          fetch(`${API_URL}/api/admin/notifications/stats`, { headers: { 'Authorization': `Bearer ${token}` } }),
+          fetch(`${API_URL}/api/admin/notifications/history`, { headers: { 'Authorization': `Bearer ${token}` } })
+        ]);
+
+        if (statsRes.ok) {
+          setStats(await statsRes.json());
+        }
+        if (historyRes.ok) {
+          setHistory(await historyRes.json());
         }
       } catch (e) {
-        console.error('Failed to fetch stats:', e);
+        console.error('Failed to fetch stats/history:', e);
       }
     };
-    fetchStats();
+    fetchStatsAndHistory();
     // Refresh every 60 seconds
-    const timer = setInterval(fetchStats, 60000);
+    const timer = setInterval(fetchStatsAndHistory, 60000);
     return () => clearInterval(timer);
   }, [token]);
 
@@ -64,6 +70,43 @@ export function NotificationsAdmin() {
     }
   };
 
+  const handleBroadcast = async () => {
+    if (!targetAll && !campus) {
+      setStatus('Error: Please specify a target campus.');
+      return;
+    }
+    
+    setStatus('Broadcasting campaign...');
+    try {
+      const API_URL = import.meta.env.VITE_API_URL || '';
+      const campaignId = `CAMP_${Date.now()}`;
+      
+      const res = await fetch(`${API_URL}/api/admin/notifications/broadcast`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          campaignId,
+          templateType: template,
+          context: { campus },
+          deepLink: '/',
+          audienceSegments: targetAll ? {} : { campus }
+        })
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        setStatus(`Broadcast sent! Delivered: ${data.sent}, Failed: ${data.failed}`);
+      } else {
+        setStatus(`Error: ${data.error}`);
+      }
+    } catch (e: any) {
+      setStatus(`Failed to broadcast: ${e.message}`);
+    }
+  };
+
   return (
     <div className="p-8 space-y-6">
       <div>
@@ -90,9 +133,33 @@ export function NotificationsAdmin() {
                 </select>
               </div>
 
-              {template === 'campus_active' && (
+              <div>
+                <label className="block text-sm text-slate-400 mb-2">Target Audience</label>
+                <div className="flex items-center gap-4 mb-3">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input 
+                      type="radio" 
+                      checked={targetAll} 
+                      onChange={() => setTargetAll(true)} 
+                      className="accent-blue-500"
+                    />
+                    <span className="text-slate-300 text-sm">All Subscribers</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input 
+                      type="radio" 
+                      checked={!targetAll} 
+                      onChange={() => setTargetAll(false)} 
+                      className="accent-blue-500"
+                    />
+                    <span className="text-slate-300 text-sm">Specific Campus</span>
+                  </label>
+                </div>
+              </div>
+
+              {!targetAll && (
                 <div>
-                  <label className="block text-sm text-slate-400 mb-2">Target Campus Variable</label>
+                  <label className="block text-sm text-slate-400 mb-2">Target Campus</label>
                   <input 
                     type="text"
                     value={campus}
@@ -111,7 +178,10 @@ export function NotificationsAdmin() {
               >
                 Send Test (My Browser)
               </button>
-              <button className="px-6 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-colors">
+              <button 
+                onClick={handleBroadcast}
+                className="px-6 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-colors"
+              >
                 Broadcast Campaign
               </button>
             </div>
@@ -154,6 +224,31 @@ export function NotificationsAdmin() {
                 <span className="text-white font-mono">{stats.avgCtr.toFixed(1)}%</span>
               </div>
             </div>
+          </div>
+          
+          <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
+            <h2 className="text-lg font-semibold text-white mb-4">Broadcast History</h2>
+            {history.length === 0 ? (
+              <div className="text-slate-500 text-sm">No campaigns broadcasted yet.</div>
+            ) : (
+              <div className="space-y-4">
+                {history.map((campaign, idx) => (
+                  <div key={idx} className="border-b border-slate-800 pb-3 last:border-0 last:pb-0">
+                    <div className="flex justify-between items-center mb-1">
+                      <span className="text-white font-medium text-sm truncate pr-2">
+                        {campaign.campaignId}
+                      </span>
+                      <span className="text-xs text-slate-500 whitespace-nowrap">
+                        {new Date(campaign.sentAt).toLocaleDateString()}
+                      </span>
+                    </div>
+                    <div className="text-xs text-slate-400">
+                      Delivered: {campaign.delivered}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>

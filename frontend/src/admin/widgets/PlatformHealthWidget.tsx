@@ -11,6 +11,11 @@ interface MissionControlData {
   averageCallMinutes: number;
   mutualLikePercent: number;
   growthPercent: number;
+  todayNewUsers: number;
+  todayMatches: number;
+  topCampus: string;
+  topCity: string;
+  todayDeliveries: number;
 }
 
 interface PlatformHealthWidgetProps {
@@ -43,8 +48,8 @@ export function PlatformHealthWidget({ data }: PlatformHealthWidgetProps) {
         </div>
       </div>
 
-      {/* KPI Grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* Primary Live KPI Grid */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
         {/* KPI 1: Live Online */}
         <div className="bg-slate-900/50 p-4 rounded-lg border border-slate-700/50">
           <div className="flex justify-between items-start mb-2">
@@ -81,7 +86,31 @@ export function PlatformHealthWidget({ data }: PlatformHealthWidgetProps) {
             <AlertTriangle className="w-4 h-4 text-amber-400" />
           </div>
           <span className="text-2xl font-bold text-white">{data.todayReports}</span>
-          <p className="text-xs text-slate-500 mt-1">{data.mutualLikePercent}% Mutual Likes</p>
+          <p className="text-xs text-slate-500 mt-1">{data.mutualLikePercent}% Mutual Likes (Overall)</p>
+        </div>
+      </div>
+
+      {/* Secondary Today's Metrics Grid */}
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+        <div className="bg-slate-900/30 p-3 rounded-lg border border-slate-800">
+          <span className="block text-slate-500 text-xs uppercase tracking-wider mb-1">New Users Today</span>
+          <span className="text-lg font-bold text-white">{data.todayNewUsers || 0}</span>
+        </div>
+        <div className="bg-slate-900/30 p-3 rounded-lg border border-slate-800">
+          <span className="block text-slate-500 text-xs uppercase tracking-wider mb-1">Matches Today</span>
+          <span className="text-lg font-bold text-white">{data.todayMatches || 0}</span>
+        </div>
+        <div className="bg-slate-900/30 p-3 rounded-lg border border-slate-800">
+          <span className="block text-slate-500 text-xs uppercase tracking-wider mb-1">Top Campus</span>
+          <span className="text-sm font-medium text-white truncate block">{data.topCampus || 'Unknown'}</span>
+        </div>
+        <div className="bg-slate-900/30 p-3 rounded-lg border border-slate-800">
+          <span className="block text-slate-500 text-xs uppercase tracking-wider mb-1">Top City</span>
+          <span className="text-sm font-medium text-white truncate block">{data.topCity || 'Unknown'}</span>
+        </div>
+        <div className="bg-slate-900/30 p-3 rounded-lg border border-slate-800">
+          <span className="block text-slate-500 text-xs uppercase tracking-wider mb-1">Push Deliveries</span>
+          <span className="text-lg font-bold text-white">{data.todayDeliveries || 0}</span>
         </div>
       </div>
 

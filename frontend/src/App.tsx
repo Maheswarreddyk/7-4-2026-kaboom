@@ -28,6 +28,8 @@ const Dashboard = lazy(() => import('./admin/pages/Dashboard.js').then(m => ({ d
 const LiveOperations = lazy(() => import('./admin/pages/LiveOperations.js').then(m => ({ default: m.LiveOperations })));
 const AdminCampus = lazy(() => import('./admin/pages/CampusAnalytics.js').then(m => ({ default: m.CampusAnalytics })));
 const NotificationsAdmin = lazy(() => import('./admin/pages/Notifications.js').then(m => ({ default: m.NotificationsAdmin })));
+const Growth = lazy(() => import('./admin/pages/Growth.js').then(m => ({ default: m.Growth })));
+const Product = lazy(() => import('./admin/pages/Product.js').then(m => ({ default: m.Product })));
 
 function ProtectedAdminRoute({ children }: { children: React.ReactNode }) {
   const { token } = useAdminAuth();
@@ -64,13 +66,11 @@ const router = createBrowserRouter([
     ),
     children: [
       { index: true, element: <Dashboard /> },
-      { path: "growth", element: <Dashboard /> },
-      { path: "product", element: <Dashboard /> },
-      { path: "notifications", element: <NotificationsAdmin /> },
-      { path: "operations", element: <LiveOperations /> },
-      { path: "engineering", element: <div className="p-8 text-slate-400">Engineering Diagnostics (Postponed for MVP)</div> },
+      { path: "growth", element: <Growth /> },
+      { path: "product", element: <Product /> },
       { path: "campus", element: <AdminCampus /> },
-      { path: "*", element: <Dashboard /> },
+      { path: "notifications", element: <NotificationsAdmin /> },
+      { path: "operations", element: <LiveOperations /> }
     ]
   },
   {

@@ -42,9 +42,9 @@ export class CampaignManager {
         
         // Log Delivery Success
         await supabase.from('analytics_events').insert({
-          event: 'NOTIFICATION_SENT',
+          event_type: 'NOTIFICATION_SENT',
           session_id: user.subscription_id, // We link to subscription id for offline tracking
-          details: { campaignId }
+          payload: { campaignId }
         });
 
       } catch (err: any) {
