@@ -9,6 +9,7 @@ import { ToastProvider } from './contexts/ToastContext.js';
 import { FloatingLayoutProvider } from './contexts/FloatingLayoutContext.js';
 import { AdminAuthProvider, useAdminAuth, AdminLogin } from './admin/AdminAuth.js';
 import { AdminLayout } from './admin/AdminLayout.js';
+import { SplashLoader } from './components/SplashLoader.js';
 
 // Lazy imports for chunk splitting
 const LandingPage = lazy(() => import('./pages/LandingPage.js').then(m => ({ default: m.LandingPage })));
@@ -39,14 +40,7 @@ function ProtectedAdminRoute({ children }: { children: React.ReactNode }) {
 
 function SuspenseWrapper({ children }: { children: React.ReactNode }) {
   return (
-    <Suspense fallback={
-      <div className="flex h-screen items-center justify-center bg-[#0B0F19]">
-        <div className="flex flex-col items-center">
-          <div className="h-12 w-12 animate-spin rounded-full border-4 border-blue-500/20 border-t-blue-500" />
-          <span className="mt-4 text-sm text-slate-400 font-mono tracking-widest uppercase">Loading Kaboom...</span>
-        </div>
-      </div>
-    }>
+    <Suspense fallback={<SplashLoader />}>
       {children}
     </Suspense>
   );

@@ -700,7 +700,7 @@ export function LandingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#FAF9F7] flex flex-col justify-between overflow-x-hidden selection:bg-amber-500/20 select-none relative text-stone-800">
+    <div className="min-h-screen bg-[#FAF9F7] flex flex-col justify-between overflow-x-hidden selection:bg-amber-500/20 select-none relative text-stone-800 animate-in fade-in duration-700">
       <MetaManager page="home" />
       
       {/* ── STYLE TAG FOR V6 CORE MASCOT & GAME CONTROLS KEYFRAMES ── */}

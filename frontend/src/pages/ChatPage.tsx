@@ -1098,7 +1098,7 @@ export function ChatPage() {
   return (
     /* Root: fills entire 100dvh viewport (set by layout-immersive on parent) */
     <div
-      className="absolute inset-0 bg-black overflow-hidden select-none"
+      className="absolute inset-0 bg-black overflow-hidden select-none animate-in fade-in duration-700"
       onMouseMove={resetInactivityTimeout}
       onTouchStart={handleTouchStartRoot}
       onTouchEnd={handleTouchEndRoot}

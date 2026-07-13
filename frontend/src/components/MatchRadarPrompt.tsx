@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { PushService } from '../services/PushService.js';
+import { safeLocalStorage } from '../utils/index.js';
 
 interface MatchRadarPromptProps {
   onDismiss: () => void;
@@ -13,27 +14,72 @@ export function MatchRadarPrompt({ onDismiss, sessionId }: MatchRadarPromptProps
   const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [college, setCollege] = useState<string>('');
   const [lookingFor, setLookingFor] = useState<string>('');
+  const [shouldRender, setShouldRender] = useState(true);
 
   useEffect(() => {
+    // 1. Native Permission Check
+    if (Notification.permission === 'granted') {
+      setShouldRender(false);
+      onDismiss();
+      return;
+    }
+
+    // 2. Local State Machine Check
+    const permission = safeLocalStorage.getItem('kaboom_notification_permission');
+    if (permission === 'granted') {
+      setShouldRender(false);
+      onDismiss();
+      return;
+    }
+
+    if (permission === 'denied') {
+      const lastPrompt = parseInt(safeLocalStorage.getItem('kaboom_notification_last_prompt') || '0', 10);
+      const sevenDays = 7 * 24 * 60 * 60 * 1000;
+      if (Date.now() - lastPrompt < sevenDays) {
+        setShouldRender(false);
+        onDismiss();
+        return;
+      }
+    }
+
+    const lastPrompt = parseInt(safeLocalStorage.getItem('kaboom_notification_last_prompt') || '0', 10);
+    const twelveHours = 12 * 60 * 60 * 1000;
+    if (Date.now() - lastPrompt < twelveHours) {
+      setShouldRender(false);
+      onDismiss();
+      return;
+    }
+
     try {
-      const prefs = JSON.parse(localStorage.getItem('kaboom_preferences') || '{}');
+      const prefs = JSON.parse(safeLocalStorage.getItem('kaboom_preferences') || '{}');
       if (prefs.college) setCollege(prefs.college);
       if (prefs.looking_for) setLookingFor(prefs.looking_for);
     } catch (e) {}
   }, []);
 
+  const handleDismiss = () => {
+    safeLocalStorage.setItem('kaboom_notification_last_prompt', Date.now().toString());
+    onDismiss();
+  };
+
   const handleActivate = async () => {
     setLoading(true);
+    safeLocalStorage.setItem('kaboom_notification_prompt_seen', 'true');
+    safeLocalStorage.setItem('kaboom_notification_last_prompt', Date.now().toString());
+    
     try {
       const subscription = await PushService.requestSubscription();
       if (subscription) {
+        safeLocalStorage.setItem('kaboom_notification_permission', 'granted');
         await PushService.sendSubscriptionToBackend(subscription, sessionId || null);
         setStatus('success');
         setTimeout(() => onDismiss(), 2500);
       } else {
+        safeLocalStorage.setItem('kaboom_notification_permission', 'denied');
         setStatus('error');
       }
     } catch (e) {
+      safeLocalStorage.setItem('kaboom_notification_permission', 'denied');
       setStatus('error');
     } finally {
       setLoading(false);
@@ -42,6 +88,10 @@ export function MatchRadarPrompt({ onDismiss, sessionId }: MatchRadarPromptProps
 
   const targetText = lookingFor === 'female' ? 'Girls' : lookingFor === 'male' ? 'Guys' : 'People';
   const locationText = college ? `from ${college}` : 'matching your preferences';
+
+  if (!shouldRender) {
+    return null;
+  }
 
   if (status === 'success') {
     return (
@@ -71,7 +121,7 @@ export function MatchRadarPrompt({ onDismiss, sessionId }: MatchRadarPromptProps
         <div className="relative bg-slate-950/90 rounded-xl p-5 overflow-hidden">
           {/* Close Button */}
           <button 
-            onClick={onDismiss}
+            onClick={handleDismiss}
             className="absolute top-3 right-3 text-slate-500 hover:text-slate-300 transition-colors p-1"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
