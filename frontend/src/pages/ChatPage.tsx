@@ -14,6 +14,7 @@ import { MatchRadarPrompt } from '../components/MatchRadarPrompt.js';
 import { useSession } from '../contexts/SessionContext.js';
 import { useToast } from '../contexts/ToastContext.js';
 import { useVideoChat } from '../hooks/useVideoChat.js';
+import { useTabLeader } from '../hooks/useTabLeader.js';
 import { useFloatingLayout } from '../contexts/FloatingLayoutContext.js';
 import { apiService } from '../services/api.js';
 import type { ReportReason } from '../types/index.js';
@@ -22,6 +23,8 @@ import { cn, safeLocalStorage as localStorage } from '../utils/index.js';
 import { playTapSound } from '../utils/audio.js';
 import { useResponsiveLayout } from '../hooks/useResponsiveLayout.js';
 import { AdaptiveControlsDock } from '../components/AdaptiveControlsDock.js';
+import { DraggablePiP } from '../components/DraggablePiP.js';
+import { ReactionLayer, ReactionLayerRef } from '../components/ReactionLayer.js';
 import { LayoutDebugger } from '../components/LayoutDebugger.js';
 import { MobileHeader } from '../components/MobileHeader.js';
 import { GestureLayer } from '../components/GestureLayer.js';
@@ -69,12 +72,18 @@ export function ChatPage() {
   }, []);
 
   // FaceTime draggable self-preview state
-  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
-  const [isDragging, setIsDragging] = useState(false);
-  const [snapCorner, setSnapCorner] = useState<'br' | 'bl' | 'tr' | 'tl'>(() => {
-    return (localStorage.getItem('pipPosition') as any) || 'tl';
+  const [snapCorner, setSnapCorner] = useState<'br'|'bl'|'tr'|'tl'>(() => {
+    return (localStorage.getItem('pipPosition') as any) || (isMobile ? 'br' : 'br');
   });
-  const dragStart = useRef({ x: 0, y: 0 });
+
+  useEffect(() => {
+    const handlePipChange = () => {
+      const pos = localStorage.getItem('pipPosition') as 'br'|'bl'|'tr'|'tl';
+      if (pos) setSnapCorner(pos);
+    };
+    window.addEventListener('pipPositionChanged', handlePipChange);
+    return () => window.removeEventListener('pipPositionChanged', handlePipChange);
+  }, []);
   const [showReactionHub, setShowReactionHub] = useState(false);
 
   // Onboarding Hint state
@@ -90,24 +99,13 @@ export function ChatPage() {
 
 
 
-  // High fidelity reactions
-  const [reactions, setReactions] = useState<Array<{ id: number; emoji: string; left: number; delay: number }>>([]);
+  const { isFollower } = useTabLeader();
+
+  const reactionLayerRef = useRef<ReactionLayerRef>(null);
   const [isPlacementsSwapped, setIsPlacementsSwapped] = useState(false);
-  const [pipScale, setPipScale] = useState(1);
-  const touchStartDist = useRef<number | null>(null);
-  const initialPipScale = useRef<number>(1);
 
   const triggerReaction = useCallback((emoji: string) => {
-    const newReactions = Array.from({ length: 6 }).map((_, i) => ({
-      id: Math.random() + i,
-      emoji,
-      left: Math.random() * 80 + 10,
-      delay: Math.random() * 0.4
-    }));
-    setReactions(prev => [...prev, ...newReactions]);
-    setTimeout(() => {
-      setReactions(prev => prev.filter(r => !newReactions.some(nr => nr.id === r.id)));
-    }, 3000);
+    reactionLayerRef.current?.triggerReaction(emoji);
   }, []);
 
   const {
@@ -705,120 +703,11 @@ export function ChatPage() {
     setIsPlacementsSwapped((prev) => !prev);
   };
 
-  // Draggable & Pinch Zoom handlers
-  const handleMouseDown = (e: React.MouseEvent) => {
-    if (isSearching) return;
-    setIsDragging(true);
-    dragStart.current = { x: e.clientX - dragOffset.x, y: e.clientY - dragOffset.y };
-  };
 
-  const handleTouchStart = (e: React.TouchEvent) => {
-    if (isSearching) return;
-    if (e.touches.length === 2) {
-      setIsDragging(false);
-      const dist = Math.hypot(
-        e.touches[0].clientX - e.touches[1].clientX,
-        e.touches[0].clientY - e.touches[1].clientY
-      );
-      touchStartDist.current = dist;
-      initialPipScale.current = pipScale;
-    } else {
-      setIsDragging(true);
-      const touch = e.touches[0];
-      dragStart.current = { x: touch.clientX - dragOffset.x, y: touch.clientY - dragOffset.y };
-    }
-  };
-
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      if (!isDragging) return;
-      setDragOffset({
-        x: e.clientX - dragStart.current.x,
-        y: e.clientY - dragStart.current.y,
-      });
-    };
-
-    const handleTouchMove = (e: TouchEvent) => {
-      if (e.touches.length === 2 && touchStartDist.current) {
-        if (e.cancelable) e.preventDefault();
-        const dist = Math.hypot(
-          e.touches[0].clientX - e.touches[1].clientX,
-          e.touches[0].clientY - e.touches[1].clientY
-        );
-        const factor = dist / touchStartDist.current;
-        const newScale = Math.min(Math.max(initialPipScale.current * factor, 0.6), 2.0);
-        setPipScale(newScale);
-      } else if (isDragging) {
-        if (e.cancelable) e.preventDefault();
-        const touch = e.touches[0];
-        setDragOffset({
-          x: touch.clientX - dragStart.current.x,
-          y: touch.clientY - dragStart.current.y,
-        });
-      }
-    };
-
-    const handleMouseUp = () => {
-      if (!isDragging) {
-        setIsDragging(false);
-        touchStartDist.current = null;
-        return;
-      }
-      setIsDragging(false);
-      touchStartDist.current = null;
-      
-      const vw = window.innerWidth;
-      const vh = window.innerHeight;
-      const baseWidth = vw < 640 ? vw * 0.28 : 200;
-      const pipRatio = pipAspectRatio || 1.33;
-      const pipW = baseWidth * pipScale;
-      const pipH = (baseWidth / pipRatio) * pipScale;
-      
-      // Calculate absolute center position relative to active corner
-      let currentX = 0;
-      let currentY = 0;
-      
-      const safeBottom = isMobile ? 198 : 100;
-      const safeTop = isMobile ? (72 + 54) : (72 + 16); // Account for header size
-      
-      if (snapCorner === 'br') {
-        currentX = vw - 24 - pipW + dragOffset.x;
-        currentY = vh - safeBottom - pipH + dragOffset.y;
-      } else if (snapCorner === 'bl') {
-        currentX = 24 + dragOffset.x;
-        currentY = vh - safeBottom - pipH + dragOffset.y;
-      } else if (snapCorner === 'tr') {
-        currentX = vw - 24 - pipW + dragOffset.x;
-        currentY = safeTop + dragOffset.y;
-      } else if (snapCorner === 'tl') {
-        currentX = 24 + dragOffset.x;
-        currentY = safeTop + dragOffset.y;
-      }
-      
-      const isLeft = currentX + pipW / 2 < vw / 2;
-      const isTop = currentY + pipH / 2 < vh / 2;
-      const finalCorner = isTop ? (isLeft ? 'tl' : 'tr') : (isLeft ? 'bl' : 'br');
-      
-      setSnapCorner(finalCorner);
-      localStorage.setItem('pipPosition', finalCorner);
-      setDragOffset({ x: 0, y: 0 });
-    };
-
-    window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('mouseup', handleMouseUp);
-    window.addEventListener('touchmove', handleTouchMove, { passive: false });
-    window.addEventListener('touchend', handleMouseUp);
-
-    return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
-      window.removeEventListener('touchmove', handleTouchMove);
-      window.removeEventListener('touchend', handleMouseUp);
-    };
-  }, [isDragging, dragOffset, pipScale]);
 
   // Session Initialization
   useEffect(() => {
+    if (isFollower) return; // Wait/abort if we are a follower
     if (isLoading) return; // Wait until session restore loading finishes!
     if (session) return;
     if (showWelcomeGate) return; // Wait until they complete the profile setup!
@@ -843,6 +732,7 @@ export function ChatPage() {
   }, [session, isLoading, startSession, showToast, navigate, showWelcomeGate]);
 
   useEffect(() => {
+    if (isFollower) return;
     if (!session || isLoading) return;
 
     const checkPermission = async () => {
@@ -1094,6 +984,21 @@ export function ChatPage() {
     );
   }
 
+  if (isFollower) {
+    return (
+      <div className="layout-immersive bg-surface flex flex-col items-center justify-center p-6 text-center z-[9999]">
+        <div className="w-16 h-16 rounded-full bg-surface-2 flex items-center justify-center mb-6">
+          <svg className="w-8 h-8 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+          </svg>
+        </div>
+        <h2 className="text-2xl font-bold mb-3 text-white">Kaboom is active in another tab</h2>
+        <p className="text-stone-400 max-w-sm">
+          You can only have one active Kaboom session at a time. Please close this tab or use the other active one.
+        </p>
+      </div>
+    );
+  }
 
   return (
     /* Root: fills entire 100dvh viewport (set by layout-immersive on parent) */
@@ -1112,7 +1017,7 @@ export function ChatPage() {
       {isMobile ? (
         <GestureLayer
           onSwipeLeft={triggerSkipConfirmation}
-          disabled={chatState.isChatOpen || isDragging}
+          disabled={chatState.isChatOpen}
         >
           <div className="absolute inset-0 z-0 bg-stone-950 overflow-hidden">
             {/* Remote Video Container */}
@@ -1134,18 +1039,16 @@ export function ChatPage() {
               />
             </div>
 
-            {/* Local Video (Self Preview) Container */}
-            <div
-              onMouseDown={handleMouseDown}
-              onTouchStart={handleTouchStart}
-              onDoubleClick={handleDoubleTapSwap}
+            <DraggablePiP
+              onDoubleTap={handleDoubleTapSwap}
+              isDraggable={!isSearching && videoLayout !== 'split'}
+              pipAspectRatio={pipAspectRatio}
               className={cn(
                 "absolute transition-all duration-[350ms] ease-out overflow-hidden bg-black",
                 videoLayout === 'split' ? "border border-white/5" : "rounded-2xl border border-white/10 shadow-2xl",
-                isDragging && 'shadow-2xl border-amber-500/30 scale-[1.03]',
                 (!controlsVisible && videoLayout !== 'split') && 'border-transparent shadow-none'
               )}
-              style={getLocalContainerStyle()}
+              baseStyle={getLocalContainerStyle()}
             >
               <VideoPlayer
                 stream={isPlacementsSwapped ? remoteStream : localStream}
@@ -1163,7 +1066,7 @@ export function ChatPage() {
                 }
                 frozen={isPlacementsSwapped ? false : isSkipPending}
               />
-            </div>
+            </DraggablePiP>
           </div>
         </GestureLayer>
       ) : (
@@ -1187,18 +1090,16 @@ export function ChatPage() {
             />
           </div>
 
-          {/* Local Video (Self Preview) Container */}
-          <div
-            onMouseDown={handleMouseDown}
-            onTouchStart={handleTouchStart}
-            onDoubleClick={handleDoubleTapSwap}
+          <DraggablePiP
+            onDoubleTap={handleDoubleTapSwap}
+            isDraggable={!isSearching && videoLayout !== 'split'}
+            pipAspectRatio={pipAspectRatio}
             className={cn(
               "absolute transition-all duration-[350ms] ease-out overflow-hidden bg-black",
               videoLayout === 'split' ? "border border-white/5" : "rounded-2xl border border-white/10 shadow-2xl",
-              isDragging && 'shadow-2xl border-amber-500/30 scale-[1.03]',
               (!controlsVisible && videoLayout !== 'split') && 'border-transparent shadow-none'
             )}
-            style={getLocalContainerStyle()}
+            baseStyle={getLocalContainerStyle()}
           >
             <VideoPlayer
               stream={isPlacementsSwapped ? remoteStream : localStream}
@@ -1216,7 +1117,7 @@ export function ChatPage() {
               }
               frozen={isPlacementsSwapped ? false : isSkipPending}
             />
-          </div>
+          </DraggablePiP>
         </div>
       )}
 
@@ -1651,18 +1552,7 @@ export function ChatPage() {
       )}
 
       {/* ── FLOATING REACTION EMITTER ─────────────────────── */}
-      {reactions.map((r) => (
-        <span
-          key={r.id}
-          className="floating-heart"
-          style={{
-            left: `${r.left}%`,
-            animationDelay: `${r.delay}s`
-          }}
-        >
-          {r.emoji}
-        </span>
-      ))}
+      <ReactionLayer ref={reactionLayerRef} />
 
       {/* ── MODALS ────────────────────────────────────────── */}
       <ReportModal

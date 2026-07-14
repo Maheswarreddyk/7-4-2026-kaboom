@@ -35,15 +35,52 @@ router.post('/end-session', sessionController.endSession);
 router.post('/restore-session', sessionController.restoreSession);
 router.post('/session/heartbeat', async (req, res, next) => {
   try {
-    const { sessionId, sessionToken } = req.body;
+    const { sessionId, sessionToken, clientState } = req.body;
     if (!sessionId || !sessionToken) {
       return res.status(400).json({ error: 'sessionId and sessionToken are required' });
     }
-    const { error } = await getSupabase()
+    
+    const supabase = getSupabase();
+    const { data: session, error: fetchErr } = await supabase
+      .from('visitor_sessions')
+      .select('status, match_id')
+      .eq('id', sessionId)
+      .eq('session_token', sessionToken)
+      .single();
+      
+    if (fetchErr) throw fetchErr;
+
+    // V9 State Synchronization Guardrail
+    // If frontend thinks it is IDLE or SEARCHING, but DB thinks it is matched, we have a desync.
+    if (clientState && ['IDLE', 'SEARCHING', 'REQUEUEING'].includes(clientState)) {
+      if (['RESERVED', 'READY', 'CONNECTED'].includes(session.status) && session.match_id) {
+        console.warn(`[Sync Guardrail] Desync detected for ${sessionId}: Client is ${clientState}, DB is ${session.status}. Forcing cleanup.`);
+        
+        // Notify the ghost partner that this user has left
+        const { data: matchInfo } = await supabase
+          .from('matches')
+          .select('session1_id, session2_id')
+          .eq('id', session.match_id)
+          .single();
+          
+        if (matchInfo) {
+          const partnerId = matchInfo.session1_id === sessionId ? matchInfo.session2_id : matchInfo.session1_id;
+          await broadcastToSession(partnerId, 'partner_left', { reason: 'desync_recovery' });
+        }
+        
+        // Destroy the ghost match
+        await supabase.from('matches').update({ status: 'ended', ended_at: new Date().toISOString() }).eq('id', session.match_id);
+        
+        // Reset this user to IDLE (they will be re-queued by the frontend if they are SEARCHING)
+        await supabase.from('visitor_sessions').update({ status: 'IDLE', match_id: null }).eq('id', sessionId);
+      }
+    }
+
+    const { error } = await supabase
       .from('visitor_sessions')
       .update({ last_activity: new Date().toISOString() })
-      .eq('id', sessionId)
-      .eq('session_token', sessionToken);
+      .eq('id', sessionId);
+      
     if (error) throw error;
     res.json({ success: true });
   } catch (err) {

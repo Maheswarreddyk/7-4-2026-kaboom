@@ -22,6 +22,33 @@ export class WebRTCManager {
   private iceServers: IceServerConfig[] = DEFAULT_ICE_SERVERS;
   private queuedCandidates: RTCIceCandidateInit[] = [];
 
+  constructor() {
+    this.setupDeviceChangeListener();
+  }
+
+  private setupDeviceChangeListener() {
+    if (typeof navigator !== 'undefined' && navigator.mediaDevices) {
+      navigator.mediaDevices.addEventListener('devicechange', async () => {
+        console.log('[WebRTC] Device change detected. Attempting to reacquire media...');
+        try {
+          const stream = await this.getLocalMedia(true);
+          
+          if (this.peerConnection && this.peerConnection.connectionState !== 'closed') {
+            const senders = this.peerConnection.getSenders();
+            stream.getTracks().forEach((track) => {
+              const sender = senders.find((s) => s.track && s.track.kind === track.kind);
+              if (sender) {
+                sender.replaceTrack(track).catch((e) => console.warn('[WebRTC] replaceTrack failed on device change:', e));
+              }
+            });
+          }
+        } catch (err) {
+          console.error('[WebRTC] Failed to reacquire media on device change:', err);
+        }
+      });
+    }
+  }
+
   setCallbacks(callbacks: WebRTCCallbacks): void {
     this.callbacks = callbacks;
   }
@@ -32,7 +59,15 @@ export class WebRTCManager {
 
   private localStreamPromise: Promise<MediaStream> | null = null;
 
-  async getLocalMedia(): Promise<MediaStream> {
+  async getLocalMedia(forceReacquire = false): Promise<MediaStream> {
+    if (forceReacquire) {
+      if (this.localStream) {
+        this.localStream.getTracks().forEach((t) => t.stop());
+        this.localStream = null;
+      }
+      this.localStreamPromise = null;
+    }
+
     // If stream already exists and all tracks are active, return it directly
     if (this.localStream && this.localStream.getTracks().length > 0 && this.localStream.getTracks().every((t) => t.readyState === 'live')) {
       return this.localStream;

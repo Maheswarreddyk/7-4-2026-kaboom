@@ -5,15 +5,15 @@ import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
 import cookieParser from 'cookie-parser';
-import { Server as SocketServer } from 'socket.io';
+
 import { config } from './config/index.js';
 import { checkDatabaseConnection, getSupabase } from './database/client.js';
 import { globalErrorHandler, notFoundHandler } from './middleware/errorHandler.js';
 import routes from './routes/index.js';
 import analyticsRouter from './analytics/routes.js';
-import { setupSocketHandlers } from './socket/index.js';
+
 import { cleanupService, statsService } from './services/index.js';
-import { matchingEngine } from './services/matchingEngine.js';
+
 import { runGlobalMatchCycle } from './matchmaking/matchingEngine.js';
 import { MatchScheduler } from './matchmaking/MatchScheduler.js';
 import { CampaignManager } from './notifications/CampaignManager.js';
@@ -45,22 +45,7 @@ const isOriginAllowed = (origin: string | undefined): boolean => {
   return false;
 };
 
-const io = new SocketServer(server, {
-  cors: {
-    origin: (origin, callback) => {
-      if (isOriginAllowed(origin)) {
-        callback(null, true);
-      } else {
-        console.warn(`[Socket.io CORS Blocked] Origin: ${origin}`);
-        callback(new Error('Not allowed by CORS'));
-      }
-    },
-    methods: ['GET', 'POST'],
-    credentials: true,
-  },
-  pingTimeout: 60000,
-  pingInterval: 25000,
-});
+
 
 app.set('trust proxy', 1);
 
@@ -146,7 +131,7 @@ app.get('*', (req, res, next) => {
 app.use(notFoundHandler);
 app.use(globalErrorHandler);
 
-setupSocketHandlers(io);
+
 
 let metricsInterval: ReturnType<typeof setInterval> | null = null;
 let cleanupInterval: ReturnType<typeof setInterval> | null = null;

@@ -6,10 +6,11 @@ import {
   nextPartner,
   notifyPartnerLeft,
 } from '../services/matchService.js';
+import { queueLimiter } from '../middleware/queueLimiter.js';
 
 const router = Router();
 
-router.post('/join', async (req, res, next) => {
+router.post('/join', queueLimiter, async (req, res, next) => {
   try {
     const { sessionId, sessionToken } = req.body;
     if (!sessionId || !sessionToken) {
@@ -22,7 +23,7 @@ router.post('/join', async (req, res, next) => {
   }
 });
 
-router.post('/leave', async (req, res, next) => {
+router.post('/leave', queueLimiter, async (req, res, next) => {
   try {
     const { sessionId, sessionToken } = req.body;
     if (!sessionId || !sessionToken) {
@@ -35,7 +36,7 @@ router.post('/leave', async (req, res, next) => {
   }
 });
 
-router.post('/next', async (req, res, next) => {
+router.post('/next', queueLimiter, async (req, res, next) => {
   try {
     const { sessionId, sessionToken } = req.body;
     if (!sessionId || !sessionToken) {
@@ -48,7 +49,7 @@ router.post('/next', async (req, res, next) => {
   }
 });
 
-router.post('/disconnect', async (req, res, next) => {
+router.post('/disconnect', queueLimiter, async (req, res, next) => {
   try {
     const { sessionId, sessionToken, reason } = req.body;
     if (!sessionId || !sessionToken) {
@@ -61,7 +62,7 @@ router.post('/disconnect', async (req, res, next) => {
   }
 });
 
-router.post('/ready', async (req, res, next) => {
+router.post('/ready', queueLimiter, async (req, res, next) => {
   try {
     const { sessionId, sessionToken, matchId } = req.body;
     if (!sessionId || !sessionToken || !matchId) {

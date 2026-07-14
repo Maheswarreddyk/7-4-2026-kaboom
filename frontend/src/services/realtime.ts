@@ -22,11 +22,11 @@ export interface RealtimeCallbacks {
   onPartnerLeft?: (data: { reason: string }) => void;
   onSearching?: (data: { message: string }) => void;
   onError?: (data: { message: string }) => void;
-  onOffer?: (data: { fromSessionId: string; offer: RTCSessionDescriptionInit }) => void;
-  onOfferAck?: (data: { fromSessionId: string }) => void;
-  onAnswer?: (data: { fromSessionId: string; answer: RTCSessionDescriptionInit }) => void;
-  onAnswerAck?: (data: { fromSessionId: string }) => void;
-  onIceCandidate?: (data: { fromSessionId: string; candidate: RTCIceCandidateInit }) => void;
+  onOffer?: (data: { fromSessionId: string; offer: RTCSessionDescriptionInit; matchId: string }) => void;
+  onOfferAck?: (data: { fromSessionId: string; matchId: string }) => void;
+  onAnswer?: (data: { fromSessionId: string; answer: RTCSessionDescriptionInit; matchId: string }) => void;
+  onAnswerAck?: (data: { fromSessionId: string; matchId: string }) => void;
+  onIceCandidate?: (data: { fromSessionId: string; candidate: RTCIceCandidateInit; matchId: string }) => void;
   onPartnerLiked?: (data: { matchId: string }) => void;
   onMutualLike?: (data: { matchId: string; partnerSessionId: string }) => void;
   onNewMessage?: (data: { matchId: string; senderSessionId: string; message: string; createdAt: string }) => void;
@@ -40,6 +40,7 @@ export interface RealtimeCallbacks {
 let sessionChannel: RealtimeChannel | null = null;
 let matchChannel: RealtimeChannel | null = null;
 let currentMatchId: string | null = null;
+let isMatchChannelConnected = false;
 
 const API_BASE = environment.apiUrl;
 
@@ -75,6 +76,7 @@ function cleanupMatchChannel() {
     matchChannel = null;
   }
   currentMatchId = null;
+  isMatchChannelConnected = false;
 }
 
 function subscribeToMatchChannel(matchId: string, callbacks: RealtimeCallbacks): Promise<void> {
@@ -99,19 +101,19 @@ function subscribeToMatchChannel(matchId: string, callbacks: RealtimeCallbacks):
     matchChannel = supabase
       .channel(`match:${matchId}`, { config: { broadcast: { self: false } } })
       .on('broadcast', { event: 'offer' }, ({ payload }) => {
-        callbacks.onOffer?.(payload as { fromSessionId: string; offer: RTCSessionDescriptionInit });
+        callbacks.onOffer?.({ ...(payload as any), matchId });
       })
       .on('broadcast', { event: 'offer_ack' }, ({ payload }) => {
-        callbacks.onOfferAck?.(payload as { fromSessionId: string });
+        callbacks.onOfferAck?.({ ...(payload as any), matchId });
       })
       .on('broadcast', { event: 'answer' }, ({ payload }) => {
-        callbacks.onAnswer?.(payload as { fromSessionId: string; answer: RTCSessionDescriptionInit });
+        callbacks.onAnswer?.({ ...(payload as any), matchId });
       })
       .on('broadcast', { event: 'answer_ack' }, ({ payload }) => {
-        callbacks.onAnswerAck?.(payload as { fromSessionId: string });
+        callbacks.onAnswerAck?.({ ...(payload as any), matchId });
       })
       .on('broadcast', { event: 'ice_candidate' }, ({ payload }) => {
-        callbacks.onIceCandidate?.(payload as { fromSessionId: string; candidate: RTCIceCandidateInit });
+        callbacks.onIceCandidate?.({ ...(payload as any), matchId });
       })
       .on('broadcast', { event: 'typing' }, ({ payload }) => {
         callbacks.onPartnerTyping?.(payload as { typing: boolean });
@@ -137,16 +139,26 @@ function subscribeToMatchChannel(matchId: string, callbacks: RealtimeCallbacks):
       if (status === 'SUBSCRIBED') {
         clearTimeout(subscribeTimeout);
         subscribed = true;
+        isMatchChannelConnected = true;
         console.log(`[Realtime] Subscribed to match channel: ${matchId}`);
         resolve();
       }
-      if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+      if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
         clearTimeout(subscribeTimeout);
+        isMatchChannelConnected = false;
         console.warn(`[Realtime] Match channel ${matchId} status: ${status} — resolving with fallback`);
         resolve();
       }
     });
   });
+}
+
+export async function ensureMatchChannelConnected(matchId: string, callbacks: RealtimeCallbacks): Promise<void> {
+  if (isMatchChannelConnected) {
+    return;
+  }
+  console.log('[Realtime] Match channel disconnected. Re-subscribing before proceeding...');
+  await subscribeToMatchChannel(matchId, callbacks);
 }
 
 export function sendReaction(emoji: string) {

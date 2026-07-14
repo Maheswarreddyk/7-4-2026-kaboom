@@ -19,6 +19,7 @@ import {
   sendSeenStatus,
   sendSkipPending,
   sendSkipCancelled,
+  ensureMatchChannelConnected,
 } from '../services/realtime.js';
 import { webrtcManager } from '../webrtc/index.js';
 import type { ChatState, ConnectionStatus, SessionStatus } from '../types/index.js';
@@ -241,6 +242,7 @@ export function useVideoChat(
     webrtcManager.resetConnection();
     lastProcessedOfferSdpRef.current = null;
     lastProcessedAnswerSdpRef.current = null;
+    matchIdRef.current = null;
     
     showToast('info', 'Partner left. Finding someone new...');
     // Wait 2.5 seconds to show the left animation overlay, then automatically rejoin the queue
@@ -326,7 +328,11 @@ export function useVideoChat(
     try {
       console.log('[WebRTC] Initiating ICE restart...');
       const offer = await webrtcManager.createOffer({ iceRestart: true });
-      if (sessionIdRef.current) {
+      if (sessionIdRef.current && matchIdRef.current && callbacksRef.current) {
+        
+        // Phase 4: WebRTC Hardening — Verify WebSocket is connected before sending offer
+        await ensureMatchChannelConnected(matchIdRef.current, callbacksRef.current);
+        
         sendOffer(sessionIdRef.current, offer);
 
         if (offerRetryTimerRef.current) clearInterval(offerRetryTimerRef.current);
@@ -608,13 +614,22 @@ export function useVideoChat(
           if (sessionIdRef.current) {
             sendOffer(sessionIdRef.current, offer);
 
+            let retryCount = 0;
             if (offerRetryTimerRef.current) clearInterval(offerRetryTimerRef.current);
             offerRetryTimerRef.current = setInterval(() => {
-              console.log('[Signaling] Offer ACK not received, retrying offer...');
+              retryCount++;
+              if (retryCount > 1) {
+                console.warn('[Signaling] Offer ACK strictly timed out. Restarting negotiation via requeue.');
+                if (offerRetryTimerRef.current) clearInterval(offerRetryTimerRef.current);
+                offerRetryTimerRef.current = null;
+                void triggerAutoRejoinRef.current?.();
+                return;
+              }
+              console.log('[Signaling] Offer ACK not received, retrying offer once...');
               if (sessionIdRef.current) {
                 sendOffer(sessionIdRef.current, offer);
               }
-            }, 2000);
+            }, 5000);
           }
         } catch (error) {
           showToast('error', 'Failed to create connection offer');
@@ -827,8 +842,12 @@ export function useVideoChat(
           });
         }
       },
-      onOffer: async (data: { fromSessionId: string; offer: RTCSessionDescriptionInit }) => {
+      onOffer: async (data: { fromSessionId: string; offer: RTCSessionDescriptionInit; matchId: string }) => {
         if (skipInProgressRef.current) return;
+        if (data.matchId && matchIdRef.current && data.matchId !== matchIdRef.current) {
+          console.warn(`[Signaling] Stale onOffer rejected. Expected ${matchIdRef.current}, got ${data.matchId}`);
+          return;
+        }
 
         // Phase 3 fix: Always send ACK first so the remote peer stops retrying the offer,
         // even if we are already connected!
@@ -872,29 +891,44 @@ export function useVideoChat(
           if (sessionIdRef.current) {
             sendAnswer(sessionIdRef.current, answer);
 
+            let retryCount = 0;
             if (answerRetryTimerRef.current) clearInterval(answerRetryTimerRef.current);
             answerRetryTimerRef.current = setInterval(() => {
-              console.log('[Signaling] Answer ACK not received, retrying answer...');
+              retryCount++;
+              if (retryCount > 1) {
+                console.warn('[Signaling] Answer ACK strictly timed out. Restarting negotiation via requeue.');
+                if (answerRetryTimerRef.current) clearInterval(answerRetryTimerRef.current);
+                answerRetryTimerRef.current = null;
+                void triggerAutoRejoinRef.current?.();
+                return;
+              }
+              console.log('[Signaling] Answer ACK not received, retrying answer once...');
               if (sessionIdRef.current) {
                 sendAnswer(sessionIdRef.current, answer);
               }
-            }, 2000);
+            }, 5000);
           }
         } catch (error) {
           showToast('error', 'Failed to handle connection offer');
           console.error(error);
         }
       },
-      onOfferAck: () => {
+      onOfferAck: (data: { fromSessionId: string; matchId: string }) => {
         if (skipInProgressRef.current) return;
+        if (data.matchId && matchIdRef.current && data.matchId !== matchIdRef.current) return;
+        
         console.log('[Signaling] Offer ACK received, clearing retry timer.');
         if (offerRetryTimerRef.current) {
           clearInterval(offerRetryTimerRef.current);
           offerRetryTimerRef.current = null;
         }
       },
-      onAnswer: async (data: { answer: RTCSessionDescriptionInit }) => {
+      onAnswer: async (data: { fromSessionId: string; answer: RTCSessionDescriptionInit; matchId: string }) => {
         if (skipInProgressRef.current) return;
+        if (data.matchId && matchIdRef.current && data.matchId !== matchIdRef.current) {
+          console.warn(`[Signaling] Stale onAnswer rejected. Expected ${matchIdRef.current}, got ${data.matchId}`);
+          return;
+        }
 
         // Phase 3 fix: Always send ACK first so the remote peer stops retrying the answer,
         // even if we are already connected!
@@ -927,16 +961,20 @@ export function useVideoChat(
           console.error(error);
         }
       },
-      onAnswerAck: () => {
+      onAnswerAck: (data: { fromSessionId: string; matchId: string }) => {
         if (skipInProgressRef.current) return;
+        if (data.matchId && matchIdRef.current && data.matchId !== matchIdRef.current) return;
+
         console.log('[Signaling] Answer ACK received, clearing retry timer.');
         if (answerRetryTimerRef.current) {
           clearInterval(answerRetryTimerRef.current);
           answerRetryTimerRef.current = null;
         }
       },
-      onIceCandidate: async (data: { candidate: RTCIceCandidateInit }) => {
+      onIceCandidate: async (data: { candidate: RTCIceCandidateInit; matchId: string }) => {
         if (skipInProgressRef.current) return;
+        if (data.matchId && matchIdRef.current && data.matchId !== matchIdRef.current) return;
+        
         if (webrtcManager.getConnectionState() === 'connected') return;
         await webrtcManager.addIceCandidate(data.candidate);
       },
@@ -1185,7 +1223,7 @@ export function useVideoChat(
 
     const runHeartbeat = async () => {
       try {
-        await apiService.submitHeartbeat(sessionId, sessionToken);
+        await apiService.submitHeartbeat(sessionId, sessionToken, signalingStateRef.current);
       } catch (err) {
         console.warn('[Heartbeat] Active heartbeat failed:', err);
       }
@@ -1207,16 +1245,37 @@ export function useVideoChat(
   useEffect(() => {
     const API_BASE = environment.apiUrl;
 
-    const handleUnloadOrHide = (e?: Event) => {
-      console.log(`[Lifecycle] Event: ${e?.type || 'manual'} | Releasing camera tracks.`);
+    const suspendLocalMedia = () => {
+      console.log('[Lifecycle] Suspending local media to prevent background hardware crashes');
       const activeStream = webrtcManager.getLocalStream();
       if (activeStream) {
-        activeStream.getTracks().forEach(track => track.stop());
+        activeStream.getTracks().forEach(track => {
+          track.enabled = false;
+          track.stop();
+        });
         (webrtcManager as any).localStream = null;
         setLocalStream(null);
       }
+    };
 
-      if (sessionIdRef.current && sessionTokenRef.current && (e?.type === 'beforeunload' || e?.type === 'pagehide')) {
+    const handleUnloadOrHide = (e?: Event) => {
+      const isClosing = e?.type === 'beforeunload';
+      console.log(`[Lifecycle] Event: ${e?.type || 'manual'} | isClosing: ${isClosing}`);
+      
+      if (isClosing) {
+        const isCallActive = [
+          'SEARCHING', 'REQUEUEING', 'MATCH_FOUND', 'READY', 'NEGOTIATING', 'ICE_CONNECTING', 'CONNECTED'
+        ].includes(signalingStateRef.current);
+
+        if (isCallActive && e) {
+          e.preventDefault();
+          e.returnValue = true; // Required for Chrome/Safari to show prompt
+        }
+
+        suspendLocalMedia();
+      }
+
+      if (sessionIdRef.current && sessionTokenRef.current && isClosing) {
         // SendBeacon ensures payload is sent even if page is closing/suspending instantly
         const url = `${API_BASE}/api/match/disconnect`;
         const payload = JSON.stringify({
@@ -1277,7 +1336,7 @@ export function useVideoChat(
 
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'hidden') {
-        handleUnloadOrHide();
+        suspendLocalMedia();
       } else {
         void handleResumeOrFocus();
       }
