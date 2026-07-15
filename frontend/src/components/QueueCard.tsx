@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { cn, safeLocalStorage } from '../utils/index.js';
 
 interface QueueCardProps {
@@ -27,16 +27,38 @@ export function QueueCard({
   const [expanded, setExpanded] = useState(false);
   const [isCanceling, setIsCanceling] = useState(false);
 
-  // Expose local preferences
-  // Expose local preferences
-  const displayName = safeLocalStorage.getItem('kaboom_display_name') || 'Guest';
-  const country = safeLocalStorage.getItem('kaboom_country') || '';
-  const city = safeLocalStorage.getItem('kaboom_city') || '';
-  const university = safeLocalStorage.getItem('kaboom_university') || '';
-  const bio = safeLocalStorage.getItem('kaboom_bio') || '';
-  
-  const interests: string[] = safeLocalStorage.getJSON('kaboom_interest_tags', []);
-  const languages: string[] = safeLocalStorage.getJSON('kaboom_languages', []);
+  const sheetRef = useRef<HTMLDivElement>(null);
+  const sheetDragStartY = useRef(0);
+  const isSheetDragging = useRef(false);
+
+  const handleSheetPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    sheetDragStartY.current = e.clientY;
+    isSheetDragging.current = true;
+    if (sheetRef.current) {
+      sheetRef.current.style.transition = 'none';
+    }
+  };
+
+  const handleSheetPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!isSheetDragging.current) return;
+    const d = e.clientY - sheetDragStartY.current;
+    if (d > 0 && sheetRef.current) {
+      sheetRef.current.style.transform = `translateY(${d}px)`;
+    }
+  };
+
+  const handleSheetPointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    isSheetDragging.current = false;
+    if (sheetRef.current) {
+      const d = e.clientY - sheetDragStartY.current;
+      sheetRef.current.style.transition = 'transform 0.3s ease-out';
+      if (d > 100) {
+        setExpanded(false);
+      } else {
+        sheetRef.current.style.transform = 'translateY(0px)';
+      }
+    }
+  };
 
   const formatTimer = (secs: number) => {
     const m = Math.floor(secs / 60).toString().padStart(2, '0');
@@ -52,17 +74,33 @@ export function QueueCard({
     }
   };
 
-  // Compile active filters list
-  const activeFiltersList: string[] = [];
-  if (country) activeFiltersList.push(`🌍 ${country}`);
-  if (city) activeFiltersList.push(`📍 ${city}`);
-  if (university) activeFiltersList.push(`🎓 ${university}`);
-  interests.forEach(t => activeFiltersList.push(`#${t}`));
-  languages.forEach(l => activeFiltersList.push(`💬 ${l}`));
+  // Optimize: Compute filters and local storage data once instead of every second when `elapsed` ticks
+  const { displayName, activeFiltersList, hasFilters, visibleFilters, remainingFiltersCount, bio } = useMemo(() => {
+    const dName = safeLocalStorage.getItem('kaboom_display_name') || 'Guest';
+    const country = safeLocalStorage.getItem('kaboom_country') || '';
+    const city = safeLocalStorage.getItem('kaboom_city') || '';
+    const university = safeLocalStorage.getItem('kaboom_university') || '';
+    const b = safeLocalStorage.getItem('kaboom_bio') || '';
+    
+    const interests: string[] = safeLocalStorage.getJSON('kaboom_interest_tags', []);
+    const languages: string[] = safeLocalStorage.getJSON('kaboom_languages', []);
 
-  const hasFilters = activeFiltersList.length > 0;
-  const visibleFilters = activeFiltersList.slice(0, 2);
-  const remainingFiltersCount = activeFiltersList.length - visibleFilters.length;
+    const filters: string[] = [];
+    if (country) filters.push(`🌍 ${country}`);
+    if (city) filters.push(`📍 ${city}`);
+    if (university) filters.push(`🎓 ${university}`);
+    interests.forEach(t => filters.push(`#${t}`));
+    languages.forEach(l => filters.push(`💬 ${l}`));
+
+    return {
+      displayName: dName,
+      bio: b,
+      activeFiltersList: filters,
+      hasFilters: filters.length > 0,
+      visibleFilters: filters.slice(0, 2),
+      remainingFiltersCount: filters.length > 2 ? filters.length - 2 : 0
+    };
+  }, []);
 
   const handleToggleExpand = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -80,7 +118,7 @@ export function QueueCard({
         {/* Row 1: Header (Always visible) */}
         <div className="queue-card-header flex items-center justify-between border-b border-white/5 pb-3">
           <div className="flex items-center gap-2 overflow-hidden">
-            <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse shrink-0" />
+            <span className="w-2 h-2 rounded-full bg-amber-500 motion-safe:animate-pulse shrink-0" />
             <h4 className="fluid-username font-extrabold text-white truncate max-w-[140px] m-0">
               {displayName}
             </h4>
@@ -89,7 +127,7 @@ export function QueueCard({
               {matchMode === 'STRICT' ? 'Exact' : matchMode === 'PREFER' ? 'Smart' : 'Random'}
             </span>
             {isQueuePaused && (
-              <span className="text-[9px] text-amber-500 font-black tracking-wider shrink-0 animate-pulse">PAUSED</span>
+              <span className="text-[9px] text-amber-500 font-black tracking-wider shrink-0 motion-safe:animate-pulse">PAUSED</span>
             )}
           </div>
           <div className="flex items-center gap-2 shrink-0">
@@ -175,6 +213,7 @@ export function QueueCard({
                 onClick={(e) => { e.stopPropagation(); onOpenPreferences(); }}
                 className="btn-action-edit flex-1 flex items-center justify-center gap-1.5 rounded-xl text-[11px] font-extrabold tracking-wide active:scale-95 transition-all cursor-pointer h-11"
                 title="Edit Search Filters"
+                aria-label="Edit Search Filters"
               >
                 <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
@@ -188,6 +227,8 @@ export function QueueCard({
                   type="button"
                   onClick={(e) => { e.stopPropagation(); onResumeQueue(); }}
                   className="btn-action-pause flex-1 flex items-center justify-center gap-1.5 rounded-xl text-[11px] font-extrabold tracking-wide active:scale-95 transition-all cursor-pointer h-11"
+                  aria-label="Resume Queue"
+                  title="Resume Queue"
                 >
                   <svg className="w-3.5 h-3.5 fill-current shrink-0" viewBox="0 0 24 24">
                     <path d="M8 5v14l11-7z" />
@@ -201,6 +242,8 @@ export function QueueCard({
                   type="button"
                   onClick={(e) => { e.stopPropagation(); onPauseQueue(); }}
                   className="btn-action-pause flex-1 flex items-center justify-center gap-1.5 rounded-xl text-[11px] font-extrabold tracking-wide active:scale-95 transition-all cursor-pointer h-11"
+                  aria-label="Pause Queue"
+                  title="Pause Queue"
                 >
                   <svg className="w-3.5 h-3.5 fill-current shrink-0" viewBox="0 0 24 24">
                     <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
@@ -223,6 +266,7 @@ export function QueueCard({
                 }}
                 className="btn-action-cancel flex-1 flex items-center justify-center gap-1.5 rounded-xl text-[11px] font-extrabold tracking-wide active:scale-95 transition-all cursor-pointer h-11 disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100"
                 title="Cancel Queue"
+                aria-label="Cancel Queue"
               >
                 {isCanceling ? (
                   <svg className="w-4 h-4 animate-spin shrink-0 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -247,13 +291,17 @@ export function QueueCard({
       {/* ── EXPANDED BOTTOM SHEET OVERLAY ── */}
       {expanded && (
         <div 
-          className="fixed inset-0 bg-black/85 z-[90] flex flex-col justify-end animate-fade-in pointer-events-auto select-none"
+          className="fixed inset-0 bg-black/85 z-[90] flex flex-col justify-end motion-safe:animate-fade-in pointer-events-auto select-none"
           onClick={() => setExpanded(false)}
         >
           <div
-            className="w-full bg-stone-900 border-t border-white/10 rounded-t-3xl p-6 text-left flex flex-col gap-4 max-h-[85vh] overflow-y-auto animate-slide-up"
-            style={{ paddingBottom: '32px' }}
+            ref={sheetRef}
+            className="w-full bg-stone-900 border-t border-white/10 rounded-t-3xl p-6 text-left flex flex-col gap-4 max-h-[85vh] overflow-y-auto motion-safe:animate-slide-up touch-none"
+            style={{ paddingBottom: '32px', willChange: 'transform' }}
             onClick={(e) => e.stopPropagation()}
+            onPointerDown={handleSheetPointerDown}
+            onPointerMove={handleSheetPointerMove}
+            onPointerUp={handleSheetPointerUp}
           >
             {/* Header */}
             <div className="flex items-center justify-between pb-3 border-b border-white/5">
@@ -321,6 +369,7 @@ export function QueueCard({
                     type="button"
                     onClick={(e) => { e.stopPropagation(); setExpanded(false); onOpenPreferences(); }}
                     className="py-2.5 text-xs rounded-lg bg-white/5 hover:bg-white/10 text-stone-200 hover:text-white font-bold border border-white/10 transition-all active:scale-95 flex items-center justify-center gap-1 cursor-pointer"
+                    aria-label="Edit Search Filters"
                   >
                     ✏️ Edit Filters
                   </button>
@@ -331,6 +380,7 @@ export function QueueCard({
                       type="button"
                       onClick={(e) => { e.stopPropagation(); setExpanded(false); onResumeQueue(); }}
                       className="py-2.5 text-xs rounded-lg bg-green-600 hover:bg-green-500 text-white font-bold transition-all active:scale-95 flex items-center justify-center gap-1 cursor-pointer"
+                      aria-label="Resume Queue"
                     >
                       ▶️ Resume
                     </button>
@@ -341,6 +391,7 @@ export function QueueCard({
                       type="button"
                       onClick={(e) => { e.stopPropagation(); setExpanded(false); onPauseQueue(); }}
                       className="py-2.5 text-xs rounded-lg bg-amber-500 hover:bg-amber-600 text-stone-950 font-bold transition-all active:scale-95 flex items-center justify-center gap-1 cursor-pointer"
+                      aria-label="Pause Queue"
                     >
                       ⏸ Pause
                     </button>
@@ -360,6 +411,7 @@ export function QueueCard({
                     onLeaveQueue();
                   }}
                   className="w-full py-2.5 text-xs rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 font-bold border border-red-500/25 transition-all active:scale-95 flex items-center justify-center gap-1 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100"
+                  aria-label="Cancel Queue"
                 >
                   {isCanceling ? '🔴 Leaving...' : '📵 Leave Queue'}
                 </button>

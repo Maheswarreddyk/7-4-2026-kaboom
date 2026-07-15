@@ -17,6 +17,7 @@ import { cleanupService, statsService } from './services/index.js';
 import { runGlobalMatchCycle, matchmakerMetrics } from './matchmaking/matchingEngine.js';
 import { MatchScheduler } from './matchmaking/MatchScheduler.js';
 import { CampaignManager } from './notifications/CampaignManager.js';
+import { startupManager } from './utils/startupState.js';
 
 // Initialize Web Push VAPID keys
 CampaignManager.init();
@@ -137,40 +138,56 @@ let metricsInterval: ReturnType<typeof setInterval> | null = null;
 let cleanupInterval: ReturnType<typeof setInterval> | null = null;
 
 async function startServer(): Promise<void> {
-  const dbConnected = await checkDatabaseConnection();
+  startupManager.setState('STARTING_HTTP');
 
-  if (!dbConnected) {
-    console.warn('[Warning] Database connection failed. Ensure Supabase credentials are configured.');
-    console.warn('[Warning] API will start but database operations may fail.');
-  } else {
-    console.log('[Database] Connected to Supabase');
-  }
-
+  // 1. Bind HTTP Server Instantly
   server.listen(config.port, () => {
     console.log(`[Server] IndiaTV backend running on port ${config.port}`);
     console.log(`[Server] Frontend URL: ${config.frontendUrl}`);
     console.log(`[Server] Environment: ${config.nodeEnv}`);
   });
 
-  metricsInterval = setInterval(async () => {
+  // 2. Background Initialization (Non-blocking)
+  (async () => {
     try {
-      await statsService.recordMetrics(matchmakerMetrics.totalSearchingUsers);
-    } catch (error) {
-      console.error('[Metrics] Failed to record:', error);
-    }
-  }, config.metricsIntervalMs);
+      startupManager.setState('CONNECTING_DATABASE');
+      const dbConnected = await checkDatabaseConnection();
 
-  cleanupInterval = setInterval(async () => {
-    try {
-      await cleanupService.runCleanup(config.queueStaleMs, config.matchStaleMs);
-    } catch (error) {
-      console.error('[Cleanup] Failed:', error);
-    }
-  }, config.cleanupIntervalMs);
+      if (!dbConnected) {
+        console.warn('[Warning] Database connection failed. Ensure Supabase credentials are configured.');
+        console.warn('[Warning] API will start but database operations may fail.');
+        startupManager.setState('DEGRADED', 'Running in degraded mode (No DB)');
+      } else {
+        console.log('[Database] Connected to Supabase');
+        startupManager.setState('INITIALIZING_SERVICES');
 
-  if (dbConnected) {
-    MatchScheduler.start();
-  }
+        // 3. Initialize background services only after DB is ready
+        metricsInterval = setInterval(async () => {
+          try {
+            await statsService.recordMetrics(matchmakerMetrics.totalSearchingUsers);
+          } catch (error) {
+            console.error('[Metrics] Failed to record:', error);
+          }
+        }, config.metricsIntervalMs);
+
+        cleanupInterval = setInterval(async () => {
+          try {
+            await cleanupService.runCleanup(config.queueStaleMs, config.matchStaleMs);
+          } catch (error) {
+            console.error('[Cleanup] Failed:', error);
+          }
+        }, config.cleanupIntervalMs);
+
+        MatchScheduler.start();
+        
+        // 4. Mark as READY
+        startupManager.setState('READY');
+      }
+    } catch (e) {
+      console.error('[Startup] Fatal error during background initialization', e);
+      startupManager.setState('FAILED');
+    }
+  })();
 }
 
 function gracefulShutdown(signal: string): void {

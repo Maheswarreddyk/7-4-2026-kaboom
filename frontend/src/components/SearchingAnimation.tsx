@@ -87,8 +87,14 @@ export function SearchingAnimation({
     return () => document.removeEventListener('visibilitychange', handleVisibility);
   }, []);
 
+  const prefersReducedMotion = typeof window !== 'undefined' 
+    ? window.matchMedia('(prefers-reduced-motion: reduce)').matches 
+    : false;
+
   // 3D Perspective Network Globe Projection Loop
   useEffect(() => {
+    if (prefersReducedMotion) return;
+
     const canvas = canvasRef.current;
     if (!canvas) return;
 
@@ -285,7 +291,9 @@ export function SearchingAnimation({
   return (
     <div className="absolute inset-0 w-full h-full bg-stone-950 overflow-hidden select-none z-[70] flex flex-col items-center justify-center">
       {/* 3D Global connectivity canvas network */}
-      <canvas ref={canvasRef} className="absolute inset-0 w-full h-full pointer-events-none" />
+      {!prefersReducedMotion && (
+        <canvas ref={canvasRef} className="absolute inset-0 w-full h-full pointer-events-none" />
+      )}
 
       {/* Unified Waiting Room Content Layer */}
       <div 
@@ -353,20 +361,22 @@ export function SearchingAnimation({
             </div>
 
             {/* Fading matched stages text */}
-            <p
-              className="text-stone-100 font-bold text-[11px] sm:text-xs tracking-tight mb-2 h-5 overflow-hidden transition-opacity duration-150 shrink-0 select-none"
-              style={{ opacity: fadeOpacity }}
-            >
-              {fadingText}
-            </p>
+            <div aria-live="polite" className="h-5 shrink-0">
+              <p
+                className="text-stone-100 font-bold text-[11px] sm:text-xs tracking-tight mb-2 overflow-hidden transition-opacity duration-150 select-none"
+                style={{ opacity: fadeOpacity }}
+              >
+                {fadingText}
+              </p>
+            </div>
 
             {/* Jump loader dots */}
             <div className="flex items-center justify-center gap-1.5 shrink-0">
               {[0, 1, 2].map((i) => (
                 <div
                   key={i}
-                  className="w-1.2 h-1.2 sm:w-1.5 sm:h-1.5 rounded-full bg-amber-500/60 animate-bounce"
-                  style={{ animationDelay: `${i * 0.15}s` }}
+                  className={cn("w-1.2 h-1.2 sm:w-1.5 sm:h-1.5 rounded-full bg-amber-500/60", prefersReducedMotion ? "" : "animate-bounce")}
+                  style={{ animationDelay: prefersReducedMotion ? '0s' : `${i * 0.15}s` }}
                 />
               ))}
             </div>

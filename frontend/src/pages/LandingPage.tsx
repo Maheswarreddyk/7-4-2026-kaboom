@@ -700,7 +700,7 @@ export function LandingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#FAF9F7] flex flex-col justify-between overflow-x-hidden selection:bg-amber-500/20 select-none relative text-stone-800 animate-in fade-in duration-700">
+    <div className="min-h-screen min-h-[100dvh] bg-[#FAF9F7] flex flex-col justify-between overflow-x-hidden selection:bg-amber-500/20 select-none relative text-stone-800 animate-in fade-in duration-700">
       <MetaManager page="home" />
       
       {/* ── STYLE TAG FOR V6 CORE MASCOT & GAME CONTROLS KEYFRAMES ── */}
@@ -900,7 +900,7 @@ export function LandingPage() {
         ref={containerRef}
         onMouseMove={handleMouseMove}
         onMouseLeave={handleMouseLeave}
-        className="min-h-screen flex flex-col justify-between items-center px-6 pt-24 pb-16 relative w-full z-10"
+        className="min-h-screen min-h-[100dvh] flex flex-col justify-between items-center px-6 pt-24 pb-16 relative w-full z-10"
       >
         {/* Rotating Globe backdrop */}
         <div className="absolute inset-0 flex items-center justify-center z-0 overflow-hidden pointer-events-none opacity-80">

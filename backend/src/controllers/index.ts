@@ -9,19 +9,23 @@ import {
 } from '../services/index.js';
 import { AppError, asyncHandler } from '../middleware/errorHandler.js';
 import type { ReportReason } from '../types/index.js';
+import { startupManager } from '../utils/startupState.js';
 
 const VALID_REPORT_REASONS: ReportReason[] = ['spam', 'nudity', 'abuse', 'harassment', 'other'];
 
 export const healthController = {
   getHealth: asyncHandler(async (_req: Request, res: Response) => {
-    const dbConnected = await checkDatabaseConnection();
-
+    const startupProgress = startupManager.getProgressInfo();
+    
     res.json({
       success: true,
-      status: dbConnected ? 'healthy' : 'degraded',
-      timestamp: new Date().toISOString(),
-      database: dbConnected ? 'connected' : 'disconnected',
+      ready: startupProgress.state === 'READY' || startupProgress.state === 'DEGRADED',
+      status: startupProgress.state,
+      progress: startupProgress.progress,
+      stage: startupProgress.stage,
+      version: startupManager.getVersion(),
       uptime: process.uptime(),
+      timestamp: new Date().toISOString(),
     });
   }),
 };

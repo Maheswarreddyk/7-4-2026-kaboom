@@ -101,7 +101,7 @@ export function ChatControls({
       </svg>
     ),
     LikeOn: () => (
-      <svg className="w-5 h-5 text-red-500 fill-red-500 animate-heart-pop" viewBox="0 0 24 24">
+      <svg className="w-5 h-5 text-red-500 fill-red-500 motion-safe:animate-heart-pop" viewBox="0 0 24 24">
         <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
       </svg>
     ),
@@ -148,6 +148,7 @@ export function ChatControls({
             onPointerDown={handlePress(onOpenPreferences)}
             className={cn(btnSpring, "w-12 h-12 bg-white/5 border-white/5 text-white/80 hover:bg-white/10 hover:border-white/10")}
             title="Preferences"
+            aria-label="Open Preferences"
           >
             <Icons.Settings />
           </button>
@@ -164,6 +165,7 @@ export function ChatControls({
               : "bg-white/5 border-white/5 text-white/80 hover:bg-white/10 hover:border-white/10"
           )}
           title={isMuted ? "Unmute" : "Mute"}
+          aria-label={isMuted ? "Unmute Microphone" : "Mute Microphone"}
         >
           {isMuted ? <Icons.MicOff /> : <Icons.MicOn />}
         </button>
@@ -179,6 +181,7 @@ export function ChatControls({
               : "bg-white/5 border-white/5 text-white/80 hover:bg-white/10 hover:border-white/10"
           )}
           title={isCameraOff ? "Enable Camera" : "Disable Camera"}
+          aria-label={isCameraOff ? "Enable Camera" : "Disable Camera"}
         >
           {isCameraOff ? <Icons.CameraOff /> : <Icons.CameraOn />}
         </button>
@@ -197,6 +200,7 @@ export function ChatControls({
                 : "bg-white/5 border-white/5 text-white/80 hover:border-white/10 hover:bg-white/10"
             )}
             title="Like Partner"
+            aria-label="Like Partner"
           >
             {liked ? <Icons.LikeOn /> : <Icons.LikeOff />}
           </button>
@@ -214,10 +218,11 @@ export function ChatControls({
                 : "bg-white/5 border-white/5 text-white/80 hover:border-white/10 hover:bg-white/10"
             )}
             title="Toggle Chat"
+            aria-label="Toggle Chat Window"
           >
             <Icons.Chat />
             {unreadCount > 0 && (
-              <span className="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-extrabold text-white border border-stone-950 animate-pulse">
+              <span className="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-extrabold text-white border border-stone-950 motion-safe:animate-pulse">
                 {unreadCount}
               </span>
             )}
@@ -229,6 +234,7 @@ export function ChatControls({
           disabled={disabled}
           className={cn(btnSpring, "w-14 h-14 bg-gradient-to-r from-amber-500 to-amber-600 border-amber-400/40 text-stone-950 hover:shadow-[0_8px_24px_rgba(245,166,35,0.35)]")}
           title="Next Partner"
+          aria-label="Next Partner"
         >
           <Icons.Next />
         </button>
@@ -238,6 +244,7 @@ export function ChatControls({
           disabled={disabled}
           className={cn(btnSpring, "w-12 h-12 bg-white/5 border-white/5 text-yellow-400/80 hover:bg-white/10 hover:border-white/10")}
           title="Report User"
+          aria-label="Report User"
         >
           <Icons.Report />
         </button>
@@ -253,6 +260,7 @@ export function ChatControls({
               : "bg-white/5 border-white/5 text-white/80 hover:border-white/10 hover:bg-white/10"
           )}
           title="Toggle Fullscreen"
+          aria-label={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
         >
           <Icons.Fullscreen />
         </button>
@@ -261,6 +269,7 @@ export function ChatControls({
           onPointerDown={handlePress(onLeave)}
           className={cn(btnSpring, "w-12 h-12 bg-red-600 border-red-500 text-white hover:bg-red-500 hover:shadow-[0_0_20px_rgba(220,38,38,0.45)]")}
           title="End Call"
+          aria-label="End Call"
         >
           <Icons.Leave />
         </button>
@@ -279,6 +288,8 @@ export function ChatControls({
               "w-[50px] h-[50px] bg-black/45 backdrop-blur-xl border-white/5",
               isMuted ? "text-red-400" : "text-white"
             )}
+            title={isMuted ? "Unmute" : "Mute"}
+            aria-label={isMuted ? "Unmute Microphone" : "Mute Microphone"}
           >
             {isMuted ? <Icons.MicOff /> : <Icons.MicOn />}
           </button>
@@ -291,6 +302,8 @@ export function ChatControls({
               "w-[50px] h-[50px] bg-black/45 backdrop-blur-xl border-white/5",
               isCameraOff ? "text-red-400" : "text-white"
             )}
+            title={isCameraOff ? "Enable Camera" : "Disable Camera"}
+            aria-label={isCameraOff ? "Enable Camera" : "Disable Camera"}
           >
             {isCameraOff ? <Icons.CameraOff /> : <Icons.CameraOn />}
           </button>
@@ -304,6 +317,8 @@ export function ChatControls({
                 "w-[50px] h-[50px] bg-black/45 backdrop-blur-xl border-white/5",
                 liked ? "text-red-500 scale-110" : "text-white"
               )}
+              title="Like Partner"
+              aria-label="Like Partner"
             >
               {liked ? <Icons.LikeOn /> : <Icons.LikeOff />}
             </button>
@@ -318,6 +333,8 @@ export function ChatControls({
             <button
               onPointerDown={handlePress(onOpenPreferences)}
               className={cn(btnSpring, "w-[46px] h-[46px] bg-black/45 backdrop-blur-xl border-white/5 text-white/70")}
+              title="Preferences"
+              aria-label="Open Preferences"
             >
               <Icons.Settings />
             </button>
@@ -328,6 +345,8 @@ export function ChatControls({
             onPointerDown={handlePress(onReport)}
             disabled={disabled}
             className={cn(btnSpring, "w-[46px] h-[46px] bg-black/45 backdrop-blur-xl border-white/5 text-yellow-400/80")}
+            title="Report User"
+            aria-label="Report User"
           >
             <Icons.Report />
           </button>
@@ -342,10 +361,12 @@ export function ChatControls({
                 "w-[48px] h-[48px] bg-black/45 backdrop-blur-xl border-white/5 text-white/80",
                 isChatOpen && "bg-amber-500 text-stone-950 border-amber-400"
               )}
+              title="Toggle Chat"
+              aria-label="Toggle Chat Window"
             >
               <Icons.Chat />
               {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-extrabold text-white border border-stone-950">
+                <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-extrabold text-white border border-stone-950 motion-safe:animate-pulse">
                   {unreadCount}
                 </span>
               )}
@@ -360,7 +381,8 @@ export function ChatControls({
               btnSpring,
               "w-[65px] h-[65px] bg-gradient-to-r from-amber-500 to-amber-600 border-amber-400/40 text-stone-950 shadow-[0_8px_24px_rgba(245,166,35,0.35)]"
             )}
-            title="Next"
+            title="Next Partner"
+            aria-label="Next Partner"
           >
             <Icons.Next />
           </button>
@@ -369,7 +391,8 @@ export function ChatControls({
           <button
             onPointerDown={handlePress(onLeave)}
             className={cn(btnSpring, "w-[46px] h-[46px] bg-red-600 border-red-500 text-white hover:bg-red-500 hover:shadow-[0_0_15px_rgba(220,38,38,0.4)]")}
-            title="Leave"
+            title="End Call"
+            aria-label="End Call"
           >
             <Icons.Leave />
           </button>

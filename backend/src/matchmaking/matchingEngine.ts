@@ -24,20 +24,16 @@ import { logEngine, logToDb } from './logger.js';
 import { AnalyticsLogger } from '../analytics/logger.js';
 
 // ============================================================
-// Concurrency Advisory Lock Configuration
+// Concurrency Memory Mutex Configuration
 // ============================================================
-const MATCHMAKER_LOCK_ID = 99999;
+let isHealCycleRunning = false;
+let isMatchmakerRunning = false;
 
 // ============================================================
 // In-Memory Queue Cache & Invalidation
 // ============================================================
-let cachedWaitingUsers: any[] | null = null;
-let lastReconciliationTime = 0;
-const RECONCILIATION_INTERVAL_MS = 10_000; // 10 seconds full sync fallback
-
 export function invalidateMatchmakerCache(): void {
-  console.log('[MatchmakerCache] Cache invalidated.');
-  cachedWaitingUsers = null;
+  // No-op: Cache removed to fix ghost matches (Chaos/Sync Audit)
 }
 
 // ============================================================
@@ -197,7 +193,6 @@ async function loadBatchedExclusions(supabase: SupabaseClient, sessionIds: strin
 
 let lastHealTime = 0;
 const HEAL_INTERVAL_MS = 15000;
-const HEAL_QUEUE_LOCK_ID = 88998822; // Separate lock for healing
 
 /**
  * Self-healing and queue recovery (V4.1 Requirement 4 & 12).
@@ -210,14 +205,10 @@ export async function runGlobalHealCycle(supabase: SupabaseClient): Promise<void
     return;
   }
 
-  const { data: lockAcquired, error: lockErr } = await supabase.rpc('try_advisory_lock', { lock_id: HEAL_QUEUE_LOCK_ID });
-  if (lockErr) {
-    console.error('[HealQueue] try_advisory_lock RPC error:', lockErr.message);
-  }
-  if (!lockAcquired) {
+  if (isHealCycleRunning) {
     return; // Another instance is healing
   }
-
+  isHealCycleRunning = true;
   lastHealTime = Date.now();
 
   const now = new Date().toISOString();
@@ -415,6 +406,8 @@ export async function runGlobalHealCycle(supabase: SupabaseClient): Promise<void
     }
   } catch (err) {
     console.error('[Self-Healing] Error during queue healing:', err instanceof Error ? err.message : err);
+  } finally {
+    isHealCycleRunning = false;
   }
 }
 
@@ -424,17 +417,12 @@ export async function runGlobalHealCycle(supabase: SupabaseClient): Promise<void
  */
 export async function runGlobalMatchCycle(supabase: SupabaseClient): Promise<void> {
   const start = Date.now();
-  console.log('[Matchmaker] Starting global matching cycle...');
 
   // 1. Acquire distributed advisory lock to coordinate matching passes (V4.1 Requirement 16)
-  const { data: lockAcquired, error: lockErr } = await supabase.rpc('try_advisory_lock', { lock_id: MATCHMAKER_LOCK_ID });
-  if (lockErr) {
-    console.error('[Matchmaker] try_advisory_lock RPC error:', lockErr.message);
-  }
-  if (!lockAcquired) {
-    console.log('[Matchmaker] Advisory lock already held by another matchmaking process instance. Skipping cycle.');
+  if (isMatchmakerRunning) {
     return;
   }
+  isMatchmakerRunning = true;
 
   try {
     // 2. Queue healing has been decoupled to runGlobalHealCycle (Phase 4 Perf Optimization)
@@ -443,57 +431,47 @@ export async function runGlobalMatchCycle(supabase: SupabaseClient): Promise<voi
     const expiredCount = await expireStaleReservations(supabase);
     if (expiredCount > 0) {
       console.log(`[Matchmaker] Expired ${expiredCount} stale reservations.`);
-      invalidateMatchmakerCache(); // Cache is modified by database expiration
     }
 
-    // 4. Load waiting queue entries (In-memory cache logic)
+    // 4. Load waiting queue entries (No cache, fix ghost matches)
     const heartbeatThreshold = new Date(Date.now() - HEARTBEAT_STALE_MS).toISOString();
     let waitingQueue: any[] = [];
-    const needSync = cachedWaitingUsers === null || (Date.now() - lastReconciliationTime > RECONCILIATION_INTERVAL_MS);
 
-    if (needSync) {
-      console.log('[MatchmakerCache] Reconciling waiting queue from database...');
-      const { data, error: queueErr } = await supabase
-        .from('waiting_queue')
-        .select(`
-          session_id,
-          joined_at,
-          visitor_sessions:session_id (
-            id,
-            session_token,
-            gender,
-            looking_for,
-            languages,
-            country,
-            state,
-            district,
-            city,
-            interest_tags,
-            last_partner,
-            queue_entered_at,
-            last_activity,
-            status,
-            display_name,
-            bio,
-            match_mode,
-            match_constraints,
-            match_attributes
-          )
-        `)
-        .eq('status', 'waiting')
-        .order('joined_at', { ascending: true }); // Oldest waiting first
+    const { data, error: queueErr } = await supabase
+      .from('waiting_queue')
+      .select(`
+        session_id,
+        joined_at,
+        visitor_sessions:session_id (
+          id,
+          session_token,
+          gender,
+          looking_for,
+          languages,
+          country,
+          state,
+          district,
+          city,
+          interest_tags,
+          last_partner,
+          queue_entered_at,
+          last_activity,
+          status,
+          display_name,
+          bio,
+          match_mode,
+          match_constraints,
+          match_attributes
+        )
+      `)
+      .eq('status', 'waiting')
+      .order('joined_at', { ascending: true }); // Oldest waiting first
 
-      if (queueErr) {
-        console.error('[Matchmaker] Failed to load waiting queue:', queueErr.message);
-        return;
-      }
-      waitingQueue = data || [];
-      cachedWaitingUsers = [...waitingQueue];
-      lastReconciliationTime = Date.now();
-    } else {
-      console.log('[MatchmakerCache] Serving queue from memory cache.');
-      waitingQueue = [...(cachedWaitingUsers || [])];
+    if (queueErr) {
+      console.error('[Matchmaker] Failed to load waiting queue:', queueErr.message);
+      return;
     }
+    waitingQueue = data || [];
 
     // Filter active waiting users using heartbeat threshold
     let activeWaiting = waitingQueue.filter((entry) => {
@@ -589,10 +567,19 @@ export async function runGlobalMatchCycle(supabase: SupabaseClient): Promise<voi
       }
 
       // Transition FSM states to RESERVED (V4.1 Requirement 1)
-      await Promise.all([
+      const [resA, resB] = await Promise.all([
         transitionSessionStatus(supabase, sessionIdA, 'RESERVED', 'Matchmaker reservation lock'),
         transitionSessionStatus(supabase, sessionIdB, 'RESERVED', 'Matchmaker reservation lock'),
       ]);
+
+      if (!resA || !resB) {
+        console.error(`[Matchmaker] FSM Transition to RESERVED failed for ${sessionIdA} or ${sessionIdB}. Rolling back reservation.`);
+        await rollbackReservation(supabase, reservation.reservationId, 'FSM transition failed');
+        if (resA) await transitionSessionStatus(supabase, sessionIdA, 'SEARCHING', 'Reservation rollback');
+        if (resB) await transitionSessionStatus(supabase, sessionIdB, 'SEARCHING', 'Reservation rollback');
+        matchmakerMetrics.failedMatches += 1;
+        continue;
+      }
 
       const userA = sessionIdA < sessionIdB ? sessionIdA : sessionIdB;
       const userB = sessionIdA < sessionIdB ? sessionIdB : sessionIdA;
@@ -628,7 +615,7 @@ export async function runGlobalMatchCycle(supabase: SupabaseClient): Promise<voi
       await confirmReservation(supabase, reservation.reservationId, match.id);
 
       // Transition FSM states to MATCHED (V4.1 Requirement 1)
-      await Promise.all([
+      const [matchedA, matchedB] = await Promise.all([
         transitionSessionStatus(supabase, userA, 'MATCHED', 'Match established'),
         transitionSessionStatus(supabase, userB, 'MATCHED', 'Match established'),
         supabase
@@ -638,11 +625,8 @@ export async function runGlobalMatchCycle(supabase: SupabaseClient): Promise<voi
           .eq('status', 'waiting'),
       ]);
 
-      // Remove matched users from in-memory cache immediately
-      if (cachedWaitingUsers) {
-        cachedWaitingUsers = cachedWaitingUsers.filter(
-          (u) => u.session_id !== sessionIdA && u.session_id !== sessionIdB
-        );
+      if (!matchedA || !matchedB) {
+        console.error(`[Matchmaker] FSM Transition to MATCHED failed. State may be corrupt but proceeding.`);
       }
 
       // Track matchmaking statistics
@@ -745,11 +729,7 @@ export async function runGlobalMatchCycle(supabase: SupabaseClient): Promise<voi
     }
   } finally {
     // 6. Release advisory lock (V4.1 Requirement 16)
-    const { data: lockReleased, error: unlockErr } = await supabase.rpc('advisory_unlock', { lock_id: MATCHMAKER_LOCK_ID });
-    if (unlockErr) {
-      console.error('[Matchmaker] advisory_unlock RPC error:', unlockErr.message);
-    }
-    console.log(`[Matchmaker] Finished global matching cycle in ${Date.now() - start}ms (lockReleased=${lockReleased}).`);
+    isMatchmakerRunning = false;
   }
 }
 

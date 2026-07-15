@@ -10,6 +10,7 @@ import { FloatingLayoutProvider } from './contexts/FloatingLayoutContext.js';
 import { AdminAuthProvider, useAdminAuth, AdminLogin } from './admin/AdminAuth.js';
 import { AdminLayout } from './admin/AdminLayout.js';
 import { SplashLoader } from './components/SplashLoader.js';
+import { BootScreen } from './components/BootScreen.js';
 
 // Lazy imports for chunk splitting
 const LandingPage = lazy(() => import('./pages/LandingPage.js').then(m => ({ default: m.LandingPage })));
@@ -90,7 +91,7 @@ const router = createBrowserRouter([
   },
 ]);
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 function PushNotificationHandler() {
   useEffect(() => {
@@ -128,15 +129,30 @@ function PushNotificationHandler() {
 }
 
 export default function App() {
+  const [isBooted, setIsBooted] = useState(false);
+  const [showBootScreen, setShowBootScreen] = useState(true);
+
+  const handleReady = () => {
+    setIsBooted(true);
+    // Give the app time to mount behind the boot screen, then unmount boot screen
+    setTimeout(() => {
+      setShowBootScreen(false);
+    }, 500);
+  };
+
   return (
     <ErrorBoundary>
       <ToastProvider>
-        <SessionProvider>
-          <FloatingLayoutProvider>
-            <PushNotificationHandler />
-            <RouterProvider router={router} />
-          </FloatingLayoutProvider>
-        </SessionProvider>
+        {showBootScreen && <BootScreen onReady={handleReady} />}
+        
+        {isBooted && (
+          <SessionProvider>
+            <FloatingLayoutProvider>
+              <PushNotificationHandler />
+              <RouterProvider router={router} />
+            </FloatingLayoutProvider>
+          </SessionProvider>
+        )}
       </ToastProvider>
     </ErrorBoundary>
   );

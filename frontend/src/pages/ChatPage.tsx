@@ -989,7 +989,7 @@ export function ChatPage() {
 
   if (permissionGranted === false) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-stone-950 p-6 relative overflow-hidden select-none">
+      <div className="flex flex-col items-center justify-center min-h-screen min-h-[100dvh] bg-stone-950 p-6 relative overflow-hidden select-none">
         <div className="absolute w-[500px] h-[500px] rounded-full bg-amber-500/5 blur-[120px] pointer-events-none -translate-x-1/2 -translate-y-1/2 left-1/2 top-1/3" />
         
         <div className="max-w-md w-full relative z-10 p-8 rounded-3xl border border-white/5 bg-white/[0.01] shadow-2xl backdrop-blur-md text-center flex flex-col items-center glass">

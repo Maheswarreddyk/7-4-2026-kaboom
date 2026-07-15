@@ -303,6 +303,10 @@ export function useVideoChat(
   }, [clearSignalingRetryTimers, clearWebRTCTimeout]);
 
   const handleIceRestart = useCallback(async () => {
+    if (!isInitiatorRef.current) {
+      console.log('[WebRTC] Not the initiator. Skipping ICE restart to avoid glare collision.');
+      return;
+    }
     try {
       console.log('[WebRTC] Initiating ICE restart...');
       const offer = await webrtcManager.createOffer({ iceRestart: true });
@@ -627,16 +631,11 @@ export function useVideoChat(
     setSignalingState('REQUEUEING');
 
     // Reset local/remote signaling states before re-entering queue
-    clearSignalingRetryTimers();
+    clearAllTimers();
     setRemoteStream(null);
     webrtcManager.resetConnection();
     lastProcessedOfferSdpRef.current = null;
     lastProcessedAnswerSdpRef.current = null;
-
-    if (reconnectIntervalRef.current) {
-      clearInterval(reconnectIntervalRef.current);
-      reconnectIntervalRef.current = null;
-    }
 
     updateChatState({
       partnerSessionId: null,

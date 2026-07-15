@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 
 // Read from env var — fallback to local dev token
-const MVP_ADMIN_TOKEN = process.env.ADMIN_TOKEN || 'Mahes@123';
+const MVP_ADMIN_TOKEN = process.env.ADMIN_TOKEN;
 
 export const requireAdminToken = (req: Request, res: Response, next: NextFunction) => {
   const authHeader = req.headers.authorization;
@@ -11,7 +11,7 @@ export const requireAdminToken = (req: Request, res: Response, next: NextFunctio
   }
 
   const token = authHeader.split(' ')[1];
-  if (token !== MVP_ADMIN_TOKEN) {
+  if (!MVP_ADMIN_TOKEN || token !== MVP_ADMIN_TOKEN) {
     res.status(403).json({ error: 'Forbidden: Invalid admin token' });
     return;
   }

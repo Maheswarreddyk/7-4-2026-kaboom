@@ -18,17 +18,23 @@ import notificationRoutes from './notifications.js';
 import { matchmakerMetrics } from '../matchmaking/matchingEngine.js';
 import { broadcastToSession } from '../services/broadcast.js';
 import { validateSession } from '../services/matchService.js';
+import { requireBackendReady } from '../middleware/readiness.js';
 
 const router = Router();
 
 router.use(apiRateLimiter);
+
+// Unprotected routes (available during warmup)
+router.get('/health', healthController.getHealth);
+router.get('/stats', statsController.getStats);
+
+// Readiness Middleware - protects all following routes during startup
+router.use(requireBackendReady);
+
 router.use('/match', matchRoutes);
 router.use('/notifications', notificationRoutes);
 import adminNotificationRoutes from './admin-notifications.js';
 router.use('/admin/notifications', adminNotificationRoutes);
-
-router.get('/health', healthController.getHealth);
-router.get('/stats', statsController.getStats);
 
 router.post('/start-session', sessionRateLimiter, sessionController.startSession);
 router.post('/end-session', sessionController.endSession);
@@ -458,7 +464,8 @@ router.get('/chat/:matchId', async (req, res, next) => {
 router.get('/analytics', async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
-    if (!authHeader || authHeader !== 'Bearer admin-token') {
+    const expectedToken = process.env.ADMIN_TOKEN;
+    if (!authHeader || !expectedToken || authHeader !== `Bearer ${expectedToken}`) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
     
