@@ -10,7 +10,7 @@ import { config } from './config/index.js';
 import { checkDatabaseConnection, getSupabase } from './database/client.js';
 import { globalErrorHandler, notFoundHandler } from './middleware/errorHandler.js';
 import routes from './routes/index.js';
-import analyticsRouter from './analytics/routes.js';
+import { analyticsRouter } from './analytics/routes.js';
 
 import { cleanupService, statsService } from './services/index.js';
 

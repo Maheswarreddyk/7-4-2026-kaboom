@@ -1,44 +1,33 @@
 import { Router } from 'express';
 import { analyticsService } from './service.js';
+import { etlService } from './etlService.js';
 import { requireAdminToken } from '../middleware/adminAuth.js';
 
 const router = Router();
 
-// MVP Auth Guard for all admin routes
 router.use(requireAdminToken);
 
-// I. Platform Overview (Mission Control)
-router.get('/mission-control', async (req, res) => {
+router.post('/sync', async (req, res) => {
   try {
-    const data = await analyticsService.getMissionControl();
+    const result = await etlService.syncAnalytics();
+    res.json(result);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get('/overview', async (req, res) => {
+  try {
+    const data = await analyticsService.getOverview();
     res.json(data);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
 });
 
-router.get('/mission-control/timeseries', async (req, res) => {
+router.get('/trends', async (req, res) => {
   try {
-    const data = await analyticsService.getMissionControlTimeSeries();
-    res.json(data);
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// II. Product Intelligence
-router.get('/search-demand', async (req, res) => {
-  try {
-    const data = await analyticsService.getSearchDemand();
-    res.json(data);
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-router.get('/match-quality', async (req, res) => {
-  try {
-    const data = await analyticsService.getMatchQuality();
+    const data = await analyticsService.getTrends();
     res.json(data);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -47,49 +36,38 @@ router.get('/match-quality', async (req, res) => {
 
 router.get('/audience', async (req, res) => {
   try {
-    const data = await analyticsService.getAudienceAnalytics();
+    const data = await analyticsService.getAudience();
     res.json(data);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
 });
 
-router.get('/matchmaking', async (req, res) => {
+router.get('/match-analytics', async (req, res) => {
   try {
-    const data = await analyticsService.getMatchmakingIntelligence();
+    const data = await analyticsService.getMatchAnalytics();
     res.json(data);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
 });
 
-router.get('/campus-leaderboard', async (req, res) => {
+router.get('/notifications', async (req, res) => {
   try {
-    const data = await analyticsService.getCampusLeaderboard();
+    const data = await analyticsService.getNotifications();
     res.json(data);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// III. Growth & Campaigns
-router.get('/funnel', async (req, res) => {
+router.get('/live-feed', async (req, res) => {
   try {
-    const data = await analyticsService.getFunnel();
+    const data = await analyticsService.getActivityFeed();
     res.json(data);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// IV. Operations (Live Data)
-router.get('/live-sessions', async (req, res) => {
-  try {
-    const data = await analyticsService.getLiveSessions();
-    res.json(data);
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-export default router;
+export { router as analyticsRouter };

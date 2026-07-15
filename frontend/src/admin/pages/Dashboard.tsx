@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useAdminAuth } from '../AdminAuth.js';
-import { PlatformHealthWidget } from '../widgets/PlatformHealthWidget.js';
-import { LiveGraphsWidget } from '../widgets/LiveGraphsWidget.js';
-import { LiveActivityFeedWidget } from '../widgets/LiveActivityFeedWidget.js';
+const API_URL = import.meta.env.VITE_API_URL || '';
+import { Users, Activity, PhoneCall, Heart, Clock } from '../Icons.js';
 
 export function Dashboard() {
   const { token } = useAdminAuth();
@@ -10,71 +9,116 @@ export function Dashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    let missionTimer: number;
-
-    const fetchMission = async () => {
+    const fetchOverview = async () => {
       try {
-        const API_URL = import.meta.env.VITE_API_URL || '';
-        const headers = { 'Authorization': `Bearer ${token}` };
-        
-        const [missionRes, timeRes, liveRes] = await Promise.all([
-          fetch(`${API_URL}/api/analytics/mission-control`, { headers }),
-          fetch(`${API_URL}/api/analytics/mission-control/timeseries`, { headers }),
-          fetch(`${API_URL}/api/analytics/live-sessions`, { headers })
-        ]);
-        
-        if (missionRes.ok && timeRes.ok && liveRes.ok) {
-          const missionData = await missionRes.json();
-          const timeData = await timeRes.json();
-          const liveData = await liveRes.json();
-          
-          setData({
-            ...missionData,
-            timeSeries: timeData,
-            events: liveData.events || []
-          });
+        const res = await fetch(`${API_URL}/api/analytics/overview`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) {
+          setData(await res.json());
         }
       } catch (err) {
-        console.error('Failed to fetch mission control', err);
+        console.error('Failed to fetch overview', err);
+      } finally {
+        setLoading(false);
       }
     };
 
-    const initialFetch = async () => {
-      setLoading(true);
-      await fetchMission();
-      setLoading(false);
-      
-      missionTimer = window.setInterval(fetchMission, 5000);
-    };
-
-    initialFetch();
-
-    return () => {
-      window.clearInterval(missionTimer);
-    };
+    fetchOverview();
   }, [token]);
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64 text-slate-400">
-        <div className="animate-pulse flex flex-col items-center">
-          <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-          <p>Compiling Mission Control...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!data) {
-    return <div className="text-rose-400">Failed to load mission control data.</div>;
-  }
+  if (loading) return <div className="p-8 text-slate-400">Loading overview...</div>;
+  if (!data || Object.keys(data).length === 0) return (
+    <div className="p-8 text-slate-400 border border-dashed border-slate-700 rounded-xl text-center">
+      No analytics available yet. Click "Refresh Analytics" in the sidebar.
+    </div>
+  );
 
   return (
-    <div className="flex flex-col gap-6 max-w-7xl pb-12">
-      <PlatformHealthWidget data={data} />
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <LiveGraphsWidget timeSeriesData={data.timeSeries} />
-        <LiveActivityFeedWidget events={data.events} />
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-xl font-bold text-white">Platform Overview</h2>
+        <p className="text-slate-400 mt-1">High-level snapshot of user activity and system health.</p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Visitors */}
+        <div className="bg-slate-800/50 rounded-xl p-5 border border-slate-700">
+          <div className="flex items-center justify-between mb-4">
+            <div className="p-2 bg-blue-500/20 rounded-lg">
+              <Users className="w-5 h-5 text-blue-400" />
+            </div>
+            <span className="text-xs font-medium text-slate-500">All Time</span>
+          </div>
+          <div className="text-3xl font-bold text-white mb-1">{data.total_visitors || 0}</div>
+          <div className="text-sm text-slate-400">Total Visitors</div>
+        </div>
+
+        {/* Queue Joins */}
+        <div className="bg-slate-800/50 rounded-xl p-5 border border-slate-700">
+          <div className="flex items-center justify-between mb-4">
+            <div className="p-2 bg-indigo-500/20 rounded-lg">
+              <Activity className="w-5 h-5 text-indigo-400" />
+            </div>
+          </div>
+          <div className="text-3xl font-bold text-white mb-1">{data.queue_joins || 0}</div>
+          <div className="text-sm text-slate-400">Queue Joins</div>
+        </div>
+
+        {/* Matches Created */}
+        <div className="bg-slate-800/50 rounded-xl p-5 border border-slate-700">
+          <div className="flex items-center justify-between mb-4">
+            <div className="p-2 bg-emerald-500/20 rounded-lg">
+              <PhoneCall className="w-5 h-5 text-emerald-400" />
+            </div>
+          </div>
+          <div className="text-3xl font-bold text-white mb-1">{data.matches_created || 0}</div>
+          <div className="text-sm text-slate-400">Matches Created</div>
+        </div>
+
+        {/* Connected Calls */}
+        <div className="bg-slate-800/50 rounded-xl p-5 border border-slate-700">
+          <div className="flex items-center justify-between mb-4">
+            <div className="p-2 bg-teal-500/20 rounded-lg">
+              <PhoneCall className="w-5 h-5 text-teal-400" />
+            </div>
+          </div>
+          <div className="text-3xl font-bold text-white mb-1">{data.connected_calls || 0}</div>
+          <div className="text-sm text-slate-400">Connected Calls</div>
+        </div>
+
+        {/* Mutual Likes */}
+        <div className="bg-slate-800/50 rounded-xl p-5 border border-slate-700">
+          <div className="flex items-center justify-between mb-4">
+            <div className="p-2 bg-rose-500/20 rounded-lg">
+              <Heart className="w-5 h-5 text-rose-400" />
+            </div>
+          </div>
+          <div className="text-3xl font-bold text-white mb-1">{data.mutual_likes || 0}</div>
+          <div className="text-sm text-slate-400">Mutual Likes</div>
+        </div>
+
+        {/* Avg Wait */}
+        <div className="bg-slate-800/50 rounded-xl p-5 border border-slate-700">
+          <div className="flex items-center justify-between mb-4">
+            <div className="p-2 bg-amber-500/20 rounded-lg">
+              <Clock className="w-5 h-5 text-amber-400" />
+            </div>
+          </div>
+          <div className="text-3xl font-bold text-white mb-1">{data.avg_wait_seconds || 0}s</div>
+          <div className="text-sm text-slate-400">Avg Wait Time</div>
+        </div>
+
+        {/* Avg Duration */}
+        <div className="bg-slate-800/50 rounded-xl p-5 border border-slate-700">
+          <div className="flex items-center justify-between mb-4">
+            <div className="p-2 bg-purple-500/20 rounded-lg">
+              <Clock className="w-5 h-5 text-purple-400" />
+            </div>
+          </div>
+          <div className="text-3xl font-bold text-white mb-1">{data.avg_duration_seconds || 0}s</div>
+          <div className="text-sm text-slate-400">Avg Call Duration</div>
+        </div>
       </div>
     </div>
   );

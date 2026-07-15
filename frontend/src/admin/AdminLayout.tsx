@@ -1,4 +1,4 @@
-
+import { useState } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { useAdminAuth } from './AdminAuth.js';
 import { 
@@ -8,8 +8,9 @@ import {
   Target,
   Activity,
   Bell,
-  GraduationCap
+  RefreshCw
 } from './Icons.js';
+const API_URL = import.meta.env.VITE_API_URL || '';
 
 interface NavCategory {
   title: string;
@@ -18,27 +19,44 @@ interface NavCategory {
 
 const NAV_CATEGORIES: NavCategory[] = [
   {
-    title: 'Product Intelligence',
+    title: 'Product Analytics',
     items: [
-      { path: '', label: 'Mission Control', icon: BarChart3, exact: true },
-      { path: 'audience', label: 'Audience Analytics', icon: Activity },
-      { path: 'matchmaking', label: 'Matchmaking Intelligence', icon: Target },
-      { path: 'notifications', label: 'Notification Center', icon: Bell },
-    ]
-  },
-  {
-    title: 'Legacy Dashboards (WIP removal)',
-    items: [
-      { path: 'growth', label: 'Growth & Funnels', icon: TrendingUp },
-      { path: 'product', label: 'Match Quality & Demand', icon: Target },
-      { path: 'campus', label: 'Campus Analytics', icon: GraduationCap },
-      { path: 'operations', label: 'Live Operations', icon: Activity },
+      { path: '', label: '1. Overview', icon: BarChart3, exact: true },
+      { path: 'trends', label: '2. Usage Trends', icon: TrendingUp },
+      { path: 'audience', label: '3. Audience', icon: Target },
+      { path: 'match-analytics', label: '4. Match Analytics', icon: Activity },
+      { path: 'notifications', label: '5. Notifications', icon: Bell },
+      { path: 'activity-feed', label: '6. Activity Feed', icon: Activity },
     ]
   }
 ];
 
 export function AdminLayout() {
-  const { logout } = useAdminAuth();
+  const { logout, token } = useAdminAuth();
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null);
+
+  const handleRefresh = async () => {
+    if (isRefreshing) return;
+    setIsRefreshing(true);
+    try {
+      const res = await fetch(`${API_URL}/api/analytics/sync`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        setLastRefreshed(new Date());
+        // Simple reload to refresh all sub-components
+        window.location.reload();
+      } else {
+        alert('Failed to synchronize analytics.');
+      }
+    } catch (e) {
+      alert('Error connecting to ETL service.');
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[#0F172A] text-slate-300 font-sans flex">
@@ -50,7 +68,7 @@ export function AdminLayout() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
             </svg>
           </div>
-          <span className="font-bold text-white text-lg tracking-tight">Kaboom Admin</span>
+          <span className="font-bold text-white text-lg tracking-tight">Kaboom Analytics</span>
         </div>
 
         <nav className="flex-1 overflow-y-auto py-6 px-3 flex flex-col gap-8">
@@ -82,10 +100,19 @@ export function AdminLayout() {
           ))}
         </nav>
 
-        <div className="p-4 border-t border-slate-800">
+        <div className="p-4 border-t border-slate-800 flex flex-col gap-2">
+          <button
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+            className="flex items-center justify-center w-full px-3 py-2.5 rounded-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-500 transition-colors disabled:opacity-50"
+          >
+            <RefreshCw className={`w-5 h-5 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+            {isRefreshing ? 'Syncing ETL...' : 'Refresh Analytics'}
+          </button>
+          
           <button
             onClick={logout}
-            className="flex items-center w-full px-3 py-2.5 rounded-lg text-sm font-medium text-rose-400 hover:bg-rose-500/10 transition-colors"
+            className="flex items-center w-full px-3 py-2.5 rounded-lg text-sm font-medium text-rose-400 hover:bg-rose-500/10 transition-colors mt-2"
           >
             <LogOut className="w-5 h-5 mr-3 opacity-80" />
             Sign out
@@ -95,8 +122,11 @@ export function AdminLayout() {
 
       {/* Main Content */}
       <main className="flex-1 overflow-y-auto">
-        <header className="h-16 border-b border-slate-800/50 bg-[#0F172A]/80 backdrop-blur-md sticky top-0 z-10 flex items-center px-8">
-          <h1 className="text-lg font-semibold text-white">Operations Center</h1>
+        <header className="h-16 border-b border-slate-800/50 bg-[#0F172A]/80 backdrop-blur-md sticky top-0 z-10 flex items-center px-8 justify-between">
+          <h1 className="text-lg font-semibold text-white">Product Dashboard</h1>
+          {lastRefreshed && (
+            <span className="text-xs text-slate-500">Last Synced: {lastRefreshed.toLocaleTimeString()}</span>
+          )}
         </header>
         <div className="p-8">
           <Outlet />

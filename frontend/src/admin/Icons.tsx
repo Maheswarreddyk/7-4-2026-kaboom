@@ -26,3 +26,5 @@ export const Monitor = IconStub;
 export const Heart = IconStub;
 export const AlertTriangle = IconStub;
 export const Bell = IconStub;
+export const RefreshCw = IconStub;
+export const PhoneCall = IconStub;

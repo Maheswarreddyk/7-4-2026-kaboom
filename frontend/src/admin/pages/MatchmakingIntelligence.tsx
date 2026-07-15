@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useAdminAuth } from '../AdminAuth.js';
-import { WidgetCard } from '../widgets/WidgetCard.js';
+const API_URL = import.meta.env.VITE_API_URL || '';
 
 export function MatchmakingIntelligence() {
   const { token } = useAdminAuth();
@@ -10,15 +10,14 @@ export function MatchmakingIntelligence() {
   useEffect(() => {
     const fetchMatchmaking = async () => {
       try {
-        const API_URL = import.meta.env.VITE_API_URL || '';
-        const res = await fetch(`${API_URL}/api/analytics/matchmaking`, {
+        const res = await fetch(`${API_URL}/api/analytics/match-analytics`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         if (res.ok) {
           setData(await res.json());
         }
       } catch (err) {
-        console.error(err);
+        console.error('Failed to fetch match analytics', err);
       } finally {
         setLoading(false);
       }
@@ -26,77 +25,77 @@ export function MatchmakingIntelligence() {
     fetchMatchmaking();
   }, [token]);
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64 text-slate-400">
-        <div className="animate-pulse flex flex-col items-center">
-          <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-          <p>Compiling Matchmaking Intelligence...</p>
-        </div>
-      </div>
-    );
-  }
+  if (loading) return <div className="p-8 text-slate-400">Loading match analytics...</div>;
+  if (!data || Object.keys(data).length === 0) return (
+    <div className="p-8 text-slate-400 border border-dashed border-slate-700 rounded-xl text-center">
+      No analytics available yet. Click "Refresh Analytics" in the sidebar.
+    </div>
+  );
 
-  if (!data) return <div className="text-rose-400">Failed to load data.</div>;
+  const funnelSteps = [
+    { label: 'Queue Joins', value: data.queue_joins || 0 },
+    { label: 'Matched', value: data.matched || 0 },
+    { label: 'Connected', value: data.connected || 0 },
+    { label: 'Completed', value: data.completed || 0 },
+    { label: 'Liked', value: data.liked || 0 },
+    { label: 'Mutual Likes', value: data.mutual_likes || 0 },
+  ];
 
   return (
-    <div className="flex flex-col gap-6 max-w-7xl pb-12">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold text-white tracking-tight">Matchmaking Intelligence</h2>
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-xl font-bold text-white">Match Analytics</h2>
+        <p className="text-slate-400 mt-1">Funnel drop-off and call end reasons.</p>
       </div>
 
-      <WidgetCard title="Wait Times" subtitle="Last 10,000 matches">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-4">
-          <div className="bg-slate-900/50 p-4 rounded-lg border border-slate-700/50 text-center">
-            <span className="block text-slate-400 text-sm font-medium mb-1">Average Wait</span>
-            <span className="text-3xl font-bold text-emerald-400">{data.avgWait}s</span>
-          </div>
-          <div className="bg-slate-900/50 p-4 rounded-lg border border-slate-700/50 text-center">
-            <span className="block text-slate-400 text-sm font-medium mb-1">Median Wait (P50)</span>
-            <span className="text-3xl font-bold text-blue-400">{data.medianWait}s</span>
-          </div>
-          <div className="bg-slate-900/50 p-4 rounded-lg border border-slate-700/50 text-center">
-            <span className="block text-slate-400 text-sm font-medium mb-1">95th Percentile (P95)</span>
-            <span className="text-3xl font-bold text-rose-400">{data.p95Wait}s</span>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="bg-slate-800/50 rounded-xl p-5 border border-slate-700">
+          <h3 className="text-lg font-semibold text-white mb-4">User Funnel</h3>
+          <div className="space-y-4">
+            {funnelSteps.map((step, idx) => {
+              const prev = idx === 0 ? step.value : funnelSteps[idx - 1].value;
+              const dropoff = prev > 0 ? Math.round(((prev - step.value) / prev) * 100) : 0;
+              const width = funnelSteps[0].value > 0 ? (step.value / funnelSteps[0].value) * 100 : 0;
+              
+              return (
+                <div key={step.label} className="relative">
+                  <div className="flex justify-between text-sm mb-1">
+                    <span className="text-slate-300 font-medium">{step.label}</span>
+                    <span className="text-slate-400">
+                      {step.value} {idx > 0 && <span className="text-rose-400 text-xs ml-2">(-{dropoff}%)</span>}
+                    </span>
+                  </div>
+                  <div className="h-2 w-full bg-slate-700 rounded-full overflow-hidden">
+                    <div className="h-full bg-blue-500 rounded-full" style={{ width: `${width}%` }}></div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
-      </WidgetCard>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <WidgetCard title="Call Duration">
-          <div className="mt-4 text-center">
-            <span className="text-4xl font-bold text-white">{data.avgDuration}</span>
-            <span className="text-slate-400 ml-1">min</span>
+        <div className="bg-slate-800/50 rounded-xl p-5 border border-slate-700">
+          <h3 className="text-lg font-semibold text-white mb-4">Drop-off Reasons</h3>
+          <div className="space-y-4">
+            <div className="flex justify-between items-center p-3 bg-slate-900/50 rounded-lg">
+              <span className="text-slate-300">User Skipped</span>
+              <span className="text-white font-bold">{data.skipped_count || 0}</span>
+            </div>
+            <div className="flex justify-between items-center p-3 bg-slate-900/50 rounded-lg">
+              <span className="text-slate-300">Partner Left</span>
+              <span className="text-white font-bold">{data.partner_left_count || 0}</span>
+            </div>
+            <div className="flex justify-between items-center p-3 bg-slate-900/50 rounded-lg">
+              <span className="text-slate-300">Timeout</span>
+              <span className="text-white font-bold">{data.timeout_count || 0}</span>
+            </div>
+            <div className="flex justify-between items-center p-3 bg-slate-900/50 rounded-lg">
+              <span className="text-slate-300">Connection Failed</span>
+              <span className="text-white font-bold">{data.failed_negotiation_count || 0}</span>
+            </div>
           </div>
-        </WidgetCard>
-
-        <WidgetCard title="Queue Abandonment">
-          <div className="mt-4 text-center">
-            <span className="text-4xl font-bold text-amber-400">{data.queueAbandonment}%</span>
-            <span className="block text-xs text-slate-500 mt-1">Users leaving queue before match</span>
-          </div>
-        </WidgetCard>
-
-        <WidgetCard title="Connection Success">
-          <div className="mt-4 text-center">
-            <span className="text-4xl font-bold text-emerald-400">{data.connectionSuccess}%</span>
-            <span className="block text-xs text-slate-500 mt-1">Matched &gt; Connected</span>
-          </div>
-        </WidgetCard>
-
-        <WidgetCard title="Partner Disconnects">
-          <div className="mt-4 text-center">
-            <span className="text-4xl font-bold text-rose-400">{data.partnerDisconnects}</span>
-            <span className="block text-xs text-slate-500 mt-1">Calls ended due to connection drop</span>
-          </div>
-        </WidgetCard>
+        </div>
       </div>
-
-      <WidgetCard title="Match Resolution Type" subtitle="Exact vs Smart vs Quick">
-        <div className="h-32 flex items-center justify-center text-slate-500 italic text-sm border border-dashed border-slate-700 rounded-lg mt-4">
-          No production data available yet (missing resolution payload in analytics_events)
-        </div>
-      </WidgetCard>
     </div>
   );
 }

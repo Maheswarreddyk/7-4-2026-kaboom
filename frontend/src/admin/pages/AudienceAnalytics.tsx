@@ -1,17 +1,17 @@
 import { useEffect, useState } from 'react';
 import { useAdminAuth } from '../AdminAuth.js';
+const API_URL = import.meta.env.VITE_API_URL || '';
 import { WidgetCard } from '../widgets/WidgetCard.js';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
 export function AudienceAnalytics() {
   const { token } = useAdminAuth();
-  const [data, setData] = useState<any>(null);
+  const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchAudience = async () => {
       try {
-        const API_URL = import.meta.env.VITE_API_URL || '';
         const res = await fetch(`${API_URL}/api/analytics/audience`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -19,7 +19,7 @@ export function AudienceAnalytics() {
           setData(await res.json());
         }
       } catch (err) {
-        console.error(err);
+        console.error('Failed to fetch audience', err);
       } finally {
         setLoading(false);
       }
@@ -27,92 +27,58 @@ export function AudienceAnalytics() {
     fetchAudience();
   }, [token]);
 
-  if (loading) {
+  if (loading) return <div className="p-8 text-slate-400">Loading audience...</div>;
+  if (!data || data.length === 0) return (
+    <div className="p-8 text-slate-400 border border-dashed border-slate-700 rounded-xl text-center">
+      No analytics available yet. Click "Refresh Analytics" in the sidebar.
+    </div>
+  );
+
+  const categories = Array.from(new Set(data.map(d => d.category)));
+
+  const renderRanking = (title: string, cat: string) => {
+    const subset = data.filter(d => d.category === cat).slice(0, 10);
+    if (subset.length === 0) return null;
+
     return (
-      <div className="flex items-center justify-center h-64 text-slate-400">
-        <div className="animate-pulse flex flex-col items-center">
-          <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-          <p>Compiling Audience Demographics...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!data) return <div className="text-rose-400">Failed to load data.</div>;
-
-  const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#14B8A6'];
-
-  const renderBarChart = (title: string, payload: any[]) => (
-    <WidgetCard title={title}>
-      <div className="h-64 mt-4">
-        {payload && payload.length > 0 ? (
+      <WidgetCard title={title}>
+        <div className="h-64 mt-4">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={payload} layout="vertical" margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
+            <BarChart data={subset} layout="vertical" margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
               <XAxis type="number" hide />
-              <YAxis dataKey="name" type="category" width={100} stroke="#94A3B8" fontSize={12} tickLine={false} axisLine={false} />
-              <Tooltip cursor={{ fill: '#1E293B' }} contentStyle={{ backgroundColor: '#0F172A', borderColor: '#1E293B', borderRadius: '8px' }} itemStyle={{ color: '#E2E8F0' }} />
-              <Bar dataKey="value" fill="#3B82F6" radius={[0, 4, 4, 0]} />
+              <YAxis 
+                type="category" 
+                dataKey="label" 
+                axisLine={false} 
+                tickLine={false} 
+                tick={{ fill: '#94a3b8', fontSize: 12 }} 
+                width={100} 
+              />
+              <Tooltip 
+                cursor={{ fill: 'rgba(255,255,255,0.05)' }} 
+                contentStyle={{ backgroundColor: '#1E293B', border: 'none', borderRadius: '8px', color: '#fff' }}
+              />
+              <Bar dataKey="count" fill="#3B82F6" radius={[0, 4, 4, 0]} barSize={24} />
             </BarChart>
           </ResponsiveContainer>
-        ) : (
-          <div className="h-full flex items-center justify-center text-slate-500 italic text-sm border border-dashed border-slate-700 rounded-lg">No production data available yet</div>
-        )}
-      </div>
-    </WidgetCard>
-  );
-
-  const renderPieChart = (title: string, payload: any[]) => (
-    <WidgetCard title={title}>
-      <div className="h-64 mt-4">
-        {payload && payload.length > 0 ? (
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-              <Pie data={payload} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value">
-                {payload.map((_, index) => (
-                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                ))}
-              </Pie>
-              <Tooltip contentStyle={{ backgroundColor: '#0F172A', borderColor: '#1E293B', borderRadius: '8px' }} itemStyle={{ color: '#E2E8F0' }} />
-            </PieChart>
-          </ResponsiveContainer>
-        ) : (
-          <div className="h-full flex items-center justify-center text-slate-500 italic text-sm border border-dashed border-slate-700 rounded-lg">No production data available yet</div>
-        )}
-      </div>
-      {payload && payload.length > 0 && (
-        <div className="flex flex-wrap gap-2 mt-4">
-          {payload.map((entry, index) => (
-            <div key={entry.name} className="flex items-center text-xs text-slate-300">
-              <span className="w-2 h-2 rounded-full mr-2" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
-              {entry.name} ({entry.value})
-            </div>
-          ))}
         </div>
-      )}
-    </WidgetCard>
-  );
+      </WidgetCard>
+    );
+  };
 
   return (
-    <div className="flex flex-col gap-6 max-w-7xl pb-12">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold text-white tracking-tight">Audience Analytics</h2>
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-xl font-bold text-white">Audience Analytics</h2>
+        <p className="text-slate-400 mt-1">Top demographics, locations, and technology.</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {renderBarChart('Top Countries', data.countries)}
-        {renderBarChart('Top States', data.states)}
-        {renderBarChart('Top Cities', data.cities)}
-        
-        {renderBarChart('Top Colleges/Campuses', data.colleges)}
-        {renderBarChart('Top Interests', data.interests)}
-        {renderBarChart('Top Languages', data.languages)}
-
-        {renderPieChart('Browsers', data.browsers)}
-        {renderPieChart('Operating Systems', data.os)}
-        {renderPieChart('Devices', data.devices)}
-        
-        {renderPieChart('Screen Sizes', data.screenSizes)}
-        {renderPieChart('New vs Returning Users', data.userTypes)}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {categories.map(cat => (
+          <div key={cat}>
+            {renderRanking(`Top ${cat.charAt(0).toUpperCase() + cat.slice(1)}s`, cat)}
+          </div>
+        ))}
       </div>
     </div>
   );
