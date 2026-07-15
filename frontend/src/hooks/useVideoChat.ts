@@ -46,12 +46,12 @@ const initialChatState: ChatState = {
 };
 
 const VALID_TRANSITIONS: Record<SessionStatus, SessionStatus[]> = {
-  IDLE: ['REQUESTING_MEDIA', 'CONNECTING_REALTIME', 'SEARCHING'],
+  IDLE: ['REQUESTING_MEDIA', 'CONNECTING_REALTIME', 'SEARCHING', 'MATCH_FOUND'],
   REQUESTING_MEDIA: ['MEDIA_READY', 'IDLE'],
   MEDIA_READY: ['CONNECTING_REALTIME', 'IDLE'],
-  CONNECTING_REALTIME: ['SEARCHING', 'IDLE', 'ENDED'],
+  CONNECTING_REALTIME: ['SEARCHING', 'IDLE', 'ENDED', 'MATCH_FOUND'],
   SEARCHING: ['MATCH_FOUND', 'IDLE', 'REQUEUEING', 'ENDED', 'SEARCHING'],
-  MATCH_FOUND: ['READY', 'REQUEUEING', 'ENDED', 'SEARCHING'],
+  MATCH_FOUND: ['READY', 'PARTNER_LEFT', 'REQUEUEING', 'ENDED', 'SEARCHING'],
   READY: ['NEGOTIATING', 'ICE_CONNECTING', 'CONNECTED', 'PARTNER_LEFT', 'REQUEUEING', 'ENDED'],
   NEGOTIATING: ['ICE_CONNECTING', 'CONNECTED', 'PARTNER_LEFT', 'REQUEUEING', 'ENDED'],
   ICE_CONNECTING: ['CONNECTED', 'PARTNER_LEFT', 'REQUEUEING', 'ENDED'],
@@ -185,7 +185,7 @@ export function useVideoChat(
     setChatState((prev) => ({ ...prev, status: state }));
 
     // Auto-clear timeout on stable or ended states
-    if (state === 'CONNECTED' || state === 'IDLE' || state === 'ENDED') {
+    if (state === 'CONNECTED' || state === 'IDLE' || state === 'ENDED' || state === 'PARTNER_LEFT' || state === 'REQUEUEING') {
       clearWebRTCTimeout();
 
       // V6.15: Clear reconnect countdown on stable connection or exit
@@ -540,6 +540,8 @@ export function useVideoChat(
 
       matchIdRef.current = data.matchId;
       partnerSessionIdRef.current = data.partnerSessionId;
+
+      setSignalingState('MATCH_FOUND'); // V19 Fix: Unblocks FSM Gate
 
       updateChatState({
         connectionStatus: 'connecting',

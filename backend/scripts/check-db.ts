@@ -23,7 +23,15 @@ async function checkRemoteDatabase() {
     'temporary_messages',
     'user_preferences_cache',
     'visitor_sessions',
-    'waiting_queue'
+    'waiting_queue',
+    'analytics_sync_state',
+    'dashboard_summary',
+    'dashboard_hourly',
+    'dashboard_daily',
+    'dashboard_rankings',
+    'dashboard_match_analytics',
+    'dashboard_notifications',
+    'dashboard_activity'
   ];
 
   const rpcs = [
