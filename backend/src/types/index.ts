@@ -1,4 +1,4 @@
-export type SessionStatus = 'active' | 'waiting' | 'matched' | 'ended';
+export type SessionStatus = 'CREATED' | 'READY' | 'SEARCHING' | 'RESERVED' | 'MATCHED' | 'SIGNALING' | 'CONNECTED' | 'PARTNER_LEFT' | 'REQUEUEING' | 'ENDED' | 'active' | 'waiting' | 'matched' | 'ended';
 export type QueueStatus = 'waiting' | 'matched' | 'left' | 'expired';
 export type MatchEndReason = 'next' | 'leave' | 'disconnect' | 'report' | 'timeout' | 'error';
 export type ReportReason = 'spam' | 'nudity' | 'abuse' | 'harassment' | 'other';

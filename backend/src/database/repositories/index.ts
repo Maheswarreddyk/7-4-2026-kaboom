@@ -174,6 +174,18 @@ export const matchRepository = {
     return data as Match;
   },
 
+  async findActiveMatchBySessionId(sessionId: string): Promise<Match | null> {
+    const { data, error } = await getSupabase()
+      .from('matches')
+      .select('*')
+      .is('ended_at', null)
+      .or(`user_a.eq.${sessionId},user_b.eq.${sessionId}`)
+      .maybeSingle();
+
+    if (error) handleSupabaseError(error, 'Failed to find active match');
+    return data as Match | null;
+  },
+
   async endMatch(id: string, reason: MatchEndReason): Promise<Match | null> {
     const { data: existing } = await getSupabase()
       .from('matches')
@@ -227,6 +239,13 @@ export const matchRepository = {
       .select('id');
 
     if (error) handleSupabaseError(error, 'Failed to expire stale matches');
+
+    if (data && data.length > 0) {
+      const matchIds = data.map((m: any) => m.id);
+      await getSupabase().from('temporary_messages').delete().in('match_id', matchIds);
+      await getSupabase().from('reservations').delete().in('match_id', matchIds);
+    }
+
     return data?.length ?? 0;
   },
 };

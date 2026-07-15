@@ -5,6 +5,7 @@ import {
   markMatchReady,
   nextPartner,
   notifyPartnerLeft,
+  getMatchStatus,
 } from '../services/matchService.js';
 import { queueLimiter } from '../middleware/queueLimiter.js';
 
@@ -23,13 +24,28 @@ router.post('/join', queueLimiter, async (req, res, next) => {
   }
 });
 
+router.get('/status', queueLimiter, async (req, res, next) => {
+  try {
+    // Get headers
+    const sessionId = req.headers['x-session-id'] as string;
+    const sessionToken = req.headers['x-session-token'] as string;
+    if (!sessionId || !sessionToken) {
+      return res.status(400).json({ error: 'x-session-id and x-session-token headers are required' });
+    }
+    const result = await getMatchStatus(sessionId, sessionToken);
+    res.json({ success: true, data: result });
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.post('/leave', queueLimiter, async (req, res, next) => {
   try {
-    const { sessionId, sessionToken } = req.body;
+    const { sessionId, sessionToken, matchId } = req.body;
     if (!sessionId || !sessionToken) {
       return res.status(400).json({ error: 'sessionId and sessionToken are required' });
     }
-    await leaveQueue(sessionId, sessionToken);
+    await leaveQueue(sessionId, sessionToken, matchId);
     res.json({ success: true });
   } catch (err) {
     next(err);
@@ -38,11 +54,11 @@ router.post('/leave', queueLimiter, async (req, res, next) => {
 
 router.post('/next', queueLimiter, async (req, res, next) => {
   try {
-    const { sessionId, sessionToken } = req.body;
+    const { sessionId, sessionToken, matchId } = req.body;
     if (!sessionId || !sessionToken) {
       return res.status(400).json({ error: 'sessionId and sessionToken are required' });
     }
-    const result = await nextPartner(sessionId, sessionToken);
+    const result = await nextPartner(sessionId, sessionToken, matchId);
     res.json({ success: true, data: result });
   } catch (err) {
     next(err);
@@ -51,11 +67,11 @@ router.post('/next', queueLimiter, async (req, res, next) => {
 
 router.post('/disconnect', queueLimiter, async (req, res, next) => {
   try {
-    const { sessionId, sessionToken, reason } = req.body;
+    const { sessionId, sessionToken, reason, matchId } = req.body;
     if (!sessionId || !sessionToken) {
       return res.status(400).json({ error: 'sessionId and sessionToken are required' });
     }
-    await notifyPartnerLeft(sessionId, sessionToken, reason ?? 'disconnect');
+    await notifyPartnerLeft(sessionId, sessionToken, reason ?? 'disconnect', matchId);
     res.json({ success: true });
   } catch (err) {
     next(err);

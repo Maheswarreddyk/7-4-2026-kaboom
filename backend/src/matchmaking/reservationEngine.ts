@@ -21,6 +21,19 @@ export async function createReservation(
   const start = Date.now();
   const expiresAt = new Date(Date.now() + RESERVATION_TIMEOUT_MS).toISOString();
 
+  // Atomic pre-lock: KS-014 Fix
+  // Prevent Matchmaker Double Reservation Race by natively transitioning to RESERVED atomically
+  const lockA = await supabase.from('visitor_sessions').update({ status: 'RESERVED' }).eq('id', initiatorSessionId).eq('status', 'SEARCHING').select('id').maybeSingle();
+  const lockB = await supabase.from('visitor_sessions').update({ status: 'RESERVED' }).eq('id', partnerSessionId).eq('status', 'SEARCHING').select('id').maybeSingle();
+
+  if (lockA.error || !lockA.data || lockB.error || !lockB.data) {
+    // Rollback any partial locks if the other partner was stolen by a parallel cycle
+    if (lockA.data) await supabase.from('visitor_sessions').update({ status: 'SEARCHING' }).eq('id', initiatorSessionId);
+    if (lockB.data) await supabase.from('visitor_sessions').update({ status: 'SEARCHING' }).eq('id', partnerSessionId);
+    console.warn(`[ReservationEngine] Double Reservation Race Prevented for ${initiatorSessionId} / ${partnerSessionId}`);
+    return { reservationId: '', success: false, reason: 'Concurrent double reservation blocked' };
+  }
+
   try {
     const { data, error } = await supabase
       .from('reservations')

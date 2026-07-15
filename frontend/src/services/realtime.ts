@@ -35,6 +35,8 @@ export interface RealtimeCallbacks {
   onMessageSeen?: (data: { matchId: string; senderId: string }) => void;
   onPartnerSkipPending?: () => void;
   onPartnerSkipCancelled?: () => void;
+  onPartnerReconnect?: () => void;
+  onReconnect?: () => void;
 }
 
 let sessionChannel: RealtimeChannel | null = null;
@@ -69,7 +71,7 @@ async function apiPost<T>(path: string, body: Record<string, unknown>): Promise<
   return response.json();
 }
 
-function cleanupMatchChannel() {
+export function leaveMatchChannel() {
   const supabase = getSupabaseClient();
   if (matchChannel && supabase) {
     supabase.removeChannel(matchChannel);
@@ -79,15 +81,33 @@ function cleanupMatchChannel() {
   isMatchChannelConnected = false;
 }
 
-function subscribeToMatchChannel(matchId: string, callbacks: RealtimeCallbacks): Promise<void> {
+let isSubscribing = false;
+
+export function subscribeToMatchChannel(matchId: string, callbacks: RealtimeCallbacks): Promise<void> {
+  if (currentMatchId === matchId && isMatchChannelConnected) {
+    console.log(`[Realtime] Already connected to match ${matchId}. Skipping redundant subscription.`);
+    return Promise.resolve();
+  }
+
+  if (isSubscribing) {
+    console.log(`[Realtime] Subscription already in progress. Skipping redundant call for ${matchId}.`);
+    return Promise.resolve();
+  }
+
+  isSubscribing = true;
   const supabase = getSupabaseClient();
 
-  cleanupMatchChannel();
+  leaveMatchChannel();
   currentMatchId = matchId;
 
   return new Promise<void>((resolve) => {
-    if (!supabase) {
+    const resolveAndUnlock = () => {
+      isSubscribing = false;
       resolve();
+    };
+
+    if (!supabase) {
+      resolveAndUnlock();
       return;
     }
 
@@ -126,28 +146,32 @@ function subscribeToMatchChannel(matchId: string, callbacks: RealtimeCallbacks):
       })
       .on('broadcast', { event: 'skip_cancelled' }, () => {
         callbacks.onPartnerSkipCancelled?.();
+      })
+      .on('broadcast', { event: 'reconnect' }, () => {
+        callbacks.onPartnerReconnect?.();
       });
 
     const subscribeTimeout = setTimeout(() => {
       if (!subscribed) {
         console.warn(`[Realtime] Match channel ${matchId} subscribe timeout after ${SUBSCRIBE_TIMEOUT_MS}ms — proceeding`);
-        resolve();
+        leaveMatchChannel(); // KS-013: Ghost Timeout Leak fix
+        resolveAndUnlock();
       }
     }, SUBSCRIBE_TIMEOUT_MS);
 
-    matchChannel.subscribe((status) => {
+    matchChannel?.subscribe((status) => {
       if (status === 'SUBSCRIBED') {
         clearTimeout(subscribeTimeout);
         subscribed = true;
         isMatchChannelConnected = true;
         console.log(`[Realtime] Subscribed to match channel: ${matchId}`);
-        resolve();
+        resolveAndUnlock();
       }
       if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
         clearTimeout(subscribeTimeout);
         isMatchChannelConnected = false;
         console.warn(`[Realtime] Match channel ${matchId} status: ${status} — resolving with fallback`);
-        resolve();
+        resolveAndUnlock();
       }
     });
   });
@@ -181,6 +205,14 @@ export function sendSkipCancelled() {
   matchChannel?.send({
     type: 'broadcast',
     event: 'skip_cancelled',
+    payload: {},
+  });
+}
+
+export function sendReconnectPing() {
+  matchChannel?.send({
+    type: 'broadcast',
+    event: 'reconnect',
     payload: {},
   });
 }
@@ -224,7 +256,7 @@ export function connectRealtime(
       })();
     })
     .on('broadcast', { event: 'partner_left' }, ({ payload }) => {
-      cleanupMatchChannel();
+      leaveMatchChannel();
       callbacks.onPartnerLeft?.(payload as { reason: string });
     })
     .on('broadcast', { event: 'searching' }, ({ payload }) => {
@@ -247,6 +279,9 @@ export function connectRealtime(
     })
     .subscribe((status) => {
       console.log(`[Realtime] Session channel status: ${status}`);
+      if (status === 'SUBSCRIBED') {
+        callbacks.onReconnect?.();
+      }
       if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
         console.warn(`[Realtime] Session channel error: ${status}`);
         callbacks.onError?.({ message: 'Signaling connection lost. Reconnecting...' });
@@ -256,7 +291,7 @@ export function connectRealtime(
 
 export function disconnectRealtime(): void {
   const supabase = getSupabaseClient();
-  cleanupMatchChannel();
+  leaveMatchChannel();
 
   if (sessionChannel && supabase) {
     supabase.removeChannel(sessionChannel);
@@ -299,16 +334,20 @@ export async function markReady(sessionId: string, sessionToken: string, matchId
   await apiPost('/match/ready', { sessionId, sessionToken, matchId });
 }
 
-export async function leaveQueue(sessionId: string, sessionToken: string) {
-  await apiPost('/match/leave', { sessionId, sessionToken });
+export async function leaveQueue(sessionId: string, sessionToken: string, matchId?: string) {
+  leaveMatchChannel();
+  try {
+    await apiPost('/match/leave', { sessionId, sessionToken, matchId });
+  } catch {}
 }
 
-export async function nextPartner(sessionId: string, sessionToken: string, callbacks: RealtimeCallbacks) {
-  cleanupMatchChannel();
+export async function nextPartner(sessionId: string, sessionToken: string, callbacks: RealtimeCallbacks, matchId?: string) {
+  leaveMatchChannel();
 
   const result = await apiPost<{ success: boolean; data: Record<string, unknown> }>('/match/next', {
     sessionId,
     sessionToken,
+    matchId,
   });
 
   const data = result.data;
@@ -336,9 +375,9 @@ export async function nextPartner(sessionId: string, sessionToken: string, callb
   }
 }
 
-export async function notifyDisconnect(sessionId: string, sessionToken: string, reason: string) {
+export async function notifyDisconnect(sessionId: string, sessionToken: string, reason: string, matchId?: string) {
   try {
-    await apiPost('/match/disconnect', { sessionId, sessionToken, reason });
+    await apiPost('/match/disconnect', { sessionId, sessionToken, reason, matchId });
   } catch {
     // Best-effort on page unload
   }

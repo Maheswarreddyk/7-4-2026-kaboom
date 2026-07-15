@@ -154,11 +154,17 @@ export class WebRTCManager {
       if (this.peerConnection) {
         const state = this.peerConnection.connectionState;
         this.callbacks.onConnectionStateChange?.(state);
+      }
+    };
 
-        // Phase 2: High-End WebRTC Resiliency (ICE Restart)
-        if (state === 'failed') {
-          console.warn('[WebRTC] Connection failed. Triggering ICE Restart...');
-          this.triggerIceRestart();
+    // Phase 4 (KS-003): Listen to ICE connection state for faster dead peer detection
+    this.peerConnection.oniceconnectionstatechange = () => {
+      if (this.peerConnection) {
+        const iceState = this.peerConnection.iceConnectionState;
+        console.log(`[WebRTC] ICE Connection State: ${iceState}`);
+        if (iceState === 'disconnected' || iceState === 'failed') {
+          // Map ICE failure directly to the connection state callback
+          this.callbacks.onConnectionStateChange?.(iceState);
         }
       }
     };
@@ -188,22 +194,22 @@ export class WebRTCManager {
     return offer;
   }
 
-  async triggerIceRestart(): Promise<void> {
-    if (!this.peerConnection) return;
-    try {
-      console.log('[WebRTC] Generating ICE Restart Offer...');
-      const offer = await this.peerConnection.createOffer({ iceRestart: true });
-      await this.peerConnection.setLocalDescription(offer);
-      this.callbacks.onIceRestart?.(offer);
-    } catch (e) {
-      console.error('[WebRTC] ICE Restart failed:', e);
-    }
-  }
+
 
   async handleOffer(offer: RTCSessionDescriptionInit): Promise<RTCSessionDescriptionInit> {
     if (!this.peerConnection) this.createPeerConnection();
 
-    await this.peerConnection!.setRemoteDescription(new RTCSessionDescription(offer));
+    // E1: Explicit Rollback for perfect negotiation (polite peer accepting offer while in have-local-offer)
+    if (this.peerConnection!.signalingState !== 'stable') {
+      console.log('[WebRTC] Signaling state not stable (glare). Explicitly rolling back local description.');
+      await Promise.all([
+        this.peerConnection!.setLocalDescription({ type: 'rollback' }),
+        this.peerConnection!.setRemoteDescription(new RTCSessionDescription(offer))
+      ]);
+    } else {
+      await this.peerConnection!.setRemoteDescription(new RTCSessionDescription(offer));
+    }
+
     await this.flushIceCandidates();
 
     const answer = await this.peerConnection!.createAnswer();

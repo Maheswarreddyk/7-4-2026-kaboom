@@ -88,6 +88,7 @@ export const apiService = {
       sessionToken: data.data.sessionToken,
       createdAt: data.data.createdAt,
       status: data.data.status,
+      activeMatch: data.data.activeMatch,
     };
   },
 
@@ -181,6 +182,16 @@ export const apiService = {
       },
     });
     return data.data || [];
+  },
+
+  async getMatchStatus(sessionId: string, sessionToken: string): Promise<any> {
+    const { data } = await api.get('/match/status', {
+      headers: {
+        'x-session-id': sessionId,
+        'x-session-token': sessionToken,
+      },
+    });
+    return data.data;
   },
 
   async getAnalytics(adminToken: string): Promise<any> {

@@ -20,6 +20,11 @@ export interface SessionData {
   sessionToken: string;
   createdAt: string;
   status?: string;
+  activeMatch?: {
+    matchId: string;
+    partnerSessionId: string;
+    isInitiator: boolean;
+  } | null;
 }
 
 export interface StatsData {

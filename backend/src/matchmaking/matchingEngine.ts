@@ -75,38 +75,46 @@ const VALID_TRANSITIONS: Record<string, string[]> = {
   'ENDED': ['READY', 'SEARCHING'],
 };
 
+const VALID_FROM_STATES: Record<string, string[]> = {
+  'READY': ['CREATED', 'SEARCHING', 'ENDED'],
+  'SEARCHING': ['CREATED', 'READY', 'RESERVED', 'REQUEUEING', 'ENDED'],
+  'RESERVED': ['SEARCHING'],
+  'MATCHED': ['RESERVED'],
+  'SIGNALING': ['MATCHED'],
+  'CONNECTED': ['SIGNALING'],
+  'PARTNER_LEFT': ['CONNECTED'],
+  'REQUEUEING': ['MATCHED', 'SIGNALING', 'CONNECTED', 'PARTNER_LEFT'],
+  'ENDED': ['CREATED', 'READY', 'SEARCHING', 'RESERVED', 'MATCHED', 'SIGNALING', 'CONNECTED', 'PARTNER_LEFT', 'REQUEUEING']
+};
+
 export async function transitionSessionStatus(
   supabase: SupabaseClient,
   sessionId: string,
   targetStatus: string,
-  reason: string
+  reason: string,
+  expectedCurrentStatus?: string
 ): Promise<boolean> {
-  const { data: session } = await supabase
-    .from('visitor_sessions')
-    .select('status')
-    .eq('id', sessionId)
-    .maybeSingle();
-
-  const currentStatus = session?.status || 'CREATED';
-  if (currentStatus === targetStatus) return true;
-
-  // Validate transition
-  const allowed = VALID_TRANSITIONS[currentStatus];
-  if (allowed && !allowed.includes(targetStatus)) {
-    console.warn(`[FSM Warning] Illegal transition: ${currentStatus} -> ${targetStatus} for session ${sessionId} (${reason})`);
+  const allowedFromStates = expectedCurrentStatus ? [expectedCurrentStatus] : VALID_FROM_STATES[targetStatus] || [];
+  
+  if (allowedFromStates.length === 0) {
+    console.warn(`[FSM Warning] No valid origin states for target ${targetStatus} (${reason})`);
     return false;
   }
 
-  console.log(`[FSM Transition] Session=${sessionId} | ${currentStatus} -> ${targetStatus} | Reason=${reason}`);
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('visitor_sessions')
     .update({ status: targetStatus, last_activity: new Date().toISOString() })
-    .eq('id', sessionId);
+    .eq('id', sessionId)
+    .in('status', [...allowedFromStates, targetStatus]) // Include targetStatus for idempotency
+    .select('id')
+    .maybeSingle();
 
-  if (error) {
-    console.error(`[FSM Error] Failed to update session status to ${targetStatus}:`, error.message);
+  if (error || !data) {
+    console.warn(`[FSM Warning] Illegal transition or concurrent modification blocked for session ${sessionId} to ${targetStatus} (${reason}). Error: ${error?.message || 'Row not found or status constraint failed'}`);
     return false;
   }
+
+  console.log(`[FSM Transition] Session=${sessionId} | -> ${targetStatus} | Reason=${reason}`);
   return true;
 }
 
@@ -309,7 +317,8 @@ export async function runGlobalHealCycle(supabase: SupabaseClient): Promise<void
           if (match) matchExists = true;
         }
 
-        if (timedOut || !matchExists) {
+        // KS-017: Only rollback if the reservation is actually timed out AND no match exists
+        if (timedOut && !matchExists) {
           console.log(`[Self-Healing] Reservation ${resv.id} is stale or orphaned (timedOut=${timedOut}, matchExists=${matchExists}). Rolling back...`);
           await supabase.from('reservations').update({ status: 'rolled_back' }).eq('id', resv.id);
           
@@ -356,6 +365,9 @@ export async function runGlobalHealCycle(supabase: SupabaseClient): Promise<void
               ended_reason: 'disconnect',
             })
             .eq('id', m.id);
+
+          await supabase.from('temporary_messages').delete().eq('match_id', m.id);
+          await supabase.from('reservations').delete().eq('match_id', m.id);
 
           // Re-queue any active peer (upsert pattern — avoid duplicate queue rows)
           if (!staleA && m.user_a) {
@@ -558,25 +570,10 @@ export async function runGlobalMatchCycle(supabase: SupabaseClient): Promise<voi
 
       console.log(`[Matchmaker] Found match: ${sessionIdA} and ${sessionIdB} (score=${bestMatch.weightedScore}, reason=${bestMatch.reason})`);
 
-      // Create reservation atomically
+      // Create reservation atomically (includes KS-014 FSM lock to RESERVED)
       const reservation = await createReservation(supabase, sessionIdA, sessionIdB);
       if (!reservation.success) {
         console.error(`[Matchmaker] Failed to reserve: ${reservation.reason}`);
-        matchmakerMetrics.failedMatches += 1;
-        continue;
-      }
-
-      // Transition FSM states to RESERVED (V4.1 Requirement 1)
-      const [resA, resB] = await Promise.all([
-        transitionSessionStatus(supabase, sessionIdA, 'RESERVED', 'Matchmaker reservation lock'),
-        transitionSessionStatus(supabase, sessionIdB, 'RESERVED', 'Matchmaker reservation lock'),
-      ]);
-
-      if (!resA || !resB) {
-        console.error(`[Matchmaker] FSM Transition to RESERVED failed for ${sessionIdA} or ${sessionIdB}. Rolling back reservation.`);
-        await rollbackReservation(supabase, reservation.reservationId, 'FSM transition failed');
-        if (resA) await transitionSessionStatus(supabase, sessionIdA, 'SEARCHING', 'Reservation rollback');
-        if (resB) await transitionSessionStatus(supabase, sessionIdB, 'SEARCHING', 'Reservation rollback');
         matchmakerMetrics.failedMatches += 1;
         continue;
       }

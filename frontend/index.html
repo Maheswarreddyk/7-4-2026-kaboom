@@ -41,7 +41,33 @@
     <title>Kaboom TV – Free Random Video Chat | Meet New People Instantly</title>
   </head>
   <body>
-    <div id="root"></div>
+    <noscript>
+      <div style="font-family: sans-serif; padding: 2rem; text-align: center; color: #333; background: #fff; height: 100vh; display: flex; flex-direction: column; justify-content: center;">
+        <h1 style="color: #f59e0b;">Kaboom TV</h1>
+        <p>JavaScript is required to use this application.</p>
+        <p>Please enable JavaScript in your browser settings to start video chatting.</p>
+      </div>
+    </noscript>
+    <div id="root">
+      <style>
+        #initial-loader {
+          position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+          background-color: #0f172a; display: flex; flex-direction: column;
+          align-items: center; justify-content: center; z-index: 9999;
+          font-family: 'Inter', sans-serif; color: white;
+        }
+        .spinner {
+          width: 40px; height: 40px; border: 4px solid rgba(255, 255, 255, 0.1);
+          border-left-color: #f59e0b; border-radius: 50%;
+          animation: spin 1s linear infinite; margin-bottom: 20px;
+        }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+      </style>
+      <div id="initial-loader">
+        <div class="spinner"></div>
+        <div style="font-weight: 600; font-size: 1.25rem;">Loading Kaboom...</div>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

@@ -44,7 +44,7 @@ export const sessionService = {
     return sessionRepository.findById(sessionId);
   },
 
-  async restoreSession(sessionId: string, sessionToken: string): Promise<VisitorSession | null> {
+  async restoreSession(sessionId: string, sessionToken: string): Promise<{ session: VisitorSession; match: any | null } | null> {
     const session = await sessionRepository.findById(sessionId);
     if (!session || session.session_token !== sessionToken || session.status === 'ended') {
       return null;
@@ -56,7 +56,13 @@ export const sessionService = {
       .eq('id', sessionId);
 
     await connectionLogRepository.log(sessionId, 'reconnect');
-    return session;
+
+    let match = null;
+    if (session.status === 'CONNECTED') {
+      match = await matchRepository.findActiveMatchBySessionId(sessionId);
+    }
+
+    return { session, match };
   },
 };
 

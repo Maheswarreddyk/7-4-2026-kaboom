@@ -83,10 +83,12 @@ export const sessionController = {
       throw new AppError(400, 'sessionId and sessionToken are required');
     }
 
-    const session = await sessionService.restoreSession(sessionId, sessionToken);
-    if (!session) {
+    const result = await sessionService.restoreSession(sessionId, sessionToken);
+    if (!result) {
       throw new AppError(401, 'Invalid or expired session');
     }
+
+    const { session, match } = result;
 
     res.json({
       success: true,
@@ -95,6 +97,11 @@ export const sessionController = {
         sessionToken: session.session_token,
         createdAt: session.created_at,
         status: session.status,
+        activeMatch: match ? {
+          matchId: match.id,
+          partnerSessionId: match.user_a === session.id ? match.user_b : match.user_a,
+          isInitiator: match.user_a === session.id, // Or however we determine initiator if necessary, but usually webRTC will just resume or reconnect based on state.
+        } : null
       },
     });
   }),
