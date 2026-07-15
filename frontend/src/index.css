@@ -1063,3 +1063,52 @@
   animation: bannerProgress linear forwards;
 }
 
+/* =====================================================
+   EMOJI REACTION SYSTEM (Organic Particle Physics)
+   ===================================================== */
+
+@keyframes emojiFloat {
+  0% {
+    transform: translate(0, 0) scale(0) rotate(0deg);
+    opacity: 0;
+  }
+  15% {
+    transform: translate(calc(var(--x-drift) * 0.2), -15vh) scale(calc(var(--emoji-scale) * 1.2)) rotate(calc(var(--emoji-rot) * 0.4));
+    opacity: 1;
+  }
+  80% {
+    transform: translate(calc(var(--x-drift)), -65vh) scale(var(--emoji-scale)) rotate(var(--emoji-rot));
+    opacity: 0.9;
+  }
+  100% {
+    transform: translate(calc(var(--x-drift) * 1.5), -85vh) scale(calc(var(--emoji-scale) * 0.8)) rotate(calc(var(--emoji-rot) * 1.5));
+    opacity: 0;
+  }
+}
+
+@keyframes emojiParticles {
+  0% {
+    transform: scale(0.5);
+    opacity: 0;
+  }
+  70% {
+    transform: scale(0.5);
+    opacity: 0;
+  }
+  80% {
+    transform: scale(1.5);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(2.5);
+    opacity: 0;
+  }
+}
+
+.animate-emoji-float {
+  animation: emojiFloat 1.5s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+}
+
+.animate-emoji-particles {
+  animation: emojiParticles 1.5s ease-out forwards;
+}

@@ -31,7 +31,7 @@ export interface RealtimeCallbacks {
   onMutualLike?: (data: { matchId: string; partnerSessionId: string }) => void;
   onNewMessage?: (data: { matchId: string; senderSessionId: string; message: string; createdAt: string }) => void;
   onPartnerTyping?: (data: { typing: boolean }) => void;
-  onReaction?: (data: { emoji: string }) => void;
+  onReaction?: (data: { emoji: string; matchId: string; senderSessionId: string }) => void;
   onMessageSeen?: (data: { matchId: string; senderId: string }) => void;
   onPartnerSkipPending?: () => void;
   onPartnerSkipCancelled?: () => void;
@@ -119,7 +119,7 @@ function subscribeToMatchChannel(matchId: string, callbacks: RealtimeCallbacks):
         callbacks.onPartnerTyping?.(payload as { typing: boolean });
       })
       .on('broadcast', { event: 'reaction' }, ({ payload }) => {
-        callbacks.onReaction?.(payload as { emoji: string });
+        callbacks.onReaction?.(payload as { emoji: string; matchId: string; senderSessionId: string });
       })
       .on('broadcast', { event: 'skip_pending' }, () => {
         callbacks.onPartnerSkipPending?.();
@@ -161,11 +161,11 @@ export async function ensureMatchChannelConnected(matchId: string, callbacks: Re
   await subscribeToMatchChannel(matchId, callbacks);
 }
 
-export function sendReaction(emoji: string) {
+export function sendReaction(emoji: string, matchId: string, senderSessionId: string) {
   matchChannel?.send({
     type: 'broadcast',
     event: 'reaction',
-    payload: { emoji },
+    payload: { emoji, matchId, senderSessionId },
   });
 }
 

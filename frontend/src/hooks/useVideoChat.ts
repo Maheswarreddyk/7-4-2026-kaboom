@@ -62,7 +62,7 @@ const VALID_TRANSITIONS: Record<SessionStatus, SessionStatus[]> = {
 export function useVideoChat(
   sessionId: string | null,
   sessionToken: string | null,
-  onReaction?: (emoji: string) => void
+  onReaction?: (emoji: string, fromLocal: boolean) => void
 ) {
   const { showToast } = useToast();
   const { updateSessionLifecycleState } = useSession();
@@ -679,9 +679,11 @@ export function useVideoChat(
           connectionStatus: 'connecting',
         });
       },
-      onReaction: (data: { emoji: string }) => {
+      onReaction: (data: { emoji: string; matchId: string; senderSessionId: string }) => {
         if (skipInProgressRef.current) return;
-        onReactionRef.current?.(data.emoji);
+        if (data.matchId !== matchIdRef.current) return; // Phase 5 Strict Isolation
+        const fromLocal = data.senderSessionId === sessionIdRef.current;
+        onReactionRef.current?.(data.emoji, fromLocal);
       },
       onMatched: (data: any) => {
         if (skipInProgressRef.current) return;
@@ -1514,6 +1516,12 @@ export function useVideoChat(
     sendSkipCancelled();
   }, []);
 
+  const handleSendReaction = useCallback((emoji: string) => {
+    if (matchIdRef.current && sessionIdRef.current) {
+      sendReaction(emoji, matchIdRef.current, sessionIdRef.current);
+    }
+  }, []);
+
   return {
     chatState,
     localStream,
@@ -1529,7 +1537,7 @@ export function useVideoChat(
     sendChatMessage,
     setTypingStatus,
     setChatOpen,
-    sendReaction,
+    sendReaction: handleSendReaction,
     isQueuePaused,
     pauseQueue,
     resumeQueue,

@@ -102,9 +102,10 @@ export function ChatPage() {
   const reactionLayerRef = useRef<ReactionLayerRef>(null);
   const [isPlacementsSwapped, setIsPlacementsSwapped] = useState(false);
 
-  const triggerReaction = useCallback((emoji: string) => {
-    reactionLayerRef.current?.triggerReaction(emoji);
+  const triggerReaction = useCallback((emoji: string, fromLocal: boolean = true) => {
+    reactionLayerRef.current?.triggerReaction(emoji, fromLocal);
   }, []);
+
 
   const {
     chatState,
@@ -128,6 +129,13 @@ export function ChatPage() {
     broadcastSkipPending,
     broadcastSkipCancelled,
   } = useVideoChat(session?.sessionId ?? null, session?.sessionToken ?? null, triggerReaction);
+
+  // Clear reactions on match transition to prevent session leak
+  useEffect(() => {
+    if (chatState.status !== 'CONNECTED') {
+      reactionLayerRef.current?.clearReactions();
+    }
+  }, [chatState.status]);
 
   // V7: Trigger Match Reveal card on new match connection (reactively checks profile availability)
   useEffect(() => {
@@ -635,7 +643,7 @@ export function ChatPage() {
   }, [likePartner]);
 
   const handleSendReaction = useCallback((emoji: string) => {
-    triggerReaction(emoji);
+    triggerReaction(emoji, true);
     sendReaction(emoji);
   }, [triggerReaction, sendReaction]);
 
@@ -725,7 +733,7 @@ export function ChatPage() {
   // Trigger Heart Burst only on Mutual Likes
   useEffect(() => {
     if (chatState.mutualLike) {
-      triggerReaction('❤️');
+      triggerReaction('❤️', true);
     }
   }, [chatState.mutualLike, triggerReaction]);
 
