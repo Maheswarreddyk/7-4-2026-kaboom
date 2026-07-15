@@ -24,31 +24,32 @@ export const queueLimiter = (req: Request, res: Response, next: NextFunction) =>
   }
 
   const now = Date.now();
+  const lockKey = `${sessionId}:${req.path}`;
 
-  // 1. Concurrency Lock: Prevent multiple requests for the same session at exactly the same time
-  if (queueLocks.has(sessionId)) {
+  // 1. Concurrency Lock: Prevent multiple requests for the same endpoint at exactly the same time
+  if (queueLocks.has(lockKey)) {
     console.warn(`[QueueLimiter] Rejected concurrent request for session ${sessionId} (${req.path})`);
     return res.status(429).json({ success: false, error: 'Request already in progress.' });
   }
 
-  // 2. Throttling: Prevent rapid sequential requests
-  const lastTime = queueTimestamps.get(sessionId) || 0;
+  // 2. Throttling: Prevent rapid sequential requests to the same endpoint
+  const lastTime = queueTimestamps.get(lockKey) || 0;
   if (now - lastTime < QUEUE_COOLDOWN_MS) {
     console.warn(`[QueueLimiter] Rejected rapid request for session ${sessionId} (${req.path})`);
     return res.status(429).json({ success: false, error: 'Too many requests. Please wait a moment.' });
   }
 
   // Acquire lock and update timestamp
-  queueLocks.add(sessionId);
-  queueTimestamps.set(sessionId, now);
+  queueLocks.add(lockKey);
+  queueTimestamps.set(lockKey, now);
 
   // Release the lock when the response finishes or errors
   res.on('finish', () => {
-    queueLocks.delete(sessionId);
+    queueLocks.delete(lockKey);
   });
 
   res.on('close', () => {
-    queueLocks.delete(sessionId);
+    queueLocks.delete(lockKey);
   });
 
   next();

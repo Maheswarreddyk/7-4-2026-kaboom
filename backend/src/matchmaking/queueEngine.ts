@@ -2,6 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { HEARTBEAT_STALE_MS } from './config.js';
 import { logEngine, logToDb } from './logger.js';
 import { AnalyticsLogger } from '../analytics/logger.js';
+import { transitionSessionStatus } from './matchingEngine.js';
 
 export interface JoinQueueResult {
   queueId: string;
@@ -38,22 +39,7 @@ export async function joinQueueEntry(
     throw new Error('Session not found');
   }
 
-  let queueEnteredAt = session.queue_entered_at as string | null;
-  if (!queueEnteredAt) {
-    queueEnteredAt = now;
-  }
-
-  // Update heartbeat + ensure status is 'SEARCHING' (V4.1 Requirement 1)
-  await supabase
-    .from('visitor_sessions')
-    .update({
-      queue_entered_at: queueEnteredAt,
-      last_activity: now,
-      status: 'SEARCHING',
-    })
-    .eq('id', sessionId);
-
-  // Check if already in queue
+  // Check if already in queue first so we can determine queueEnteredAt correctly
   const { data: existing, error: existingErr } = await supabase
     .from('waiting_queue')
     .select('id, joined_at')
@@ -62,6 +48,23 @@ export async function joinQueueEntry(
     .maybeSingle();
 
   if (existingErr) throw existingErr;
+
+  let queueEnteredAt = now;
+  if (existing) {
+    queueEnteredAt = existing.joined_at;
+  }
+
+  // MT4 Fix: Use transitionSessionStatus to enforce FSM Guard
+  const fsmSuccess = await transitionSessionStatus(supabase, sessionId, 'SEARCHING', 'join_queue', session.status);
+  if (!fsmSuccess && session.status !== 'SEARCHING') {
+    throw new Error('Illegal state transition to SEARCHING');
+  }
+
+  // MT1 Fix: Forcefully update queue_entered_at to NOW() on new entry, or preserve if existing
+  await supabase
+    .from('visitor_sessions')
+    .update({ queue_entered_at: queueEnteredAt })
+    .eq('id', sessionId);
 
   if (existing) {
     const waitingSeconds = Math.floor(
@@ -149,7 +152,7 @@ export async function leaveQueueEntry(supabase: SupabaseClient, sessionId: strin
     .from('waiting_queue')
     .update({ status: 'left' })
     .eq('session_id', sessionId)
-    .eq('status', 'waiting');
+    .in('status', ['waiting', 'matched']);
 
   await supabase
     .from('visitor_sessions')

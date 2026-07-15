@@ -24,10 +24,10 @@ import { logEngine, logToDb } from './logger.js';
 import { AnalyticsLogger } from '../analytics/logger.js';
 
 // ============================================================
-// Concurrency Memory Mutex Configuration
+// Concurrency Mutex Configuration
 // ============================================================
 let isHealCycleRunning = false;
-let isMatchmakerRunning = false;
+const MATCHMAKER_LOCK_ID = 8888;
 
 // ============================================================
 // In-Memory Queue Cache & Invalidation
@@ -431,10 +431,10 @@ export async function runGlobalMatchCycle(supabase: SupabaseClient): Promise<voi
   const start = Date.now();
 
   // 1. Acquire distributed advisory lock to coordinate matching passes (V4.1 Requirement 16)
-  if (isMatchmakerRunning) {
+  const { data: lockAcquired, error: lockErr } = await supabase.rpc('try_advisory_lock', { lock_id: MATCHMAKER_LOCK_ID });
+  if (lockErr || !lockAcquired) {
     return;
   }
-  isMatchmakerRunning = true;
 
   try {
     // 2. Queue healing has been decoupled to runGlobalHealCycle (Phase 4 Perf Optimization)
@@ -551,9 +551,7 @@ export async function runGlobalMatchCycle(supabase: SupabaseClient): Promise<voi
 
       let ranked = rankCandidates(scoredCandidates, waitingSecondsA);
 
-      if (scoredCandidates.length === 1) {
-        ranked = [{ ...scoredCandidates[0], rank: 1, passesThreshold: true }];
-      } else if (ranked.length === 0 && scoredCandidates.length > 0 && waitingSecondsA >= 25) {
+      if (ranked.length === 0 && scoredCandidates.length > 0 && waitingSecondsA >= 25) {
         // Relax: fall back to best compatibility score if waiting > 25 seconds
         const bestFallback = [...scoredCandidates].sort((a, b) => b.weightedScore - a.weightedScore)[0];
         ranked = [{ ...bestFallback, rank: 1, passesThreshold: true }];
@@ -726,7 +724,7 @@ export async function runGlobalMatchCycle(supabase: SupabaseClient): Promise<voi
     }
   } finally {
     // 6. Release advisory lock (V4.1 Requirement 16)
-    isMatchmakerRunning = false;
+    await supabase.rpc('advisory_unlock', { lock_id: MATCHMAKER_LOCK_ID });
   }
 }
 
