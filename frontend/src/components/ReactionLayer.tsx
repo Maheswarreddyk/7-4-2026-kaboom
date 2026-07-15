@@ -1,10 +1,10 @@
-import React, { useState, forwardRef, useImperativeHandle, useCallback } from 'react';
+import { useState, forwardRef, useImperativeHandle, useCallback } from 'react';
 
 export interface ReactionLayerRef {
   triggerReaction: (emoji: string) => void;
 }
 
-export const ReactionLayer = forwardRef<ReactionLayerRef>((props, ref) => {
+export const ReactionLayer = forwardRef<ReactionLayerRef>((_props, ref) => {
   const [reactions, setReactions] = useState<Array<{ id: number; emoji: string; left: number; delay: number }>>([]);
 
   const triggerReaction = useCallback((emoji: string) => {
@@ -38,7 +38,13 @@ export const ReactionLayer = forwardRef<ReactionLayerRef>((props, ref) => {
             textShadow: '0 4px 12px rgba(0,0,0,0.5)',
           }}
         >
-          {r.emoji}
+          <div className={
+            r.emoji === '❤️' ? 'animate-bounce' :
+            r.emoji === '👏' ? 'animate-spin-slow' :
+            r.emoji === '😂' ? 'animate-pulse' : ''
+          }>
+            {r.emoji}
+          </div>
         </div>
       ))}
     </div>

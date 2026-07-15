@@ -6,12 +6,16 @@ interface SearchingAnimationProps {
   status?: string;
   partnerProfile?: any;
   isQueuePaused?: boolean;
+  partnerLeftCountdown?: number | null;
+  onSkipNow?: () => void;
 }
 
 export function SearchingAnimation({
   status,
   partnerProfile,
-  isQueuePaused = false
+  isQueuePaused = false,
+  partnerLeftCountdown,
+  onSkipNow
 }: SearchingAnimationProps) {
   const { width, height } = useResponsiveLayout();
   const isMinimalLayout = width < 560 || height < 500;
@@ -24,6 +28,10 @@ export function SearchingAnimation({
   const [fadeOpacity, setFadeOpacity] = useState(1);
 
   const getSearchMessage = () => {
+    if (status === 'MATCH_FOUND' || status === 'NEGOTIATING' || status === 'ICE_CONNECTING' || status === 'CONNECTED') {
+      return 'Connecting...';
+    }
+
     const uni = safeLocalStorage.getItem('kaboom_university') || '';
     const langs = safeLocalStorage.getJSON<string[]>('kaboom_languages', []);
     const interests = safeLocalStorage.getJSON<string[]>('kaboom_interest_tags', []);
@@ -293,12 +301,15 @@ export function SearchingAnimation({
             <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full border border-red-500/25 bg-red-500/5 flex items-center justify-center relative shadow-2xl mb-2 sm:mb-4">
               <span className="text-xl sm:text-2xl animate-bounce">👋</span>
             </div>
-            <p className="text-red-400 font-extrabold text-sm sm:text-base tracking-tight mb-1">
-              {partnerProfile?.displayName || 'Partner'} left.
+            <p className="text-red-400 font-extrabold text-sm sm:text-base tracking-tight mb-2">
+              {partnerProfile?.displayName || 'Partner'} disconnected.
             </p>
-            <p className="text-stone-400 text-[10px] sm:text-xs font-semibold tracking-wide animate-pulse">
-              Finding another person...
-            </p>
+            <button
+              onClick={onSkipNow}
+              className="px-6 py-2 rounded-xl bg-white/10 hover:bg-white/15 border border-white/10 text-white text-xs font-bold transition-all active:scale-95"
+            >
+              Find someone else {partnerLeftCountdown != null ? `(${partnerLeftCountdown}s)` : ''}
+            </button>
           </div>
         ) : isQueuePaused ? (
           /* Case B: Queue Paused */

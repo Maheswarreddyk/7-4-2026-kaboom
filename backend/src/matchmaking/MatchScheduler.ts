@@ -1,4 +1,4 @@
-import { runGlobalMatchCycle } from './matchingEngine.js';
+import { runGlobalMatchCycle, runGlobalHealCycle } from './matchingEngine.js';
 import { getSupabase } from '../database/client.js';
 import { SCHEDULER_INTERVAL_MS } from './config.js';
 
@@ -39,7 +39,13 @@ export const MatchScheduler = {
     if (!isCycleActive) {
       isCycleActive = true;
       try {
-        await runGlobalMatchCycle(getSupabase());
+        const supabase = getSupabase();
+        // Fire and forget heal cycle so it runs parallel and doesn't block fast-path
+        void runGlobalHealCycle(supabase).catch(err => {
+          console.error('[MatchScheduler] Heal cycle error:', err instanceof Error ? err.message : err);
+        });
+
+        await runGlobalMatchCycle(supabase);
       } catch (error) {
         console.error('[MatchScheduler] Cycle error:', error instanceof Error ? error.message : error);
       } finally {

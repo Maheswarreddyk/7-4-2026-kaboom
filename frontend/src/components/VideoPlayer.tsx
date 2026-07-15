@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { cn } from '../utils/index.js';
 
 interface VideoPlayerProps {
@@ -22,9 +22,11 @@ export function VideoPlayer({
   placeholder = 'Waiting for video...',
   fullscreen = false,
   onAspectRatioChange,
+  onPlaying,
   frozen = false,
-}: VideoPlayerProps) {
+}: VideoPlayerProps & { onPlaying?: () => void }) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const [isStarting, setIsStarting] = useState(false);
 
   // Keep latest aspect ratio callback ref to avoid resetting effects
   const onAspectRatioChangeRef = useRef(onAspectRatioChange);
@@ -94,8 +96,16 @@ export function VideoPlayer({
 
     return () => {
       video.srcObject = null;
-    };
+    }
   }, [stream]);
+
+  useEffect(() => {
+    if (stream && !mirrored) { // Only do this for the remote stream
+      setIsStarting(true);
+      const timer = setTimeout(() => setIsStarting(false), 800);
+      return () => clearTimeout(timer);
+    }
+  }, [stream, mirrored]);
 
   return (
     <div className={cn('relative overflow-hidden bg-black/50 w-full h-full flex items-center justify-center', className)}>
@@ -106,11 +116,13 @@ export function VideoPlayer({
           playsInline
           muted={muted}
           className={cn(
-            'transition-all duration-300 w-full h-full',
+            'transition-all duration-700 w-full h-full',
             fullscreen ? 'object-cover' : 'object-contain',
             mirrored && 'scale-x-[-1]',
-            frozen && 'blur-[4px] grayscale-[0.3] brightness-[0.8]'
+            frozen && 'blur-[4px] grayscale-[0.3] brightness-[0.8]',
+            isStarting && 'blur-[12px] scale-105 brightness-110 grayscale-[0.5]'
           )}
+          onPlaying={onPlaying}
           style={{
             // Hardware acceleration hints for high quality scaling without flickering
             willChange: 'transform',

@@ -14,7 +14,7 @@ import analyticsRouter from './analytics/routes.js';
 
 import { cleanupService, statsService } from './services/index.js';
 
-import { runGlobalMatchCycle } from './matchmaking/matchingEngine.js';
+import { runGlobalMatchCycle, matchmakerMetrics } from './matchmaking/matchingEngine.js';
 import { MatchScheduler } from './matchmaking/MatchScheduler.js';
 import { CampaignManager } from './notifications/CampaignManager.js';
 
@@ -122,7 +122,7 @@ app.use(express.static(distPath));
 
 // For SPA routes, fallback to index.html
 app.get('*', (req, res, next) => {
-  if (req.path.startsWith('/api') || req.path.startsWith('/socket.io')) {
+  if (req.path.startsWith('/api')) {
     return next();
   }
   res.sendFile(path.join(distPath, 'index.html'));
@@ -154,7 +154,7 @@ async function startServer(): Promise<void> {
 
   metricsInterval = setInterval(async () => {
     try {
-      await statsService.recordMetrics(matchingEngine.getOnlineCount());
+      await statsService.recordMetrics(matchmakerMetrics.totalSearchingUsers);
     } catch (error) {
       console.error('[Metrics] Failed to record:', error);
     }
@@ -180,11 +180,9 @@ function gracefulShutdown(signal: string): void {
   if (metricsInterval) clearInterval(metricsInterval);
   if (cleanupInterval) clearInterval(cleanupInterval);
 
-  io.close(() => {
-    server.close(() => {
-      console.log('[Server] Shutdown complete');
-      process.exit(0);
-    });
+  server.close(() => {
+    console.log('[Server] Shutdown complete');
+    process.exit(0);
   });
 
   setTimeout(() => {
@@ -201,4 +199,4 @@ startServer().catch((error) => {
   process.exit(1);
 });
 
-export { app, server, io };
+export { app, server };

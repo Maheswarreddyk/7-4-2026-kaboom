@@ -1,6 +1,6 @@
 import type { Request, Response } from 'express';
 import { checkDatabaseConnection } from '../database/client.js';
-import { matchingEngine } from '../services/matchingEngine.js';
+import { matchmakerMetrics } from '../matchmaking/matchingEngine.js';
 import {
   feedbackService,
   reportService,
@@ -28,7 +28,7 @@ export const healthController = {
 
 export const statsController = {
   getStats: asyncHandler(async (_req: Request, res: Response) => {
-    const stats = await statsService.getStats(matchingEngine.getOnlineCount());
+    const stats = await statsService.getStats(matchmakerMetrics.totalSearchingUsers);
     res.json({ success: true, data: stats });
   }),
 };

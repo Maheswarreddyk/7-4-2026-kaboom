@@ -98,6 +98,7 @@ export async function transitionSessionStatus(
   const allowed = VALID_TRANSITIONS[currentStatus];
   if (allowed && !allowed.includes(targetStatus)) {
     console.warn(`[FSM Warning] Illegal transition: ${currentStatus} -> ${targetStatus} for session ${sessionId} (${reason})`);
+    return false;
   }
 
   console.log(`[FSM Transition] Session=${sessionId} | ${currentStatus} -> ${targetStatus} | Reason=${reason}`);
@@ -138,41 +139,87 @@ async function findActiveMatch(supabase: SupabaseClient, sessionId: string) {
   return data;
 }
 
-async function loadExclusionSets(supabase: SupabaseClient, sessionId: string) {
-  const [recentMatchesQuery, reportsQuery] = await Promise.all([
+async function loadBatchedExclusions(supabase: SupabaseClient, sessionIds: string[]) {
+  if (sessionIds.length === 0) {
+    return { recentPartnersMap: new Map(), reportedIdsMap: new Map(), endedMatchesMap: new Map() };
+  }
+
+  // Build exclusion maps for all active waitlist sessions (O(1) queries instead of O(N))
+  // We limit the batch size indirectly by only querying for active waiting sessions
+  
+  const [recentMatchesQuery, reportsQuery, endedMatchesQuery] = await Promise.all([
     supabase
       .from('matches')
       .select('user_a, user_b')
-      .or(`user_a.eq.${sessionId},user_b.eq.${sessionId}`)
+      .or(`user_a.in.(${sessionIds.join(',')}),user_b.in.(${sessionIds.join(',')})`)
       .order('started_at', { ascending: false })
-      .limit(5),
+      .limit(200),
     supabase
       .from('reports')
       .select('reporter_session, reported_session')
-      .or(`reporter_session.eq.${sessionId},reported_session.eq.${sessionId}`),
+      .or(`reporter_session.in.(${sessionIds.join(',')}),reported_session.in.(${sessionIds.join(',')})`),
+    supabase
+      .from('matches')
+      .select('user_a, user_b, ended_at')
+      .not('ended_at', 'is', null)
+      .or(`user_a.in.(${sessionIds.join(',')}),user_b.in.(${sessionIds.join(',')})`)
+      .order('ended_at', { ascending: false })
+      .limit(300)
   ]);
 
-  const recentPartners = new Set<string>();
+  const recentPartnersMap = new Map<string, Set<string>>();
+  const reportedIdsMap = new Map<string, Set<string>>();
+  const endedMatchesMap = new Map<string, Map<string, string>>(); // user -> (partner -> ended_at)
+
+  sessionIds.forEach(id => {
+    recentPartnersMap.set(id, new Set());
+    reportedIdsMap.set(id, new Set());
+    endedMatchesMap.set(id, new Map());
+  });
+
   recentMatchesQuery.data?.forEach((m) => {
-    recentPartners.add(m.user_a === sessionId ? m.user_b : m.user_a);
+    if (recentPartnersMap.has(m.user_a)) recentPartnersMap.get(m.user_a)!.add(m.user_b);
+    if (recentPartnersMap.has(m.user_b)) recentPartnersMap.get(m.user_b)!.add(m.user_a);
   });
 
-  const reportedIds = new Set<string>();
   reportsQuery.data?.forEach((r) => {
-    reportedIds.add(
-      r.reporter_session === sessionId ? r.reported_session : r.reporter_session
-    );
+    if (reportedIdsMap.has(r.reporter_session)) reportedIdsMap.get(r.reporter_session)!.add(r.reported_session);
+    if (reportedIdsMap.has(r.reported_session)) reportedIdsMap.get(r.reported_session)!.add(r.reporter_session);
   });
 
-  return { recentPartners, reportedIds };
+  endedMatchesQuery.data?.forEach((m) => {
+    if (endedMatchesMap.has(m.user_a)) endedMatchesMap.get(m.user_a)!.set(m.user_b, m.ended_at);
+    if (endedMatchesMap.has(m.user_b)) endedMatchesMap.get(m.user_b)!.set(m.user_a, m.ended_at);
+  });
+
+  return { recentPartnersMap, reportedIdsMap, endedMatchesMap };
 }
+
+let lastHealTime = 0;
+const HEAL_INTERVAL_MS = 15000;
+const HEAL_QUEUE_LOCK_ID = 88998822; // Separate lock for healing
 
 /**
  * Self-healing and queue recovery (V4.1 Requirement 4 & 12).
  * Verifies that visitor_sessions, waiting_queue, reservations, and matches are in sync.
- * Runs at the beginning of every matchmaking cycle.
+ * Runs periodically (throttled to 15s).
  */
-export async function healQueue(supabase: SupabaseClient): Promise<void> {
+export async function runGlobalHealCycle(supabase: SupabaseClient): Promise<void> {
+  const nowMs = Date.now();
+  if (nowMs - lastHealTime < HEAL_INTERVAL_MS) {
+    return;
+  }
+
+  const { data: lockAcquired, error: lockErr } = await supabase.rpc('try_advisory_lock', { lock_id: HEAL_QUEUE_LOCK_ID });
+  if (lockErr) {
+    console.error('[HealQueue] try_advisory_lock RPC error:', lockErr.message);
+  }
+  if (!lockAcquired) {
+    return; // Another instance is healing
+  }
+
+  lastHealTime = Date.now();
+
   const now = new Date().toISOString();
   const heartbeatThreshold = new Date(Date.now() - HEARTBEAT_STALE_MS).toISOString();
 
@@ -367,8 +414,7 @@ export async function runGlobalMatchCycle(supabase: SupabaseClient): Promise<voi
   }
 
   try {
-    // 2. Run database self-healing and queue recovery (V4.1 Requirement 4 & 12)
-    await healQueue(supabase);
+    // 2. Queue healing has been decoupled to runGlobalHealCycle (Phase 4 Perf Optimization)
 
     // 3. Expire stale reservations
     const expiredCount = await expireStaleReservations(supabase);
@@ -443,7 +489,11 @@ export async function runGlobalMatchCycle(supabase: SupabaseClient): Promise<voi
     const matchedOrReservedInCycle = new Set<string>();
     const reservedIds = await getReservedSessionIds(supabase);
 
-    // 5. Match from oldest to newest (V4.1 Requirement 13: longest waiting prioritization)
+    // 5. Batch load exclusions (Phase 4 Perf Optimization)
+    const activeWaitingIds = activeWaiting.map(e => e.session_id);
+    const { recentPartnersMap, reportedIdsMap, endedMatchesMap: allEndedMatchesMap } = await loadBatchedExclusions(supabase, activeWaitingIds);
+
+    // 6. Match from oldest to newest (V4.1 Requirement 13: longest waiting prioritization)
     for (let i = 0; i < activeWaiting.length; i++) {
       const entryA = activeWaiting[i];
       const sessionIdA = entryA.session_id;
@@ -453,25 +503,9 @@ export async function runGlobalMatchCycle(supabase: SupabaseClient): Promise<voi
       const profileA = entryA.visitor_sessions;
       if (!profileA || profileA.status !== 'SEARCHING') continue;
 
-      // Load exclusion sets
-      const { recentPartners, reportedIds } = await loadExclusionSets(supabase, sessionIdA);
-
-      // Query ended matches for user A to build endedMatchesMap for rematch cooldown checking
-      const { data: endedMatchesQuery } = await supabase
-        .from('matches')
-        .select('user_a, user_b, ended_at')
-        .or(`user_a.eq.${sessionIdA},user_b.eq.${sessionIdA}`)
-        .not('ended_at', 'is', null)
-        .order('ended_at', { ascending: false })
-        .limit(10);
-
-      const endedMatchesMap = new Map<string, string>();
-      endedMatchesQuery?.forEach((m) => {
-        const partnerId = m.user_a === sessionIdA ? m.user_b : m.user_a;
-        if (!endedMatchesMap.has(partnerId)) {
-          endedMatchesMap.set(partnerId, m.ended_at);
-        }
-      });
+      const recentPartners = recentPartnersMap.get(sessionIdA) || new Set();
+      const reportedIds = reportedIdsMap.get(sessionIdA) || new Set();
+      const endedMatchesMap = allEndedMatchesMap.get(sessionIdA) || new Map();
 
       const waitingSecondsA = Math.floor((Date.now() - new Date(entryA.joined_at).getTime()) / 1000);
       matchmakerMetrics.maximumWaitTime = Math.max(matchmakerMetrics.maximumWaitTime, waitingSecondsA);

@@ -59,12 +59,12 @@ router.post('/session/heartbeat', async (req, res, next) => {
         // Notify the ghost partner that this user has left
         const { data: matchInfo } = await supabase
           .from('matches')
-          .select('session1_id, session2_id')
+          .select('user_a, user_b')
           .eq('id', session.match_id)
           .single();
           
         if (matchInfo) {
-          const partnerId = matchInfo.session1_id === sessionId ? matchInfo.session2_id : matchInfo.session1_id;
+          const partnerId = matchInfo.user_a === sessionId ? matchInfo.user_b : matchInfo.user_a;
           await broadcastToSession(partnerId, 'partner_left', { reason: 'desync_recovery' });
         }
         
@@ -272,7 +272,12 @@ router.get('/universities', async (req, res, next) => {
     // Take top 15 results
     const finalResults = merged.slice(0, 15);
     
-    // Save to Cache
+    // Save to Cache with basic LRU size limit
+    if (universityCache.size >= 500) {
+      // Delete the oldest entry (Map iteration order is insertion order)
+      const firstKey = universityCache.keys().next().value;
+      if (firstKey) universityCache.delete(firstKey);
+    }
     universityCache.set(cleanQ, finalResults);
 
     res.json({ success: true, data: finalResults });
@@ -340,11 +345,22 @@ router.post('/like', async (req, res, next) => {
       .select()
       .single();
       
+    const isMutual = updatedMatch ? (updatedMatch.liked_by_a && updatedMatch.liked_by_b) : false;
+
+    // Phase 2 Fix: If this like made it mutual, ensure both parties are immediately notified via WebSocket.
+    // (Previously, only the HTTP caller knew it was mutual).
+    if (isMutual && updatedMatch) {
+      const partnerId = match.user_a === sessionId ? match.user_b : match.user_a;
+      // We broadcast to BOTH just in case, though the caller already gets HTTP response.
+      broadcastToSession(sessionId, 'mutual_like', { matchId, partnerSessionId: partnerId }).catch(e => console.warn('[Like] Broadcast err A:', e.message));
+      broadcastToSession(partnerId, 'mutual_like', { matchId, partnerSessionId: sessionId }).catch(e => console.warn('[Like] Broadcast err B:', e.message));
+    }
+      
     res.json({
       success: true,
       data: {
         success: true,
-        mutual: updatedMatch ? (updatedMatch.liked_by_a && updatedMatch.liked_by_b) : false
+        mutual: isMutual
       }
     });
   } catch (err) {

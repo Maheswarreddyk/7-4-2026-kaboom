@@ -90,7 +90,7 @@ export function FloatingLayoutProvider({ children }: { children: React.ReactNode
       if (isConnected && !isSearching) {
         setControlsVisible(false);
       }
-    }, 4000);
+    }, 3000);
   }, [isConnected, isSearching]);
 
   // Sync controls state when status changes

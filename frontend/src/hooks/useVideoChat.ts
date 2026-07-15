@@ -25,6 +25,7 @@ import { webrtcManager } from '../webrtc/index.js';
 import type { ChatState, ConnectionStatus, SessionStatus } from '../types/index.js';
 import { environment } from 'config';
 import { safeLocalStorage } from '../utils/index.js';
+import { useAudioUX } from './useAudioUX.js';
 
 const initialChatState: ChatState = {
   status: 'IDLE',
@@ -65,6 +66,7 @@ export function useVideoChat(
 ) {
   const { showToast } = useToast();
   const { updateSessionLifecycleState } = useSession();
+  const { playConnect, playDisconnect, playMutualLike } = useAudioUX();
   const [chatState, setChatState] = useState<ChatState>(initialChatState);
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
@@ -125,37 +127,8 @@ export function useVideoChat(
   });
 
   const playConnectChime = useCallback(() => {
-    try {
-      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-      if (!AudioContextClass) return;
-      const ctx = new AudioContextClass();
-      
-      const now = ctx.currentTime;
-      const playTone = (freq: number, start: number, duration: number) => {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(freq, start);
-        
-        gain.gain.setValueAtTime(0, start);
-        gain.gain.linearRampToValueAtTime(0.15, start + 0.05);
-        gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
-        
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        
-        osc.start(start);
-        osc.stop(start + duration);
-      };
-      
-      playTone(523.25, now, 0.6); // C5
-      playTone(659.25, now + 0.1, 0.6); // E5
-      playTone(783.99, now + 0.2, 0.8); // G5
-    } catch (e) {
-      console.warn('Audio context chime failed to play:', e);
-    }
-  }, []);
+    playConnect(matchIdRef.current || undefined);
+  }, [playConnect]);
 
   const signalingStateRef = useRef<SessionStatus>('IDLE');
   const triggerAutoRejoinRef = useRef<() => Promise<void>>(async () => {});
@@ -238,7 +211,6 @@ export function useVideoChat(
 
   const executePartnerLeftTeardown = useCallback(() => {
     setSignalingState('PARTNER_LEFT');
-    setRemoteStream(null);
     webrtcManager.resetConnection();
     lastProcessedOfferSdpRef.current = null;
     lastProcessedAnswerSdpRef.current = null;
@@ -736,6 +708,8 @@ export function useVideoChat(
       },
       onPartnerLeft: (data?: { reason: string; eventId?: string }) => {
         if (skipInProgressRef.current) return;
+        console.log(`[Websocket Event] partnerLeft received (reason: ${data?.reason || 'unknown'})`);
+        playDisconnect(matchIdRef.current || undefined);
         if (data?.eventId && processedEventsRef.current.has(data.eventId)) {
           console.log('[Signaling] Duplicate partner_left event ignored. eventId:', data.eventId);
           return;
@@ -781,6 +755,7 @@ export function useVideoChat(
       },
       onMutualLike: () => {
         if (skipInProgressRef.current) return;
+        playMutualLike(matchIdRef.current || undefined);
         setChatState((prev) => {
           const newMessages = prev.messages ? [...prev.messages] : [];
           const hasMutualMsg = newMessages.some((m) => m.id.startsWith('system-mutual-like'));
@@ -1046,7 +1021,6 @@ export function useVideoChat(
     setSignalingState('REQUEUEING');
 
     clearAllTimers();
-    setRemoteStream(null);
     webrtcManager.resetConnection();
     lastProcessedOfferSdpRef.current = null;
     lastProcessedAnswerSdpRef.current = null;

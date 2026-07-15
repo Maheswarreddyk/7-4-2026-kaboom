@@ -73,7 +73,7 @@ export function ChatPage() {
 
   // FaceTime draggable self-preview state
   const [snapCorner, setSnapCorner] = useState<'br'|'bl'|'tr'|'tl'>(() => {
-    return (localStorage.getItem('pipPosition') as any) || (isMobile ? 'br' : 'br');
+    return (localStorage.getItem('pipPosition') as any) || 'tr';
   });
 
   useEffect(() => {
@@ -90,8 +90,6 @@ export function ChatPage() {
   const [activeHint, setActiveHint] = useState<string | null>(null);
   const [hintDismissed, setHintDismissed] = useState(false);
   const [showMutualBanner, setShowMutualBanner] = useState(false);
-  const [showSkipConfirm, setShowSkipConfirm] = useState(false);
-  const [confirmCountdown, setConfirmCountdown] = useState(5);
   const confirmTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
 
@@ -148,9 +146,12 @@ export function ChatPage() {
   const [skipCountdown, setSkipCountdown] = useState(5);
   const skipTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  const handleNextRef = useRef(handleNext);
+  useEffect(() => { handleNextRef.current = handleNext; }, [handleNext]);
+
   const startSkipCountdown = useCallback(() => {
     if (chatState.status !== 'CONNECTED') {
-      handleNext();
+      handleNextRef.current();
       return;
     }
 
@@ -159,63 +160,51 @@ export function ChatPage() {
     broadcastSkipPending();
 
     if (skipTimerRef.current) clearInterval(skipTimerRef.current);
+    
+    let ticks = 5;
     skipTimerRef.current = setInterval(() => {
-      setSkipCountdown((prev) => {
-        if (prev <= 1) {
-          if (skipTimerRef.current) clearInterval(skipTimerRef.current);
-          setIsSkipPending(false);
-          handleNext();
-          return 0;
+      ticks -= 1;
+      setSkipCountdown(ticks);
+      
+      if (ticks <= 0) {
+        if (skipTimerRef.current) {
+          clearInterval(skipTimerRef.current);
+          skipTimerRef.current = null;
         }
-        return prev - 1;
-      });
+        setIsSkipPending(false);
+        handleNextRef.current();
+      }
     }, 1000);
-  }, [chatState.status, handleNext, broadcastSkipPending]);
+  }, [chatState.status, broadcastSkipPending]);
 
   const cancelSkipCountdown = useCallback(() => {
-    if (skipTimerRef.current) clearInterval(skipTimerRef.current);
+    if (skipTimerRef.current) {
+      clearInterval(skipTimerRef.current);
+      skipTimerRef.current = null;
+    }
     setIsSkipPending(false);
     broadcastSkipCancelled();
   }, [broadcastSkipCancelled]);
 
   const forceSkipImmediately = useCallback(() => {
-    if (skipTimerRef.current) clearInterval(skipTimerRef.current);
+    if (skipTimerRef.current) {
+      clearInterval(skipTimerRef.current);
+      skipTimerRef.current = null;
+    }
     setIsSkipPending(false);
-    handleNext();
-  }, [handleNext]);
-
-  const handleConfirmStay = useCallback(() => {
-    if (confirmTimerRef.current) clearInterval(confirmTimerRef.current);
-    setShowSkipConfirm(false);
+    handleNextRef.current();
   }, []);
 
-  const handleConfirmSkip = useCallback(() => {
-    if (confirmTimerRef.current) clearInterval(confirmTimerRef.current);
-    setShowSkipConfirm(false);
-    startSkipCountdown();
-  }, [startSkipCountdown]);
-
   const triggerSkipConfirmation = useCallback(() => {
+    if (skipTimerRef.current) return; // Prevent spam clicks restarting the timer
+    
     if (chatState.status !== 'CONNECTED') {
-      handleNext();
+      handleNextRef.current();
       return;
     }
-
-    setShowSkipConfirm(true);
-    setConfirmCountdown(5);
-
-    if (confirmTimerRef.current) clearInterval(confirmTimerRef.current);
-    confirmTimerRef.current = setInterval(() => {
-      setConfirmCountdown((prev) => {
-        if (prev <= 1) {
-          if (confirmTimerRef.current) clearInterval(confirmTimerRef.current);
-          setShowSkipConfirm(false);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-  }, [chatState.status, handleNext, startSkipCountdown]);
+    // Skip the confirmation popup completely and start the countdown
+    startSkipCountdown();
+  }, [chatState.status, startSkipCountdown]);
 
   useEffect(() => {
     return () => {
@@ -226,9 +215,14 @@ export function ChatPage() {
 
   const prevPartnerSkipPendingRef = useRef(false);
   const [showResumedBanner, setShowResumedBanner] = useState(false);
-
+  const [isJustConnected, setIsJustConnected] = useState(false);
+  
   useEffect(() => {
     if (chatState.status === 'CONNECTED') {
+      if (!isJustConnected && !prevPartnerSkipPendingRef.current) {
+        setIsJustConnected(true);
+        setTimeout(() => setIsJustConnected(false), 350);
+      }
       if (prevPartnerSkipPendingRef.current && !chatState.partnerSkipPending) {
         setShowResumedBanner(true);
         const timer = setTimeout(() => setShowResumedBanner(false), 3000);
@@ -239,6 +233,37 @@ export function ChatPage() {
     }
     prevPartnerSkipPendingRef.current = chatState.partnerSkipPending || false;
   }, [chatState.partnerSkipPending, chatState.status]);
+
+  // Partner Disconnected Grace Period Logic
+  const [partnerLeftCountdown, setPartnerLeftCountdown] = useState<number | null>(null);
+  const partnerLeftTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    if (chatState.status === 'CONNECTED' && chatState.partnerSkipPending && !isSkipPending) {
+      if (partnerLeftTimerRef.current) return;
+      setPartnerLeftCountdown(10);
+      partnerLeftTimerRef.current = setInterval(() => {
+        setPartnerLeftCountdown((prev) => {
+          if (prev === null || prev <= 1) {
+            if (partnerLeftTimerRef.current) clearInterval(partnerLeftTimerRef.current);
+            partnerLeftTimerRef.current = null;
+            handleNext();
+            return null;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    } else {
+      if (partnerLeftTimerRef.current) {
+        clearInterval(partnerLeftTimerRef.current);
+        partnerLeftTimerRef.current = null;
+      }
+      setPartnerLeftCountdown(null);
+    }
+    return () => {
+      if (partnerLeftTimerRef.current) clearInterval(partnerLeftTimerRef.current);
+    };
+  }, [chatState.status, chatState.partnerSkipPending, isSkipPending, handleNext]);
 
   const [goodbyePhase, setGoodbyePhase] = useState<'leaving' | 'cleaning' | 'goodbye' | null>(null);
 
@@ -269,8 +294,16 @@ export function ChatPage() {
     };
   }, [stopChat, endSession]);
 
+  const [remoteVideoPlaying, setRemoteVideoPlaying] = useState(false);
+
+  useEffect(() => {
+    if (chatState.status !== 'CONNECTED' && chatState.status !== 'ICE_CONNECTING') {
+      setRemoteVideoPlaying(false);
+    }
+  }, [chatState.status]);
+
   const isConnected = chatState.status === 'CONNECTED';
-  const isSearching = chatState.status !== 'CONNECTED' && chatState.status !== 'IDLE' && chatState.status !== 'ENDED';
+  const isSearching = chatState.status !== 'IDLE' && chatState.status !== 'ENDED' && (!isConnected || !remoteVideoPlaying);
 
   // Central Responsive Layout Manager hooks
   const { 
@@ -308,10 +341,11 @@ export function ChatPage() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Reset drag offset when layout becomes Focus Mode (Phase 4)
+  // Reset layout state if needed (Phase 4)
   useEffect(() => {
+    // Re-dispatch position event if focus layout triggers
     if (videoLayout === 'focus') {
-      setDragOffset({ x: 0, y: 0 });
+      window.dispatchEvent(new Event('pipPositionChanged'));
     }
   }, [videoLayout]);
 
@@ -593,15 +627,12 @@ export function ChatPage() {
       width: `${pipW}px`,
       height: `${pipH}px`,
       zIndex: 10,
-      transform: `translate(${dragOffset.x}px, ${dragOffset.y}px)`,
     };
-  }, [isSearching, videoLayout, isLandscape, isMobile, dragOffset, getStyle]);
+  }, [isSearching, videoLayout, isLandscape, isMobile, getStyle]);
 
   const handleLike = useCallback(async () => {
-    triggerReaction('❤️');
-    sendReaction('❤️');
     await likePartner();
-  }, [triggerReaction, likePartner, sendReaction]);
+  }, [likePartner]);
 
   const handleSendReaction = useCallback((emoji: string) => {
     triggerReaction(emoji);
@@ -691,12 +722,12 @@ export function ChatPage() {
     }
   }, [chatState.mutualLike]);
 
-  // Trigger Heart Burst on Likes
+  // Trigger Heart Burst only on Mutual Likes
   useEffect(() => {
-    if (chatState.partnerLiked || chatState.mutualLike) {
+    if (chatState.mutualLike) {
       triggerReaction('❤️');
     }
-  }, [chatState.partnerLiked, chatState.mutualLike, triggerReaction]);
+  }, [chatState.mutualLike, triggerReaction]);
 
   const handleDoubleTapSwap = () => {
     if (isSearching) return;
@@ -800,6 +831,10 @@ export function ChatPage() {
         case ' ':
           e.preventDefault();
           toggleMute();
+          break;
+        case 'v':
+          e.preventDefault();
+          toggleCamera();
           break;
         case 'n':
           triggerSkipConfirmation();
@@ -1019,106 +1054,126 @@ export function ChatPage() {
           onSwipeLeft={triggerSkipConfirmation}
           disabled={chatState.isChatOpen}
         >
-          <div className="absolute inset-0 z-0 bg-stone-950 overflow-hidden">
-            {/* Remote Video Container */}
-            <div
-              className={cn(
-                "absolute transition-all duration-[350ms] ease-out overflow-hidden bg-black",
-                videoLayout === 'split' ? "border border-white/5" : ""
-              )}
-              style={getRemoteContainerStyle()}
-            >
-              <VideoPlayer
-                stream={isPlacementsSwapped ? localStream : remoteStream}
-                mirrored={isPlacementsSwapped}
-                muted={isPlacementsSwapped}
-                fullscreen={videoLayout === 'split' || isMobile || chatState.isFullscreen}
-                onAspectRatioChange={isPlacementsSwapped ? handleLocalAspectRatioChange : handleRemoteAspectRatioChange}
-                placeholder={isSearching ? 'Looking for a partner...' : 'Partner video will appear here'}
-                frozen={isPlacementsSwapped ? isSkipPending : false}
-              />
-            </div>
+          {/* Define freeze logic clearly */}
+          {(() => {
+            const isRemoteFrozen = isSkipPending || isSearching;
+            const isLocalFrozen = isSkipPending;
+            return (
+              <div className="absolute inset-0 z-0 bg-stone-950 overflow-hidden">
+                {/* Remote Video Container */}
+                <div
+                  className={cn(
+                    "absolute transition-all ease-out overflow-hidden bg-black",
+                    isJustConnected ? "duration-[350ms] scale-95 opacity-50" : "duration-[350ms] scale-100 opacity-100",
+                    videoLayout === 'split' ? "border border-white/5" : ""
+                  )}
+                  style={getRemoteContainerStyle()}
+                >
+                  <VideoPlayer
+                    stream={isPlacementsSwapped ? localStream : remoteStream}
+                    mirrored={isPlacementsSwapped}
+                    muted={isPlacementsSwapped}
+                    fullscreen={videoLayout === 'split' || isMobile || chatState.isFullscreen}
+                    onAspectRatioChange={isPlacementsSwapped ? handleLocalAspectRatioChange : handleRemoteAspectRatioChange}
+                    onPlaying={!isPlacementsSwapped ? () => setRemoteVideoPlaying(true) : undefined}
+                    placeholder={isSearching ? 'Looking for a partner...' : 'Partner video will appear here'}
+                    frozen={isPlacementsSwapped ? isLocalFrozen : isRemoteFrozen}
+                  />
+                </div>
 
-            <DraggablePiP
-              onDoubleTap={handleDoubleTapSwap}
-              isDraggable={!isSearching && videoLayout !== 'split'}
-              pipAspectRatio={pipAspectRatio}
-              className={cn(
-                "absolute transition-all duration-[350ms] ease-out overflow-hidden bg-black",
-                videoLayout === 'split' ? "border border-white/5" : "rounded-2xl border border-white/10 shadow-2xl",
-                (!controlsVisible && videoLayout !== 'split') && 'border-transparent shadow-none'
-              )}
-              baseStyle={getLocalContainerStyle()}
-            >
-              <VideoPlayer
-                stream={isPlacementsSwapped ? remoteStream : localStream}
-                muted={!isPlacementsSwapped}
-                mirrored={!isPlacementsSwapped}
-                onAspectRatioChange={isPlacementsSwapped ? handleRemoteAspectRatioChange : handleLocalAspectRatioChange}
-                className="w-full h-full pointer-events-none"
-                fullscreen={isSearching || isPlacementsSwapped || videoLayout === 'split'}
-                label={
-                  isPlacementsSwapped 
-                    ? (chatState.partnerProfile?.displayName || 'Partner') 
-                    : isSearching 
-                      ? (localStorage.getItem('kaboom_display_name')?.split(' ')[0] || 'You')
-                      : undefined
-                }
-                frozen={isPlacementsSwapped ? false : isSkipPending}
-              />
-            </DraggablePiP>
-          </div>
+                <DraggablePiP
+                  onDoubleTap={handleDoubleTapSwap}
+                  isDraggable={!isSearching && videoLayout !== 'split'}
+                  pipAspectRatio={pipAspectRatio}
+                  className={cn(
+                    "absolute transition-all duration-[350ms] ease-out overflow-hidden bg-black",
+                    videoLayout === 'split' ? "border border-white/5" : "rounded-2xl backdrop-blur-xl bg-white/10 border border-white/20 shadow-2xl",
+                    (!controlsVisible && videoLayout !== 'split') && 'border-transparent shadow-none'
+                  )}
+                  baseStyle={getLocalContainerStyle()}
+                >
+                  <VideoPlayer
+                    stream={isPlacementsSwapped ? remoteStream : localStream}
+                    muted={!isPlacementsSwapped}
+                    mirrored={!isPlacementsSwapped}
+                    onAspectRatioChange={isPlacementsSwapped ? handleRemoteAspectRatioChange : handleLocalAspectRatioChange}
+                    onPlaying={isPlacementsSwapped ? () => setRemoteVideoPlaying(true) : undefined}
+                    className="w-full h-full pointer-events-none"
+                    fullscreen={isSearching || isPlacementsSwapped || videoLayout === 'split'}
+                    label={
+                      isPlacementsSwapped 
+                        ? (chatState.partnerProfile?.displayName || 'Partner') 
+                        : isSearching 
+                          ? (localStorage.getItem('kaboom_display_name')?.split(' ')[0] || 'You')
+                          : undefined
+                    }
+                    frozen={isPlacementsSwapped ? isRemoteFrozen : isLocalFrozen}
+                  />
+                </DraggablePiP>
+              </div>
+            );
+          })()}
         </GestureLayer>
       ) : (
-        <div className="absolute inset-0 z-0 bg-stone-950 overflow-hidden">
-          {/* Remote Video Container */}
-          <div
-            className={cn(
-              "absolute transition-all duration-[350ms] ease-out overflow-hidden bg-black",
-              videoLayout === 'split' ? "border border-white/5" : ""
-            )}
-            style={getRemoteContainerStyle()}
-          >
-            <VideoPlayer
-              stream={isPlacementsSwapped ? localStream : remoteStream}
-              mirrored={isPlacementsSwapped}
-              muted={isPlacementsSwapped}
-              fullscreen={videoLayout === 'split' || isMobile || chatState.isFullscreen}
-              onAspectRatioChange={isPlacementsSwapped ? handleLocalAspectRatioChange : handleRemoteAspectRatioChange}
-              placeholder={isSearching ? 'Looking for a partner...' : 'Partner video will appear here'}
-              frozen={isPlacementsSwapped ? isSkipPending : false}
-            />
-          </div>
+        <>
+          {(() => {
+            const isRemoteFrozen = isSkipPending || isSearching;
+            const isLocalFrozen = isSkipPending;
+            return (
+            <div className="absolute inset-0 z-0 bg-stone-950 overflow-hidden">
+              {/* Remote Video Container */}
+              <div
+                className={cn(
+                  "absolute transition-all duration-[350ms] ease-out overflow-hidden bg-black",
+                  videoLayout === 'split' ? "border border-white/5" : ""
+                )}
+                style={getRemoteContainerStyle()}
+              >
+                <VideoPlayer
+                  stream={isPlacementsSwapped ? localStream : remoteStream}
+                  mirrored={isPlacementsSwapped}
+                  muted={isPlacementsSwapped}
+                  fullscreen={videoLayout === 'split' || isMobile || chatState.isFullscreen}
+                  onAspectRatioChange={isPlacementsSwapped ? handleLocalAspectRatioChange : handleRemoteAspectRatioChange}
+                  onPlaying={!isPlacementsSwapped ? () => setRemoteVideoPlaying(true) : undefined}
+                  placeholder={isSearching ? 'Looking for a partner...' : 'Partner video will appear here'}
+                  frozen={isPlacementsSwapped ? isLocalFrozen : isRemoteFrozen}
+                />
+              </div>
 
-          <DraggablePiP
-            onDoubleTap={handleDoubleTapSwap}
-            isDraggable={!isSearching && videoLayout !== 'split'}
-            pipAspectRatio={pipAspectRatio}
-            className={cn(
-              "absolute transition-all duration-[350ms] ease-out overflow-hidden bg-black",
-              videoLayout === 'split' ? "border border-white/5" : "rounded-2xl border border-white/10 shadow-2xl",
-              (!controlsVisible && videoLayout !== 'split') && 'border-transparent shadow-none'
-            )}
-            baseStyle={getLocalContainerStyle()}
-          >
-            <VideoPlayer
-              stream={isPlacementsSwapped ? remoteStream : localStream}
-              muted={!isPlacementsSwapped}
-              mirrored={!isPlacementsSwapped}
-              onAspectRatioChange={isPlacementsSwapped ? handleRemoteAspectRatioChange : handleLocalAspectRatioChange}
-              className="w-full h-full pointer-events-none"
-              fullscreen={isSearching || isPlacementsSwapped || videoLayout === 'split'}
-              label={
-                isPlacementsSwapped 
-                  ? (chatState.partnerProfile?.displayName || 'Partner') 
-                  : isSearching 
-                    ? (localStorage.getItem('kaboom_display_name')?.split(' ')[0] || 'You')
-                    : undefined
-              }
-              frozen={isPlacementsSwapped ? false : isSkipPending}
-            />
-          </DraggablePiP>
-        </div>
+              <DraggablePiP
+                onDoubleTap={handleDoubleTapSwap}
+                isDraggable={!isSearching && videoLayout !== 'split'}
+                pipAspectRatio={pipAspectRatio}
+                className={cn(
+                  "absolute transition-all duration-[350ms] ease-out overflow-hidden bg-black",
+                  videoLayout === 'split' ? "border border-white/5" : "rounded-2xl border border-white/10 shadow-2xl",
+                  (!controlsVisible && videoLayout !== 'split') && 'border-transparent shadow-none'
+                )}
+                baseStyle={getLocalContainerStyle()}
+              >
+                <VideoPlayer
+                  stream={isPlacementsSwapped ? remoteStream : localStream}
+                  muted={!isPlacementsSwapped}
+                  mirrored={!isPlacementsSwapped}
+                  onAspectRatioChange={isPlacementsSwapped ? handleRemoteAspectRatioChange : handleLocalAspectRatioChange}
+                  onPlaying={isPlacementsSwapped ? () => setRemoteVideoPlaying(true) : undefined}
+                  className="w-full h-full pointer-events-none"
+                  fullscreen={isSearching || isPlacementsSwapped || videoLayout === 'split'}
+                  label={
+                    isPlacementsSwapped 
+                      ? (chatState.partnerProfile?.displayName || 'Partner') 
+                      : isSearching 
+                        ? (localStorage.getItem('kaboom_display_name')?.split(' ')[0] || 'You')
+                        : undefined
+                  }
+                  frozen={isPlacementsSwapped ? isRemoteFrozen : isLocalFrozen}
+                />
+              </DraggablePiP>
+            </div>
+          );
+        })()}
+        </>
       )}
 
       {/* Partner Skip Pending status banner */}
@@ -1224,6 +1279,8 @@ export function ChatPage() {
           status={chatState.status}
           partnerProfile={chatState.partnerProfile}
           isQueuePaused={isQueuePaused}
+          partnerLeftCountdown={chatState.partnerLeftCountdown}
+          onSkipNow={() => handleNext()}
         />
       )}
 
@@ -1360,7 +1417,6 @@ export function ChatPage() {
       />
 
       {/* ── PREFERENCES MODAL ─────────────────────────────── */}
-      {/* ── PREFERENCES MODAL ─────────────────────────────── */}
       {showWelcomeGate && (
         <OnboardingModal
           onSave={async (prefs) => {
@@ -1418,7 +1474,6 @@ export function ChatPage() {
         />
       )}
 
-      {/* ── MUTUAL MATCH OVERLAY ──────────────────────────── */}
       {/* ── MUTUAL MATCH OVERLAY (iPhone dynamic floating banner) ── */}
       {showMutualBanner && (
         <div
@@ -1445,44 +1500,6 @@ export function ChatPage() {
         </div>
       )}
 
-      {/* ── SKIP CALL CONFIRMATION DIALOG ───────────────── */}
-      {showSkipConfirm && (
-        <div 
-          className="absolute inset-0 flex items-center justify-center bg-black/85 backdrop-blur-md z-50 p-6 text-center animate-fade-in"
-          style={{ zIndex: 'calc(var(--z-overlay) + 20)' as any }}
-        >
-          <div className="max-w-xs w-full bg-stone-900 border border-white/10 rounded-3xl p-6 shadow-2xl space-y-6 text-center animate-spring-in">
-            <div className="space-y-2">
-              <div className="w-12 h-12 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-500 flex items-center justify-center text-xl mx-auto animate-bounce">
-                ⏭️
-              </div>
-              <h3 className="text-lg font-black text-white">Skip this conversation?</h3>
-              <p className="text-stone-400 text-xs leading-relaxed">
-                You will leave this chat and start searching for someone new.
-              </p>
-              <p className="text-stone-500 text-[10px] tracking-wider uppercase font-extrabold mt-1">
-                Staying connected in {confirmCountdown}...
-              </p>
-            </div>
-
-            <div className="flex flex-col gap-2 pt-2">
-              <button
-                onClick={handleConfirmStay}
-                autoFocus
-                className="w-full py-3 rounded-xl bg-white/10 hover:bg-white/15 text-white font-bold text-xs border border-white/10 transition-all active:scale-95 shadow-md"
-              >
-                Stay
-              </button>
-              <button
-                onClick={handleConfirmSkip}
-                className="w-full py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-stone-950 font-black text-xs transition-all active:scale-95 shadow-md"
-              >
-                Find Next
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* ── FLOATING REACTION HUB ─────────────────────────── */}
       {isConnected && (
@@ -1691,7 +1708,7 @@ export function ChatPage() {
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 backdrop-blur-md animate-fade-in z-50 p-6 text-center">
           <div className="max-w-xs w-full bg-stone-900 border border-white/10 rounded-3xl p-6 shadow-2xl space-y-6">
             <div className="space-y-2">
-              <h3 className="text-xl font-bold text-white">Switching to next person?</h3>
+              <h3 className="text-xl font-bold text-white">Finding someone new...</h3>
               <p className="text-stone-400 text-sm">Conversation will disconnect in</p>
             </div>
             
@@ -1746,20 +1763,45 @@ export function ChatPage() {
 
 
       {/* ── RECONNECTING GRACE PERIOD OVERLAY ───────────── */}
-      {chatState.connectionStatus === 'reconnecting' && (
+      {chatState.connectionStatus === 'reconnecting' && !isSkipPending && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/85 backdrop-blur-md z-45 p-6 text-center animate-fade-in">
           <div className="space-y-4 max-w-xs w-full bg-stone-900 border border-white/10 rounded-3xl p-6 shadow-2xl">
             <div className="w-12 h-12 rounded-full border border-amber-500/30 bg-amber-500/10 flex items-center justify-center text-xl mx-auto animate-spin">
               🌀
             </div>
-            <h3 className="text-lg font-bold text-white">Partner disconnected</h3>
+            <h3 className="text-lg font-bold text-white">Connection lost</h3>
             <p className="text-xs text-stone-400 leading-relaxed">
-              Connection lost. Reconnecting in{' '}
+              Reconnecting in{' '}
               <span className="text-amber-500 font-black text-sm">
                 {chatState.reconnectCountdown !== undefined && chatState.reconnectCountdown !== null ? chatState.reconnectCountdown : 10}
               </span>{' '}
               seconds...
             </p>
+          </div>
+        </div>
+      )}
+
+      {/* ── PARTNER LEFT GRACE PERIOD OVERLAY ───────────── */}
+      {partnerLeftCountdown !== null && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/85 backdrop-blur-md z-45 p-6 text-center animate-fade-in">
+          <div className="space-y-4 max-w-xs w-full bg-stone-900 border border-white/10 rounded-3xl p-6 shadow-2xl">
+            <div className="w-12 h-12 rounded-full border border-amber-500/30 bg-amber-500/10 flex items-center justify-center text-xl mx-auto animate-pulse">
+              🏃
+            </div>
+            <h3 className="text-lg font-bold text-white">Partner left</h3>
+            <p className="text-xs text-stone-400 leading-relaxed">
+              Finding a new match in{' '}
+              <span className="text-amber-500 font-black text-sm">
+                {partnerLeftCountdown}
+              </span>{' '}
+              seconds...
+            </p>
+            <button
+              onClick={() => handleNext()}
+              className="w-full py-2.5 mt-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-stone-950 font-black text-xs transition-all active:scale-95"
+            >
+              Skip Now
+            </button>
           </div>
         </div>
       )}

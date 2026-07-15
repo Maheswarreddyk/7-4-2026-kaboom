@@ -40,8 +40,8 @@ export async function createReservation(
     if (error) {
       // If table doesn't exist yet (pre-005 deployment), proceed without reservation
       if (error.message.includes('schema cache') || error.code === '42P01') {
-        console.warn('[ReservationEngine] Reservations table not yet migrated — proceeding without lock.');
-        return { reservationId: '', success: true, reason: 'Reservations table not migrated' };
+        console.warn('[ReservationEngine] Reservations table not yet migrated — halting match to prevent duplication.');
+        return { reservationId: '', success: false, reason: 'Reservations table not migrated' };
       }
       // Unique constraint violation = one of these sessions is already reserved
       if (error.code === '23505') {

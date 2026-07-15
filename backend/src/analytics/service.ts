@@ -88,7 +88,7 @@ class AnalyticsService {
         .eq('event_type', 'NOTIFICATION_SENT')
         .gte('created_at', todayIso),
       supabase.from('visitor_sessions')
-        .select('country, city, payload')
+        .select('country, city, college')
         .gte('created_at', todayIso)
         .limit(1000)
     ]);
@@ -114,7 +114,7 @@ class AnalyticsService {
       const cityCounts = new Map<string, number>();
       
       for (const s of sessionsRes.data) {
-        const campus = s.payload?.campus || 'Unknown';
+        const campus = s.college || 'Unknown';
         if (campus !== 'Unknown') campusCounts.set(campus, (campusCounts.get(campus) || 0) + 1);
         
         const city = s.city || 'Unknown';

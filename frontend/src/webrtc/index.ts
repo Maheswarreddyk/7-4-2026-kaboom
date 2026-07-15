@@ -163,6 +163,11 @@ export class WebRTCManager {
   async createOffer(options?: RTCOfferOptions): Promise<RTCSessionDescriptionInit> {
     if (!this.peerConnection) this.createPeerConnection();
 
+    if (options?.iceRestart) {
+      console.log('[WebRTC] ICE Restart requested. Clearing stale queued ICE candidates.');
+      this.queuedCandidates = [];
+    }
+
     const offer = await this.peerConnection!.createOffer({
       offerToReceiveAudio: true,
       offerToReceiveVideo: true,

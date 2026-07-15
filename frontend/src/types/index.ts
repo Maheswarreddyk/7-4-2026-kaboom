@@ -98,6 +98,7 @@ export interface ChatState {
     matchedBy: string[];
   } | null;
   partnerSkipPending?: boolean;
+  partnerLeftCountdown?: number | null;
 }
 
 export const REPORT_REASONS: { value: ReportReason; label: string }[] = [

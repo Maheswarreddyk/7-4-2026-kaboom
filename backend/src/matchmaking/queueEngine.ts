@@ -277,7 +277,7 @@ export async function expireStaleReservations(supabase: SupabaseClient): Promise
 
         await supabase
           .from('visitor_sessions')
-          .update({ status: 'waiting' })
+          .update({ status: 'SEARCHING' })
           .in('id', sessionIds);
       }
 

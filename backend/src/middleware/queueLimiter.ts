@@ -6,6 +6,16 @@ const queueTimestamps = new Map<string, number>();
 
 const QUEUE_COOLDOWN_MS = 1000;
 
+// Phase 4: Prevent memory leak by cleaning up old timestamps every 5 minutes
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, timestamp] of queueTimestamps.entries()) {
+    if (now - timestamp > QUEUE_COOLDOWN_MS * 10) {
+      queueTimestamps.delete(key);
+    }
+  }
+}, 5 * 60 * 1000).unref();
+
 export const queueLimiter = (req: Request, res: Response, next: NextFunction) => {
   const { sessionId } = req.body;
   if (!sessionId) {

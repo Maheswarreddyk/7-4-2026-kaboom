@@ -13,14 +13,20 @@ router.get('/stats', async (req, res, next) => {
   try {
     const supabase = getSupabase();
     
-    const { count: activeSubs } = await supabase
-      .from('push_subscriptions')
-      .select('*', { count: 'exact', head: true })
-      .eq('enabled', true);
+    const [activeSubsRes, sentRes, clickedRes] = await Promise.all([
+      supabase.from('push_subscriptions').select('*', { count: 'exact', head: true }).eq('enabled', true),
+      supabase.from('analytics_events').select('*', { count: 'exact', head: true }).eq('event_type', 'NOTIFICATION_SENT'),
+      supabase.from('analytics_events').select('*', { count: 'exact', head: true }).eq('event_type', 'NOTIFICATION_CLICKED')
+    ]);
+
+    const activeSubs = activeSubsRes.count || 0;
+    const sent = sentRes.count || 0;
+    const clicked = clickedRes.count || 0;
+    const avgCtr = sent > 0 ? (clicked / sent) * 100 : 0;
 
     res.json({
-      activeSubs: activeSubs || 0,
-      avgCtr: 0 // Future implementation: compute from campaigns
+      activeSubs,
+      avgCtr
     });
   } catch (err) {
     next(err);

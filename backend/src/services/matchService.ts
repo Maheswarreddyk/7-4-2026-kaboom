@@ -6,26 +6,25 @@ import { AnalyticsLogger } from '../analytics/logger.js';
 
 export type MatchEndReason = 'next' | 'leave' | 'disconnect' | 'report';
 
+import { acquireGlobalLock, releaseGlobalLock } from './lockService.js';
+
 // ============================================================
-// Global Cycle Mutex
-// Prevents concurrent runGlobalMatchCycle() execution from:
-//   - REST /match/join endpoint
-//   - MatchScheduler background loop
-// This is instance-local (single Render instance). Acceptable for now.
-// Phase 3 TODO: move to DB-level advisory lock for multi-instance scaling.
+// Global Cycle Distributed Mutex
+// Prevents concurrent runGlobalMatchCycle() execution across
+// multiple instances by using a Postgres-backed REST lock.
 // ============================================================
-let globalCycleRunning = false;
 
 export async function safeRunGlobalMatchCycle(): Promise<void> {
-  if (globalCycleRunning) {
+  const locked = await acquireGlobalLock();
+  if (!locked) {
     console.log('[MatchService] Global cycle already running — skipping concurrent trigger');
     return;
   }
-  globalCycleRunning = true;
+  
   try {
     await runGlobalMatchCycle(getSupabase());
   } finally {
-    globalCycleRunning = false;
+    await releaseGlobalLock();
   }
 }
 

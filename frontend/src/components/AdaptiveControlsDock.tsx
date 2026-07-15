@@ -137,6 +137,7 @@ function DesktopDock({ props, style }: { props: AdaptiveControlsDockProps; style
           active={props.liked}
           disabled={props.disabled}
           soundType="like"
+          className="w-[var(--control-size)] h-[var(--control-size)] bg-rose-500/10 hover:bg-rose-500/20 border-rose-500/30 text-rose-400 active:scale-[0.85] transition-transform"
           tooltip="Like Partner"
         />
       )}
@@ -228,6 +229,7 @@ function TabletDock({ props, style }: { props: AdaptiveControlsDockProps; style?
           active={props.liked}
           disabled={props.disabled}
           soundType="like"
+          className="w-[var(--control-size)] h-[var(--control-size)] bg-rose-500/10 border-rose-500/30 text-rose-400 active:scale-[0.85] transition-transform"
           tooltip="Like Partner"
         />
       )}
@@ -333,7 +335,7 @@ function MobileDock({ props }: { props: AdaptiveControlsDockProps }) {
             icon={props.liked ? <Icons.LikeOn /> : <Icons.LikeOff />}
             active={props.liked}
             soundType="like"
-            className="w-[50px] h-[50px] bg-black/75 backdrop-blur-[18px] border-white/[0.10] shadow-[0_4px_20px_rgba(0,0,0,0.55)]"
+            className="w-[50px] h-[50px] bg-black/75 backdrop-blur-[18px] border-white/[0.10] shadow-[0_4px_20px_rgba(0,0,0,0.55)] active:scale-[0.85] transition-transform"
           />
         )}
       </div>
