@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { cn, safeLocalStorage } from '../utils/index.js';
 
 interface QueueCardProps {
