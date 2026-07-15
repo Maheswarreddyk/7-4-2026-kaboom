@@ -21,25 +21,6 @@ function getAudioContext(): AudioContext | null {
   }
 }
 
-    const gain = ctx.createGain();
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(freq, start);
-    
-    gain.gain.setValueAtTime(0, start);
-    gain.gain.linearRampToValueAtTime(volume, start + 0.03);
-    gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
-    
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    
-    osc.start(start);
-    osc.stop(start + duration);
-  };
-
-  playTone(523.25, now, 0.4, 0.12); // C5
-  playTone(659.25, now + 0.08, 0.4, 0.12); // E5
-  playTone(783.99, now + 0.16, 0.5, 0.15); // G5
-}
 
 // Next swipe: airy swoosh sound
 export function playSwipeSound() {
