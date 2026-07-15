@@ -1,94 +1,30 @@
-import { useEffect, useState, useCallback } from 'react';
 import { RefreshCw, CheckCircle, Circle, AlertCircle } from 'lucide-react';
+import { cn } from '../utils/index.js';
 
-interface HealthResponse {
-  success: boolean;
-  ready: boolean;
-  status: string;
-  progress: number;
+interface BootScreenProps {
+  visible: boolean;
   stage: string;
-  version: string;
-  uptime: number;
+  progress: number;
+  isLongLoading: boolean;
+  isError: boolean;
+  bootTime: number;
+  onRetry: () => void;
 }
 
-export function BootScreen({ onReady }: { onReady: () => void }) {
-  const [stage, setStage] = useState('Loading application');
-  const [progress, setProgress] = useState(10);
-  const [status, setStatus] = useState('BOOTING');
-  const [bootTime, setBootTime] = useState(0);
-  const [isFadingOut, setIsFadingOut] = useState(false);
-  const [isError, setIsError] = useState(false);
-
-  // Poll health endpoint
-  const checkHealth = useCallback(async () => {
-    try {
-      const res = await fetch('/api/health');
-      if (res.ok) {
-        const data: HealthResponse = await res.json();
-        
-        setStage(data.stage);
-        setProgress(data.progress);
-        setStatus(data.status);
-
-        if (data.ready) {
-          setIsFadingOut(true);
-          setTimeout(() => onReady(), 500); // 500ms fade transition
-          return true; // Is ready
-        }
-      }
-    } catch (e) {
-      // Network error during early boot, just ignore and retry
-      console.warn('[BootScreen] Health check failed, retrying...');
-    }
-    return false;
-  }, [onReady]);
-
-  // Polling loop
-  useEffect(() => {
-    if (isFadingOut || isError) return;
-
-    let timeoutId: NodeJS.Timeout;
-    const poll = async () => {
-      const ready = await checkHealth();
-      if (!ready && !isFadingOut && !isError) {
-        timeoutId = setTimeout(poll, 1000);
-      }
-    };
-    
-    poll();
-
-    return () => clearTimeout(timeoutId);
-  }, [checkHealth, isFadingOut, isError]);
-
-  // Timeout Escalation Timer
-  useEffect(() => {
-    if (isFadingOut || isError) return;
-    
-    const interval = setInterval(() => {
-      setBootTime(prev => {
-        const newTime = prev + 1;
-        if (newTime >= 60) {
-          setIsError(true);
-        }
-        return newTime;
-      });
-    }, 1000);
-    
-    return () => clearInterval(interval);
-  }, [isFadingOut, isError]);
-
-  // Handle Manual Retry
-  const handleRetry = () => {
-    setIsError(false);
-    setBootTime(0);
-    setStage('Reconnecting...');
-    setProgress(10);
-  };
-
+export function BootScreen({ 
+  visible, 
+  stage, 
+  progress, 
+  isLongLoading, 
+  isError, 
+  bootTime, 
+  onRetry 
+}: BootScreenProps) {
   const getSubtext = () => {
     if (isError) return "Unable to start.";
     if (bootTime > 30) return "Retrying connection...";
     if (bootTime > 15) return "Still warming up...";
+    if (isLongLoading) return "Almost ready...";
     return "Please wait a moment.";
   };
 
@@ -102,9 +38,17 @@ export function BootScreen({ onReady }: { onReady: () => void }) {
 
   return (
     <div 
-      className={`fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-zinc-950 text-white transition-opacity duration-500 ease-in-out ${isFadingOut ? 'opacity-0' : 'opacity-100'}`}
+      className={cn(
+        "fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-[#0A0A0B] text-white transition-all duration-700 ease-in-out",
+        visible ? "opacity-100 backdrop-blur-md" : "opacity-0 pointer-events-none backdrop-blur-none"
+      )}
     >
-      <div className="flex flex-col items-center max-w-md w-full px-6">
+      <div 
+        className={cn(
+          "flex flex-col items-center max-w-md w-full px-6 transition-transform duration-700 ease-out",
+          visible ? "scale-100" : "scale-95"
+        )}
+      >
         
         {/* Logo / Brand */}
         <div className="mb-8 flex items-center justify-center space-x-3">
@@ -116,8 +60,13 @@ export function BootScreen({ onReady }: { onReady: () => void }) {
           </h1>
         </div>
 
-        {/* Progress System */}
-        <div className="w-full bg-zinc-900/50 border border-zinc-800/50 rounded-2xl p-6 backdrop-blur-xl shadow-2xl">
+        {/* Progress System - Only fade in if it takes longer than 2s (Long Loading) or Error */}
+        <div 
+          className={cn(
+            "w-full bg-zinc-900/50 border border-zinc-800/50 rounded-2xl p-6 backdrop-blur-xl shadow-2xl transition-all duration-1000",
+            (isLongLoading || isError) ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
+          )}
+        >
           <div className="mb-6 flex justify-between items-center">
             <h2 className="text-lg font-bold text-white">{isError ? 'Startup Failed' : stage}</h2>
             {!isError && <RefreshCw className="w-5 h-5 text-purple-400 animate-spin" />}
@@ -126,17 +75,20 @@ export function BootScreen({ onReady }: { onReady: () => void }) {
 
           <div className="space-y-4 mb-6">
             {steps.map((step) => {
-              const isCompleted = progress >= step.minProgress && status !== 'FAILED';
+              const isCompleted = progress >= step.minProgress && !isError;
               const isCurrent = !isCompleted && progress < step.minProgress && progress > (step.minProgress - 30);
               
               return (
-                <div key={step.name} className={`flex items-center space-x-3 ${isCompleted ? 'text-zinc-200' : isCurrent ? 'text-purple-400' : 'text-zinc-600'}`}>
+                <div key={step.name} className={cn(
+                  "flex items-center space-x-3",
+                  isCompleted ? "text-zinc-200" : isCurrent ? "text-purple-400" : "text-zinc-600"
+                )}>
                   {isCompleted ? (
                     <CheckCircle className="w-5 h-5 text-emerald-500" />
                   ) : (
-                    <Circle className={`w-5 h-5 ${isCurrent ? 'animate-pulse text-purple-500' : ''}`} />
+                    <Circle className={cn("w-5 h-5", isCurrent && "animate-pulse text-purple-500")} />
                   )}
-                  <span className={`text-sm font-medium ${isCurrent ? 'animate-pulse' : ''}`}>{step.name}</span>
+                  <span className={cn("text-sm font-medium", isCurrent && "animate-pulse")}>{step.name}</span>
                 </div>
               );
             })}
@@ -145,18 +97,21 @@ export function BootScreen({ onReady }: { onReady: () => void }) {
           {/* Progress Bar */}
           <div className="w-full h-2 bg-zinc-800 rounded-full overflow-hidden mb-4">
             <div 
-              className={`h-full rounded-full transition-all duration-500 ease-out ${isError ? 'bg-red-500' : 'bg-gradient-to-r from-purple-500 to-pink-500'}`}
+              className={cn(
+                "h-full rounded-full transition-all duration-500 ease-out",
+                isError ? "bg-red-500" : "bg-gradient-to-r from-purple-500 to-pink-500"
+              )}
               style={{ width: `${progress}%` }}
             />
           </div>
           
-          <p className={`text-xs text-center font-medium ${isError ? 'text-red-400' : 'text-zinc-500'}`}>
+          <p className={cn("text-xs text-center font-medium", isError ? "text-red-400" : "text-zinc-500")}>
             {getSubtext()}
           </p>
 
           {isError && (
             <button 
-              onClick={handleRetry}
+              onClick={onRetry}
               className="mt-6 w-full py-3 bg-white text-black rounded-xl font-bold hover:bg-zinc-200 transition-colors"
             >
               Retry Connection

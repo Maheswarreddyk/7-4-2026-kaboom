@@ -11,6 +11,8 @@ import { AdminAuthProvider, useAdminAuth, AdminLogin } from './admin/AdminAuth.j
 import { AdminLayout } from './admin/AdminLayout.js';
 import { SplashLoader } from './components/SplashLoader.js';
 import { BootScreen } from './components/BootScreen.js';
+import { ApplicationShell } from './components/ApplicationShell.js';
+import { useStartupOrchestrator } from './utils/useStartupOrchestrator.js';
 import { BrowserCapabilities } from './utils/index.js';
 
 // Lazy imports for chunk splitting
@@ -92,7 +94,7 @@ const router = createBrowserRouter([
   },
 ]);
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 
 function PushNotificationHandler() {
   useEffect(() => {
@@ -132,30 +134,35 @@ function PushNotificationHandler() {
 }
 
 export default function App() {
-  const [isBooted, setIsBooted] = useState(false);
-  const [showBootScreen, setShowBootScreen] = useState(true);
+  const orchestrator = useStartupOrchestrator();
 
-  const handleReady = () => {
-    setIsBooted(true);
-    // Give the app time to mount behind the boot screen, then unmount boot screen
-    setTimeout(() => {
-      setShowBootScreen(false);
-    }, 500);
-  };
+  const showBootScreen = orchestrator.state === 'SHOW_LOADING' || orchestrator.state === 'LONG_LOADING' || orchestrator.state === 'FAILED';
+  const showRouter = orchestrator.state === 'READY' || orchestrator.state === 'FAST_READY';
+  const isLongLoading = orchestrator.state === 'LONG_LOADING';
 
   return (
     <ErrorBoundary>
       <ToastProvider>
-        {showBootScreen && <BootScreen onReady={handleReady} />}
-        
-        {isBooted && (
-          <SessionProvider>
-            <FloatingLayoutProvider>
-              <PushNotificationHandler />
-              <RouterProvider router={router} />
-            </FloatingLayoutProvider>
-          </SessionProvider>
-        )}
+        <ApplicationShell>
+          <BootScreen 
+            visible={showBootScreen}
+            stage={orchestrator.stage}
+            progress={orchestrator.progress}
+            isLongLoading={isLongLoading}
+            isError={orchestrator.error}
+            bootTime={orchestrator.bootTime}
+            onRetry={orchestrator.retry}
+          />
+          
+          {showRouter && (
+            <SessionProvider>
+              <FloatingLayoutProvider>
+                <PushNotificationHandler />
+                <RouterProvider router={router} />
+              </FloatingLayoutProvider>
+            </SessionProvider>
+          )}
+        </ApplicationShell>
       </ToastProvider>
     </ErrorBoundary>
   );
