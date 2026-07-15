@@ -33,7 +33,7 @@ export const environment = {
     sessionTimeout: isBackend ? parseInt(process.env.SESSION_TIMEOUT || '1800', 10) : 1800,
     queueTimeout: isBackend ? parseInt(process.env.QUEUE_TIMEOUT || '300', 10) : 300,
     matchTimeout: isBackend ? parseInt(process.env.MATCH_TIMEOUT || '1800', 10) : 1800,
-    allowedOrigins: (isBackend ? (process.env.ALLOWED_ORIGINS || 'http://localhost:5173,http://localhost:5000,http://localhost:10000,https://kaboom-tv.com,https://www.kaboom-tv.com,https://api.kaboom-tv.com,https://seven-4-2026-kaboom-1a.onrender.com') : '')
+    allowedOrigins: (isBackend ? (process.env.ALLOWED_ORIGINS || 'http://localhost:5173,http://localhost:4173,http://localhost:5000,http://localhost:10000,https://kaboom-tv.com,https://www.kaboom-tv.com,https://api.kaboom-tv.com,https://seven-4-2026-kaboom-1a.onrender.com') : '')
       .split(',')
       .map((o: string) => o.trim())
       .filter(Boolean),

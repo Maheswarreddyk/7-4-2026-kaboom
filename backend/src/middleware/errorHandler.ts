@@ -43,6 +43,14 @@ export function globalErrorHandler(
     return;
   }
 
+  if (err.message && err.message.includes('CORS')) {
+    res.status(403).json({
+      success: false,
+      error: 'Forbidden: Origin not allowed by CORS',
+    });
+    return;
+  }
+
   res.status(500).json({
     success: false,
     error: 'Internal server error',
