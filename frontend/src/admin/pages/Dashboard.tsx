@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useAdminAuth } from '../AdminAuth.js';
 import { PlatformHealthWidget } from '../widgets/PlatformHealthWidget.js';
+import { LiveGraphsWidget } from '../widgets/LiveGraphsWidget.js';
+import { LiveActivityFeedWidget } from '../widgets/LiveActivityFeedWidget.js';
 
 export function Dashboard() {
   const { token } = useAdminAuth();
@@ -14,10 +16,23 @@ export function Dashboard() {
       try {
         const API_URL = import.meta.env.VITE_API_URL || '';
         const headers = { 'Authorization': `Bearer ${token}` };
-        const missionRes = await fetch(`${API_URL}/api/analytics/mission-control`, { headers });
-        if (missionRes.ok) {
+        
+        const [missionRes, timeRes, liveRes] = await Promise.all([
+          fetch(`${API_URL}/api/analytics/mission-control`, { headers }),
+          fetch(`${API_URL}/api/analytics/mission-control/timeseries`, { headers }),
+          fetch(`${API_URL}/api/analytics/live-sessions`, { headers })
+        ]);
+        
+        if (missionRes.ok && timeRes.ok && liveRes.ok) {
           const missionData = await missionRes.json();
-          setData(missionData);
+          const timeData = await timeRes.json();
+          const liveData = await liveRes.json();
+          
+          setData({
+            ...missionData,
+            timeSeries: timeData,
+            events: liveData.events || []
+          });
         }
       } catch (err) {
         console.error('Failed to fetch mission control', err);
@@ -55,8 +70,12 @@ export function Dashboard() {
   }
 
   return (
-    <div className="flex flex-col gap-8 max-w-7xl">
+    <div className="flex flex-col gap-6 max-w-7xl pb-12">
       <PlatformHealthWidget data={data} />
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <LiveGraphsWidget timeSeriesData={data.timeSeries} />
+        <LiveActivityFeedWidget events={data.events} />
+      </div>
     </div>
   );
 }

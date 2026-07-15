@@ -13,20 +13,28 @@ router.get('/stats', async (req, res, next) => {
   try {
     const supabase = getSupabase();
     
-    const [activeSubsRes, sentRes, clickedRes] = await Promise.all([
+    const [activeSubsRes, inactiveSubsRes, sentRes, clickedRes] = await Promise.all([
       supabase.from('push_subscriptions').select('*', { count: 'exact', head: true }).eq('enabled', true),
+      supabase.from('push_subscriptions').select('*', { count: 'exact', head: true }).eq('enabled', false),
       supabase.from('analytics_events').select('*', { count: 'exact', head: true }).eq('event_type', 'NOTIFICATION_SENT'),
       supabase.from('analytics_events').select('*', { count: 'exact', head: true }).eq('event_type', 'NOTIFICATION_CLICKED')
     ]);
 
     const activeSubs = activeSubsRes.count || 0;
+    const inactiveSubs = inactiveSubsRes.count || 0;
     const sent = sentRes.count || 0;
     const clicked = clickedRes.count || 0;
     const avgCtr = sent > 0 ? (clicked / sent) * 100 : 0;
 
     res.json({
       activeSubs,
-      avgCtr
+      inactiveSubs,
+      sent,
+      clicked,
+      avgCtr,
+      permissionDenied: 0, // Missing DB tracking
+      revoked: 0, // Missing DB tracking
+      dismissed: 0, // Missing DB tracking
     });
   } catch (err) {
     next(err);

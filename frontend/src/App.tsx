@@ -26,6 +26,8 @@ const NotFoundPage = lazy(() => import('./pages/NotFoundPage.js').then(m => ({ d
 
 // Admin Lazy Imports
 const Dashboard = lazy(() => import('./admin/pages/Dashboard.js').then(m => ({ default: m.Dashboard })));
+const AudienceAnalytics = lazy(() => import('./admin/pages/AudienceAnalytics.js').then(m => ({ default: m.AudienceAnalytics })));
+const MatchmakingIntelligence = lazy(() => import('./admin/pages/MatchmakingIntelligence.js').then(m => ({ default: m.MatchmakingIntelligence })));
 const LiveOperations = lazy(() => import('./admin/pages/LiveOperations.js').then(m => ({ default: m.LiveOperations })));
 const AdminCampus = lazy(() => import('./admin/pages/CampusAnalytics.js').then(m => ({ default: m.CampusAnalytics })));
 const NotificationsAdmin = lazy(() => import('./admin/pages/Notifications.js').then(m => ({ default: m.NotificationsAdmin })));
@@ -60,6 +62,8 @@ const router = createBrowserRouter([
     ),
     children: [
       { index: true, element: <Dashboard /> },
+      { path: "audience", element: <AudienceAnalytics /> },
+      { path: "matchmaking", element: <MatchmakingIntelligence /> },
       { path: "growth", element: <Growth /> },
       { path: "product", element: <Product /> },
       { path: "campus", element: <AdminCampus /> },

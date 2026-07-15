@@ -69,7 +69,7 @@ class AnalyticsService {
 
     // Fetch wait times and call durations directly from recent events to avoid heavy RPCs
     // Using last 100 MATCH_FOUND and CALL_ENDED events to calculate rolling averages
-    const [matchesRes, callsRes, mutualLikesRes, pushSentRes, sessionsRes] = await Promise.all([
+    const [matchesRes, callsRes, mutualLikesRes, pushSentRes, sessionsRes, pushSubsRes] = await Promise.all([
       supabase.from('analytics_events')
         .select('payload')
         .eq('event_type', 'MATCH_FOUND')
@@ -90,7 +90,10 @@ class AnalyticsService {
       supabase.from('visitor_sessions')
         .select('country, city, college')
         .gte('created_at', todayIso)
-        .limit(1000)
+        .limit(1000),
+      supabase.from('push_subscriptions')
+        .select('*', { count: 'exact', head: true })
+        .eq('enabled', true)
     ]);
 
     let avgWait = 0;
@@ -142,6 +145,8 @@ class AnalyticsService {
       todayReports: todayReports || 0,
       todayNewUsers: todayNewUsers || 0,
       todayMatches: todayMatches || 0,
+      todayMutualLikes: mutualLikesRes.count || 0,
+      notificationSubscribers: pushSubsRes?.count || 0,
       averageWaitSeconds: avgWait,
       averageCallMinutes: avgCallMin,
       mutualLikePercent: Math.min(mutualLikePercent, 100),
@@ -264,11 +269,205 @@ class AnalyticsService {
     // Fetch last 50 active sessions
     const { data: sessions } = await supabase
       .from('visitor_sessions')
-      .select('id, country, city, device, browser, status, last_activity')
+      .select('id, country, city, device, browser, status, last_activity, college, interests')
       .order('last_activity', { ascending: false })
       .limit(50);
       
-    return sessions || [];
+    // Fetch last 50 events for the activity feed
+    const { data: events } = await supabase
+      .from('analytics_events')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(50);
+
+    return {
+      sessions: sessions || [],
+      events: events || []
+    };
+  }
+
+  /**
+   * V. Mission Control Graphs (Last 60 mins time-series)
+   */
+  async getMissionControlTimeSeries() {
+    const supabase = getSupabase();
+    
+    const sixtyMinsAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+
+    const { data: events } = await supabase
+      .from('analytics_events')
+      .select('event_type, created_at, payload')
+      .gte('created_at', sixtyMinsAgo)
+      .order('created_at', { ascending: true });
+
+    if (!events) return [];
+
+    // Group by minute
+    const timeSeriesMap = new Map<string, any>();
+    
+    for (const e of events) {
+      const minStr = e.created_at.substring(11, 16); // Extract HH:MM
+      if (!timeSeriesMap.has(minStr)) {
+        timeSeriesMap.set(minStr, {
+          time: minStr,
+          queueDepth: 0,
+          connections: 0,
+          waitTimes: [],
+          callDurations: []
+        });
+      }
+      
+      const slot = timeSeriesMap.get(minStr);
+      
+      if (e.event_type === 'QUEUE_JOINED') slot.queueDepth++;
+      if (e.event_type === 'MATCH_FOUND') {
+        slot.connections++;
+        if (e.payload?.wait_time_sec) slot.waitTimes.push(Number(e.payload.wait_time_sec));
+      }
+      if (e.event_type === 'CALL_ENDED' && e.payload?.duration_sec) {
+        slot.callDurations.push(Number(e.payload.duration_sec));
+      }
+    }
+
+    // Convert to array and average arrays
+    return Array.from(timeSeriesMap.values()).map(slot => ({
+      time: slot.time,
+      queueDepth: slot.queueDepth,
+      connections: slot.connections,
+      avgWait: slot.waitTimes.length ? Math.round(slot.waitTimes.reduce((a:number, b:number) => a+b, 0) / slot.waitTimes.length) : 0,
+      avgDuration: slot.callDurations.length ? Math.round((slot.callDurations.reduce((a:number, b:number) => a+b, 0) / slot.callDurations.length) / 60) : 0
+    }));
+  }
+
+  /**
+   * VI. Audience Analytics
+   */
+  async getAudienceAnalytics() {
+    const supabase = getSupabase();
+    
+    // Fetch last 10,000 sessions or last 30 days for audience insights
+    const { data: sessions } = await supabase
+      .from('visitor_sessions')
+      .select('country, state, city, college, interests, languages, device, platform, browser')
+      .order('created_at', { ascending: false })
+      .limit(5000);
+
+    if (!sessions) return {};
+
+    const agg = (key: string, list: any[]) => {
+      const counts = new Map<string, number>();
+      for (const item of list) {
+        if (!item) continue;
+        const val = typeof item === 'string' ? item : item.toString();
+        if (val && val !== 'Unknown') counts.set(val, (counts.get(val) || 0) + 1);
+      }
+      return Array.from(counts.entries())
+        .map(([name, count]) => ({ name, value: count }))
+        .sort((a, b) => b.value - a.value)
+        .slice(0, 10);
+    };
+
+    const aggArrays = (key: string, list: any[]) => {
+      const counts = new Map<string, number>();
+      for (const arr of list) {
+        if (!arr || !Array.isArray(arr)) continue;
+        for (const item of arr) {
+          const val = typeof item === 'string' ? item : item.toString();
+          if (val && val !== 'Unknown') counts.set(val, (counts.get(val) || 0) + 1);
+        }
+      }
+      return Array.from(counts.entries())
+        .map(([name, count]) => ({ name, value: count }))
+        .sort((a, b) => b.value - a.value)
+        .slice(0, 10);
+    };
+
+    return {
+      countries: agg('country', sessions.map(s => s.country)),
+      states: agg('state', sessions.map(s => s.state)),
+      cities: agg('city', sessions.map(s => s.city)),
+      colleges: agg('college', sessions.map(s => s.college)),
+      browsers: agg('browser', sessions.map(s => s.browser)),
+      os: agg('platform', sessions.map(s => s.platform)),
+      devices: agg('device', sessions.map(s => s.device)),
+      interests: aggArrays('interests', sessions.map(s => s.interests)),
+      languages: aggArrays('languages', sessions.map(s => s.languages)),
+      screenSizes: [], // Explicitly empty as verified in Phase 1
+      userTypes: [
+        { name: 'New Users', value: sessions.length },
+        { name: 'Returning Users', value: 0 } // No tracking for this yet
+      ]
+    };
+  }
+
+  /**
+   * VII. Matchmaking Intelligence
+   */
+  async getMatchmakingIntelligence() {
+    const supabase = getSupabase();
+    
+    // Fetch recent events to calculate percentiles and abandonment
+    const { data: events } = await supabase
+      .from('analytics_events')
+      .select('event_type, payload')
+      .in('event_type', ['QUEUE_JOINED', 'MATCH_FOUND', 'CALL_CONNECTED', 'CALL_ENDED'])
+      .order('created_at', { ascending: false })
+      .limit(10000);
+
+    if (!events) return {};
+
+    const waitTimes: number[] = [];
+    const callDurations: number[] = [];
+    
+    let queueJoined = 0;
+    let matchFound = 0;
+    let callConnected = 0;
+    let partnerDisconnects = 0;
+    let reconnects = 0;
+
+    for (const e of events) {
+      if (e.event_type === 'QUEUE_JOINED') queueJoined++;
+      if (e.event_type === 'MATCH_FOUND') {
+        matchFound++;
+        if (e.payload?.wait_time_sec) waitTimes.push(Number(e.payload.wait_time_sec));
+      }
+      if (e.event_type === 'CALL_CONNECTED') callConnected++;
+      if (e.event_type === 'CALL_ENDED') {
+        if (e.payload?.duration_sec) callDurations.push(Number(e.payload.duration_sec));
+        if (e.payload?.ended_reason === 'disconnect') partnerDisconnects++;
+      }
+    }
+
+    waitTimes.sort((a, b) => a - b);
+    callDurations.sort((a, b) => a - b);
+
+    const getPercentile = (arr: number[], p: number) => {
+      if (arr.length === 0) return 0;
+      const index = Math.ceil(arr.length * p) - 1;
+      return arr[index];
+    };
+
+    const avgWait = waitTimes.length ? waitTimes.reduce((a,b)=>a+b,0) / waitTimes.length : 0;
+    const medianWait = getPercentile(waitTimes, 0.5);
+    const p95Wait = getPercentile(waitTimes, 0.95);
+
+    const avgDuration = callDurations.length ? (callDurations.reduce((a,b)=>a+b,0) / callDurations.length) / 60 : 0;
+
+    return {
+      avgWait: Math.round(avgWait),
+      medianWait: Math.round(medianWait),
+      p95Wait: Math.round(p95Wait),
+      avgDuration: Math.round(avgDuration),
+      queueAbandonment: queueJoined ? Math.max(0, Math.round(((queueJoined - matchFound) / queueJoined) * 100)) : 0,
+      connectionSuccess: matchFound ? Math.round((callConnected / matchFound) * 100) : 0,
+      partnerDisconnects,
+      reconnects,
+      avgSkips: 0, // No specific SKIP tracking event in payload yet
+      mutualLikeRate: 0, // Should be fetched from getMissionControl
+      smartMatchPct: 0, // Missing DB tracking
+      quickMatchPct: 0, // Missing DB tracking
+      exactMatchPct: 0 // Missing DB tracking
+    };
   }
 }
 

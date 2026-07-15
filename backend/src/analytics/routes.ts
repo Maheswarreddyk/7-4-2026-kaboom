@@ -17,6 +17,15 @@ router.get('/mission-control', async (req, res) => {
   }
 });
 
+router.get('/mission-control/timeseries', async (req, res) => {
+  try {
+    const data = await analyticsService.getMissionControlTimeSeries();
+    res.json(data);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // II. Product Intelligence
 router.get('/search-demand', async (req, res) => {
   try {
@@ -30,6 +39,24 @@ router.get('/search-demand', async (req, res) => {
 router.get('/match-quality', async (req, res) => {
   try {
     const data = await analyticsService.getMatchQuality();
+    res.json(data);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get('/audience', async (req, res) => {
+  try {
+    const data = await analyticsService.getAudienceAnalytics();
+    res.json(data);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get('/matchmaking', async (req, res) => {
+  try {
+    const data = await analyticsService.getMatchmakingIntelligence();
     res.json(data);
   } catch (err: any) {
     res.status(500).json({ error: err.message });

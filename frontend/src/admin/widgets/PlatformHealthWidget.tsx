@@ -1,5 +1,5 @@
 import { WidgetCard } from './WidgetCard.js';
-import { Activity, Users, Clock, AlertTriangle } from '../Icons.js';
+import { Activity, Users, Clock } from '../Icons.js';
 
 interface MissionControlData {
   healthStatus: 'healthy' | 'degraded' | 'critical';
@@ -12,7 +12,10 @@ interface MissionControlData {
   mutualLikePercent: number;
   growthPercent: number;
   todayNewUsers: number;
+  todayReturningUsers?: number;
   todayMatches: number;
+  todayMutualLikes: number;
+  notificationSubscribers: number;
   topCampus: string;
   topCity: string;
   todayDeliveries: number;
@@ -49,11 +52,11 @@ export function PlatformHealthWidget({ data }: PlatformHealthWidgetProps) {
       </div>
 
       {/* Primary Live KPI Grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-4">
         {/* KPI 1: Live Online */}
         <div className="bg-slate-900/50 p-4 rounded-lg border border-slate-700/50">
           <div className="flex justify-between items-start mb-2">
-            <span className="text-slate-400 text-sm font-medium">Live Online</span>
+            <span className="text-slate-400 text-sm font-medium">Live Users</span>
             <Users className="w-4 h-4 text-blue-400" />
           </div>
           <span className="text-2xl font-bold text-white">{data.liveUsers}</span>
@@ -62,57 +65,65 @@ export function PlatformHealthWidget({ data }: PlatformHealthWidgetProps) {
         {/* KPI 2: Active Searches */}
         <div className="bg-slate-900/50 p-4 rounded-lg border border-slate-700/50">
           <div className="flex justify-between items-start mb-2">
-            <span className="text-slate-400 text-sm font-medium">Searching Queue</span>
+            <span className="text-slate-400 text-sm font-medium">Users Searching</span>
             <Activity className="w-4 h-4 text-emerald-400" />
           </div>
           <span className="text-2xl font-bold text-white">{data.activeSearches}</span>
-          <p className="text-xs text-slate-500 mt-1">Avg wait: {data.averageWaitSeconds}s</p>
         </div>
 
         {/* KPI 3: Active Conversations */}
         <div className="bg-slate-900/50 p-4 rounded-lg border border-slate-700/50">
           <div className="flex justify-between items-start mb-2">
-            <span className="text-slate-400 text-sm font-medium">Active Calls</span>
+            <span className="text-slate-400 text-sm font-medium">Active Conversations</span>
             <Clock className="w-4 h-4 text-indigo-400" />
           </div>
           <span className="text-2xl font-bold text-white">{data.activeConversations}</span>
-          <p className="text-xs text-slate-500 mt-1">Avg len: {data.averageCallMinutes}m</p>
         </div>
 
-        {/* KPI 4: Reports & Health */}
+        {/* KPI 4: Avg Wait */}
         <div className="bg-slate-900/50 p-4 rounded-lg border border-slate-700/50">
           <div className="flex justify-between items-start mb-2">
-            <span className="text-slate-400 text-sm font-medium">Today's Reports</span>
-            <AlertTriangle className="w-4 h-4 text-amber-400" />
+            <span className="text-slate-400 text-sm font-medium">Avg Wait</span>
+            <Activity className="w-4 h-4 text-amber-400" />
           </div>
-          <span className="text-2xl font-bold text-white">{data.todayReports}</span>
-          <p className="text-xs text-slate-500 mt-1">{data.mutualLikePercent}% Mutual Likes (Overall)</p>
+          <span className="text-2xl font-bold text-white">{data.averageWaitSeconds}s</span>
+        </div>
+
+        {/* KPI 5: Avg Duration */}
+        <div className="bg-slate-900/50 p-4 rounded-lg border border-slate-700/50">
+          <div className="flex justify-between items-start mb-2">
+            <span className="text-slate-400 text-sm font-medium">Avg Duration</span>
+            <Clock className="w-4 h-4 text-purple-400" />
+          </div>
+          <span className="text-2xl font-bold text-white">{data.averageCallMinutes}m</span>
         </div>
       </div>
 
       {/* Secondary Today's Metrics Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-        <div className="bg-slate-900/30 p-3 rounded-lg border border-slate-800">
-          <span className="block text-slate-500 text-xs uppercase tracking-wider mb-1">New Users Today</span>
-          <span className="text-lg font-bold text-white">{data.todayNewUsers || 0}</span>
-        </div>
-        <div className="bg-slate-900/30 p-3 rounded-lg border border-slate-800">
+        <div className="bg-slate-900/30 p-4 rounded-lg border border-slate-800">
           <span className="block text-slate-500 text-xs uppercase tracking-wider mb-1">Matches Today</span>
-          <span className="text-lg font-bold text-white">{data.todayMatches || 0}</span>
+          <span className="text-xl font-bold text-white">{data.todayMatches || 0}</span>
         </div>
-        <div className="bg-slate-900/30 p-3 rounded-lg border border-slate-800">
-          <span className="block text-slate-500 text-xs uppercase tracking-wider mb-1">Top Campus</span>
-          <span className="text-sm font-medium text-white truncate block">{data.topCampus || 'Unknown'}</span>
+        <div className="bg-slate-900/30 p-4 rounded-lg border border-slate-800">
+          <span className="block text-slate-500 text-xs uppercase tracking-wider mb-1">Mutual Likes Today</span>
+          <span className="text-xl font-bold text-white">{data.todayMutualLikes || 0}</span>
         </div>
-        <div className="bg-slate-900/30 p-3 rounded-lg border border-slate-800">
-          <span className="block text-slate-500 text-xs uppercase tracking-wider mb-1">Top City</span>
-          <span className="text-sm font-medium text-white truncate block">{data.topCity || 'Unknown'}</span>
+        <div className="bg-slate-900/30 p-4 rounded-lg border border-slate-800">
+          <span className="block text-slate-500 text-xs uppercase tracking-wider mb-1">Push Subscribers</span>
+          <span className="text-xl font-bold text-white">{data.notificationSubscribers || 0}</span>
         </div>
-        <div className="bg-slate-900/30 p-3 rounded-lg border border-slate-800">
-          <span className="block text-slate-500 text-xs uppercase tracking-wider mb-1">Push Deliveries</span>
-          <span className="text-lg font-bold text-white">{data.todayDeliveries || 0}</span>
+        <div className="bg-slate-900/30 p-4 rounded-lg border border-slate-800">
+          <span className="block text-slate-500 text-xs uppercase tracking-wider mb-1">New Users Today</span>
+          <span className="text-xl font-bold text-white">{data.todayNewUsers || 0}</span>
+        </div>
+        <div className="bg-slate-900/30 p-4 rounded-lg border border-slate-800">
+          <span className="block text-slate-500 text-xs uppercase tracking-wider mb-1">Returning Users</span>
+          <span className="text-sm font-medium text-slate-400 block mt-1">No production data available yet</span>
         </div>
       </div>
+
+
 
     </WidgetCard>
   );

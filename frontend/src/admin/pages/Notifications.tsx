@@ -7,7 +7,10 @@ export function NotificationsAdmin() {
   const [campus, setCampus] = useState('');
   const [targetAll, setTargetAll] = useState(true);
   const [status, setStatus] = useState('');
-  const [stats, setStats] = useState({ activeSubs: 0, avgCtr: 0 });
+  const [stats, setStats] = useState({ 
+    activeSubs: 0, inactiveSubs: 0, sent: 0, clicked: 0, avgCtr: 0, 
+    permissionDenied: 0, revoked: 0, dismissed: 0 
+  });
   const [history, setHistory] = useState<any[]>([]);
 
   useEffect(() => {
@@ -213,21 +216,65 @@ export function NotificationsAdmin() {
           </div>
           
           <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
-            <h2 className="text-lg font-semibold text-white mb-4">Performance</h2>
+            <h2 className="text-lg font-semibold text-white mb-4">Audience Estimates</h2>
             <div className="space-y-3">
               <div className="flex justify-between">
-                <span className="text-slate-400">Active Subs</span>
-                <span className="text-white font-mono">{stats.activeSubs.toLocaleString()}</span>
+                <span className="text-slate-400">Total Reachable</span>
+                <span className="text-white font-mono text-lg">{stats.activeSubs.toLocaleString()}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-400">Avg CTR</span>
-                <span className="text-white font-mono">{stats.avgCtr.toFixed(1)}%</span>
+                <span className="text-slate-400">Est. Target Segment</span>
+                <span className="text-blue-400 font-mono text-lg">{targetAll ? stats.activeSubs.toLocaleString() : Math.round(stats.activeSubs * 0.15).toLocaleString()}</span>
               </div>
             </div>
           </div>
           
           <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
-            <h2 className="text-lg font-semibold text-white mb-4">Broadcast History</h2>
+            <h2 className="text-lg font-semibold text-white mb-4">Subscribers</h2>
+            <div className="space-y-3">
+              <div className="flex justify-between">
+                <span className="text-slate-400">Active</span>
+                <span className="text-emerald-400 font-mono">{stats.activeSubs.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400">Unsubscribed</span>
+                <span className="text-amber-400 font-mono">{stats.inactiveSubs.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400">Permission Denied</span>
+                <span className="text-slate-600 italic text-xs mt-1">No production data yet</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400">Revoked</span>
+                <span className="text-slate-600 italic text-xs mt-1">No production data yet</span>
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
+            <h2 className="text-lg font-semibold text-white mb-4">Performance</h2>
+            <div className="space-y-3">
+              <div className="flex justify-between">
+                <span className="text-slate-400">Total Sent</span>
+                <span className="text-white font-mono">{stats.sent.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400">Total Clicked</span>
+                <span className="text-white font-mono">{stats.clicked.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400">Avg CTR</span>
+                <span className="text-blue-400 font-mono">{stats.avgCtr.toFixed(1)}%</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400">Dismissed</span>
+                <span className="text-slate-600 italic text-xs mt-1">No production data yet</span>
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
+            <h2 className="text-lg font-semibold text-white mb-4">Campaign History</h2>
             {history.length === 0 ? (
               <div className="text-slate-500 text-sm">No campaigns broadcasted yet.</div>
             ) : (

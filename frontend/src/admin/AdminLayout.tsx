@@ -18,23 +18,20 @@ interface NavCategory {
 
 const NAV_CATEGORIES: NavCategory[] = [
   {
-    title: 'Executive',
+    title: 'Product Intelligence',
     items: [
       { path: '', label: 'Mission Control', icon: BarChart3, exact: true },
+      { path: 'audience', label: 'Audience Analytics', icon: Activity },
+      { path: 'matchmaking', label: 'Matchmaking Intelligence', icon: Target },
+      { path: 'notifications', label: 'Notification Center', icon: Bell },
     ]
   },
   {
-    title: 'Product Intelligence',
+    title: 'Legacy Dashboards (WIP removal)',
     items: [
       { path: 'growth', label: 'Growth & Funnels', icon: TrendingUp },
       { path: 'product', label: 'Match Quality & Demand', icon: Target },
       { path: 'campus', label: 'Campus Analytics', icon: GraduationCap },
-      { path: 'notifications', label: 'Push Notifications', icon: Bell },
-    ]
-  },
-  {
-    title: 'Operations',
-    items: [
       { path: 'operations', label: 'Live Operations', icon: Activity },
     ]
   }
