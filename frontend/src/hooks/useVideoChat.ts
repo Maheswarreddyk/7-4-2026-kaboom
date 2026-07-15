@@ -294,6 +294,12 @@ export function useVideoChat(
       clearTimeout(connectRetryTimeoutRef.current);
       connectRetryTimeoutRef.current = null;
     }
+    // P1 Fix: Also clear the active-call heartbeat to prevent ghost sessions
+    // leaking into the matchmaker after the user has left.
+    if (activeHeartbeatIntervalRef.current) {
+      clearInterval(activeHeartbeatIntervalRef.current);
+      activeHeartbeatIntervalRef.current = null;
+    }
   }, [clearSignalingRetryTimers, clearWebRTCTimeout]);
 
   const handleIceRestart = useCallback(async () => {

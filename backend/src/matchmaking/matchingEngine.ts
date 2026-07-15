@@ -366,26 +366,49 @@ export async function runGlobalHealCycle(supabase: SupabaseClient): Promise<void
             })
             .eq('id', m.id);
 
-          // Re-queue any active peer
+          // Re-queue any active peer (upsert pattern — avoid duplicate queue rows)
           if (!staleA && m.user_a) {
             console.log(`[Self-Healing] Requeuing active partner A: ${m.user_a}`);
             await transitionSessionStatus(supabase, m.user_a, 'SEARCHING', 'Peer disconnected match cleanup');
-            await supabase.from('waiting_queue').insert({
-              session_id: m.user_a,
-              status: 'waiting',
-              joined_at: now,
-              last_seen: now,
-            });
+            // Try to update existing row first, insert only if none exists
+            const { data: existingA } = await supabase
+              .from('waiting_queue')
+              .select('id')
+              .eq('session_id', m.user_a)
+              .in('status', ['matched', 'left', 'expired'])
+              .limit(1)
+              .maybeSingle();
+            if (existingA) {
+              await supabase.from('waiting_queue').update({ status: 'waiting', last_seen: now }).eq('id', existingA.id);
+            } else {
+              await supabase.from('waiting_queue').insert({
+                session_id: m.user_a,
+                status: 'waiting',
+                joined_at: now,
+                last_seen: now,
+              });
+            }
           }
           if (!staleB && m.user_b) {
             console.log(`[Self-Healing] Requeuing active partner B: ${m.user_b}`);
             await transitionSessionStatus(supabase, m.user_b, 'SEARCHING', 'Peer disconnected match cleanup');
-            await supabase.from('waiting_queue').insert({
-              session_id: m.user_b,
-              status: 'waiting',
-              joined_at: now,
-              last_seen: now,
-            });
+            const { data: existingB } = await supabase
+              .from('waiting_queue')
+              .select('id')
+              .eq('session_id', m.user_b)
+              .in('status', ['matched', 'left', 'expired'])
+              .limit(1)
+              .maybeSingle();
+            if (existingB) {
+              await supabase.from('waiting_queue').update({ status: 'waiting', last_seen: now }).eq('id', existingB.id);
+            } else {
+              await supabase.from('waiting_queue').insert({
+                session_id: m.user_b,
+                status: 'waiting',
+                joined_at: now,
+                last_seen: now,
+              });
+            }
           }
         }
       }
