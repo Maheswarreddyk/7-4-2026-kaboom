@@ -148,32 +148,9 @@ async function loadBatchedExclusions(supabase: SupabaseClient, sessionIds: strin
     return { recentPartnersMap: new Map(), reportedIdsMap: new Map(), endedMatchesMap: new Map() };
   }
 
-  // Build exclusion maps for all active waitlist sessions (O(1) queries instead of O(N))
-  // We limit the batch size indirectly by only querying for active waiting sessions
-  
-  const [recentMatchesQuery, reportsQuery, endedMatchesQuery] = await Promise.all([
-    supabase
-      .from('matches')
-      .select('user_a, user_b')
-      .or(`user_a.in.(${sessionIds.join(',')}),user_b.in.(${sessionIds.join(',')})`)
-      .order('started_at', { ascending: false })
-      .limit(200),
-    supabase
-      .from('reports')
-      .select('reporter_session, reported_session')
-      .or(`reporter_session.in.(${sessionIds.join(',')}),reported_session.in.(${sessionIds.join(',')})`),
-    supabase
-      .from('matches')
-      .select('user_a, user_b, ended_at')
-      .not('ended_at', 'is', null)
-      .or(`user_a.in.(${sessionIds.join(',')}),user_b.in.(${sessionIds.join(',')})`)
-      .order('ended_at', { ascending: false })
-      .limit(300)
-  ]);
-
   const recentPartnersMap = new Map<string, Set<string>>();
   const reportedIdsMap = new Map<string, Set<string>>();
-  const endedMatchesMap = new Map<string, Map<string, string>>(); // user -> (partner -> ended_at)
+  const endedMatchesMap = new Map<string, Map<string, string>>();
 
   sessionIds.forEach(id => {
     recentPartnersMap.set(id, new Set());
@@ -181,20 +158,40 @@ async function loadBatchedExclusions(supabase: SupabaseClient, sessionIds: strin
     endedMatchesMap.set(id, new Map());
   });
 
-  recentMatchesQuery.data?.forEach((m) => {
-    if (recentPartnersMap.has(m.user_a)) recentPartnersMap.get(m.user_a)!.add(m.user_b);
-    if (recentPartnersMap.has(m.user_b)) recentPartnersMap.get(m.user_b)!.add(m.user_a);
-  });
+  // Load bounded history on a per-user basis
+  await Promise.all(sessionIds.map(async (id) => {
+    const [recentMatches, reports, endedMatches] = await Promise.all([
+      supabase
+        .from('matches')
+        .select('user_a, user_b')
+        .or(`user_a.eq.${id},user_b.eq.${id}`)
+        .order('started_at', { ascending: false })
+        .limit(20),
+      supabase
+        .from('reports')
+        .select('reporter_session, reported_session')
+        .or(`reporter_session.eq.${id},reported_session.eq.${id}`),
+      supabase
+        .from('matches')
+        .select('user_a, user_b, ended_at')
+        .not('ended_at', 'is', null)
+        .or(`user_a.eq.${id},user_b.eq.${id}`)
+        .order('ended_at', { ascending: false })
+        .limit(20)
+    ]);
 
-  reportsQuery.data?.forEach((r) => {
-    if (reportedIdsMap.has(r.reporter_session)) reportedIdsMap.get(r.reporter_session)!.add(r.reported_session);
-    if (reportedIdsMap.has(r.reported_session)) reportedIdsMap.get(r.reported_session)!.add(r.reporter_session);
-  });
+    recentMatches.data?.forEach(m => {
+      recentPartnersMap.get(id)!.add(m.user_a === id ? m.user_b : m.user_a);
+    });
 
-  endedMatchesQuery.data?.forEach((m) => {
-    if (endedMatchesMap.has(m.user_a)) endedMatchesMap.get(m.user_a)!.set(m.user_b, m.ended_at);
-    if (endedMatchesMap.has(m.user_b)) endedMatchesMap.get(m.user_b)!.set(m.user_a, m.ended_at);
-  });
+    reports.data?.forEach(r => {
+      reportedIdsMap.get(id)!.add(r.reporter_session === id ? r.reported_session : r.reporter_session);
+    });
+
+    endedMatches.data?.forEach(m => {
+      endedMatchesMap.get(id)!.set(m.user_a === id ? m.user_b : m.user_a, m.ended_at);
+    });
+  }));
 
   return { recentPartnersMap, reportedIdsMap, endedMatchesMap };
 }
@@ -369,7 +366,7 @@ export async function runGlobalHealCycle(supabase: SupabaseClient): Promise<void
           await supabase.from('temporary_messages').delete().eq('match_id', m.id);
           await supabase.from('reservations').delete().eq('match_id', m.id);
 
-          // Re-queue any active peer (upsert pattern — avoid duplicate queue rows)
+          // Re-queue any active peer (upsert pattern — avoid duplicate queue rows), and mark stale peer as ENDED
           if (!staleA && m.user_a) {
             console.log(`[Self-Healing] Requeuing active partner A: ${m.user_a}`);
             await transitionSessionStatus(supabase, m.user_a, 'SEARCHING', 'Peer disconnected match cleanup');
@@ -391,7 +388,11 @@ export async function runGlobalHealCycle(supabase: SupabaseClient): Promise<void
                 last_seen: now,
               });
             }
+          } else if (staleA && m.user_a) {
+            console.log(`[Self-Healing] Marking stale partner A as ENDED: ${m.user_a}`);
+            await transitionSessionStatus(supabase, m.user_a, 'ENDED', 'Stale peer match cleanup');
           }
+
           if (!staleB && m.user_b) {
             console.log(`[Self-Healing] Requeuing active partner B: ${m.user_b}`);
             await transitionSessionStatus(supabase, m.user_b, 'SEARCHING', 'Peer disconnected match cleanup');
@@ -412,6 +413,9 @@ export async function runGlobalHealCycle(supabase: SupabaseClient): Promise<void
                 last_seen: now,
               });
             }
+          } else if (staleB && m.user_b) {
+            console.log(`[Self-Healing] Marking stale partner B as ENDED: ${m.user_b}`);
+            await transitionSessionStatus(supabase, m.user_b, 'ENDED', 'Stale peer match cleanup');
           }
         }
       }
@@ -477,7 +481,8 @@ export async function runGlobalMatchCycle(supabase: SupabaseClient): Promise<voi
         )
       `)
       .eq('status', 'waiting')
-      .order('joined_at', { ascending: true }); // Oldest waiting first
+      .order('joined_at', { ascending: true }) // Oldest waiting first
+      .limit(200); // Bound N to prevent O(N^2) explosion
 
     if (queueErr) {
       console.error('[Matchmaker] Failed to load waiting queue:', queueErr.message);

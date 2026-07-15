@@ -43,7 +43,7 @@ export interface ScoreResult {
   };
 }
 
-function scoreMutualPreference(self: SessionProfile, partner: SessionProfile): { points: number; note: string } {
+function scoreMutualPreference(self: SessionProfile, partner: SessionProfile): { points: number; note: string } | null {
   const selfWants =
     !self.looking_for ||
     self.looking_for.length === 0 ||
@@ -58,7 +58,7 @@ function scoreMutualPreference(self: SessionProfile, partner: SessionProfile): {
   if (selfWants && partnerWants) {
     return { points: MATCH_WEIGHTS.mutualPreference, note: `Mutual Preference (+${MATCH_WEIGHTS.mutualPreference})` };
   }
-  return { points: 0, note: '' };
+  return null;
 }
 
 function scoreLanguages(
@@ -141,9 +141,10 @@ export function calculateCompatibility(
       const val1 = user1.match_attributes?.[key] || [];
       const val2 = user2.match_attributes?.[key] || [];
       
-      // Ensure there is at least one shared value
-      const hasOverlap = val1.some(v => val2.includes(v));
-      if (!hasOverlap) {
+      // Exact match required for strict constraints
+      if (val1.length !== val2.length) return false;
+      const exactMatch = val1.every(v => val2.includes(v));
+      if (!exactMatch) {
         return false;
       }
     }
@@ -176,8 +177,11 @@ export function calculateCompatibility(
   }
 
   // Calculate scores
+  const mutualPref = scoreMutualPreference(self, partner);
+  if (!mutualPref) return null; // Hard block for gender mismatch
+
   const parts = [
-    scoreMutualPreference(self, partner),
+    mutualPref,
     scoreLanguages(self, partner, phase),
     scoreLocation(self, partner, phase),
     scoreInterests(self, partner, phase),

@@ -2,7 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { HEARTBEAT_STALE_MS } from './config.js';
 import { logEngine, logToDb } from './logger.js';
 import { AnalyticsLogger } from '../analytics/logger.js';
-import { transitionSessionStatus } from './matchingEngine.js';
+import { transitionSessionStatus, matchmakerMetrics } from './matchingEngine.js';
 
 export interface JoinQueueResult {
   queueId: string;
@@ -148,6 +148,8 @@ export async function joinQueueEntry(
 }
 
 export async function leaveQueueEntry(supabase: SupabaseClient, sessionId: string): Promise<void> {
+  matchmakerMetrics.abandonedSearches++;
+
   await supabase
     .from('waiting_queue')
     .update({ status: 'left' })
