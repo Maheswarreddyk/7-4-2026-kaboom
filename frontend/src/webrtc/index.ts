@@ -80,23 +80,33 @@ export class WebRTCManager {
     console.log('[WebRTC] Requesting local media stream...');
     this.localStreamPromise = navigator.mediaDevices.getUserMedia({
       video: {
-        width: { ideal: 1280 },
-        height: { ideal: 720 },
+        // Use ideal (not exact) constraints — Safari will degrade gracefully
+        width: { ideal: 1280, max: 1920 },
+        height: { ideal: 720, max: 1080 },
         facingMode: 'user',
+        frameRate: { ideal: 24, max: 30 },
       },
       audio: {
         echoCancellation: true,
         noiseSuppression: true,
-        autoGainControl: true,
+        // autoGainControl omitted — not reliably supported on iOS Safari 14 and below
+        // and can cause the entire getUserMedia call to fail
+        sampleRate: 48000,
       },
     }).then((stream) => {
       this.localStream = stream;
       this.localStreamPromise = null;
-      console.log('[WebRTC] Local media stream acquired successfully.');
       return stream;
     }).catch((err) => {
       this.localStreamPromise = null;
-      console.error('[WebRTC] Failed to acquire local media stream:', err);
+      // On error, strip the advanced constraints and retry with minimal config
+      // This handles cases where the device doesn't support all requested constraints
+      if (err.name === 'OverconstrainedError' || err.name === 'ConstraintNotSatisfiedError') {
+        return navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then((stream) => {
+          this.localStream = stream;
+          return stream;
+        });
+      }
       throw err;
     });
 

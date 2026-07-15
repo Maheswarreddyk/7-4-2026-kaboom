@@ -75,11 +75,6 @@ router.post('/ready', queueLimiter, async (req, res, next) => {
     res.status(422).json({
       success: false,
       error: err instanceof Error ? err.message : 'Failed to mark match ready',
-      details: {
-        sessionId: req.body?.sessionId,
-        matchId: req.body?.matchId,
-        ts: new Date().toISOString()
-      }
     });
   }
 });

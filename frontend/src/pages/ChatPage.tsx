@@ -953,7 +953,10 @@ export function ChatPage() {
   }, [stopChat, endSession, navigate, showToast]);
 
   const handleLeave = async () => {
-    if (chatState.status === 'CONNECTED' || chatState.partnerSessionId) {
+    // Only show the "End Call?" confirmation if the user is actually in a live conversation.
+    // During MATCH_FOUND, NEGOTIATING, ICE_CONNECTING the user is NOT yet connected —
+    // pressing Cancel in those states must immediately abort, not prompt for confirmation.
+    if (chatState.status === 'CONNECTED') {
       setShowEndCallConfirm(true);
     } else {
       await leaveCurrentExperience();

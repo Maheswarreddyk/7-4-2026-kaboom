@@ -152,6 +152,8 @@
   html, body {
     height: 100%;
     overscroll-behavior: none;
+    /* iOS Safari: prevent elastic bounce scroll revealing white background */
+    -webkit-overflow-scrolling: touch;
   }
 
   body {
@@ -162,12 +164,20 @@
       radial-gradient(circle at 10% 20%, rgba(255, 91, 53, 0.035) 0%, transparent 45%),
       radial-gradient(circle at 90% 80%, rgba(245, 166, 35, 0.025) 0%, transparent 40%);
     font-family: 'Inter', system-ui, sans-serif;
+    /* iOS: disable 300ms tap delay for all interactive elements */
+    touch-action: manipulation;
   }
 
   #root {
     min-height: 100dvh;
+    min-height: -webkit-fill-available; /* iOS Safari fallback for dvh */
     display: flex;
     flex-direction: column;
+    /* iOS safe-area: pad from notch and home bar */
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    padding-left: env(safe-area-inset-left, 0px);
+    padding-right: env(safe-area-inset-right, 0px);
   }
 
   ::-webkit-scrollbar { width: 5px; }
@@ -844,21 +854,25 @@
 }
 
 .btn-action-cancel {
-  background: rgba(239, 68, 68, 0.25) !important;
-  border: 1px solid rgba(239, 68, 68, 0.45) !important;
-  color: #fee2e2 !important;
+  background: rgba(220, 38, 38, 0.9) !important;
+  border: 1px solid rgba(220, 38, 38, 1) !important;
+  color: #fff !important;
+  box-shadow: 0 2px 12px rgba(220, 38, 38, 0.35);
+  transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.1s ease;
 }
 .btn-action-cancel:hover:not(:disabled) {
-  background: rgba(239, 68, 68, 0.4) !important;
-  border-color: rgba(239, 68, 68, 0.6) !important;
+  background: rgba(239, 68, 68, 1) !important;
+  border-color: rgba(239, 68, 68, 1) !important;
+  box-shadow: 0 4px 20px rgba(239, 68, 68, 0.5);
 }
 .btn-action-cancel:active:not(:disabled) {
-  transform: scale(0.95);
-  background: rgba(239, 68, 68, 0.15) !important;
+  transform: scale(0.93);
+  background: rgba(185, 28, 28, 1) !important;
+  box-shadow: 0 1px 6px rgba(220, 38, 38, 0.3);
 }
 .btn-action-cancel:focus {
-  outline: 2px solid rgba(239, 68, 68, 0.4);
-  outline-offset: 1px;
+  outline: 2px solid rgba(239, 68, 68, 0.7);
+  outline-offset: 2px;
 }
 
 /* Radar Breathing ring pulse & glow animation */

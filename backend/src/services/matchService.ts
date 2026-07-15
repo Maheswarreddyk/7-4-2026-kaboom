@@ -105,7 +105,8 @@ export async function markMatchReady(sessionId: string, sessionToken: string, ma
 
 export async function leaveQueue(sessionId: string, sessionToken: string) {
   const session = await validateSession(sessionId, sessionToken);
-  if (!session) throw new Error('Invalid session');
+  // Idempotent: if session is already gone/ended, treat as success (the user has already left)
+  if (!session) return;
   await leaveQueueEntry(getSupabase(), sessionId);
   invalidateMatchmakerCache();
   await transitionSessionStatus(getSupabase(), sessionId, 'READY', 'User manually left queue');

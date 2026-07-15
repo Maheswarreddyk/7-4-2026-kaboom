@@ -750,8 +750,9 @@ export function useVideoChat(
       },
       onPartnerLiked: () => {
         if (skipInProgressRef.current) return;
+        // Silently record that the partner liked — do NOT reveal this to the user.
+        // The like must remain hidden until MUTUAL_LIKE is emitted by the backend.
         updateChatState({ partnerLiked: true });
-        showToast('success', 'Your partner liked you! ❤️');
       },
       onMutualLike: () => {
         if (skipInProgressRef.current) return;
