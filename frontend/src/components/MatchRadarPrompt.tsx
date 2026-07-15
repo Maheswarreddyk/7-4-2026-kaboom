@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { PushService } from '../services/PushService.js';
 import { safeLocalStorage } from '../utils/index.js';
+import { BrowserCapabilities } from '../utils/index.js';
 
 interface MatchRadarPromptProps {
   onDismiss: () => void;
@@ -18,6 +19,11 @@ export function MatchRadarPrompt({ onDismiss, sessionId }: MatchRadarPromptProps
 
   useEffect(() => {
     // 1. Native Permission Check
+    if (!BrowserCapabilities.supportsNotifications()) {
+      setShouldRender(false);
+      onDismiss();
+      return;
+    }
     if (Notification.permission === 'granted') {
       setShouldRender(false);
       onDismiss();

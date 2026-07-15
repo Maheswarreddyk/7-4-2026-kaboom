@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAdminAuth } from '../AdminAuth.js';
+import { BrowserCapabilities } from '../../utils/index.js';
 
 export function NotificationsAdmin() {
   const { token } = useAdminAuth();
@@ -40,6 +41,10 @@ export function NotificationsAdmin() {
 
   const handleTest = async () => {
     setStatus('Sending test...');
+    if (!BrowserCapabilities.supportsNotifications()) {
+      setStatus('Error: Notifications are not supported on this browser.');
+      return;
+    }
     try {
       const subJSONStr = localStorage.getItem('kaboom_push_subscribed_data');
       if (!subJSONStr) {

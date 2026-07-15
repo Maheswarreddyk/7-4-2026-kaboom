@@ -11,6 +11,7 @@ import { AdminAuthProvider, useAdminAuth, AdminLogin } from './admin/AdminAuth.j
 import { AdminLayout } from './admin/AdminLayout.js';
 import { SplashLoader } from './components/SplashLoader.js';
 import { BootScreen } from './components/BootScreen.js';
+import { BrowserCapabilities } from './utils/index.js';
 
 // Lazy imports for chunk splitting
 const LandingPage = lazy(() => import('./pages/LandingPage.js').then(m => ({ default: m.LandingPage })));
@@ -121,8 +122,10 @@ function PushNotificationHandler() {
         localStorage.setItem('kaboom_auto_open_queue', 'true');
       }
     };
-    navigator.serviceWorker?.addEventListener('message', handleMessage);
-    return () => navigator.serviceWorker?.removeEventListener('message', handleMessage);
+    if (BrowserCapabilities.supportsServiceWorker()) {
+      navigator.serviceWorker?.addEventListener('message', handleMessage);
+      return () => navigator.serviceWorker?.removeEventListener('message', handleMessage);
+    }
   }, []);
   
   return null;

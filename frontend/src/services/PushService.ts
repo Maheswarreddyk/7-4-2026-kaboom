@@ -1,11 +1,12 @@
 import { safeLocalStorage } from '../utils/index.js';
+import { BrowserCapabilities } from '../utils/BrowserCapabilities.js';
 
 export class PushService {
   private static readonly VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY || '';
   
   static async registerServiceWorker(): Promise<ServiceWorkerRegistration | null> {
-    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-      console.warn('Push messaging is not supported');
+    if (!BrowserCapabilities.supportsServiceWorker() || !BrowserCapabilities.supportsPush()) {
+      console.warn('Push messaging or Service Worker is not supported on this browser');
       return null;
     }
 
@@ -24,6 +25,11 @@ export class PushService {
     if (!registration) return null;
 
     try {
+      if (!BrowserCapabilities.supportsNotifications()) {
+        console.warn('Notifications API is not supported on this browser');
+        return null;
+      }
+
       // 1. Check if permission is already granted. If default, the browser will prompt.
       // But we ONLY call this after the Soft Permission UI.
       const permission = await Notification.requestPermission();

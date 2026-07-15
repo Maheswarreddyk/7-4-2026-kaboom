@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { PushService } from '../services/PushService.js';
 import { safeLocalStorage } from '../utils/index.js';
 import { cn } from '../utils/index.js';
+import { BrowserCapabilities } from '../utils/index.js';
 
 const ROTATING_MESSAGES = [
   { icon: '🏫', text: 'Someone from your college joined.' },
@@ -19,7 +20,7 @@ export function MissedConnectionsToast() {
 
   useEffect(() => {
     // 1. Native Permission Check
-    if (Notification.permission === 'granted') return;
+    if (!BrowserCapabilities.supportsNotifications() || Notification.permission === 'granted') return;
 
     // 2. Local State Machine Check
     const permission = safeLocalStorage.getItem('kaboom_notification_permission');

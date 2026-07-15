@@ -60,4 +60,4 @@ export function cn(...classes: (string | boolean | undefined | null)[]): string 
 }
 
 export { safeLocalStorage } from './safeStorage.js';
-
+export { BrowserCapabilities } from './BrowserCapabilities.js';
