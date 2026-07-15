@@ -68,7 +68,7 @@ export function useVideoChat(
 ) {
   const { showToast } = useToast();
   const { updateSessionLifecycleState } = useSession();
-  const { playConnect, playDisconnect, playMutualLike } = useAudioUX();
+  const { playQueueJoin, playConnected } = useAudioUX();
   const [chatState, setChatState] = useState<ChatState>(initialChatState);
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
@@ -129,9 +129,7 @@ export function useVideoChat(
     updateSessionLifecycleStateRef.current = updateSessionLifecycleState;
   });
 
-  const playConnectChime = useCallback(() => {
-    playConnect(matchIdRef.current || undefined);
-  }, [playConnect]);
+
 
   const signalingStateRef = useRef<SessionStatus>('IDLE');
   const triggerAutoRejoinRef = useRef<() => Promise<void>>(async () => {});
@@ -200,18 +198,28 @@ export function useVideoChat(
     let lifecycleState: 'CONNECTED' | 'QUEUE' | 'IDLE' | 'LEAVING' | 'DESTROYED' = 'IDLE';
     if (state === 'CONNECTED') {
       lifecycleState = 'CONNECTED';
+      // V20 Certification: Audio strictly bound to FSM
+      playConnected(matchIdRef.current || undefined);
     } else if ([
       'REQUESTING_MEDIA', 'MEDIA_READY', 'CONNECTING_REALTIME', 
       'SEARCHING', 'REQUEUEING', 'MATCH_FOUND', 'READY', 'NEGOTIATING', 'ICE_CONNECTING'
     ].includes(state)) {
       lifecycleState = 'QUEUE';
+      // V20 Certification: Audio strictly bound to FSM
+      if (state === 'SEARCHING' && current !== 'REQUEUEING' && current !== 'CONNECTING_REALTIME') {
+         // It's a fresh queue join, handled via specific action below if needed, wait.
+         // Actually, let's do playQueueJoin when transitioning to CONNECTING_REALTIME from IDLE.
+      }
+      if (state === 'CONNECTING_REALTIME' && (current === 'IDLE' || current === 'MEDIA_READY')) {
+        playQueueJoin('queue-session');
+      }
     } else if (state === 'ENDED' || state === 'PARTNER_LEFT') {
       lifecycleState = 'LEAVING';
     } else {
       lifecycleState = 'IDLE';
     }
     updateSessionLifecycleStateRef.current(lifecycleState, matchIdRef.current, partnerSessionIdRef.current);
-  }, [clearWebRTCTimeout]);
+  }, [clearWebRTCTimeout, playConnected, playQueueJoin]);
 
   const executePartnerLeftTeardown = useCallback(() => {
     setSignalingState('PARTNER_LEFT');
@@ -343,7 +351,6 @@ export function useVideoChat(
         }
         setRemoteStream(stream);
         setSignalingState('CONNECTED');
-        playConnectChime();
       },
       onConnectionStateChange: (state) => {
         const statusMap: Record<RTCPeerConnectionState, ConnectionStatus> = {
@@ -369,7 +376,6 @@ export function useVideoChat(
           }
           updateChatState({ reconnectCountdown: null });
           setSignalingState('CONNECTED');
-          playConnectChime();
         } else if (state === 'disconnected' || state === 'failed') {
           console.log(`[WebRTC State Change] State: ${state}. Starting reconnect countdown...`);
           startReconnectCountdown();
@@ -389,7 +395,7 @@ export function useVideoChat(
         }
       },
     });
-  }, [showToast, updateChatState, handleIceRestart, playConnectChime, setSignalingState]);
+  }, [showToast, updateChatState, handleIceRestart, setSignalingState]);
 
   const handleMatched = useCallback(
     async (data: {
@@ -725,7 +731,6 @@ export function useVideoChat(
       onPartnerLeft: (data?: { reason: string; eventId?: string }) => {
         if (skipInProgressRef.current) return;
         console.log(`[Websocket Event] partnerLeft received (reason: ${data?.reason || 'unknown'})`);
-        playDisconnect(matchIdRef.current || undefined);
         if (data?.eventId && processedEventsRef.current.has(data.eventId)) {
           console.log('[Signaling] Duplicate partner_left event ignored. eventId:', data.eventId);
           return;
@@ -772,7 +777,6 @@ export function useVideoChat(
       },
       onMutualLike: () => {
         if (skipInProgressRef.current) return;
-        playMutualLike(matchIdRef.current || undefined);
         setChatState((prev) => {
           const newMessages = prev.messages ? [...prev.messages] : [];
           const hasMutualMsg = newMessages.some((m) => m.id.startsWith('system-mutual-like'));

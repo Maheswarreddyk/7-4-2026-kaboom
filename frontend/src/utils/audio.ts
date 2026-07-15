@@ -21,16 +21,6 @@ function getAudioContext(): AudioContext | null {
   }
 }
 
-// Connected chime: high quality soft pop-chime
-export function playConnectedSound() {
-  if (!isSoundEnabled) return;
-  const ctx = getAudioContext();
-  if (!ctx) return;
-
-  const now = ctx.currentTime;
-  
-  const playTone = (freq: number, start: number, duration: number, volume: number) => {
-    const osc = ctx.createOscillator();
     const gain = ctx.createGain();
     osc.type = 'sine';
     osc.frequency.setValueAtTime(freq, start);

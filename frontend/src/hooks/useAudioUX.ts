@@ -38,11 +38,19 @@ export function useAudioUX() {
     }
   }, []);
 
+  const playedQueueJoinMatches = useRef(new Set<string>());
   const playedConnectMatches = useRef(new Set<string>());
-  const playedDisconnectMatches = useRef(new Set<string>());
-  const playedLikeMatches = useRef(new Set<string>());
 
-  const playConnect = useCallback((matchId?: string) => {
+  const playQueueJoin = useCallback((matchId?: string) => {
+    if (matchId) {
+      if (playedQueueJoinMatches.current.has(matchId)) return;
+      playedQueueJoinMatches.current.add(matchId);
+    }
+    // Subtle blip to indicate matchmaking initiated
+    playTone(440, 'sine', 0.1, 0.05); // A4
+  }, [playTone]);
+
+  const playConnected = useCallback((matchId?: string) => {
     if (matchId) {
       if (playedConnectMatches.current.has(matchId)) return;
       playedConnectMatches.current.add(matchId);
@@ -53,27 +61,5 @@ export function useAudioUX() {
     setTimeout(() => playTone(783.99, 'sine', 0.7, 0.05), 200); // G5
   }, [playTone]);
 
-  const playDisconnect = useCallback((matchId?: string) => {
-    if (matchId) {
-      if (playedDisconnectMatches.current.has(matchId)) return;
-      playedDisconnectMatches.current.add(matchId);
-    }
-    // Soft, descending muted tone
-    playTone(440, 'triangle', 0.4, 0.05); // A4
-    setTimeout(() => playTone(349.23, 'triangle', 0.5, 0.05), 150); // F4
-  }, [playTone]);
-
-  const playMutualLike = useCallback((matchId?: string) => {
-    if (matchId) {
-      if (playedLikeMatches.current.has(matchId)) return;
-      playedLikeMatches.current.add(matchId);
-    }
-    // Bright, celebratory major chord
-    playTone(523.25, 'sine', 0.6, 0.08); // C5
-    playTone(659.25, 'sine', 0.6, 0.08); // E5
-    playTone(783.99, 'sine', 0.8, 0.1); // G5
-    setTimeout(() => playTone(1046.50, 'sine', 1.0, 0.1), 150); // C6
-  }, [playTone]);
-
-  return { playConnect, playDisconnect, playMutualLike };
+  return { playQueueJoin, playConnected };
 }
