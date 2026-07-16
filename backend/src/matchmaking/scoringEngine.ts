@@ -56,7 +56,14 @@ function scoreMutualPreference(self: SessionProfile, partner: SessionProfile): {
     (self.gender && partner.looking_for.includes(self.gender));
 
   if (selfWants && partnerWants) {
-    return { points: MATCH_WEIGHTS.mutualPreference, note: `Mutual Preference (+${MATCH_WEIGHTS.mutualPreference})` };
+    // Phase 4: Mutual Preference Maximization 
+    // Bonus multiplier for perfect alignment (1.5x)
+    const pts = Math.floor(MATCH_WEIGHTS.mutualPreference * 1.5);
+    return { points: pts, note: `Mutual Preference (+${pts})` };
+  }
+  // Single-sided preference gets standard weight (e.g., self wants anyone, partner specifically wants self)
+  if (selfWants || partnerWants) {
+    return { points: MATCH_WEIGHTS.mutualPreference, note: `Preference Match (+${MATCH_WEIGHTS.mutualPreference})` };
   }
   return null;
 }
@@ -72,7 +79,11 @@ function scoreLanguages(
   if (!self.languages || !partner.languages) return { points: 0, note: '' };
   const shared = self.languages.filter((l) => partner.languages!.includes(l));
   if (shared.length === 0) return { points: 0, note: '' };
-  const pts = Math.min(shared.length * MATCH_WEIGHTS.languagePerMatch, MATCH_WEIGHTS.languageMax);
+  
+  // Phase 4: Exponential Scaling for Languages (Accuracy vs Speed)
+  // 1=1x, 2=3x, 3=7x
+  const multiplier = Math.pow(2, shared.length) - 1;
+  const pts = multiplier * MATCH_WEIGHTS.languagePerMatch;
   return { points: pts, note: `Shared Languages (${shared.join(', ')}) (+${pts})` };
 }
 
@@ -108,7 +119,11 @@ function scoreInterests(
   if (!self.interest_tags || !partner.interest_tags) return { points: 0, note: '' };
   const shared = self.interest_tags.filter((i) => partner.interest_tags!.includes(i));
   if (shared.length === 0) return { points: 0, note: '' };
-  const pts = Math.min(shared.length * MATCH_WEIGHTS.interestPerMatch, MATCH_WEIGHTS.interestMax);
+  
+  // Phase 4: Exponential Scaling for Interests (Accuracy vs Speed)
+  // 1=1x, 2=3x, 3=7x, 4=15x
+  const multiplier = Math.pow(2, shared.length) - 1;
+  const pts = multiplier * MATCH_WEIGHTS.interestPerMatch;
   return { points: pts, note: `Common Interests: ${shared.join(', ')} (+${pts})` };
 }
 
@@ -126,7 +141,8 @@ export function calculateCompatibility(
   waitingSeconds: number,
   recentPartners: Set<string>,
   reportedIds: Set<string>,
-  endedMatchesMap?: Map<string, string>
+  endedMatchesMap?: Map<string, string>,
+  queueDepth: number = 0
 ): ScoreResult | null {
   if (partner.status === 'ended') return null;
   if (reportedIds.has(partner.id)) return null;
@@ -156,8 +172,8 @@ export function calculateCompatibility(
     return null;
   }
 
-  const phase = getRelaxationPhase(waitingSeconds);
-  const threshold = getMinScoreThreshold(phase);
+  const phase = getRelaxationPhase(waitingSeconds, queueDepth);
+  const threshold = getMinScoreThreshold(phase, queueDepth);
 
   // Check rematch cooldown logic
   const isPreviousPartner = partner.id === self.last_partner;
@@ -282,9 +298,10 @@ export function calculateCompatibility(
 
 export function rankCandidates(
   scores: Array<ScoreResult & { sessionId: string }>,
-  waitingSeconds: number
+  waitingSeconds: number,
+  queueDepth: number = 0
 ): Array<ScoreResult & { sessionId: string }> {
-  const phase = getRelaxationPhase(waitingSeconds);
+  const phase = getRelaxationPhase(waitingSeconds, queueDepth);
   const filtered =
     phase === 'random' ? scores : scores.filter((s) => s.passesThreshold);
 

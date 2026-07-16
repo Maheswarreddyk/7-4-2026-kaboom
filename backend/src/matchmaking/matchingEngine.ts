@@ -546,7 +546,8 @@ export async function runGlobalMatchCycle(supabase: SupabaseClient): Promise<voi
           waitingSecondsA,
           recentPartners,
           reportedIds,
-          endedMatchesMap
+          endedMatchesMap,
+          activeWaiting.length // Phase 4: Pass Queue Depth for Dynamic Thresholds
         );
 
         if (score) {
@@ -554,7 +555,7 @@ export async function runGlobalMatchCycle(supabase: SupabaseClient): Promise<voi
         }
       }
 
-      let ranked = rankCandidates(scoredCandidates, waitingSecondsA);
+      let ranked = rankCandidates(scoredCandidates, waitingSecondsA, activeWaiting.length);
 
       if (ranked.length === 0 && scoredCandidates.length > 0 && waitingSecondsA >= 25) {
         // Relax: fall back to best compatibility score if waiting > 25 seconds

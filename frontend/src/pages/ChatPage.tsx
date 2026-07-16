@@ -259,7 +259,7 @@ export function ChatPage() {
           if (prev === null || prev <= 1) {
             if (partnerLeftTimerRef.current) clearInterval(partnerLeftTimerRef.current);
             partnerLeftTimerRef.current = null;
-            handleNext();
+            lm.skip();
             return null;
           }
           return prev - 1;

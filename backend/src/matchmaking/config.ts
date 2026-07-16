@@ -75,22 +75,37 @@ export type RelaxationPhase =
   | 'allow_previous'
   | 'random';
 
-export function getRelaxationPhase(waitingSeconds: number): RelaxationPhase {
-  if (waitingSeconds <= RELAXATION_THRESHOLDS.strict) return 'strict';
-  if (waitingSeconds <= RELAXATION_THRESHOLDS.relaxInterests) return 'relax_interests';
-  if (waitingSeconds <= RELAXATION_THRESHOLDS.relaxLanguage) return 'relax_language';
-  if (waitingSeconds <= RELAXATION_THRESHOLDS.relaxLocation) return 'relax_location';
-  if (waitingSeconds <= RELAXATION_THRESHOLDS.allowPrevious) return 'allow_previous';
+export function getRelaxationPhase(waitingSeconds: number, queueDepth: number = 0): RelaxationPhase {
+  // Phase 4: Dynamic Queue Thresholds
+  // If queue is highly populated, artificially reduce waiting time to keep filters strict longer.
+  // If queue is empty, artificially increase waiting time to relax filters faster.
+  let effectiveSeconds = waitingSeconds;
+  if (queueDepth >= 10) {
+    effectiveSeconds = waitingSeconds * 0.5;
+  } else if (queueDepth <= 2) {
+    effectiveSeconds = waitingSeconds * 1.5;
+  }
+
+  if (effectiveSeconds <= RELAXATION_THRESHOLDS.strict) return 'strict';
+  if (effectiveSeconds <= RELAXATION_THRESHOLDS.relaxInterests) return 'relax_interests';
+  if (effectiveSeconds <= RELAXATION_THRESHOLDS.relaxLanguage) return 'relax_language';
+  if (effectiveSeconds <= RELAXATION_THRESHOLDS.relaxLocation) return 'relax_location';
+  if (effectiveSeconds <= RELAXATION_THRESHOLDS.allowPrevious) return 'allow_previous';
   return 'random';
 }
 
-export function getMinScoreThreshold(phase: RelaxationPhase): number {
+export function getMinScoreThreshold(phase: RelaxationPhase, queueDepth: number = 0): number {
+  // Phase 4: Dynamic Base Thresholds
+  let modifier = 0;
+  if (queueDepth >= 10) modifier = 20; // Stricter if highly populated
+  else if (queueDepth <= 2) modifier = -20; // Looser if unpopulated
+
   switch (phase) {
-    case 'strict':          return 140;
-    case 'relax_interests': return 110;
-    case 'relax_language':  return 80;
-    case 'relax_location':  return 50;
-    case 'allow_previous':  return 30;
+    case 'strict':          return 140 + modifier;
+    case 'relax_interests': return 110 + modifier;
+    case 'relax_language':  return 80 + modifier;
+    case 'relax_location':  return 50 + modifier;
+    case 'allow_previous':  return 30 + modifier;
     case 'random':          return Number.NEGATIVE_INFINITY;
   }
 }

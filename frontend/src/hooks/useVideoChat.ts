@@ -105,6 +105,7 @@ export function useVideoChat(
   const startReconnectCountdownRef = useRef<any>(null);
   const startChatRef = useRef<any>(null);
   const updateSessionLifecycleStateRef = useRef<any>(null);
+  const handleNextRef = useRef<() => Promise<void>>(async () => {});
 
   useEffect(() => {
     onReactionRef.current = onReaction;
@@ -173,7 +174,7 @@ export function useVideoChat(
 
   // V24 Lifecycle Manager Sync
   useEffect(() => {
-    const handleLMState = ({ state }: any) => {
+    const handleLMState = ({ state, metadata }: any) => {
       let mappedState: SessionStatus = 'IDLE';
       switch (state) {
         case 'HOME': mappedState = 'IDLE'; break;
@@ -183,7 +184,12 @@ export function useVideoChat(
         case 'NEGOTIATING': mappedState = 'NEGOTIATING'; break;
         case 'MEDIA_SETUP': mappedState = 'ICE_CONNECTING'; break;
         case 'CONNECTED': mappedState = 'CONNECTED'; break;
-        case 'TEARDOWN': mappedState = 'PARTNER_LEFT'; break;
+        case 'TEARDOWN': 
+          mappedState = metadata?.reason === 'local_skip' ? 'REQUEUEING' : 'PARTNER_LEFT';
+          if (metadata?.reason === 'local_skip') {
+             void handleNextRef.current();
+          }
+          break;
         case 'ENDED': mappedState = 'ENDED'; break;
       }
       
@@ -245,6 +251,7 @@ export function useVideoChat(
 
   const executePartnerLeftTeardown = useCallback((msg = 'Partner left. Finding someone new...') => {
     setSignalingState('PARTNER_LEFT');
+    updateChatState({ partnerSkipPending: false }); // V24 clear banner
     webrtcManager.resetConnection();
     lastProcessedOfferSdpRef.current = null;
     lastProcessedAnswerSdpRef.current = null;
@@ -1176,6 +1183,10 @@ export function useVideoChat(
       });
     }
   }, [updateChatState, clearSignalingRetryTimers, setSignalingState, showToast, triggerAutoRejoin]);
+
+  useEffect(() => {
+    handleNextRef.current = handleNext;
+  }, [handleNext]);
 
   const toggleMute = useCallback(() => {
     setChatState((prev) => {
