@@ -22,6 +22,7 @@ import {
 } from './reservationEngine.js';
 import { logEngine, logToDb } from './logger.js';
 import { AnalyticsLogger } from '../analytics/logger.js';
+import { AppError } from '../middleware/errorHandler.js';
 
 // ============================================================
 // Concurrency Mutex Configuration
@@ -758,7 +759,7 @@ export async function runMatchCycle(
       reason: 'Invalid session',
       durationMs: Date.now() - cycleStart,
     });
-    throw new Error('Invalid session');
+    throw new AppError(401, 'Invalid session');
   }
 
   // 1. Join queue (idempotent)

@@ -3,7 +3,7 @@ import { getIceServers } from '../config/index.js';
 import { broadcastToSession } from './broadcast.js';
 import { leaveQueueEntry, joinQueueEntry, markUserReady, runMatchCycle, runGlobalMatchCycle, invalidateMatchmakerCache, transitionSessionStatus } from '../matchmaking/matchingEngine.js';
 import { AnalyticsLogger } from '../analytics/logger.js';
-
+import { AppError } from '../middleware/errorHandler.js';
 export type MatchEndReason = 'next' | 'leave' | 'disconnect' | 'report' | 'client_aborted_match';
 
 import { acquireGlobalLock, releaseGlobalLock } from './lockService.js';
@@ -107,7 +107,7 @@ export async function joinQueue(sessionId: string, sessionToken: string) {
 
 export async function getMatchStatus(sessionId: string, sessionToken: string) {
   const session = await validateSession(sessionId, sessionToken);
-  if (!session) throw new Error('Invalid session');
+  if (!session) throw new AppError(401, 'Invalid session');
 
   const match = await findActiveMatch(sessionId);
   if (match) {

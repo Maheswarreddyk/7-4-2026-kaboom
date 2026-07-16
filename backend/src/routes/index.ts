@@ -19,6 +19,7 @@ import { matchmakerMetrics } from '../matchmaking/matchingEngine.js';
 import { broadcastToSession } from '../services/broadcast.js';
 import { validateSession } from '../services/matchService.js';
 import { requireBackendReady } from '../middleware/readiness.js';
+import { AppError } from '../middleware/errorHandler.js';
 
 const router = Router();
 
@@ -54,7 +55,7 @@ router.post('/session/heartbeat', async (req, res, next) => {
       .eq('session_token', sessionToken)
       .single();
       
-    if (fetchErr) throw fetchErr;
+    if (fetchErr) throw new AppError(401, 'Invalid session');
 
     // V9 State Synchronization Guardrail
     // If frontend thinks it is IDLE or SEARCHING, but DB thinks it is matched, we have a desync.
