@@ -6,7 +6,8 @@
   "workspaces": [
     "frontend",
     "backend",
-    "config"
+    "config",
+    "simulator"
   ],
   "scripts": {
     "dev": "vercel dev",
@@ -14,7 +15,9 @@
     "build": "npm run build -w config && npm run build -w indiatv-frontend && node scripts/copy-build.js && npm run build --prefix backend",
     "start": "node backend/dist/index.js",
     "preview": "npm run preview -w indiatv-frontend",
-    "typecheck": "npm run typecheck -w indiatv-frontend"
+    "typecheck": "npm run typecheck -w indiatv-frontend",
+    "certify": "cd simulator && npx tsx src/index.ts",
+    "certify:full": "concurrently --kill-others \"npm run dev -w indiatv-backend\" \"npm run dev -w indiatv-frontend\" \"node -e \\\"setTimeout(() => require('child_process').execSync('npx tsx simulator/src/index.ts --users=100', {stdio:'inherit', cwd: process.cwd()}), 15000)\\\"\""
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.49.1",
@@ -32,5 +35,17 @@
   },
   "engines": {
     "node": ">=18.0.0"
-  }
+  },
+  "main": "index.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Maheswarreddyk/7-4-2026-kaboom.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Maheswarreddyk/7-4-2026-kaboom/issues"
+  },
+  "homepage": "https://github.com/Maheswarreddyk/7-4-2026-kaboom#readme"
 }

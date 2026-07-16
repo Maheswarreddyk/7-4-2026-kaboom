@@ -302,9 +302,8 @@ export function ChatPage() {
     return () => {
       console.log('[ChatPage] Component unmounting — cleaning up WebRTC and session tracks...');
       stopChat().catch((e) => console.warn('[ChatPage] Unmount stopChat failed:', e));
-      endSession().catch((e) => console.warn('[ChatPage] Unmount endSession failed:', e));
     };
-  }, [stopChat, endSession]);
+  }, [stopChat]);
 
 
   const isConnected = lifecycleState === 'CONNECTED';
