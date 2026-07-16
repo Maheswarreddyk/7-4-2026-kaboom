@@ -22,9 +22,11 @@ import {
   sendReconnectPing,
   ensureMatchChannelConnected,
   leaveMatchChannel,
+  sendAbortMatch,
 } from '../services/realtime.js';
 import { webrtcManager } from '../webrtc/index.js';
 import type { ChatState, ConnectionStatus, SessionStatus } from '../types/index.js';
+import { LifecycleManager } from '../services/LifecycleManager.js';
 import { environment } from 'config';
 import { safeLocalStorage } from '../utils/index.js';
 import { useAudioUX } from './useAudioUX.js';
@@ -45,21 +47,6 @@ const initialChatState: ChatState = {
   reconnectCountdown: null,
 };
 
-const VALID_TRANSITIONS: Record<SessionStatus, SessionStatus[]> = {
-  IDLE: ['REQUESTING_MEDIA', 'CONNECTING_REALTIME', 'SEARCHING', 'MATCH_FOUND'],
-  REQUESTING_MEDIA: ['MEDIA_READY', 'IDLE'],
-  MEDIA_READY: ['CONNECTING_REALTIME', 'IDLE'],
-  CONNECTING_REALTIME: ['SEARCHING', 'IDLE', 'ENDED', 'MATCH_FOUND'],
-  SEARCHING: ['MATCH_FOUND', 'IDLE', 'REQUEUEING', 'ENDED', 'SEARCHING'],
-  MATCH_FOUND: ['READY', 'PARTNER_LEFT', 'REQUEUEING', 'ENDED', 'SEARCHING'],
-  READY: ['NEGOTIATING', 'ICE_CONNECTING', 'CONNECTED', 'PARTNER_LEFT', 'REQUEUEING', 'ENDED'],
-  NEGOTIATING: ['ICE_CONNECTING', 'CONNECTED', 'PARTNER_LEFT', 'REQUEUEING', 'ENDED'],
-  ICE_CONNECTING: ['CONNECTED', 'PARTNER_LEFT', 'REQUEUEING', 'ENDED'],
-  CONNECTED: ['PARTNER_LEFT', 'REQUEUEING', 'ENDED'],
-  PARTNER_LEFT: ['REQUEUEING', 'ENDED'],
-  REQUEUEING: ['SEARCHING', 'MATCH_FOUND', 'ENDED'],
-  ENDED: ['IDLE', 'SEARCHING', 'CONNECTING_REALTIME', 'REQUESTING_MEDIA'],
-};
 
 export function useVideoChat(
   sessionId: string | null,
@@ -164,64 +151,96 @@ export function useVideoChat(
   }, [showToast, clearWebRTCTimeout]);
 
   const setSignalingState = useCallback((state: SessionStatus) => {
-    const current = signalingStateRef.current;
-    if (current === state) return;
-
-    // Validate state transition against FSM rules
-    const allowed = VALID_TRANSITIONS[current];
-    if (allowed && !allowed.includes(state)) {
-      console.warn(`[FSM GATES] Rejected invalid state transition attempt: ${current} -> ${state}`);
-      return;
+    const lm = LifecycleManager.getInstance();
+    switch (state) {
+      case 'IDLE': lm.goHome(); break;
+      case 'REQUESTING_MEDIA': 
+      case 'MEDIA_READY': 
+      case 'CONNECTING_REALTIME': 
+      case 'SEARCHING': 
+      case 'REQUEUEING': lm.joinQueue(); break;
+      case 'MATCH_FOUND':
+        // Handle in handleMatched explicitly.
+        break;
+      case 'READY': 
+      case 'NEGOTIATING': lm.onNegotiating(); break;
+      case 'ICE_CONNECTING': lm.onMediaSetup(); break;
+      case 'CONNECTED': lm.onConnected(); break;
+      case 'PARTNER_LEFT': lm.onPartnerLeft(); break;
+      case 'ENDED': lm.goHome(); break;
     }
+  }, []);
 
-    // V6.15: Transition Logger
-    const logTime = new Date().toLocaleTimeString();
-    const entry = `${logTime} ${current} -> ${state}`;
-    transitionLogRef.current.push(entry);
-    if (environment.nodeEnv === 'development') {
-      console.log(`%c[FSM LOG] ${entry}`, 'color: #f59e0b; font-weight: bold;');
-    }
-
-    signalingStateRef.current = state;
-    setChatState((prev) => ({ ...prev, status: state }));
-
-    // Auto-clear timeout on stable or ended states
-    if (state === 'CONNECTED' || state === 'IDLE' || state === 'ENDED' || state === 'PARTNER_LEFT' || state === 'REQUEUEING') {
-      clearWebRTCTimeout();
-
-      // V6.15: Clear reconnect countdown on stable connection or exit
-      setChatState((prev) => ({ ...prev, reconnectCountdown: null }));
-      if (reconnectIntervalRef.current) {
-        clearInterval(reconnectIntervalRef.current);
-        reconnectIntervalRef.current = null;
+  // V24 Lifecycle Manager Sync
+  useEffect(() => {
+    const handleLMState = ({ state }: any) => {
+      let mappedState: SessionStatus = 'IDLE';
+      switch (state) {
+        case 'HOME': mappedState = 'IDLE'; break;
+        case 'CONFIGURING': mappedState = 'IDLE'; break;
+        case 'QUEUEING': mappedState = 'SEARCHING'; break;
+        case 'MATCH_FOUND': mappedState = 'MATCH_FOUND'; break;
+        case 'NEGOTIATING': mappedState = 'NEGOTIATING'; break;
+        case 'MEDIA_SETUP': mappedState = 'ICE_CONNECTING'; break;
+        case 'CONNECTED': mappedState = 'CONNECTED'; break;
+        case 'TEARDOWN': mappedState = 'PARTNER_LEFT'; break;
+        case 'ENDED': mappedState = 'ENDED'; break;
       }
-    }
+      
+      const current = signalingStateRef.current;
+      if (current === mappedState) return;
 
-    // Session Lifecycle Manager updates
-    let lifecycleState: 'CONNECTED' | 'QUEUE' | 'IDLE' | 'LEAVING' | 'DESTROYED' = 'IDLE';
-    if (state === 'CONNECTED') {
-      lifecycleState = 'CONNECTED';
-      // V20 Certification: Audio strictly bound to FSM
-      playConnected(matchIdRef.current || undefined);
-    } else if ([
-      'REQUESTING_MEDIA', 'MEDIA_READY', 'CONNECTING_REALTIME', 
-      'SEARCHING', 'REQUEUEING', 'MATCH_FOUND', 'READY', 'NEGOTIATING', 'ICE_CONNECTING'
-    ].includes(state)) {
-      lifecycleState = 'QUEUE';
-      // V20 Certification: Audio strictly bound to FSM
-      if (state === 'SEARCHING' && current !== 'REQUEUEING' && current !== 'CONNECTING_REALTIME') {
-         // It's a fresh queue join, handled via specific action below if needed, wait.
-         // Actually, let's do playQueueJoin when transitioning to CONNECTING_REALTIME from IDLE.
+      const logTime = new Date().toLocaleTimeString();
+      const entry = `${logTime} ${current} -> ${mappedState} (LM: ${state})`;
+      transitionLogRef.current.push(entry);
+      if (environment.nodeEnv === 'development') {
+        console.log(`%c[FSM LOG] ${entry}`, 'color: #f59e0b; font-weight: bold;');
       }
-      if (state === 'CONNECTING_REALTIME' && (current === 'IDLE' || current === 'MEDIA_READY')) {
+
+      signalingStateRef.current = mappedState;
+      setChatState(prev => ({ ...prev, status: mappedState }));
+
+      // Clear timeouts on stable states
+      if (['CONNECTED', 'IDLE', 'ENDED', 'PARTNER_LEFT', 'REQUEUEING'].includes(mappedState)) {
+        clearWebRTCTimeout();
+        setChatState(prev => ({ ...prev, reconnectCountdown: null }));
+        if (reconnectIntervalRef.current) {
+          clearInterval(reconnectIntervalRef.current);
+          reconnectIntervalRef.current = null;
+        }
+      }
+
+      let lifecycleState: 'CONNECTED' | 'QUEUE' | 'IDLE' | 'LEAVING' | 'DESTROYED' = 'IDLE';
+      if (mappedState === 'CONNECTED') {
+        lifecycleState = 'CONNECTED';
+        playConnected(matchIdRef.current || undefined);
+      } else if (['SEARCHING', 'MATCH_FOUND', 'NEGOTIATING', 'ICE_CONNECTING'].includes(mappedState)) {
+        lifecycleState = 'QUEUE';
+      } else if (mappedState === 'PARTNER_LEFT' || mappedState === 'ENDED') {
+        lifecycleState = 'LEAVING';
+      } else {
+        lifecycleState = 'IDLE';
+      }
+      
+      // Removed unused CONNECTING_REALTIME check that was causing TS errors
+      if (mappedState === 'SEARCHING' && current !== 'REQUEUEING' && current !== 'SEARCHING') {
         playQueueJoin('queue-session');
       }
-    } else if (state === 'ENDED' || state === 'PARTNER_LEFT') {
-      lifecycleState = 'LEAVING';
-    } else {
-      lifecycleState = 'IDLE';
-    }
-    updateSessionLifecycleStateRef.current(lifecycleState, matchIdRef.current, partnerSessionIdRef.current);
+      
+      updateSessionLifecycleStateRef.current(lifecycleState, matchIdRef.current, partnerSessionIdRef.current);
+    };
+
+    const lm = LifecycleManager.getInstance();
+    lm.on('stateChanged', handleLMState);
+    const handleAbortMatch = ({ matchId }: { matchId: string }) => {
+      console.log(`[useVideoChat] Forwarding abortMatch to backend for match ${matchId}`);
+      sendAbortMatch(matchId);
+    };
+    lm.on('abortMatch', handleAbortMatch);
+    return () => {
+      lm.off('stateChanged', handleLMState);
+      lm.off('abortMatch', handleAbortMatch);
+    };
   }, [clearWebRTCTimeout, playConnected, playQueueJoin]);
 
   const executePartnerLeftTeardown = useCallback((msg = 'Partner left. Finding someone new...') => {
@@ -428,7 +447,7 @@ export function useVideoChat(
 
       partnerSessionIdRef.current = data.partnerSessionId;
       isInitiatorRef.current = data.isInitiator;
-      setSignalingState('MATCH_FOUND');
+      LifecycleManager.getInstance().onMatchFound({ matchId: data.matchId, partnerSessionId: data.partnerSessionId, isInitiator: data.isInitiator });
       startWebRTCTimeout(); // V4.1 Requirement 14
 
       let existingMessages: any[] = [];
@@ -538,7 +557,7 @@ export function useVideoChat(
       matchIdRef.current = data.matchId;
       partnerSessionIdRef.current = data.partnerSessionId;
 
-      setSignalingState('MATCH_FOUND'); // V19 Fix: Unblocks FSM Gate
+      LifecycleManager.getInstance().onMatchFound({ matchId: data.matchId, partnerSessionId: data.partnerSessionId, isInitiator: data.isInitiator }); // V19 Fix: Unblocks FSM Gate
 
       updateChatState({
         connectionStatus: 'connecting',

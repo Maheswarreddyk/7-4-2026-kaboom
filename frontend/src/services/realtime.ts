@@ -442,3 +442,11 @@ export function sendSeenStatus(matchId: string, senderId: string): void {
     payload: { matchId, senderId },
   });
 }
+
+export function sendAbortMatch(matchId: string): void {
+  matchChannel?.send({
+    type: 'broadcast',
+    event: 'abortMatch',
+    payload: { matchId },
+  });
+}

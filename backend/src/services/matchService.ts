@@ -4,7 +4,7 @@ import { broadcastToSession } from './broadcast.js';
 import { leaveQueueEntry, joinQueueEntry, markUserReady, runMatchCycle, runGlobalMatchCycle, invalidateMatchmakerCache, transitionSessionStatus } from '../matchmaking/matchingEngine.js';
 import { AnalyticsLogger } from '../analytics/logger.js';
 
-export type MatchEndReason = 'next' | 'leave' | 'disconnect' | 'report';
+export type MatchEndReason = 'next' | 'leave' | 'disconnect' | 'report' | 'client_aborted_match';
 
 import { acquireGlobalLock, releaseGlobalLock } from './lockService.js';
 
@@ -268,7 +268,8 @@ export async function notifyPartnerLeft(sessionId: string, sessionToken: string,
   invalidateMatchmakerCache();
 
   // Transition leaving session status to READY or ENDED (V4.1 Requirement 8)
-  await transitionSessionStatus(getSupabase(), sessionId, reason === 'leave' ? 'READY' : 'ENDED', 'User disconnected/left call');
+  const nextStatus = (reason === 'leave' || reason === 'client_aborted_match') ? 'READY' : 'ENDED';
+  await transitionSessionStatus(getSupabase(), sessionId, nextStatus, 'User disconnected/left call');
 
   const ended = await endActiveMatch(sessionId, reason, targetMatchId);
 

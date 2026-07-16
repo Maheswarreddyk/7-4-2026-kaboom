@@ -14,6 +14,8 @@ import { MatchRadarPrompt } from '../components/MatchRadarPrompt.js';
 import { useSession } from '../contexts/SessionContext.js';
 import { useToast } from '../contexts/ToastContext.js';
 import { useVideoChat } from '../hooks/useVideoChat.js';
+import { useLifecycle } from '../hooks/useLifecycle.js';
+import { LifecycleManager } from '../services/LifecycleManager.js';
 import { useTabLeader } from '../hooks/useTabLeader.js';
 import { useFloatingLayout } from '../contexts/FloatingLayoutContext.js';
 import { apiService } from '../services/api.js';
@@ -37,6 +39,8 @@ export function ChatPage() {
   const navigate = useNavigate();
   const { session, endSession, startSession, isLoading } = useSession();
   const { showToast } = useToast();
+  const lifecycleState = useLifecycle();
+  const lm = LifecycleManager.getInstance();
   const [showReportModal, setShowReportModal] = useState(false);
   const [showPreferenceModal, setShowPreferenceModal] = useState(false);
   const [showEndCallConfirm, setShowEndCallConfirm] = useState(false);
@@ -159,7 +163,7 @@ export function ChatPage() {
 
   const startSkipCountdown = useCallback(() => {
     if (chatState.status !== 'CONNECTED') {
-      handleNextRef.current();
+      lm.skip();
       return;
     }
 
@@ -180,7 +184,7 @@ export function ChatPage() {
           skipTimerRef.current = null;
         }
         setIsSkipPending(false);
-        handleNextRef.current();
+        lm.skip();
       }
     }, 1000);
   }, [chatState.status, broadcastSkipPending]);
@@ -200,14 +204,14 @@ export function ChatPage() {
       skipTimerRef.current = null;
     }
     setIsSkipPending(false);
-    handleNextRef.current();
+    lm.skip();
   }, []);
 
   const triggerSkipConfirmation = useCallback(() => {
     if (skipTimerRef.current) return; // Prevent spam clicks restarting the timer
     
     if (chatState.status !== 'CONNECTED') {
-      handleNextRef.current();
+      lm.skip();
       return;
     }
     // Skip the confirmation popup completely and start the countdown
@@ -302,16 +306,9 @@ export function ChatPage() {
     };
   }, [stopChat, endSession]);
 
-  const [remoteVideoPlaying, setRemoteVideoPlaying] = useState(false);
 
-  useEffect(() => {
-    if (chatState.status !== 'CONNECTED' && chatState.status !== 'ICE_CONNECTING') {
-      setRemoteVideoPlaying(false);
-    }
-  }, [chatState.status]);
-
-  const isConnected = chatState.status === 'CONNECTED';
-  const isSearching = chatState.status !== 'IDLE' && chatState.status !== 'ENDED' && (!isConnected || !remoteVideoPlaying);
+  const isConnected = lifecycleState === 'CONNECTED';
+  const isSearching = ['QUEUEING', 'MATCH_FOUND', 'NEGOTIATING', 'MEDIA_SETUP'].includes(lifecycleState);
 
   // Central Responsive Layout Manager hooks
   const { 
@@ -1086,7 +1083,7 @@ export function ChatPage() {
                     muted={isPlacementsSwapped}
                     fullscreen={videoLayout === 'split' || isMobile || chatState.isFullscreen}
                     onAspectRatioChange={isPlacementsSwapped ? handleLocalAspectRatioChange : handleRemoteAspectRatioChange}
-                    onPlaying={!isPlacementsSwapped ? () => setRemoteVideoPlaying(true) : undefined}
+                    
                     placeholder={isSearching ? 'Looking for a partner...' : 'Partner video will appear here'}
                     frozen={isPlacementsSwapped ? isLocalFrozen : isRemoteFrozen}
                   />
@@ -1108,7 +1105,7 @@ export function ChatPage() {
                     muted={!isPlacementsSwapped}
                     mirrored={!isPlacementsSwapped}
                     onAspectRatioChange={isPlacementsSwapped ? handleRemoteAspectRatioChange : handleLocalAspectRatioChange}
-                    onPlaying={isPlacementsSwapped ? () => setRemoteVideoPlaying(true) : undefined}
+                    
                     className="w-full h-full pointer-events-none"
                     fullscreen={isSearching || isPlacementsSwapped || videoLayout === 'split'}
                     label={
@@ -1146,7 +1143,7 @@ export function ChatPage() {
                   muted={isPlacementsSwapped}
                   fullscreen={videoLayout === 'split' || isMobile || chatState.isFullscreen}
                   onAspectRatioChange={isPlacementsSwapped ? handleLocalAspectRatioChange : handleRemoteAspectRatioChange}
-                  onPlaying={!isPlacementsSwapped ? () => setRemoteVideoPlaying(true) : undefined}
+                  
                   placeholder={isSearching ? 'Looking for a partner...' : 'Partner video will appear here'}
                   frozen={isPlacementsSwapped ? isLocalFrozen : isRemoteFrozen}
                 />
@@ -1168,7 +1165,7 @@ export function ChatPage() {
                   muted={!isPlacementsSwapped}
                   mirrored={!isPlacementsSwapped}
                   onAspectRatioChange={isPlacementsSwapped ? handleRemoteAspectRatioChange : handleLocalAspectRatioChange}
-                  onPlaying={isPlacementsSwapped ? () => setRemoteVideoPlaying(true) : undefined}
+                  
                   className="w-full h-full pointer-events-none"
                   fullscreen={isSearching || isPlacementsSwapped || videoLayout === 'split'}
                   label={

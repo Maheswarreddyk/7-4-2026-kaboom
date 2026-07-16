@@ -44,7 +44,7 @@ export async function joinQueueEntry(
     .from('waiting_queue')
     .select('id, joined_at')
     .eq('session_id', sessionId)
-    .eq('status', 'waiting')
+    .in('status', ['waiting', 'matched'])
     .maybeSingle();
 
   if (existingErr) throw existingErr;
@@ -71,10 +71,10 @@ export async function joinQueueEntry(
       (Date.now() - new Date(queueEnteredAt).getTime()) / 1000
     );
 
-    // Update last_seen heartbeat on existing entry
+    // Update last_seen heartbeat and revert status to waiting on existing entry
     await supabase
       .from('waiting_queue')
-      .update({ last_seen: now })
+      .update({ status: 'waiting', last_seen: now })
       .eq('id', existing.id);
 
     logEngine({

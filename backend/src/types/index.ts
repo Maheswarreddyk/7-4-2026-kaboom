@@ -1,6 +1,6 @@
 export type SessionStatus = 'CREATED' | 'READY' | 'SEARCHING' | 'RESERVED' | 'MATCHED' | 'SIGNALING' | 'CONNECTED' | 'PARTNER_LEFT' | 'REQUEUEING' | 'ENDED' | 'active' | 'waiting' | 'matched' | 'ended';
 export type QueueStatus = 'waiting' | 'matched' | 'left' | 'expired';
-export type MatchEndReason = 'next' | 'leave' | 'disconnect' | 'report' | 'timeout' | 'error';
+export type MatchEndReason = 'next' | 'leave' | 'disconnect' | 'report' | 'timeout' | 'error' | 'client_aborted_match';
 export type ReportReason = 'spam' | 'nudity' | 'abuse' | 'harassment' | 'other';
 export type ConnectionEvent =
   | 'session_start'
@@ -13,7 +13,8 @@ export type ConnectionEvent =
   | 'reconnect'
   | 'next'
   | 'report'
-  | 'error';
+  | 'error'
+  | 'client_aborted_match';
 
 export interface VisitorSession {
   id: string;
