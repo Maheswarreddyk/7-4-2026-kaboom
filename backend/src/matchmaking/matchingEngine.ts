@@ -77,15 +77,15 @@ const VALID_TRANSITIONS: Record<string, string[]> = {
 };
 
 const VALID_FROM_STATES: Record<string, string[]> = {
-  'READY': ['CREATED', 'SEARCHING', 'ENDED'],
-  'SEARCHING': ['CREATED', 'READY', 'RESERVED', 'REQUEUEING', 'ENDED'],
+  'READY': ['CREATED', 'SEARCHING', 'ENDED', 'IDLE', 'MATCHED', 'SIGNALING', 'CONNECTED', 'PARTNER_LEFT', 'REQUEUEING'],
+  'SEARCHING': ['CREATED', 'READY', 'RESERVED', 'REQUEUEING', 'ENDED', 'IDLE', 'MATCHED', 'SIGNALING', 'CONNECTED', 'PARTNER_LEFT'],
   'RESERVED': ['SEARCHING'],
   'MATCHED': ['RESERVED'],
   'SIGNALING': ['MATCHED'],
   'CONNECTED': ['SIGNALING'],
-  'PARTNER_LEFT': ['CONNECTED'],
-  'REQUEUEING': ['MATCHED', 'SIGNALING', 'CONNECTED', 'PARTNER_LEFT'],
-  'ENDED': ['CREATED', 'READY', 'SEARCHING', 'RESERVED', 'MATCHED', 'SIGNALING', 'CONNECTED', 'PARTNER_LEFT', 'REQUEUEING']
+  'PARTNER_LEFT': ['MATCHED', 'SIGNALING', 'CONNECTED'],
+  'REQUEUEING': ['MATCHED', 'SIGNALING', 'CONNECTED', 'PARTNER_LEFT', 'SEARCHING'],
+  'ENDED': ['CREATED', 'READY', 'SEARCHING', 'RESERVED', 'MATCHED', 'SIGNALING', 'CONNECTED', 'PARTNER_LEFT', 'REQUEUEING', 'IDLE']
 };
 
 export async function transitionSessionStatus(
@@ -279,7 +279,7 @@ export async function runGlobalHealCycle(supabase: SupabaseClient): Promise<void
         } else if (profile.status === 'CONNECTED' || profile.status === 'MATCHED' || profile.status === 'matched') {
           console.log(`[Self-Healing] Session ${entry.session_id} is active in match (${profile.status}). Marking queue matched...`);
           await supabase.from('waiting_queue').update({ status: 'matched' }).eq('id', entry.id);
-        } else if (profile.status !== 'SEARCHING') {
+        } else if (profile.status !== 'SEARCHING' && profile.status !== 'RESERVED') {
           // If session is active and recently updated, sync its status to SEARCHING
           if (profile.last_activity >= heartbeatThreshold) {
             console.log(`[Self-Healing] Session ${entry.session_id} has waiting queue but status is ${profile.status}. Syncing to SEARCHING...`);
@@ -288,7 +288,11 @@ export async function runGlobalHealCycle(supabase: SupabaseClient): Promise<void
             // Expire queue entry because heartbeat is dead
             console.log(`[Self-Healing] Stale heartbeat for queue entry ${entry.id}. Expiring queue entry...`);
             await supabase.from('waiting_queue').update({ status: 'expired' }).eq('id', entry.id);
-            await transitionSessionStatus(supabase, entry.session_id, 'READY', 'Self-healing heartbeat expired');
+            // DEFECT-001 Fix: Only attempt READY transition if session is not already in a terminal state.
+            // Transitioning an ENDED session to READY generates a false-positive FSM warning.
+            if (profile.status !== 'ENDED' && profile.status !== 'ended') {
+              await transitionSessionStatus(supabase, entry.session_id, 'READY', 'Self-healing heartbeat expired');
+            }
           }
         }
       }

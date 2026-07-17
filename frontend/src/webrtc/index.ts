@@ -128,6 +128,11 @@ export class WebRTCManager {
       iceServers: this.iceServers,
     });
 
+    // Phase 3: Expose for automated WebRTC certification
+    if (typeof window !== 'undefined') {
+      (window as any).__kaboom_pc = this.peerConnection;
+    }
+
     if (this.localStream) {
       this.localStream.getTracks().forEach((track) => {
         this.peerConnection!.addTrack(track, this.localStream!);

@@ -29,7 +29,7 @@ export const sessionRepository = {
         browser: data.browser ?? null,
         device: data.device ?? null,
         platform: data.platform ?? null,
-        status: 'active',
+        status: 'IDLE',
       })
       .select()
       .single();
@@ -73,7 +73,7 @@ export const sessionRepository = {
     const { error } = await getSupabase()
       .from('visitor_sessions')
       .update({
-        status: 'ended',
+        status: 'ENDED',
         ended_at: new Date().toISOString(),
       })
       .eq('id', id);
@@ -82,10 +82,12 @@ export const sessionRepository = {
   },
 
   async countActive(): Promise<number> {
+    // DEFECT-002 Fix: legacy query used lowercase 'active' which no longer exists.
+    // Count sessions that are in any live (non-terminal) state instead.
     const { count, error } = await getSupabase()
       .from('visitor_sessions')
       .select('*', { count: 'exact', head: true })
-      .eq('status', 'active');
+      .in('status', ['IDLE', 'READY', 'SEARCHING', 'RESERVED', 'MATCHED', 'SIGNALING', 'CONNECTED', 'PARTNER_LEFT', 'REQUEUEING']);
 
     if (error) handleSupabaseError(error, 'Failed to count active sessions');
     return count ?? 0;
