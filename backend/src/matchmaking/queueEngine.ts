@@ -156,9 +156,15 @@ export async function leaveQueueEntry(supabase: SupabaseClient, sessionId: strin
     .eq('session_id', sessionId)
     .in('status', ['waiting', 'matched']);
 
+  // BE-002: Enforce FSM validation
+  const success = await transitionSessionStatus(supabase, sessionId, 'READY', 'leave_queue', 'SEARCHING');
+  if (!success) {
+    throw new Error('Illegal state transition: User must be SEARCHING to leave queue');
+  }
+
   await supabase
     .from('visitor_sessions')
-    .update({ status: 'READY', queue_entered_at: null })
+    .update({ queue_entered_at: null })
     .eq('id', sessionId);
 
   await logToDb(supabase, sessionId, 'queue_leave', {});

@@ -298,42 +298,10 @@ export async function runGlobalHealCycle(supabase: SupabaseClient): Promise<void
       }
     }
 
-    // --- 3. Reservation exists but match is missing or signaling timed out (V4.1 Requirement 3) ---
-    const reservationCutoff = new Date(Date.now() - RESERVATION_TIMEOUT_MS).toISOString();
-    const { data: activeReservations } = await supabase
-      .from('reservations')
-      .select('id, match_id, user_a, user_b, created_at')
-      .eq('status', 'pending');
-
-    if (activeReservations && activeReservations.length > 0) {
-      for (const resv of activeReservations) {
-        const timedOut = resv.created_at < reservationCutoff;
-        
-        let matchExists = false;
-        if (resv.match_id) {
-          const { data: match } = await supabase
-            .from('matches')
-            .select('id')
-            .eq('id', resv.match_id)
-            .maybeSingle();
-          if (match) matchExists = true;
-        }
-
-        // KS-017: Only rollback if the reservation is actually timed out AND no match exists
-        if (timedOut && !matchExists) {
-          console.log(`[Self-Healing] Reservation ${resv.id} is stale or orphaned (timedOut=${timedOut}, matchExists=${matchExists}). Rolling back...`);
-          await supabase.from('reservations').update({ status: 'rolled_back' }).eq('id', resv.id);
-          
-          // Re-queue both users if they are still active
-          for (const uid of [resv.user_a, resv.user_b]) {
-            const { data: sess } = await supabase.from('visitor_sessions').select('status, last_activity').eq('id', uid).maybeSingle();
-            if (uid && sess && sess.last_activity >= heartbeatThreshold) {
-              await transitionSessionStatus(supabase, uid, 'SEARCHING', 'Reservation rollback recovery');
-              await supabase.from('waiting_queue').update({ status: 'waiting' }).eq('session_id', uid).eq('status', 'matched');
-            }
-          }
-        }
-      }
+    // --- 3 & 3.5. Execute Distributed Heal Cycle RPC (BE-004 & BE-006) ---
+    const { error: healErr } = await supabase.rpc('matchmaker_heal_cycle');
+    if (healErr) {
+      console.error('[Self-Healing] matchmaker_heal_cycle RPC failed:', healErr.message);
     }
 
     // --- 4. Match exists but peer is disconnected or ended ---
@@ -445,12 +413,6 @@ export async function runGlobalHealCycle(supabase: SupabaseClient): Promise<void
  */
 export async function runGlobalMatchCycle(supabase: SupabaseClient): Promise<void> {
   const start = Date.now();
-
-  // 1. Acquire distributed advisory lock to coordinate matching passes (V4.1 Requirement 16)
-  const { data: lockAcquired, error: lockErr } = await supabase.rpc('try_advisory_lock', { lock_id: MATCHMAKER_LOCK_ID });
-  if (lockErr || !lockAcquired) {
-    return;
-  }
 
   try {
     // 2. Queue healing has been decoupled to runGlobalHealCycle (Phase 4 Perf Optimization)
@@ -740,9 +702,8 @@ export async function runGlobalMatchCycle(supabase: SupabaseClient): Promise<voi
         campus: pB?.campus
       }, `${match.id}_found_${sessionIdB}`);
     }
-  } finally {
-    // 6. Release advisory lock (V4.1 Requirement 16)
-    await supabase.rpc('advisory_unlock', { lock_id: MATCHMAKER_LOCK_ID });
+  } catch (err) {
+    console.error('[Matchmaker] Error during cycle:', err);
   }
 }
 

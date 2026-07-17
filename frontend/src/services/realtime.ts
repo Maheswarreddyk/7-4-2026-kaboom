@@ -40,11 +40,6 @@ export interface RealtimeCallbacks {
   onReconnect?: () => void;
 }
 
-let sessionChannel: RealtimeChannel | null = null;
-let matchChannel: RealtimeChannel | null = null;
-let currentMatchId: string | null = null;
-let isMatchChannelConnected = false;
-
 const API_BASE = environment.apiUrl;
 
 async function apiPost<T>(path: string, body: Record<string, unknown>): Promise<T> {
@@ -72,403 +67,415 @@ async function apiPost<T>(path: string, body: Record<string, unknown>): Promise<
   return response.json();
 }
 
-export function leaveMatchChannel() {
-  const supabase = getSupabaseClient();
-  if (matchChannel && supabase) {
-    supabase.removeChannel(matchChannel);
-    matchChannel = null;
-  }
-  currentMatchId = null;
-  isMatchChannelConnected = false;
-}
+export class RealtimeManager {
+  private sessionChannel: RealtimeChannel | null = null;
+  private matchChannel: RealtimeChannel | null = null;
+  private currentMatchId: string | null = null;
+  private isMatchChannelConnected = false;
+  private isSubscribing = false;
 
-let isSubscribing = false;
-
-export function subscribeToMatchChannel(matchId: string, callbacks: RealtimeCallbacks): Promise<boolean> {
-  if (currentMatchId === matchId && isMatchChannelConnected) {
-    console.log(`[Realtime] Already connected to match ${matchId}. Skipping redundant subscription.`);
-    return Promise.resolve(true);
-  }
-
-  if (isSubscribing) {
-    console.log(`[Realtime] Subscription already in progress. Skipping redundant call for ${matchId}.`);
-    return Promise.resolve(false);
+  leaveMatchChannel() {
+    const supabase = getSupabaseClient();
+    if (this.matchChannel && supabase) {
+      supabase.removeChannel(this.matchChannel);
+      this.matchChannel = null;
+    }
+    this.currentMatchId = null;
+    this.isMatchChannelConnected = false;
   }
 
-  isSubscribing = true;
-  const supabase = getSupabaseClient();
+  subscribeToMatchChannel(matchId: string, callbacks: RealtimeCallbacks): Promise<boolean> {
+    if (this.currentMatchId === matchId && this.isMatchChannelConnected) {
+      console.log(`[Realtime] Already connected to match ${matchId}. Skipping redundant subscription.`);
+      return Promise.resolve(true);
+    }
 
-  leaveMatchChannel();
-  currentMatchId = matchId;
+    if (this.isSubscribing) {
+      console.log(`[Realtime] Subscription already in progress. Skipping redundant call for ${matchId}.`);
+      return Promise.resolve(false);
+    }
 
-  return new Promise<boolean>((resolve) => {
-    const resolveAndUnlock = (success: boolean) => {
-      isSubscribing = false;
-      resolve(success);
-    };
+    this.isSubscribing = true;
+    const supabase = getSupabaseClient();
 
-    if (!supabase) {
-      resolveAndUnlock(false);
+    this.leaveMatchChannel();
+    this.currentMatchId = matchId;
+
+    return new Promise<boolean>((resolve) => {
+      let timeoutFired = false;
+      const resolveAndUnlock = (success: boolean) => {
+        this.isSubscribing = false;
+        resolve(success);
+      };
+
+      if (!supabase) {
+        resolveAndUnlock(false);
+        return;
+      }
+
+      let subscribed = false;
+      const SUBSCRIBE_TIMEOUT_MS = 5_000;
+
+      this.matchChannel = supabase
+        .channel(`match:${matchId}`, { config: { broadcast: { self: false } } })
+        .on('broadcast', { event: 'offer' }, ({ payload }) => {
+          callbacks.onOffer?.({ ...(payload as any), matchId });
+        })
+        .on('broadcast', { event: 'offer_ack' }, ({ payload }) => {
+          callbacks.onOfferAck?.({ ...(payload as any), matchId });
+        })
+        .on('broadcast', { event: 'answer' }, ({ payload }) => {
+          callbacks.onAnswer?.({ ...(payload as any), matchId });
+        })
+        .on('broadcast', { event: 'answer_ack' }, ({ payload }) => {
+          callbacks.onAnswerAck?.({ ...(payload as any), matchId });
+        })
+        .on('broadcast', { event: 'ice_candidate' }, ({ payload }) => {
+          callbacks.onIceCandidate?.({ ...(payload as any), matchId });
+        })
+        .on('broadcast', { event: 'typing' }, ({ payload }) => {
+          callbacks.onPartnerTyping?.(payload as { typing: boolean });
+        })
+        .on('broadcast', { event: 'reaction' }, ({ payload }) => {
+          callbacks.onReaction?.(payload as { emoji: string; matchId: string; senderSessionId: string });
+        })
+        .on('broadcast', { event: 'skip_pending' }, () => {
+          callbacks.onPartnerSkipPending?.();
+        })
+        .on('broadcast', { event: 'skip_cancelled' }, () => {
+          callbacks.onPartnerSkipCancelled?.();
+        })
+        .on('broadcast', { event: 'reconnect' }, () => {
+          callbacks.onPartnerReconnect?.();
+        });
+
+      const subscribeTimeout = setTimeout(() => {
+        if (!subscribed) {
+          timeoutFired = true;
+          console.warn(`[Realtime] Match channel ${matchId} subscribe timeout after ${SUBSCRIBE_TIMEOUT_MS}ms — aborting subscription`);
+          this.leaveMatchChannel(); 
+          resolveAndUnlock(false);
+        }
+      }, SUBSCRIBE_TIMEOUT_MS);
+
+      this.matchChannel?.subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          clearTimeout(subscribeTimeout);
+          // FE-006 fix: explicitly abort if timeout already fired
+          if (timeoutFired) {
+            console.warn(`[Realtime] Match channel ${matchId} subscribed successfully, but timeout already fired. Aborting late subscription.`);
+            this.leaveMatchChannel();
+            return;
+          }
+          subscribed = true;
+          this.isMatchChannelConnected = true;
+          console.log(`[Realtime] Subscribed to match channel: ${matchId}`);
+          resolveAndUnlock(true);
+        }
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+          clearTimeout(subscribeTimeout);
+          this.isMatchChannelConnected = false;
+          console.warn(`[Realtime] Match channel ${matchId} status: ${status} — aborting subscription`);
+          resolveAndUnlock(false);
+        }
+      });
+    });
+  }
+
+  async ensureMatchChannelConnected(matchId: string, callbacks: RealtimeCallbacks): Promise<void> {
+    if (this.isMatchChannelConnected) {
+      return;
+    }
+    console.log('[Realtime] Match channel disconnected. Re-subscribing before proceeding...');
+    await this.subscribeToMatchChannel(matchId, callbacks);
+  }
+
+  sendReaction(emoji: string, matchId: string, senderSessionId: string) {
+    this.matchChannel?.send({
+      type: 'broadcast',
+      event: 'reaction',
+      payload: { emoji, matchId, senderSessionId },
+    });
+  }
+
+  sendSkipPending() {
+    this.matchChannel?.send({
+      type: 'broadcast',
+      event: 'skip_pending',
+      payload: {},
+    });
+  }
+
+  sendSkipCancelled() {
+    this.matchChannel?.send({
+      type: 'broadcast',
+      event: 'skip_cancelled',
+      payload: {},
+    });
+  }
+
+  sendReconnectPing() {
+    this.matchChannel?.send({
+      type: 'broadcast',
+      event: 'reconnect',
+      payload: {},
+    });
+  }
+
+  connectRealtime(
+    sessionId: string,
+    sessionToken: string,
+    callbacks: RealtimeCallbacks
+  ): void {
+    const supabase = getSupabaseClient();
+
+    this.disconnectRealtime();
+
+    this.sessionChannel = supabase
+      .channel(`session:${sessionId}`, { config: { broadcast: { self: false } } })
+      .on('broadcast', { event: 'matched' }, ({ payload }) => {
+        const data = payload as {
+          matchId: string;
+          partnerSessionId: string;
+          isInitiator: boolean;
+          iceServers: IceServerConfig[];
+          partnerProfile?: any;
+          matchReasonMetadata?: any;
+        };
+        void (async () => {
+          const subscribed = await this.subscribeToMatchChannel(data.matchId, callbacks);
+          if (subscribed) {
+            callbacks.onMatched?.(data);
+            await this.markReady(sessionId, sessionToken, data.matchId);
+          } else {
+            callbacks.onError?.({ message: 'Failed to subscribe to match channel.' });
+          }
+        })();
+      })
+      .on('broadcast', { event: 'start_negotiation' }, ({ payload }) => {
+        const data = payload as {
+          matchId: string;
+          partnerSessionId: string;
+          isInitiator: boolean;
+          iceServers: IceServerConfig[];
+        };
+        void (async () => {
+          const subscribed = await this.subscribeToMatchChannel(data.matchId, callbacks);
+          if (subscribed) {
+            callbacks.onStartNegotiation?.(data);
+          }
+        })();
+      })
+      .on('broadcast', { event: 'session_connected' }, ({ payload }) => {
+        callbacks.onSessionConnected?.(payload as { matchId: string });
+      })
+      .on('broadcast', { event: 'partner_left' }, ({ payload }) => {
+        this.leaveMatchChannel();
+        callbacks.onPartnerLeft?.(payload as { reason: string });
+      })
+      .on('broadcast', { event: 'searching' }, ({ payload }) => {
+        callbacks.onSearching?.(payload as { message: string });
+      })
+      .on('broadcast', { event: 'partner_liked' }, ({ payload }) => {
+        callbacks.onPartnerLiked?.(payload as { matchId: string });
+      })
+      .on('broadcast', { event: 'mutual_like' }, ({ payload }) => {
+        callbacks.onMutualLike?.(payload as { matchId: string; partnerSessionId: string });
+      })
+      .on('broadcast', { event: 'new_message' }, ({ payload }) => {
+        callbacks.onNewMessage?.(payload as { matchId: string; senderSessionId: string; message: string; createdAt: string });
+      })
+      .on('broadcast', { event: 'partner_typing' }, ({ payload }) => {
+        callbacks.onPartnerTyping?.(payload as { typing: boolean });
+      })
+      .on('broadcast', { event: 'message_seen' }, ({ payload }) => {
+        callbacks.onMessageSeen?.(payload as { matchId: string; senderId: string });
+      })
+      .subscribe((status) => {
+        console.log(`[Realtime] Session channel status: ${status}`);
+        if (status === 'SUBSCRIBED') {
+          callbacks.onReconnect?.();
+        }
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          console.warn(`[Realtime] Session channel error: ${status}`);
+          callbacks.onError?.({ message: 'Signaling connection lost. Reconnecting...' });
+        }
+      });
+  }
+
+  disconnectRealtime(): void {
+    const supabase = getSupabaseClient();
+    this.leaveMatchChannel();
+
+    if (this.sessionChannel && supabase) {
+      supabase.removeChannel(this.sessionChannel);
+      this.sessionChannel = null;
+    }
+  }
+
+  async joinQueue(sessionId: string, sessionToken: string, callbacks: RealtimeCallbacks) {
+    const result = await apiPost<{ success: boolean; data: Record<string, unknown> }>('/match/join', {
+      sessionId,
+      sessionToken,
+    });
+
+    const data = result.data;
+
+    if (data.status === 'waiting') {
+      callbacks.onWaiting?.({
+        queuePosition: (data.queuePosition as number) ?? 1,
+        message: (data.message as string) ?? 'Waiting for a partner...',
+      });
       return;
     }
 
-    // Phase 1 fix: Track whether we subscribed successfully so the timeout
-    // fallback never fires after a real subscription (prevents premature resolution).
-    let subscribed = false;
-    // Phase 1 fix: 5000ms timeout — was 1500ms. Mobile cellular can take 2–4s to subscribe.
-    // Firing too early caused offers to be sent before the answerer had a channel to receive them.
-    const SUBSCRIBE_TIMEOUT_MS = 5_000;
-
-    matchChannel = supabase
-      .channel(`match:${matchId}`, { config: { broadcast: { self: false } } })
-      .on('broadcast', { event: 'offer' }, ({ payload }) => {
-        callbacks.onOffer?.({ ...(payload as any), matchId });
-      })
-      .on('broadcast', { event: 'offer_ack' }, ({ payload }) => {
-        callbacks.onOfferAck?.({ ...(payload as any), matchId });
-      })
-      .on('broadcast', { event: 'answer' }, ({ payload }) => {
-        callbacks.onAnswer?.({ ...(payload as any), matchId });
-      })
-      .on('broadcast', { event: 'answer_ack' }, ({ payload }) => {
-        callbacks.onAnswerAck?.({ ...(payload as any), matchId });
-      })
-      .on('broadcast', { event: 'ice_candidate' }, ({ payload }) => {
-        callbacks.onIceCandidate?.({ ...(payload as any), matchId });
-      })
-      .on('broadcast', { event: 'typing' }, ({ payload }) => {
-        callbacks.onPartnerTyping?.(payload as { typing: boolean });
-      })
-      .on('broadcast', { event: 'reaction' }, ({ payload }) => {
-        callbacks.onReaction?.(payload as { emoji: string; matchId: string; senderSessionId: string });
-      })
-      .on('broadcast', { event: 'skip_pending' }, () => {
-        callbacks.onPartnerSkipPending?.();
-      })
-      .on('broadcast', { event: 'skip_cancelled' }, () => {
-        callbacks.onPartnerSkipCancelled?.();
-      })
-      .on('broadcast', { event: 'reconnect' }, () => {
-        callbacks.onPartnerReconnect?.();
-      });
-
-    const subscribeTimeout = setTimeout(() => {
-      if (!subscribed) {
-        console.warn(`[Realtime] Match channel ${matchId} subscribe timeout after ${SUBSCRIBE_TIMEOUT_MS}ms — aborting subscription`);
-        leaveMatchChannel(); // KS-013: Ghost Timeout Leak fix
-        resolveAndUnlock(false);
+    if (data.status === 'matched') {
+      const matchId = data.matchId as string;
+      const subscribed = await this.subscribeToMatchChannel(matchId, callbacks);
+      if (subscribed) {
+        callbacks.onMatched?.({
+          matchId,
+          partnerSessionId: data.partnerSessionId as string,
+          isInitiator: data.isInitiator as boolean,
+          iceServers: data.iceServers as IceServerConfig[],
+          partnerProfile: data.partnerProfile,
+          matchReasonMetadata: data.matchReasonMetadata,
+        });
+        await this.markReady(sessionId, sessionToken, matchId);
+      } else {
+        callbacks.onError?.({ message: 'Failed to subscribe to match channel.' });
       }
-    }, SUBSCRIBE_TIMEOUT_MS);
-
-    matchChannel?.subscribe((status) => {
-      if (status === 'SUBSCRIBED') {
-        clearTimeout(subscribeTimeout);
-        subscribed = true;
-        isMatchChannelConnected = true;
-        console.log(`[Realtime] Subscribed to match channel: ${matchId}`);
-        resolveAndUnlock(true);
-      }
-      if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
-        clearTimeout(subscribeTimeout);
-        isMatchChannelConnected = false;
-        console.warn(`[Realtime] Match channel ${matchId} status: ${status} — aborting subscription`);
-        resolveAndUnlock(false);
-      }
-    });
-  });
-}
-
-export async function ensureMatchChannelConnected(matchId: string, callbacks: RealtimeCallbacks): Promise<void> {
-  if (isMatchChannelConnected) {
-    return;
-  }
-  console.log('[Realtime] Match channel disconnected. Re-subscribing before proceeding...');
-  await subscribeToMatchChannel(matchId, callbacks);
-}
-
-export function sendReaction(emoji: string, matchId: string, senderSessionId: string) {
-  matchChannel?.send({
-    type: 'broadcast',
-    event: 'reaction',
-    payload: { emoji, matchId, senderSessionId },
-  });
-}
-
-export function sendSkipPending() {
-  matchChannel?.send({
-    type: 'broadcast',
-    event: 'skip_pending',
-    payload: {},
-  });
-}
-
-export function sendSkipCancelled() {
-  matchChannel?.send({
-    type: 'broadcast',
-    event: 'skip_cancelled',
-    payload: {},
-  });
-}
-
-export function sendReconnectPing() {
-  matchChannel?.send({
-    type: 'broadcast',
-    event: 'reconnect',
-    payload: {},
-  });
-}
-
-export function connectRealtime(
-  sessionId: string,
-  sessionToken: string,
-  callbacks: RealtimeCallbacks
-): void {
-  const supabase = getSupabaseClient();
-
-  disconnectRealtime();
-
-  sessionChannel = supabase
-    .channel(`session:${sessionId}`, { config: { broadcast: { self: false } } })
-    .on('broadcast', { event: 'matched' }, ({ payload }) => {
-      const data = payload as {
-        matchId: string;
-        partnerSessionId: string;
-        isInitiator: boolean;
-        iceServers: IceServerConfig[];
-        partnerProfile?: any;
-        matchReasonMetadata?: any;
-      };
-      void (async () => {
-        const subscribed = await subscribeToMatchChannel(data.matchId, callbacks);
-        if (subscribed) {
-          callbacks.onMatched?.(data);
-          await markReady(sessionId, sessionToken, data.matchId);
-        } else {
-          callbacks.onError?.({ message: 'Failed to subscribe to match channel.' });
-        }
-      })();
-    })
-    .on('broadcast', { event: 'start_negotiation' }, ({ payload }) => {
-      const data = payload as {
-        matchId: string;
-        partnerSessionId: string;
-        isInitiator: boolean;
-        iceServers: IceServerConfig[];
-      };
-      void (async () => {
-        const subscribed = await subscribeToMatchChannel(data.matchId, callbacks);
-        if (subscribed) {
-          callbacks.onStartNegotiation?.(data);
-        }
-      })();
-    })
-    .on('broadcast', { event: 'session_connected' }, ({ payload }) => {
-      callbacks.onSessionConnected?.(payload as { matchId: string });
-    })
-    .on('broadcast', { event: 'partner_left' }, ({ payload }) => {
-      leaveMatchChannel();
-      callbacks.onPartnerLeft?.(payload as { reason: string });
-    })
-    .on('broadcast', { event: 'searching' }, ({ payload }) => {
-      callbacks.onSearching?.(payload as { message: string });
-    })
-    .on('broadcast', { event: 'partner_liked' }, ({ payload }) => {
-      callbacks.onPartnerLiked?.(payload as { matchId: string });
-    })
-    .on('broadcast', { event: 'mutual_like' }, ({ payload }) => {
-      callbacks.onMutualLike?.(payload as { matchId: string; partnerSessionId: string });
-    })
-    .on('broadcast', { event: 'new_message' }, ({ payload }) => {
-      callbacks.onNewMessage?.(payload as { matchId: string; senderSessionId: string; message: string; createdAt: string });
-    })
-    .on('broadcast', { event: 'partner_typing' }, ({ payload }) => {
-      callbacks.onPartnerTyping?.(payload as { typing: boolean });
-    })
-    .on('broadcast', { event: 'message_seen' }, ({ payload }) => {
-      callbacks.onMessageSeen?.(payload as { matchId: string; senderId: string });
-    })
-    .subscribe((status) => {
-      console.log(`[Realtime] Session channel status: ${status}`);
-      if (status === 'SUBSCRIBED') {
-        callbacks.onReconnect?.();
-      }
-      if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-        console.warn(`[Realtime] Session channel error: ${status}`);
-        callbacks.onError?.({ message: 'Signaling connection lost. Reconnecting...' });
-      }
-    });
-}
-
-export function disconnectRealtime(): void {
-  const supabase = getSupabaseClient();
-  leaveMatchChannel();
-
-  if (sessionChannel && supabase) {
-    supabase.removeChannel(sessionChannel);
-    sessionChannel = null;
-  }
-}
-
-export async function joinQueue(sessionId: string, sessionToken: string, callbacks: RealtimeCallbacks) {
-  const result = await apiPost<{ success: boolean; data: Record<string, unknown> }>('/match/join', {
-    sessionId,
-    sessionToken,
-  });
-
-  const data = result.data;
-
-  if (data.status === 'waiting') {
-    callbacks.onWaiting?.({
-      queuePosition: (data.queuePosition as number) ?? 1,
-      message: (data.message as string) ?? 'Waiting for a partner...',
-    });
-    return;
-  }
-
-  if (data.status === 'matched') {
-    const matchId = data.matchId as string;
-    const subscribed = await subscribeToMatchChannel(matchId, callbacks);
-    if (subscribed) {
-      callbacks.onMatched?.({
-        matchId,
-        partnerSessionId: data.partnerSessionId as string,
-        isInitiator: data.isInitiator as boolean,
-        iceServers: data.iceServers as IceServerConfig[],
-        partnerProfile: data.partnerProfile,
-        matchReasonMetadata: data.matchReasonMetadata,
-      });
-      await markReady(sessionId, sessionToken, matchId);
-    } else {
-      callbacks.onError?.({ message: 'Failed to subscribe to match channel.' });
     }
   }
-}
 
-export async function markReady(sessionId: string, sessionToken: string, matchId: string) {
-  await apiPost('/match/ready', { sessionId, sessionToken, matchId });
-}
-
-export async function markMediaConnected(sessionId: string, sessionToken: string, matchId: string) {
-  await apiPost('/match/connected', { sessionId, sessionToken, matchId });
-}
-
-export async function leaveQueue(sessionId: string, sessionToken: string, matchId?: string) {
-  leaveMatchChannel();
-  try {
-    await apiPost('/match/leave', { sessionId, sessionToken, matchId });
-  } catch {}
-}
-
-export async function nextPartner(sessionId: string, sessionToken: string, callbacks: RealtimeCallbacks, matchId?: string) {
-  leaveMatchChannel();
-
-  const result = await apiPost<{ success: boolean; data: Record<string, unknown> }>('/match/next', {
-    sessionId,
-    sessionToken,
-    matchId,
-  });
-
-  const data = result.data;
-
-  if (data.status === 'waiting') {
-    callbacks.onWaiting?.({
-      queuePosition: (data.queuePosition as number) ?? 1,
-      message: 'Finding a new partner...',
-    });
-    return;
+  async markReady(sessionId: string, sessionToken: string, matchId: string) {
+    await apiPost('/match/ready', { sessionId, sessionToken, matchId });
   }
 
-  if (data.status === 'matched') {
-    const matchId = data.matchId as string;
-    const subscribed = await subscribeToMatchChannel(matchId, callbacks);
-    if (subscribed) {
-      callbacks.onMatched?.({
-        matchId,
-        partnerSessionId: data.partnerSessionId as string,
-        isInitiator: data.isInitiator as boolean,
-        iceServers: data.iceServers as IceServerConfig[],
-        partnerProfile: data.partnerProfile,
-        matchReasonMetadata: data.matchReasonMetadata,
+  async markMediaConnected(sessionId: string, sessionToken: string, matchId: string) {
+    await apiPost('/match/connected', { sessionId, sessionToken, matchId });
+  }
+
+  async leaveQueue(sessionId: string, sessionToken: string, matchId?: string) {
+    this.leaveMatchChannel();
+    try {
+      await apiPost('/match/leave', { sessionId, sessionToken, matchId });
+    } catch {}
+  }
+
+  async nextPartner(sessionId: string, sessionToken: string, callbacks: RealtimeCallbacks, matchId?: string) {
+    this.leaveMatchChannel();
+
+    const result = await apiPost<{ success: boolean; data: Record<string, unknown> }>('/match/next', {
+      sessionId,
+      sessionToken,
+      matchId,
+    });
+
+    const data = result.data;
+
+    if (data.status === 'waiting') {
+      callbacks.onWaiting?.({
+        queuePosition: (data.queuePosition as number) ?? 1,
+        message: 'Finding a new partner...',
       });
-      await markReady(sessionId, sessionToken, matchId);
-    } else {
-      callbacks.onError?.({ message: 'Failed to subscribe to match channel.' });
+      return;
+    }
+
+    if (data.status === 'matched') {
+      const matchId = data.matchId as string;
+      const subscribed = await this.subscribeToMatchChannel(matchId, callbacks);
+      if (subscribed) {
+        callbacks.onMatched?.({
+          matchId,
+          partnerSessionId: data.partnerSessionId as string,
+          isInitiator: data.isInitiator as boolean,
+          iceServers: data.iceServers as IceServerConfig[],
+          partnerProfile: data.partnerProfile,
+          matchReasonMetadata: data.matchReasonMetadata,
+        });
+        await this.markReady(sessionId, sessionToken, matchId);
+      } else {
+        callbacks.onError?.({ message: 'Failed to subscribe to match channel.' });
+      }
     }
   }
-}
 
-export async function notifyDisconnect(sessionId: string, sessionToken: string, reason: string, matchId?: string) {
-  try {
-    await apiPost('/match/disconnect', { sessionId, sessionToken, reason, matchId });
-  } catch {
-    // Best-effort on page unload
+  async notifyDisconnect(sessionId: string, sessionToken: string, reason: string, matchId?: string) {
+    try {
+      await apiPost('/match/disconnect', { sessionId, sessionToken, reason, matchId });
+    } catch {
+      // Best-effort on page unload
+    }
+  }
+
+  sendOffer(fromSessionId: string, offer: RTCSessionDescriptionInit): void {
+    this.matchChannel?.send({
+      type: 'broadcast',
+      event: 'offer',
+      payload: { fromSessionId, offer },
+    });
+  }
+
+  sendAnswer(fromSessionId: string, answer: RTCSessionDescriptionInit): void {
+    this.matchChannel?.send({
+      type: 'broadcast',
+      event: 'answer',
+      payload: { fromSessionId, answer },
+    });
+  }
+
+  sendIceCandidate(fromSessionId: string, candidate: RTCIceCandidateInit): void {
+    this.matchChannel?.send({
+      type: 'broadcast',
+      event: 'ice_candidate',
+      payload: { fromSessionId, candidate },
+    });
+  }
+
+  sendOfferAck(fromSessionId: string): void {
+    this.matchChannel?.send({
+      type: 'broadcast',
+      event: 'offer_ack',
+      payload: { fromSessionId },
+    });
+  }
+
+  sendAnswerAck(fromSessionId: string): void {
+    this.matchChannel?.send({
+      type: 'broadcast',
+      event: 'answer_ack',
+      payload: { fromSessionId },
+    });
+  }
+
+  getCurrentMatchId(): string | null {
+    return this.currentMatchId;
+  }
+
+  sendTyping(typing: boolean): void {
+    this.matchChannel?.send({
+      type: 'broadcast',
+      event: 'typing',
+      payload: { typing },
+    });
+  }
+
+  sendSeenStatus(matchId: string, senderId: string): void {
+    this.matchChannel?.send({
+      type: 'broadcast',
+      event: 'message_seen',
+      payload: { matchId, senderId },
+    });
+  }
+
+  sendAbortMatch(matchId: string): void {
+    this.matchChannel?.send({
+      type: 'broadcast',
+      event: 'abortMatch',
+      payload: { matchId },
+    });
   }
 }
 
-export function sendOffer(fromSessionId: string, offer: RTCSessionDescriptionInit): void {
-  matchChannel?.send({
-    type: 'broadcast',
-    event: 'offer',
-    payload: { fromSessionId, offer },
-  });
-}
-
-export function sendAnswer(fromSessionId: string, answer: RTCSessionDescriptionInit): void {
-  matchChannel?.send({
-    type: 'broadcast',
-    event: 'answer',
-    payload: { fromSessionId, answer },
-  });
-}
-
-export function sendIceCandidate(fromSessionId: string, candidate: RTCIceCandidateInit): void {
-  matchChannel?.send({
-    type: 'broadcast',
-    event: 'ice_candidate',
-    payload: { fromSessionId, candidate },
-  });
-}
-
-export function sendOfferAck(fromSessionId: string): void {
-  matchChannel?.send({
-    type: 'broadcast',
-    event: 'offer_ack',
-    payload: { fromSessionId },
-  });
-}
-
-export function sendAnswerAck(fromSessionId: string): void {
-  matchChannel?.send({
-    type: 'broadcast',
-    event: 'answer_ack',
-    payload: { fromSessionId },
-  });
-}
-
-export function getCurrentMatchId(): string | null {
-  return currentMatchId;
-}
-
-export function sendTyping(typing: boolean): void {
-  matchChannel?.send({
-    type: 'broadcast',
-    event: 'typing',
-    payload: { typing },
-  });
-}
-
-export function sendSeenStatus(matchId: string, senderId: string): void {
-  matchChannel?.send({
-    type: 'broadcast',
-    event: 'message_seen',
-    payload: { matchId, senderId },
-  });
-}
-
-export function sendAbortMatch(matchId: string): void {
-  matchChannel?.send({
-    type: 'broadcast',
-    event: 'abortMatch',
-    payload: { matchId },
-  });
-}
+export const realtimeManager = new RealtimeManager();

@@ -56,11 +56,6 @@ export interface ToastMessage {
 }
 
 export interface ChatState {
-  status: SessionStatus;
-  connectionStatus: ConnectionStatus;
-  partnerSessionId: string | null;
-  matchId: string | null;
-  isInitiator: boolean;
   isMuted: boolean;
   isCameraOff: boolean;
   isFullscreen: boolean;
@@ -104,6 +99,11 @@ export interface ChatState {
   } | null;
   partnerSkipPending?: boolean;
   partnerLeftCountdown?: number | null;
+  // Deprecated fields kept for backwards compatibility with useVideoChat.ts hooks
+  status?: string;
+  connectionStatus?: 'disconnected' | 'connecting' | 'connected' | 'failed' | 'reconnecting' | null;
+  partnerSessionId?: string | null;
+  matchId?: string | null;
 }
 
 export const REPORT_REASONS: { value: ReportReason; label: string }[] = [

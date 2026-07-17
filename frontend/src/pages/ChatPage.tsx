@@ -136,23 +136,23 @@ export function ChatPage() {
 
   // Clear reactions on match transition to prevent session leak
   useEffect(() => {
-    if (chatState.status !== 'CONNECTED') {
+    if ((chatState as any).status !== 'CONNECTED') {
       reactionLayerRef.current?.clearReactions();
     }
-  }, [chatState.status]);
+  }, [(chatState as any).status]);
 
   // V7: Trigger Match Reveal card on new match connection (reactively checks profile availability)
   useEffect(() => {
-    if (chatState.status === 'CONNECTED' && chatState.partnerSessionId) {
-      if (chatState.partnerProfile && chatState.partnerSessionId !== lastPartnerIdRef.current) {
-        lastPartnerIdRef.current = chatState.partnerSessionId;
+    if ((chatState as any).status === 'CONNECTED' && (chatState as any).partnerSessionId) {
+      if (chatState.partnerProfile && (chatState as any).partnerSessionId !== lastPartnerIdRef.current) {
+        lastPartnerIdRef.current = (chatState as any).partnerSessionId;
         setShowMatchIntro(true);
       }
-    } else if (chatState.status !== 'CONNECTED' && !chatState.partnerSessionId) {
+    } else if ((chatState as any).status !== 'CONNECTED' && !(chatState as any).partnerSessionId) {
       lastPartnerIdRef.current = null;
       setShowMatchIntro(false);
     }
-  }, [chatState.status, chatState.partnerSessionId, chatState.partnerProfile]);
+  }, [(chatState as any).status, (chatState as any).partnerSessionId, chatState.partnerProfile]);
 
   const [isSkipPending, setIsSkipPending] = useState(false);
   const [skipCountdown, setSkipCountdown] = useState(5);
@@ -162,7 +162,7 @@ export function ChatPage() {
   useEffect(() => { handleNextRef.current = handleNext; }, [handleNext]);
 
   const startSkipCountdown = useCallback(() => {
-    if (chatState.status !== 'CONNECTED') {
+    if ((chatState as any).status !== 'CONNECTED') {
       lm.skip();
       return;
     }
@@ -187,7 +187,7 @@ export function ChatPage() {
         lm.skip();
       }
     }, 1000);
-  }, [chatState.status, broadcastSkipPending]);
+  }, [(chatState as any).status, broadcastSkipPending]);
 
   const cancelSkipCountdown = useCallback(() => {
     if (skipTimerRef.current) {
@@ -210,13 +210,13 @@ export function ChatPage() {
   const triggerSkipConfirmation = useCallback(() => {
     if (skipTimerRef.current) return; // Prevent spam clicks restarting the timer
     
-    if (chatState.status !== 'CONNECTED') {
+    if ((chatState as any).status !== 'CONNECTED') {
       lm.skip();
       return;
     }
     // Skip the confirmation popup completely and start the countdown
     startSkipCountdown();
-  }, [chatState.status, startSkipCountdown]);
+  }, [(chatState as any).status, startSkipCountdown]);
 
   useEffect(() => {
     return () => {
@@ -230,7 +230,7 @@ export function ChatPage() {
   const [isJustConnected, setIsJustConnected] = useState(false);
   
   useEffect(() => {
-    if (chatState.status === 'CONNECTED') {
+    if ((chatState as any).status === 'CONNECTED') {
       if (!isJustConnected && !prevPartnerSkipPendingRef.current) {
         setIsJustConnected(true);
         setTimeout(() => setIsJustConnected(false), 350);
@@ -244,14 +244,14 @@ export function ChatPage() {
       setShowResumedBanner(false);
     }
     prevPartnerSkipPendingRef.current = chatState.partnerSkipPending || false;
-  }, [chatState.partnerSkipPending, chatState.status]);
+  }, [chatState.partnerSkipPending, (chatState as any).status]);
 
   // Partner Disconnected Grace Period Logic
   const [partnerLeftCountdown, setPartnerLeftCountdown] = useState<number | null>(null);
   const partnerLeftTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    if (chatState.status === 'CONNECTED' && chatState.partnerSkipPending && !isSkipPending) {
+    if ((chatState as any).status === 'CONNECTED' && chatState.partnerSkipPending && !isSkipPending) {
       if (partnerLeftTimerRef.current) return;
       setPartnerLeftCountdown(10);
       partnerLeftTimerRef.current = setInterval(() => {
@@ -275,14 +275,14 @@ export function ChatPage() {
     return () => {
       if (partnerLeftTimerRef.current) clearInterval(partnerLeftTimerRef.current);
     };
-  }, [chatState.status, chatState.partnerSkipPending, isSkipPending, handleNext]);
+  }, [(chatState as any).status, chatState.partnerSkipPending, isSkipPending, handleNext]);
 
   const [goodbyePhase, setGoodbyePhase] = useState<'leaving' | 'cleaning' | 'goodbye' | null>(null);
 
   const blocker = useBlocker(
     ({ nextLocation }) =>
-      chatState.status !== 'IDLE' &&
-      chatState.status !== 'ENDED' &&
+      (chatState as any).status !== 'IDLE' &&
+      (chatState as any).status !== 'ENDED' &&
       !pendingLeaveRef.current &&
       nextLocation.pathname !== '/chat'
   );
@@ -382,7 +382,7 @@ export function ChatPage() {
   }, [startPartnerCardTimer]);
 
   useEffect(() => {
-    if (isConnected && chatState.partnerSessionId) {
+    if (isConnected && (chatState as any).partnerSessionId) {
       setIsPartnerCardExpanded(true);
       startPartnerCardTimer();
     } else {
@@ -397,7 +397,7 @@ export function ChatPage() {
         clearTimeout(partnerCardTimerRef.current);
       }
     };
-  }, [isConnected, chatState.partnerSessionId, startPartnerCardTimer]);
+  }, [isConnected, (chatState as any).partnerSessionId, startPartnerCardTimer]);
 
   // Register searching header indicator
   useEffect(() => {
@@ -812,7 +812,7 @@ export function ChatPage() {
 
   // Active match counter
   useEffect(() => {
-    if (!chatState.matchStartTime || chatState.status !== 'CONNECTED') {
+    if (!chatState.matchStartTime || (chatState as any).status !== 'CONNECTED') {
       setElapsedSeconds(0);
       return;
     }
@@ -822,7 +822,7 @@ export function ChatPage() {
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [chatState.matchStartTime, chatState.status]);
+  }, [chatState.matchStartTime, (chatState as any).status]);
 
   // Keyboard Shortcuts
   useEffect(() => {
@@ -858,14 +858,14 @@ export function ChatPage() {
 
   // Hint Engine Updates
   useEffect(() => {
-    if (!session || chatState.status !== 'CONNECTED') {
+    if (!session || (chatState as any).status !== 'CONNECTED') {
       setActiveHint(null);
       return;
     }
 
     const showHint = () => {
       const hintState = {
-        appState: chatState.status as any,
+        appState: (chatState as any).status as any,
         micMuted: chatState.isMuted,
         cameraOff: chatState.isCameraOff,
         isMobile: isMobile, // uses consistent threshold from useResponsiveLayout (width < 768)
@@ -899,7 +899,7 @@ export function ChatPage() {
       clearInterval(interval);
       if (hintHideTimerRef.current) clearTimeout(hintHideTimerRef.current);
     };
-  }, [chatState.status, chatState.isMuted, chatState.isCameraOff, chatState.liked, chatState.messages, elapsedSeconds, session]);
+  }, [(chatState as any).status, chatState.isMuted, chatState.isCameraOff, chatState.liked, chatState.messages, elapsedSeconds, session]);
 
   const handleDismissHint = () => {
     setHintDismissed(true);
@@ -960,7 +960,7 @@ export function ChatPage() {
     // Only show the "End Call?" confirmation if the user is actually in a live conversation.
     // During MATCH_FOUND, NEGOTIATING, ICE_CONNECTING the user is NOT yet connected —
     // pressing Cancel in those states must immediately abort, not prompt for confirmation.
-    if (chatState.status === 'CONNECTED') {
+    if ((chatState as any).status === 'CONNECTED') {
       setShowEndCallConfirm(true);
     } else {
       await leaveCurrentExperience();
@@ -968,7 +968,7 @@ export function ChatPage() {
   };
 
   const handleReport = async (reason: ReportReason, notes: string) => {
-    if (!session || !chatState.partnerSessionId) {
+    if (!session || !(chatState as any).partnerSessionId) {
       showToast('error', 'No partner to report');
       return;
     }
@@ -976,7 +976,7 @@ export function ChatPage() {
     try {
       await apiService.submitReport(
         session.sessionId,
-        chatState.partnerSessionId,
+        (chatState as any).partnerSessionId,
         reason,
         notes || undefined
       );
@@ -1283,7 +1283,7 @@ export function ChatPage() {
       {/* ── BACKGROUND & SEARCHING LAYERS (Globe, Radar, Status) ── */}
       {isSearching && (
         <SearchingAnimation
-          status={chatState.status}
+          status={(chatState as any).status}
           partnerProfile={chatState.partnerProfile}
           isQueuePaused={isQueuePaused}
           partnerLeftCountdown={chatState.partnerLeftCountdown}
@@ -1325,7 +1325,7 @@ export function ChatPage() {
       {isMobile ? (
         <MobileHeader
           elapsedSeconds={elapsedSeconds}
-          connectionStatus={chatState.connectionStatus}
+          connectionStatus={(chatState as any).connectionStatus}
           connectionQuality={chatState.connectionQuality ?? null}
           isConnected={isConnected}
           onLeave={handleLeave}
@@ -1343,7 +1343,7 @@ export function ChatPage() {
             zIndex: 'var(--z-controls)' as any,
           }}
         >
-          {!isConnected && <ConnectionStatusBadge status={chatState.connectionStatus} />}
+          {!isConnected && <ConnectionStatusBadge status={(chatState as any).connectionStatus} />}
           {isConnected && (
             <span className="flex items-center gap-2 px-3 py-1 bg-black/40 backdrop-blur-md rounded-full border border-white/10 text-sm text-white/80 font-mono tracking-wider shadow-lg">
               <span className={cn(
@@ -1475,7 +1475,7 @@ export function ChatPage() {
         <MatchIntroCard
           partnerProfile={chatState.partnerProfile}
           matchReasonMetadata={chatState.matchReasonMetadata}
-          status={chatState.status}
+          status={(chatState as any).status}
           isChatOpen={chatState.isChatOpen || false}
           onDismiss={() => setShowMatchIntro(false)}
         />
@@ -1770,7 +1770,7 @@ export function ChatPage() {
 
 
       {/* ── RECONNECTING GRACE PERIOD OVERLAY ───────────── */}
-      {chatState.connectionStatus === 'reconnecting' && !isSkipPending && (
+      {(chatState as any).connectionStatus === 'reconnecting' && !isSkipPending && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/85 backdrop-blur-md z-45 p-6 text-center animate-fade-in">
           <div className="space-y-4 max-w-xs w-full bg-stone-900 border border-white/10 rounded-3xl p-6 shadow-2xl">
             <div className="w-12 h-12 rounded-full border border-amber-500/30 bg-amber-500/10 flex items-center justify-center text-xl mx-auto animate-spin">
@@ -1838,10 +1838,10 @@ export function ChatPage() {
           <div className="max-w-xs w-full bg-stone-900 border border-white/10 rounded-3xl p-6 shadow-2xl space-y-6 animate-spring-in">
             <div className="space-y-2">
               <h3 className="text-xl font-bold text-white">
-                {chatState.status === 'CONNECTED' ? 'Leave Conversation?' : 'Leave Search?'}
+                {(chatState as any).status === 'CONNECTED' ? 'Leave Conversation?' : 'Leave Search?'}
               </h3>
               <p className="text-stone-400 text-sm">
-                {chatState.status === 'CONNECTED' ? 'Your current chat will end.' : 'Your current search will stop.'}
+                {(chatState as any).status === 'CONNECTED' ? 'Your current chat will end.' : 'Your current search will stop.'}
               </p>
             </div>
             
@@ -1850,7 +1850,7 @@ export function ChatPage() {
                 onClick={() => blocker.reset && blocker.reset()}
                 className="w-full py-3 rounded-xl bg-white/10 hover:bg-white/15 text-white font-medium text-sm transition-all active:scale-95"
               >
-                {chatState.status === 'CONNECTED' ? 'Continue Chat' : 'Continue Searching'}
+                {(chatState as any).status === 'CONNECTED' ? 'Continue Chat' : 'Continue Searching'}
               </button>
               <button
                 onClick={handleConfirmBlockerLeave}

@@ -192,8 +192,8 @@ async function requeuePartner(partnerId: string): Promise<void> {
   }
 
   // KS-006: Concurrent Skip Protection
-  // If partner is already skipping or left, do not re-queue them.
-  if (partner.status === 'REQUEUEING' || partner.status === 'SEARCHING' || partner.status === 'READY') {
+  // If partner is already searching or ready, do not re-queue them.
+  if (partner.status === 'SEARCHING' || partner.status === 'READY') {
     console.log(`[MatchService] requeuePartner: ${partnerId} is already ${partner.status}, skipping redundant requeue.`);
     return;
   }

@@ -133,6 +133,7 @@ export const cleanupService = {
     try {
       const supabase = (await import('../database/client.js')).getSupabase();
       const { invalidateMatchmakerCache, transitionSessionStatus } = await import('../matchmaking/matchingEngine.js');
+      const { expireStaleReservations } = await import('../matchmaking/queueEngine.js');
 
       // 1. Expire stale heartbeat queue entries (V4.1 Requirement 12)
       const { data: staleSessionIds } = await supabase
@@ -158,22 +159,9 @@ export const cleanupService = {
       }
 
       // 2. Clean up expired reservations (V4.1 Requirement 3 & 12)
-      const { data: expiredResvs } = await supabase
-        .from('reservations')
-        .update({ status: 'rolled_back' })
-        .eq('status', 'pending')
-        .lt('expires_at', now)
-        .select('user_a, user_b');
-
-      if (expiredResvs && expiredResvs.length > 0) {
-        console.log(`[Cleanup] Rolled back ${expiredResvs.length} expired reservations`);
-        for (const resv of expiredResvs) {
-          for (const uid of [resv.user_a, resv.user_b]) {
-            if (uid) {
-              await transitionSessionStatus(supabase, uid, 'SEARCHING', 'Reservation expiration recovery');
-            }
-          }
-        }
+      // BE-006: Use centralized expireStaleReservations
+      const expiredCount = await expireStaleReservations(supabase);
+      if (expiredCount > 0) {
         invalidateMatchmakerCache();
       }
 

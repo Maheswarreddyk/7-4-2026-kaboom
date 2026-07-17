@@ -21,46 +21,14 @@ export async function createReservation(
   const start = Date.now();
   const expiresAt = new Date(Date.now() + RESERVATION_TIMEOUT_MS).toISOString();
 
-  // Atomic pre-lock: KS-014 Fix
-  // Prevent Matchmaker Double Reservation Race by natively transitioning to RESERVED atomically
-  const lockA = await supabase.from('visitor_sessions').update({ status: 'RESERVED' }).eq('id', initiatorSessionId).eq('status', 'SEARCHING').select('id').maybeSingle();
-  const lockB = await supabase.from('visitor_sessions').update({ status: 'RESERVED' }).eq('id', partnerSessionId).eq('status', 'SEARCHING').select('id').maybeSingle();
-
-  if (lockA.error || !lockA.data || lockB.error || !lockB.data) {
-    // Rollback any partial locks if the other partner was stolen by a parallel cycle
-    if (lockA.data) await supabase.from('visitor_sessions').update({ status: 'SEARCHING' }).eq('id', initiatorSessionId);
-    if (lockB.data) await supabase.from('visitor_sessions').update({ status: 'SEARCHING' }).eq('id', partnerSessionId);
-    console.warn(`[ReservationEngine] Double Reservation Race Prevented for ${initiatorSessionId} / ${partnerSessionId}`);
-    return { reservationId: '', success: false, reason: 'Concurrent double reservation blocked' };
-  }
-
   try {
-    const { data, error } = await supabase
-      .from('reservations')
-      .insert({
-        // 005 column names (user's actual DB)
-        user_a: initiatorSessionId,
-        user_b: partnerSessionId,
-        // 006 alias column names (code compatibility layer)
-        initiator_session_id: initiatorSessionId,
-        partner_session_id: partnerSessionId,
-        status: 'pending',
-        expires_at: expiresAt,
-      })
-      .select('id')
-      .single();
+    const { data, error } = await supabase.rpc('matchmaker_create_reservation', {
+      p_initiator_id: initiatorSessionId,
+      p_partner_id: partnerSessionId,
+      p_expires_at: expiresAt,
+    });
 
     if (error) {
-      // If table doesn't exist yet (pre-005 deployment), proceed without reservation
-      if (error.message.includes('schema cache') || error.code === '42P01') {
-        console.warn('[ReservationEngine] Reservations table not yet migrated — halting match to prevent duplication.');
-        return { reservationId: '', success: false, reason: 'Reservations table not migrated' };
-      }
-      // Unique constraint violation = one of these sessions is already reserved
-      if (error.code === '23505') {
-        console.warn(`[ReservationEngine] Reservation conflict for ${initiatorSessionId} or ${partnerSessionId}`);
-        return { reservationId: '', success: false, reason: 'Session already reserved' };
-      }
       logEngine({
         engine: 'ReservationEngine',
         sessionId: initiatorSessionId,
@@ -71,18 +39,23 @@ export async function createReservation(
       return { reservationId: '', success: false, reason: error.message };
     }
 
+    if (!data.success) {
+      console.warn(`[ReservationEngine] Reservation failed: ${data.reason}`);
+      return { reservationId: '', success: false, reason: data.reason };
+    }
+
     await logToDb(supabase, initiatorSessionId, 'reservation_created', {
-      reservationId: data.id,
+      reservationId: data.reservationId,
       partnerSessionId,
       expiresAt,
     });
 
     console.log(`[ReservationEngine] Reserved pair ${initiatorSessionId} <-> ${partnerSessionId} (expires ${expiresAt})`);
-    return { reservationId: data.id, success: true, reason: 'Reserved' };
+    return { reservationId: data.reservationId, success: true, reason: 'Reserved' };
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Reservation unavailable';
     console.warn(`[ReservationEngine] Non-fatal reservation error: ${message}`);
-    return { reservationId: '', success: true, reason: `Skipped reservation: ${message}` };
+    return { reservationId: '', success: false, reason: `Skipped reservation: ${message}` };
   }
 }
 

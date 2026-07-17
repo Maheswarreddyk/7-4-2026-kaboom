@@ -9,6 +9,7 @@ const DEFAULT_ICE_SERVERS: IceServerConfig[] = [
 export interface WebRTCCallbacks {
   onRemoteStream?: (stream: MediaStream) => void;
   onConnectionStateChange?: (state: RTCPeerConnectionState) => void;
+  onIceConnectionStateChange?: (state: RTCIceConnectionState) => void;
   onIceCandidate?: (candidate: RTCIceCandidateInit) => void;
   onNegotiationNeeded?: () => void;
   onIceRestart?: (offer: RTCSessionDescriptionInit) => void;
@@ -26,26 +27,28 @@ export class WebRTCManager {
     this.setupDeviceChangeListener();
   }
 
+  private handleDeviceChange = async () => {
+    console.log('[WebRTC] Device change detected. Attempting to reacquire media...');
+    try {
+      const stream = await this.getLocalMedia(true);
+      
+      if (this.peerConnection && this.peerConnection.connectionState !== 'closed') {
+        const senders = this.peerConnection.getSenders();
+        stream.getTracks().forEach((track) => {
+          const sender = senders.find((s) => s.track && s.track.kind === track.kind);
+          if (sender) {
+            sender.replaceTrack(track).catch((e) => console.warn('[WebRTC] replaceTrack failed on device change:', e));
+          }
+        });
+      }
+    } catch (err) {
+      console.error('[WebRTC] Failed to reacquire media on device change:', err);
+    }
+  };
+
   private setupDeviceChangeListener() {
     if (typeof navigator !== 'undefined' && navigator.mediaDevices) {
-      navigator.mediaDevices.addEventListener('devicechange', async () => {
-        console.log('[WebRTC] Device change detected. Attempting to reacquire media...');
-        try {
-          const stream = await this.getLocalMedia(true);
-          
-          if (this.peerConnection && this.peerConnection.connectionState !== 'closed') {
-            const senders = this.peerConnection.getSenders();
-            stream.getTracks().forEach((track) => {
-              const sender = senders.find((s) => s.track && s.track.kind === track.kind);
-              if (sender) {
-                sender.replaceTrack(track).catch((e) => console.warn('[WebRTC] replaceTrack failed on device change:', e));
-              }
-            });
-          }
-        } catch (err) {
-          console.error('[WebRTC] Failed to reacquire media on device change:', err);
-        }
-      });
+      navigator.mediaDevices.addEventListener('devicechange', this.handleDeviceChange);
     }
   }
 
@@ -167,10 +170,7 @@ export class WebRTCManager {
       if (this.peerConnection) {
         const iceState = this.peerConnection.iceConnectionState;
         console.log(`[WebRTC] ICE Connection State: ${iceState}`);
-        if (iceState === 'disconnected' || iceState === 'failed') {
-          // Map ICE failure directly to the connection state callback
-          this.callbacks.onConnectionStateChange?.(iceState);
-        }
+        this.callbacks.onIceConnectionStateChange?.(iceState);
       }
     };
 
@@ -315,6 +315,10 @@ export class WebRTCManager {
     if (this.localStream) {
       this.localStream.getTracks().forEach((track) => track.stop());
       this.localStream = null;
+    }
+
+    if (typeof navigator !== 'undefined' && navigator.mediaDevices) {
+      navigator.mediaDevices.removeEventListener('devicechange', this.handleDeviceChange);
     }
   }
 }
