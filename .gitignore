@@ -15,3 +15,5 @@ coverage/
 # Supabase local dev
 supabase/.branches
 supabase/.temp
+simulator/
+backend/scripts/run-chaos-backend.*

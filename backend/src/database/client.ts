@@ -5,26 +5,10 @@ let supabase: SupabaseClient | null = null;
 
 export function getSupabase(): SupabaseClient {
   if (!supabase) {
-    const globalFetch = globalThis.fetch;
-    const chaosFetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
-      if (process.env.CHAOS_DB_LATENCY === 'true') {
-        // 20% chance to inject 1000-4000ms latency on DB requests
-        if (Math.random() < 0.2) {
-          const delay = Math.floor(Math.random() * 3000) + 1000;
-          console.warn(`[Chaos] Injecting ${delay}ms DB latency into Supabase query...`);
-          await new Promise(resolve => setTimeout(resolve, delay));
-        }
-      }
-      return globalFetch(input, init);
-    };
-
     supabase = createClient(config.supabaseUrl, config.supabaseServiceRoleKey, {
       auth: {
         autoRefreshToken: false,
         persistSession: false,
-      },
-      global: {
-        fetch: chaosFetch
       }
     });
   }
