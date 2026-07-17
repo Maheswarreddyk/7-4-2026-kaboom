@@ -33,20 +33,19 @@ export interface IceServer {
 export function getIceServers(): IceServer[] {
   const servers: IceServer[] = config.stunServers.map((url: string) => ({ urls: url }));
 
-  if (config.turnServer && config.turnUsername && config.turnPassword) {
-    // UDP TURN (preferred — lower latency)
-    servers.push({
-      urls: `turn:${config.turnServer}`,
-      username: config.turnUsername,
-      credential: config.turnPassword,
-    });
-    // TCP TURN fallback (works through firewalls that block UDP)
-    servers.push({
-      urls: `turn:${config.turnServer}?transport=tcp`,
-      username: config.turnUsername,
-      credential: config.turnPassword,
-    });
-    console.log(`[ICE] TURN server configured: ${config.turnServer}`);
+  if (config.turnServer || config.turnUsername || config.turnPassword) {
+    const turnHost = config.turnServer || 'global.relay.metered.ca';
+    const username = config.turnUsername || 'f150dd7566a5922af619c80f'; // Fallback to provided defaults if env is missing
+    const credential = config.turnPassword || 'QAWBn93cIDtErz8U';
+
+    servers.push(
+      { urls: `stun:stun.relay.metered.ca:80` },
+      { urls: `turn:${turnHost}:80`, username, credential },
+      { urls: `turn:${turnHost}:80?transport=tcp`, username, credential },
+      { urls: `turn:${turnHost}:443`, username, credential },
+      { urls: `turns:${turnHost}:443?transport=tcp`, username, credential }
+    );
+    console.log(`[ICE] TURN servers configured (Primary: ${turnHost})`);
   } else {
     console.warn('[ICE] No TURN server configured — connections may fail on symmetric NAT (mobile networks). Set TURN_SERVER, TURN_USERNAME, TURN_PASSWORD env vars.');
   }
