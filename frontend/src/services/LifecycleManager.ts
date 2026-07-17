@@ -1,4 +1,5 @@
 type Listener = (...args: any[]) => void;
+import { TimelineTelemetry } from './TimelineTelemetry';
 
 class EventEmitter {
   private events: Record<string, Listener[]> = {};
@@ -28,7 +29,7 @@ export type LifecycleState =
   | 'QUEUEING'      // Waiting for a match
   | 'MATCH_FOUND'   // Match assigned by backend, setting up
   | 'NEGOTIATING'   // WebRTC offer/answer exchange
-  | 'MEDIA_SETUP'   // Waiting for local and remote video tracks to flow
+  | 'AWAITING_MEDIA'   // Waiting for local and remote video tracks to flow
   | 'CONNECTED'     // Both peers have media, fully active chat
   | 'TEARDOWN'      // Cleaning up connection to return to QUEUEING or HOME
   | 'ENDED';        // End of session, logging out or fatal error
@@ -73,6 +74,11 @@ export class LifecycleManager extends EventEmitter {
    */
   private transitionTo(newState: LifecycleState, metadata?: any) {
     console.log(`[LifecycleManager] Transition: ${this.currentState} -> ${newState}`, metadata);
+    TimelineTelemetry.log('FSM', `Transition to ${newState}`, { 
+      from: this.currentState, 
+      matchId: this.matchId, 
+      metadata 
+    });
     this.currentState = newState;
     this.emit('stateChanged', { state: newState, metadata });
   }
@@ -85,7 +91,7 @@ export class LifecycleManager extends EventEmitter {
     if (this.currentState === 'CONFIGURING') return;
     
     // Valid from HOME or QUEUEING. 
-    // If in MATCH_FOUND, NEGOTIATING, MEDIA_SETUP, or CONNECTED, 
+    // If in MATCH_FOUND, NEGOTIATING, AWAITING_MEDIA, or CONNECTED, 
     // we must reject this unless we forcibly leave the chat (which we probably shouldn't do without warning).
     // For now, if they are in queue, they can open settings.
     if (['HOME', 'QUEUEING'].includes(this.currentState)) {
@@ -147,18 +153,18 @@ export class LifecycleManager extends EventEmitter {
 
   public onMediaSetup() {
     if (['MATCH_FOUND', 'NEGOTIATING'].includes(this.currentState)) {
-      this.transitionTo('MEDIA_SETUP');
+      this.transitionTo('AWAITING_MEDIA');
     }
   }
 
   public onConnected() {
-    if (this.currentState === 'MEDIA_SETUP' || this.currentState === 'NEGOTIATING') {
+    if (this.currentState === 'AWAITING_MEDIA' || this.currentState === 'NEGOTIATING') {
       this.transitionTo('CONNECTED');
     }
   }
 
   public skip() {
-    if (['MATCH_FOUND', 'NEGOTIATING', 'MEDIA_SETUP', 'CONNECTED'].includes(this.currentState)) {
+    if (['MATCH_FOUND', 'NEGOTIATING', 'AWAITING_MEDIA', 'CONNECTED'].includes(this.currentState)) {
       this.transitionTo('TEARDOWN', { reason: 'local_skip' });
       this.cleanupState();
     } else {
@@ -167,7 +173,7 @@ export class LifecycleManager extends EventEmitter {
   }
 
   public onPartnerLeft(reason: string = 'partner_left') {
-    if (['MATCH_FOUND', 'NEGOTIATING', 'MEDIA_SETUP', 'CONNECTED'].includes(this.currentState)) {
+    if (['MATCH_FOUND', 'NEGOTIATING', 'AWAITING_MEDIA', 'CONNECTED'].includes(this.currentState)) {
       this.transitionTo('TEARDOWN', { reason });
       this.cleanupState();
     }

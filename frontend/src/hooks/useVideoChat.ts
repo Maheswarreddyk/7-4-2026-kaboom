@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useToast } from '../contexts/ToastContext.js';
 import { useSession } from '../contexts/SessionContext.js';
 import { apiService } from '../services/api.js';
+import { TimelineTelemetry } from '../services/TimelineTelemetry.js';
 import {
   connectRealtime,
   disconnectRealtime,
@@ -23,6 +24,7 @@ import {
   ensureMatchChannelConnected,
   leaveMatchChannel,
   sendAbortMatch,
+  markMediaConnected,
 } from '../services/realtime.js';
 import { webrtcManager } from '../webrtc/index.js';
 import type { ChatState, ConnectionStatus, SessionStatus } from '../types/index.js';
@@ -182,7 +184,7 @@ export function useVideoChat(
         case 'QUEUEING': mappedState = 'SEARCHING'; break;
         case 'MATCH_FOUND': mappedState = 'MATCH_FOUND'; break;
         case 'NEGOTIATING': mappedState = 'NEGOTIATING'; break;
-        case 'MEDIA_SETUP': mappedState = 'ICE_CONNECTING'; break;
+        case 'AWAITING_MEDIA': mappedState = 'ICE_CONNECTING'; break;
         case 'CONNECTED': mappedState = 'CONNECTED'; break;
         case 'TEARDOWN': 
           mappedState = metadata?.reason === 'local_skip' ? 'REQUEUEING' : 'PARTNER_LEFT';
@@ -372,16 +374,84 @@ export function useVideoChat(
   }, []);
 
   const setupWebRTC = useCallback(async () => {
+    let mediaCheckTimeout: any = null;
+
+    const checkAndSetConnected = async () => {
+      const isIceConnected = webrtcManager.getConnectionState() === 'connected';
+      if (!isIceConnected) {
+        TimelineTelemetry.log('SyncGate', 'ICE disconnected', { state: webrtcManager.getConnectionState() });
+        console.warn(`[Sync Gate] Blocked CONNECTED transition. ICE: ${webrtcManager.getConnectionState()}`);
+        if (mediaCheckTimeout) clearTimeout(mediaCheckTimeout);
+        return;
+      }
+
+      const remoteStream = webrtcManager.getRemoteStream();
+      const audioTracks = remoteStream ? remoteStream.getAudioTracks() : [];
+      const videoTracks = remoteStream ? remoteStream.getVideoTracks() : [];
+      
+      const hasRemoteAudio = audioTracks.length > 0 && audioTracks[0].readyState === 'live';
+      const hasRemoteVideo = videoTracks.length > 0 && videoTracks[0].readyState === 'live';
+      
+      if (!hasRemoteAudio || !hasRemoteVideo) {
+        TimelineTelemetry.log('SyncGate', 'Tracks missing or not live', { audio: hasRemoteAudio, video: hasRemoteVideo });
+        console.warn(`[Sync Gate] Blocked CONNECTED transition. Audio: ${hasRemoteAudio}, Video: ${hasRemoteVideo}. Re-checking...`);
+        if (mediaCheckTimeout) clearTimeout(mediaCheckTimeout);
+        mediaCheckTimeout = setTimeout(checkAndSetConnected, 100);
+        return;
+      }
+
+      // Strict Media Gate: Check byte flow
+      try {
+        const getStatsPromise = webrtcManager.getStats();
+        if (!getStatsPromise) return;
+        const stats = await getStatsPromise;
+
+        let audioBytes = 0;
+        let videoBytes = 0;
+
+        stats.forEach((report: any) => {
+          if (report.type === 'inbound-rtp') {
+            if (report.mediaType === 'audio' || report.kind === 'audio') {
+               audioBytes = report.bytesReceived || 0;
+            }
+            if (report.mediaType === 'video' || report.kind === 'video') {
+               videoBytes = report.bytesReceived || 0;
+            }
+          }
+        });
+
+        if (audioBytes > 0 && videoBytes > 0) {
+          TimelineTelemetry.log('SyncGate', 'Media bytes confirmed flowing', { audioBytes, videoBytes });
+          console.log(`[Sync Gate] Media flowing. Audio bytes: ${audioBytes}, Video bytes: ${videoBytes}`);
+          if (mediaCheckTimeout) clearTimeout(mediaCheckTimeout);
+          
+          // Bidirectional Agreement: Ask backend to verify the other party also has media
+          if (sessionIdRef.current && sessionTokenRef.current && matchIdRef.current) {
+            markMediaConnected(sessionIdRef.current, sessionTokenRef.current, matchIdRef.current).catch(err => {
+              console.error('[Sync Gate] Failed to mark media connected:', err);
+            });
+          }
+        } else {
+          TimelineTelemetry.log('SyncGate', 'Media bytes 0 - waiting for packets', { audioBytes, videoBytes });
+          console.warn(`[Sync Gate] ICE connected but media bytes not flowing. Re-checking...`);
+          if (mediaCheckTimeout) clearTimeout(mediaCheckTimeout);
+          mediaCheckTimeout = setTimeout(checkAndSetConnected, 100);
+        }
+      } catch (err) {
+        console.error('[Sync Gate] Failed to retrieve stats:', err);
+      }
+    };
+
     webrtcManager.setCallbacks({
-      onRemoteStream: (stream) => {
+      onRemoteStream: (stream: MediaStream) => {
         if (partnerReconnectTimerRef.current) {
           clearTimeout(partnerReconnectTimerRef.current);
           partnerReconnectTimerRef.current = null;
         }
         setRemoteStream(stream);
-        setSignalingState('CONNECTED');
+        checkAndSetConnected();
       },
-      onConnectionStateChange: (state) => {
+      onConnectionStateChange: (state: RTCPeerConnectionState) => {
         const statusMap: Record<RTCPeerConnectionState, ConnectionStatus> = {
           new: 'connecting',
           connecting: 'connecting',
@@ -404,7 +474,7 @@ export function useVideoChat(
             reconnectIntervalRef.current = null;
           }
           updateChatState({ reconnectCountdown: null });
-          setSignalingState('CONNECTED');
+          checkAndSetConnected();
         } else if (state === 'disconnected' || state === 'failed') {
           console.log(`[WebRTC State Change] State: ${state}. Starting reconnect countdown...`);
           startReconnectCountdown();
@@ -416,10 +486,9 @@ export function useVideoChat(
           }
         }
       },
-      onIceCandidate: (candidate) => {
-        const partnerId = partnerSessionIdRef.current;
+      onIceCandidate: (candidate: RTCIceCandidateInit) => {
         const fromSessionId = sessionIdRef.current;
-        if (partnerId && fromSessionId) {
+        if (partnerSessionIdRef.current && fromSessionId) {
           sendIceCandidate(fromSessionId, candidate);
         }
       },
@@ -761,6 +830,12 @@ export function useVideoChat(
           return;
         }
         handleStartNegotiationRef.current?.(data);
+      },
+      onSessionConnected: (data: { matchId: string }) => {
+        if (skipInProgressRef.current && signalingStateRef.current !== 'REQUEUEING') return;
+        if (data.matchId !== matchIdRef.current) return;
+        console.log(`[Websocket Event] session_connected for match ${data.matchId}`);
+        setSignalingState('CONNECTED');
       },
       onPartnerLeft: (data?: { reason: string; eventId?: string }) => {
         if (skipInProgressRef.current && signalingStateRef.current !== 'REQUEUEING') return;
@@ -1246,7 +1321,7 @@ export function useVideoChat(
         let currentFramesDecoded = 0;
         let hasVideoReport = false;
 
-        stats.forEach((report) => {
+        stats.forEach((report: any) => {
           if (report.type === 'remote-inbound-rtp' && report.roundTripTime) {
             rtt = report.roundTripTime * 1000;
           }
@@ -1361,7 +1436,7 @@ export function useVideoChat(
       console.log('[Lifecycle] Suspending local media to prevent background hardware crashes');
       const activeStream = webrtcManager.getLocalStream();
       if (activeStream) {
-        activeStream.getTracks().forEach(track => {
+        activeStream.getTracks().forEach((track: MediaStreamTrack) => {
           track.enabled = false;
         });
       }
@@ -1414,7 +1489,7 @@ export function useVideoChat(
       if (isCallActive && !isQueuePausedRef.current) {
         const activeStream = webrtcManager.getLocalStream();
         if (activeStream) {
-          activeStream.getTracks().forEach(track => {
+          activeStream.getTracks().forEach((track: MediaStreamTrack) => {
             track.enabled = true;
           });
         } else {
@@ -1427,7 +1502,7 @@ export function useVideoChat(
             const pc = (webrtcManager as any).peerConnection;
             if (pc && pc.connectionState !== 'closed') {
               const senders = pc.getSenders();
-              stream.getTracks().forEach((track) => {
+              stream.getTracks().forEach((track: MediaStreamTrack) => {
                 const sender = senders.find((s: any) => s.track && s.track.kind === track.kind);
                 if (sender) {
                   sender.replaceTrack(track).catch((e: any) => console.warn('[Lifecycle] replaceTrack failed:', e));

@@ -339,7 +339,7 @@ export async function runGlobalHealCycle(supabase: SupabaseClient): Promise<void
     // --- 4. Match exists but peer is disconnected or ended ---
     const { data: activeMatches } = await supabase
       .from('matches')
-      .select('id, user_a, user_b, started_at')
+      .select('id, user_a, user_b, started_at, negotiation_started, user_a_media_ready, user_b_media_ready')
       .is('ended_at', null);
 
     if (activeMatches && activeMatches.length > 0) {
@@ -355,9 +355,16 @@ export async function runGlobalHealCycle(supabase: SupabaseClient): Promise<void
         const staleA = !profileA || !profileA.last_activity || profileA.last_activity < heartbeatThreshold;
         const staleB = !profileB || !profileB.last_activity || profileB.last_activity < heartbeatThreshold;
 
-        if (staleA || staleB) {
-          console.log(`[Self-Healing] Ending active match ${m.id} due to stale heartbeat (A_stale=${staleA}, B_stale=${staleB})`);
-          const duration = Math.floor((Date.now() - new Date(m.started_at).getTime()) / 1000);
+        // Stage 7/8: WebRTC Media Timeout (15s limit)
+        const matchAgeMs = Date.now() - new Date(m.started_at).getTime();
+        const MEDIA_TIMEOUT_MS = 15000;
+        const hasMediaFlow = m.user_a_media_ready && m.user_b_media_ready;
+        const isMediaTimeout = matchAgeMs > MEDIA_TIMEOUT_MS && !hasMediaFlow;
+
+        if (staleA || staleB || isMediaTimeout) {
+          const abortReason = isMediaTimeout ? 'Media verification timeout (15s limit)' : 'stale heartbeat';
+          console.log(`[Self-Healing] Ending active match ${m.id} due to ${abortReason} (A_stale=${staleA}, B_stale=${staleB}, MediaTimeout=${isMediaTimeout})`);
+          const duration = Math.floor(matchAgeMs / 1000);
           
           await supabase
             .from('matches')
@@ -988,11 +995,7 @@ export async function markUserReady(
 
     const partnerId = isUserA ? match.user_b : match.user_a;
     const iceServers = getIceServers();
-
     console.log(`[/ready] [${requestId}] Both ready — broadcasting start_negotiation to ${sessionId} and ${partnerId}`);
-
-    // Emit exactly-once Analytics Event
-    AnalyticsLogger.logEvent('CALL_CONNECTED', sessionId, matchId, {}, `${matchId}_call_connected`);
 
     // Fetch profile details for both sessions
     const [sessSelfQuery, sessPartnerQuery] = await Promise.all([
@@ -1064,4 +1067,68 @@ export async function markUserReady(
   }
 
   return { bothReady, isInitiator: isUserA };
+}
+
+export async function markMediaConnected(
+  supabase: import('@supabase/supabase-js').SupabaseClient,
+  sessionId: string,
+  sessionToken: string,
+  matchId: string
+) {
+  const requestId = crypto.randomUUID();
+  console.log(`[/media_ready] [${requestId}] ${sessionId} marking media ready for match ${matchId}`);
+
+  const { data: sessionData } = await supabase.from('visitor_sessions').select('*').eq('id', sessionId).maybeSingle();
+  if (!sessionData || sessionData.session_token !== sessionToken) {
+    throw new Error('Invalid session');
+  }
+
+  const { data: match, error } = await supabase
+    .from('matches')
+    .select('*')
+    .eq('id', matchId)
+    .maybeSingle();
+
+  if (error || !match) {
+    throw new Error('Match not found');
+  }
+
+  const isUserA = match.user_a === sessionId;
+  if (!isUserA && match.user_b !== sessionId) {
+    throw new Error('User not in match');
+  }
+  
+  // Phase 2: Update the media_ready flag for this specific user
+  const readyUpdate = isUserA ? { user_a_media_ready: true } : { user_b_media_ready: true };
+  const { data: updatedMatch, error: updateErr } = await supabase
+    .from('matches')
+    .update(readyUpdate)
+    .eq('id', matchId)
+    .select('user_a_media_ready, user_b_media_ready')
+    .single();
+
+  if (updateErr || !updatedMatch) {
+    throw new Error('Failed to update media ready status');
+  }
+
+  const bothReady = Boolean(updatedMatch.user_a_media_ready && updatedMatch.user_b_media_ready);
+  console.log(`[/media_ready] [${requestId}] user_a_media_ready=${updatedMatch.user_a_media_ready} user_b_media_ready=${updatedMatch.user_b_media_ready} bothReady=${bothReady}`);
+
+  if (bothReady) {
+    // Only transition the session status if BOTH are ready
+    await Promise.all([
+      transitionSessionStatus(supabase, match.user_a, 'CONNECTED', 'Media flow established for both users'),
+      transitionSessionStatus(supabase, match.user_b, 'CONNECTED', 'Media flow established for both users')
+    ]);
+
+    console.log(`[/media_ready] [${requestId}] Both users have media. Broadcasting session_connected.`);
+    AnalyticsLogger.logEvent('CALL_CONNECTED', sessionId, matchId, {}, `${matchId}_call_connected`);
+
+    await Promise.all([
+      broadcastToSession(match.user_a, 'session_connected', { matchId }).catch(() => {}),
+      broadcastToSession(match.user_b, 'session_connected', { matchId }).catch(() => {})
+    ]);
+  }
+
+  return { bothReady };
 }

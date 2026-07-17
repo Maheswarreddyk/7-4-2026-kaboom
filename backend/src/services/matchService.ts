@@ -287,3 +287,9 @@ export async function notifyPartnerLeft(sessionId: string, sessionToken: string,
     await requeuePartner(ended.partnerId);
   }
 }
+
+export async function markMediaConnected(sessionId: string, sessionToken: string, matchId: string) {
+  const { markMediaConnected: markMediaConnectedEngine } = await import('../matchmaking/matchingEngine.js');
+  return markMediaConnectedEngine(getSupabase(), sessionId, sessionToken, matchId);
+}
+

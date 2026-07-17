@@ -96,3 +96,23 @@ router.post('/ready', queueLimiter, async (req, res, next) => {
 });
 
 export default router;
+
+router.post('/connected', queueLimiter, async (req, res, next) => {
+  try {
+    const { sessionId, sessionToken, matchId } = req.body;
+    if (!sessionId || !sessionToken || !matchId) {
+      return res.status(400).json({ success: false, error: 'sessionId, sessionToken, and matchId are required' });
+    }
+    const { markMediaConnected } = await import('../services/matchService.js');
+    const result = await markMediaConnected(sessionId, sessionToken, matchId);
+    res.json({ success: true, data: result });
+  } catch (err) {
+    console.error('[API /connected endpoint error]', err);
+    res.status(422).json({
+      success: false,
+      error: err instanceof Error ? err.message : 'Failed to mark media connected',
+    });
+  }
+});
+
+export default router;

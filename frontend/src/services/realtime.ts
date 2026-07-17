@@ -19,6 +19,7 @@ export interface RealtimeCallbacks {
     isInitiator: boolean;
     iceServers: IceServerConfig[];
   }) => void;
+  onSessionConnected?: (data: { matchId: string }) => void;
   onPartnerLeft?: (data: { reason: string }) => void;
   onSearching?: (data: { message: string }) => void;
   onError?: (data: { message: string }) => void;
@@ -83,15 +84,15 @@ export function leaveMatchChannel() {
 
 let isSubscribing = false;
 
-export function subscribeToMatchChannel(matchId: string, callbacks: RealtimeCallbacks): Promise<void> {
+export function subscribeToMatchChannel(matchId: string, callbacks: RealtimeCallbacks): Promise<boolean> {
   if (currentMatchId === matchId && isMatchChannelConnected) {
     console.log(`[Realtime] Already connected to match ${matchId}. Skipping redundant subscription.`);
-    return Promise.resolve();
+    return Promise.resolve(true);
   }
 
   if (isSubscribing) {
     console.log(`[Realtime] Subscription already in progress. Skipping redundant call for ${matchId}.`);
-    return Promise.resolve();
+    return Promise.resolve(false);
   }
 
   isSubscribing = true;
@@ -100,14 +101,14 @@ export function subscribeToMatchChannel(matchId: string, callbacks: RealtimeCall
   leaveMatchChannel();
   currentMatchId = matchId;
 
-  return new Promise<void>((resolve) => {
-    const resolveAndUnlock = () => {
+  return new Promise<boolean>((resolve) => {
+    const resolveAndUnlock = (success: boolean) => {
       isSubscribing = false;
-      resolve();
+      resolve(success);
     };
 
     if (!supabase) {
-      resolveAndUnlock();
+      resolveAndUnlock(false);
       return;
     }
 
@@ -153,9 +154,9 @@ export function subscribeToMatchChannel(matchId: string, callbacks: RealtimeCall
 
     const subscribeTimeout = setTimeout(() => {
       if (!subscribed) {
-        console.warn(`[Realtime] Match channel ${matchId} subscribe timeout after ${SUBSCRIBE_TIMEOUT_MS}ms — proceeding`);
+        console.warn(`[Realtime] Match channel ${matchId} subscribe timeout after ${SUBSCRIBE_TIMEOUT_MS}ms — aborting subscription`);
         leaveMatchChannel(); // KS-013: Ghost Timeout Leak fix
-        resolveAndUnlock();
+        resolveAndUnlock(false);
       }
     }, SUBSCRIBE_TIMEOUT_MS);
 
@@ -165,13 +166,13 @@ export function subscribeToMatchChannel(matchId: string, callbacks: RealtimeCall
         subscribed = true;
         isMatchChannelConnected = true;
         console.log(`[Realtime] Subscribed to match channel: ${matchId}`);
-        resolveAndUnlock();
+        resolveAndUnlock(true);
       }
       if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
         clearTimeout(subscribeTimeout);
         isMatchChannelConnected = false;
-        console.warn(`[Realtime] Match channel ${matchId} status: ${status} — resolving with fallback`);
-        resolveAndUnlock();
+        console.warn(`[Realtime] Match channel ${matchId} status: ${status} — aborting subscription`);
+        resolveAndUnlock(false);
       }
     });
   });
@@ -238,9 +239,13 @@ export function connectRealtime(
         matchReasonMetadata?: any;
       };
       void (async () => {
-        await subscribeToMatchChannel(data.matchId, callbacks);
-        callbacks.onMatched?.(data);
-        await markReady(sessionId, sessionToken, data.matchId);
+        const subscribed = await subscribeToMatchChannel(data.matchId, callbacks);
+        if (subscribed) {
+          callbacks.onMatched?.(data);
+          await markReady(sessionId, sessionToken, data.matchId);
+        } else {
+          callbacks.onError?.({ message: 'Failed to subscribe to match channel.' });
+        }
       })();
     })
     .on('broadcast', { event: 'start_negotiation' }, ({ payload }) => {
@@ -251,9 +256,14 @@ export function connectRealtime(
         iceServers: IceServerConfig[];
       };
       void (async () => {
-        await subscribeToMatchChannel(data.matchId, callbacks);
-        callbacks.onStartNegotiation?.(data);
+        const subscribed = await subscribeToMatchChannel(data.matchId, callbacks);
+        if (subscribed) {
+          callbacks.onStartNegotiation?.(data);
+        }
       })();
+    })
+    .on('broadcast', { event: 'session_connected' }, ({ payload }) => {
+      callbacks.onSessionConnected?.(payload as { matchId: string });
     })
     .on('broadcast', { event: 'partner_left' }, ({ payload }) => {
       leaveMatchChannel();
@@ -317,21 +327,29 @@ export async function joinQueue(sessionId: string, sessionToken: string, callbac
 
   if (data.status === 'matched') {
     const matchId = data.matchId as string;
-    await subscribeToMatchChannel(matchId, callbacks);
-    callbacks.onMatched?.({
-      matchId,
-      partnerSessionId: data.partnerSessionId as string,
-      isInitiator: data.isInitiator as boolean,
-      iceServers: data.iceServers as IceServerConfig[],
-      partnerProfile: data.partnerProfile,
-      matchReasonMetadata: data.matchReasonMetadata,
-    });
-    await markReady(sessionId, sessionToken, matchId);
+    const subscribed = await subscribeToMatchChannel(matchId, callbacks);
+    if (subscribed) {
+      callbacks.onMatched?.({
+        matchId,
+        partnerSessionId: data.partnerSessionId as string,
+        isInitiator: data.isInitiator as boolean,
+        iceServers: data.iceServers as IceServerConfig[],
+        partnerProfile: data.partnerProfile,
+        matchReasonMetadata: data.matchReasonMetadata,
+      });
+      await markReady(sessionId, sessionToken, matchId);
+    } else {
+      callbacks.onError?.({ message: 'Failed to subscribe to match channel.' });
+    }
   }
 }
 
 export async function markReady(sessionId: string, sessionToken: string, matchId: string) {
   await apiPost('/match/ready', { sessionId, sessionToken, matchId });
+}
+
+export async function markMediaConnected(sessionId: string, sessionToken: string, matchId: string) {
+  await apiPost('/match/connected', { sessionId, sessionToken, matchId });
 }
 
 export async function leaveQueue(sessionId: string, sessionToken: string, matchId?: string) {
@@ -362,16 +380,20 @@ export async function nextPartner(sessionId: string, sessionToken: string, callb
 
   if (data.status === 'matched') {
     const matchId = data.matchId as string;
-    await subscribeToMatchChannel(matchId, callbacks);
-    callbacks.onMatched?.({
-      matchId,
-      partnerSessionId: data.partnerSessionId as string,
-      isInitiator: data.isInitiator as boolean,
-      iceServers: data.iceServers as IceServerConfig[],
-      partnerProfile: data.partnerProfile,
-      matchReasonMetadata: data.matchReasonMetadata,
-    });
-    await markReady(sessionId, sessionToken, matchId);
+    const subscribed = await subscribeToMatchChannel(matchId, callbacks);
+    if (subscribed) {
+      callbacks.onMatched?.({
+        matchId,
+        partnerSessionId: data.partnerSessionId as string,
+        isInitiator: data.isInitiator as boolean,
+        iceServers: data.iceServers as IceServerConfig[],
+        partnerProfile: data.partnerProfile,
+        matchReasonMetadata: data.matchReasonMetadata,
+      });
+      await markReady(sessionId, sessionToken, matchId);
+    } else {
+      callbacks.onError?.({ message: 'Failed to subscribe to match channel.' });
+    }
   }
 }
 

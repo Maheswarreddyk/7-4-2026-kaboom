@@ -274,6 +274,18 @@ export class WebRTCManager {
     return this.peerConnection?.connectionState ?? null;
   }
 
+  async verifyMediaFlow(): Promise<boolean> {
+    const stats = await this.getStats();
+    if (!stats) return false;
+    let bytesReceived = 0;
+    stats.forEach((report) => {
+      if (report.type === 'inbound-rtp') {
+        bytesReceived += report.bytesReceived || 0;
+      }
+    });
+    return bytesReceived > 0;
+  }
+
 
   resetConnection(): void {
     this.cleanupPeerConnection(false); // Clean candidates on hard reset
