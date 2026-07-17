@@ -95,8 +95,6 @@ router.post('/ready', queueLimiter, async (req, res, next) => {
   }
 });
 
-export default router;
-
 router.post('/connected', queueLimiter, async (req, res, next) => {
   try {
     const { sessionId, sessionToken, matchId } = req.body;
