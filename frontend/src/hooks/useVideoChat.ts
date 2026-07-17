@@ -1420,6 +1420,7 @@ export function useVideoChat(
   // Mobile Lifecycle Event Listeners: visibilitychange, pagehide, freeze/resume, online/offline
   useEffect(() => {
     const API_BASE = environment.apiUrl;
+    let visibilityDebounceTimer: any = null;
 
     const suspendLocalMedia = () => {
       console.log('[Lifecycle] Suspending local media to prevent background hardware crashes');
@@ -1531,11 +1532,34 @@ export function useVideoChat(
       }
     };
 
+    // Keep track of internal state to prevent duplicate/looping triggers
+    let isCurrentlyBackgrounded = false;
+
+    const executeSuspend = () => {
+      if (!isCurrentlyBackgrounded) {
+        isCurrentlyBackgrounded = true;
+        suspendLocalMedia();
+      }
+    };
+
+    const executeResume = () => {
+      if (visibilityDebounceTimer) {
+        clearTimeout(visibilityDebounceTimer);
+        visibilityDebounceTimer = null;
+      }
+      if (isCurrentlyBackgrounded) {
+        isCurrentlyBackgrounded = false;
+        void handleResumeOrFocus();
+      }
+    };
+
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'hidden') {
-        suspendLocalMedia();
+        // Debounce suspension to prevent flapping if OS rapidly toggles visibility
+        if (visibilityDebounceTimer) clearTimeout(visibilityDebounceTimer);
+        visibilityDebounceTimer = setTimeout(executeSuspend, 1000);
       } else {
-        void handleResumeOrFocus();
+        executeResume();
       }
     };
 
@@ -1544,16 +1568,15 @@ export function useVideoChat(
     document.addEventListener('visibilitychange', handleVisibilityChange);
     document.addEventListener('freeze', handleUnloadOrHide);
 
-    // Phase 4: Extract named handlers so removeEventListener can match the SAME reference.
-    // Passing new arrow functions to removeEventListener never removes the original listener.
-    const handleResume = () => void handleResumeOrFocus();
-    const handleFocus = () => void handleResumeOrFocus();
+    const handleResume = () => executeResume();
+    const handleFocus = () => executeResume();
     document.addEventListener('resume', handleResume);
     window.addEventListener('focus', handleFocus);
     window.addEventListener('online', handleOnline);
 
     return () => {
       isMountedRef.current = false;
+      if (visibilityDebounceTimer) clearTimeout(visibilityDebounceTimer);
       window.removeEventListener('beforeunload', handleUnloadOrHide);
       window.removeEventListener('pagehide', handleUnloadOrHide);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
