@@ -494,10 +494,10 @@ export function useVideoChat(
       partnerProfile?: any;
     }) => {
       if (!isMountedRef.current) return;
-      if (skipInProgressRef.current && LifecycleManager.getInstance().getState() !== ('REQUEUEING' as any)) return;
+      if (skipInProgressRef.current && LifecycleManager.getInstance().getState() !== ('QUEUEING')) return;
       if (
         LifecycleManager.getInstance().getState() === 'MATCH_FOUND' ||
-        LifecycleManager.getInstance().getState() === ('READY' as any) ||
+        LifecycleManager.getInstance().getState() === ('MATCH_FOUND') ||
         LifecycleManager.getInstance().getState() === 'NEGOTIATING' ||
         LifecycleManager.getInstance().getState() === 'CONNECTED'
       ) {
@@ -654,7 +654,7 @@ export function useVideoChat(
     }) => {
       if (skipInProgressRef.current) return;
       if (
-        LifecycleManager.getInstance().getState() === ('READY' as any) ||
+        LifecycleManager.getInstance().getState() === ('MATCH_FOUND') ||
         LifecycleManager.getInstance().getState() === 'NEGOTIATING' ||
         LifecycleManager.getInstance().getState() === 'CONNECTED'
       ) {
@@ -757,7 +757,7 @@ export function useVideoChat(
     try {
       await realtimeManager.joinQueue(sessionIdRef.current, sessionTokenRef.current, callbacksRef.current);
       if (!isMountedRef.current) return;
-      if (LifecycleManager.getInstance().getState() === ('REQUEUEING' as any)) {
+      if (LifecycleManager.getInstance().getState() === ('QUEUEING')) {
         setSignalingState('SEARCHING');
       }
       console.log('[Lifecycle] Queue Joined');
@@ -779,7 +779,7 @@ export function useVideoChat(
   function buildCallbacks() {
     return {
       onWaiting: (data: { queuePosition: number; message: string }) => {
-        if (skipInProgressRef.current && LifecycleManager.getInstance().getState() !== ('REQUEUEING' as any)) return;
+        if (skipInProgressRef.current && LifecycleManager.getInstance().getState() !== ('QUEUEING')) return;
         setSignalingState('SEARCHING');
         updateChatState({
           queuePosition: data.queuePosition,
@@ -787,13 +787,13 @@ export function useVideoChat(
         });
       },
       onReaction: (data: { emoji: string; matchId: string; senderSessionId: string }) => {
-        if (skipInProgressRef.current && LifecycleManager.getInstance().getState() !== ('REQUEUEING' as any)) return;
+        if (skipInProgressRef.current && LifecycleManager.getInstance().getState() !== ('QUEUEING')) return;
         if (data.matchId !== matchIdRef.current) return; // Phase 5 Strict Isolation
         const fromLocal = data.senderSessionId === sessionIdRef.current;
         onReactionRef.current?.(data.emoji, fromLocal);
       },
       onMatched: (data: any) => {
-        if (skipInProgressRef.current && LifecycleManager.getInstance().getState() !== ('REQUEUEING' as any)) return;
+        if (skipInProgressRef.current && LifecycleManager.getInstance().getState() !== ('QUEUEING')) return;
         if (data?.eventId && processedEventsRef.current.has(data.eventId)) {
           console.log('[Signaling] Duplicate matched event ignored. eventId:', data.eventId);
           return;
@@ -807,7 +807,7 @@ export function useVideoChat(
         handleMatchedRef.current?.(data);
       },
       onStartNegotiation: (data: any) => {
-        if (skipInProgressRef.current && LifecycleManager.getInstance().getState() !== ('REQUEUEING' as any)) return;
+        if (skipInProgressRef.current && LifecycleManager.getInstance().getState() !== ('QUEUEING')) return;
         if (data?.eventId && processedEventsRef.current.has(data.eventId)) {
           console.log('[Signaling] Duplicate startNegotiation event ignored. eventId:', data.eventId);
           return;
@@ -821,13 +821,13 @@ export function useVideoChat(
         handleStartNegotiationRef.current?.(data);
       },
       onSessionConnected: (data: { matchId: string }) => {
-        if (skipInProgressRef.current && LifecycleManager.getInstance().getState() !== ('REQUEUEING' as any)) return;
+        if (skipInProgressRef.current && LifecycleManager.getInstance().getState() !== ('QUEUEING')) return;
         if (data.matchId !== matchIdRef.current) return;
         console.log(`[Websocket Event] session_connected for match ${data.matchId}`);
         setSignalingState('CONNECTED');
       },
       onPartnerLeft: (data?: { reason: string; eventId?: string }) => {
-        if (skipInProgressRef.current && LifecycleManager.getInstance().getState() !== ('REQUEUEING' as any)) return;
+        if (skipInProgressRef.current && LifecycleManager.getInstance().getState() !== ('QUEUEING')) return;
         console.log(`[Websocket Event] partnerLeft received (reason: ${data?.reason || 'unknown'})`);
         if (data?.eventId && processedEventsRef.current.has(data.eventId)) {
           console.log('[Signaling] Duplicate partner_left event ignored. eventId:', data.eventId);
@@ -845,13 +845,13 @@ export function useVideoChat(
         executePartnerLeftTeardownRef.current?.();
       },
       onSearching: (data: { message: string }) => {
-        if (skipInProgressRef.current && LifecycleManager.getInstance().getState() !== ('REQUEUEING' as any)) return;
+        if (skipInProgressRef.current && LifecycleManager.getInstance().getState() !== ('QUEUEING')) return;
         setSignalingState('SEARCHING');
         updateChatState({ connectionStatus: 'connecting' });
         showToast('info', data.message);
       },
       onError: (data: { message: string }) => {
-        if (skipInProgressRef.current && LifecycleManager.getInstance().getState() !== ('REQUEUEING' as any)) return;
+        if (skipInProgressRef.current && LifecycleManager.getInstance().getState() !== ('QUEUEING')) return;
         showToast('error', data.message);
 
         if (data.message.includes('lost') || data.message.includes('Reconnecting')) {
@@ -868,13 +868,13 @@ export function useVideoChat(
         }
       },
       onPartnerLiked: () => {
-        if (skipInProgressRef.current && LifecycleManager.getInstance().getState() !== ('REQUEUEING' as any)) return;
+        if (skipInProgressRef.current && LifecycleManager.getInstance().getState() !== ('QUEUEING')) return;
         // Silently record that the partner liked — do NOT reveal this to the user.
         // The like must remain hidden until MUTUAL_LIKE is emitted by the backend.
         updateChatState({ partnerLiked: true });
       },
       onMutualLike: () => {
-        if (skipInProgressRef.current && LifecycleManager.getInstance().getState() !== ('REQUEUEING' as any)) return;
+        if (skipInProgressRef.current && LifecycleManager.getInstance().getState() !== ('QUEUEING')) return;
         setChatState((prev) => {
           const newMessages = prev.messages ? [...prev.messages] : [];
           const hasMutualMsg = newMessages.some((m) => m.id.startsWith('system-mutual-like'));
@@ -894,22 +894,22 @@ export function useVideoChat(
         });
       },
       onPartnerSkipPending: () => {
-        if (skipInProgressRef.current && LifecycleManager.getInstance().getState() !== ('REQUEUEING' as any)) return;
+        if (skipInProgressRef.current && LifecycleManager.getInstance().getState() !== ('QUEUEING')) return;
         updateChatState({ partnerSkipPending: true });
       },
       onPartnerSkipCancelled: () => {
-        if (skipInProgressRef.current && LifecycleManager.getInstance().getState() !== ('REQUEUEING' as any)) return;
+        if (skipInProgressRef.current && LifecycleManager.getInstance().getState() !== ('QUEUEING')) return;
         updateChatState({ partnerSkipPending: false });
       },
       onPartnerReconnect: () => {
-        if (skipInProgressRef.current && LifecycleManager.getInstance().getState() !== ('REQUEUEING' as any)) return;
+        if (skipInProgressRef.current && LifecycleManager.getInstance().getState() !== ('QUEUEING')) return;
         console.log('[Signaling] Partner reconnected. Triggering ICE restart...');
         if (isInitiatorRef.current) {
           void handleIceRestart();
         }
       },
       onNewMessage: (data: { matchId: string; senderSessionId: string; message: string; createdAt: string }) => {
-        if (skipInProgressRef.current && LifecycleManager.getInstance().getState() !== ('REQUEUEING' as any)) return;
+        if (skipInProgressRef.current && LifecycleManager.getInstance().getState() !== ('QUEUEING')) return;
         setChatState((prev) => {
           const newMessages = prev.messages ? [...prev.messages] : [];
           newMessages.push({
@@ -927,11 +927,11 @@ export function useVideoChat(
         });
       },
       onPartnerTyping: (data: { typing: boolean }) => {
-        if (skipInProgressRef.current && LifecycleManager.getInstance().getState() !== ('REQUEUEING' as any)) return;
+        if (skipInProgressRef.current && LifecycleManager.getInstance().getState() !== ('QUEUEING')) return;
         updateChatState({ partnerTyping: data.typing });
       },
       onMessageSeen: (data: { matchId: string; senderId: string }) => {
-        if (skipInProgressRef.current && LifecycleManager.getInstance().getState() !== ('REQUEUEING' as any)) return;
+        if (skipInProgressRef.current && LifecycleManager.getInstance().getState() !== ('QUEUEING')) return;
         if (data.senderId === sessionIdRef.current) {
           setChatState((prev) => {
             const updated = prev.messages
@@ -944,7 +944,7 @@ export function useVideoChat(
         }
       },
       onOffer: async (data: { fromSessionId: string; offer: RTCSessionDescriptionInit; matchId: string }) => {
-        if (skipInProgressRef.current && LifecycleManager.getInstance().getState() !== ('REQUEUEING' as any)) return;
+        if (skipInProgressRef.current && LifecycleManager.getInstance().getState() !== ('QUEUEING')) return;
         if (data.matchId && matchIdRef.current && data.matchId !== matchIdRef.current) {
           console.warn(`[Signaling] Stale onOffer rejected. Expected ${matchIdRef.current}, got ${data.matchId}`);
           return;
@@ -1019,7 +1019,7 @@ export function useVideoChat(
         }
       },
       onOfferAck: (data: { fromSessionId: string; matchId: string }) => {
-        if (skipInProgressRef.current && LifecycleManager.getInstance().getState() !== ('REQUEUEING' as any)) return;
+        if (skipInProgressRef.current && LifecycleManager.getInstance().getState() !== ('QUEUEING')) return;
         if (data.matchId && matchIdRef.current && data.matchId !== matchIdRef.current) return;
         
         console.log('[Signaling] Offer ACK received, clearing retry timer.');
@@ -1029,7 +1029,7 @@ export function useVideoChat(
         }
       },
       onAnswer: async (data: { fromSessionId: string; answer: RTCSessionDescriptionInit; matchId: string }) => {
-        if (skipInProgressRef.current && LifecycleManager.getInstance().getState() !== ('REQUEUEING' as any)) return;
+        if (skipInProgressRef.current && LifecycleManager.getInstance().getState() !== ('QUEUEING')) return;
         if (data.matchId && matchIdRef.current && data.matchId !== matchIdRef.current) {
           console.warn(`[Signaling] Stale onAnswer rejected. Expected ${matchIdRef.current}, got ${data.matchId}`);
           return;
@@ -1067,7 +1067,7 @@ export function useVideoChat(
         }
       },
       onAnswerAck: (data: { fromSessionId: string; matchId: string }) => {
-        if (skipInProgressRef.current && LifecycleManager.getInstance().getState() !== ('REQUEUEING' as any)) return;
+        if (skipInProgressRef.current && LifecycleManager.getInstance().getState() !== ('QUEUEING')) return;
         if (data.matchId && matchIdRef.current && data.matchId !== matchIdRef.current) return;
 
         console.log('[Signaling] Answer ACK received, clearing retry timer.');
@@ -1077,7 +1077,7 @@ export function useVideoChat(
         }
       },
       onIceCandidate: async (data: { candidate: RTCIceCandidateInit; matchId: string }) => {
-        if (skipInProgressRef.current && LifecycleManager.getInstance().getState() !== ('REQUEUEING' as any)) return;
+        if (skipInProgressRef.current && LifecycleManager.getInstance().getState() !== ('QUEUEING')) return;
         if (data.matchId && matchIdRef.current && data.matchId !== matchIdRef.current) return;
         
         await webrtcManager.addIceCandidate(data.candidate);
@@ -1090,7 +1090,7 @@ export function useVideoChat(
             console.log('[Realtime] Socket reconnected and backend reports MATCHED. Restoring state...');
             handleMatched(status);
           } else if (status.status === 'waiting') {
-            if (LifecycleManager.getInstance().getState() !== ('SEARCHING' as any) && !skipInProgressRef.current) {
+            if (LifecycleManager.getInstance().getState() !== ('QUEUEING') && !skipInProgressRef.current) {
               setSignalingState('SEARCHING');
             }
           }
@@ -1142,10 +1142,10 @@ export function useVideoChat(
       // ----------------------------
 
       await realtimeManager.joinQueue(sessionId, sessionToken, callbacks);
-      if (LifecycleManager.getInstance().getState() === ('CONNECTING_REALTIME' as any)) {
+      if (LifecycleManager.getInstance().getState() === ('QUEUEING')) {
         setSignalingState('SEARCHING');
         console.log('[Lifecycle] Queue Joined');
-      } else if (LifecycleManager.getInstance().getState() === 'ENDED' || LifecycleManager.getInstance().getState() === ('IDLE' as any)) {
+      } else if (LifecycleManager.getInstance().getState() === 'ENDED' || LifecycleManager.getInstance().getState() === ('HOME')) {
         // KS-C8 Fix: Compensatory leaveQueue
         // If the user clicked "Cancel" (stopChat) while the joinQueue request was in-flight,
         // the signalingState was set to 'ENDED' synchronously. We must undo the join.
@@ -1191,7 +1191,7 @@ export function useVideoChat(
     if (skipInProgressRef.current) return;
 
     // Disallow skip if we are already searching
-    if (LifecycleManager.getInstance().getState() === ('SEARCHING' as any)) {
+    if (LifecycleManager.getInstance().getState() === ('QUEUEING')) {
       console.log('[Queue] Cannot skip while actively searching.');
       return;
     }
@@ -1224,7 +1224,7 @@ export function useVideoChat(
       await realtimeManager.nextPartner(sessionIdRef.current, sessionTokenRef.current, callbacksRef.current, currentMatchId ?? undefined);
       if (!isMountedRef.current) return;
       
-      if (LifecycleManager.getInstance().getState() === ('REQUEUEING' as any)) {
+      if (LifecycleManager.getInstance().getState() === ('QUEUEING')) {
         setSignalingState('SEARCHING');
       } else {
         // KS-C9 Fix: Compensatory leaveQueue
@@ -1454,7 +1454,7 @@ export function useVideoChat(
       
       if (isClosing) {
         const isCallActive = [
-          'SEARCHING', 'REQUEUEING', 'MATCH_FOUND', 'READY', 'NEGOTIATING', 'ICE_CONNECTING', 'CONNECTED'
+          'QUEUEING', 'MATCH_FOUND', 'READY', 'NEGOTIATING', 'ICE_CONNECTING', 'CONNECTED'
         ].includes(LifecycleManager.getInstance().getState());
 
         if (isCallActive && e) {
@@ -1472,7 +1472,7 @@ export function useVideoChat(
       
       const isCallActive = [
         'REQUESTING_MEDIA', 'MEDIA_READY', 'CONNECTING_REALTIME', 
-        'SEARCHING', 'REQUEUEING', 'PARTNER_LEFT', 'MATCH_FOUND', 'READY', 'NEGOTIATING', 'ICE_CONNECTING', 'CONNECTED'
+        'QUEUEING', 'PARTNER_LEFT', 'MATCH_FOUND', 'READY', 'NEGOTIATING', 'ICE_CONNECTING', 'CONNECTED'
       ].includes(LifecycleManager.getInstance().getState());
 
       if (isCallActive && !isQueuePausedRef.current) {
@@ -1518,7 +1518,7 @@ export function useVideoChat(
       }
 
       // Self-healing queue: If status is SEARCHING, send a heartbeat joinQueue immediately
-      if (LifecycleManager.getInstance().getState() === ('SEARCHING' as any) && !isQueuePausedRef.current && sessionIdRef.current && sessionTokenRef.current && callbacksRef.current) {
+      if (LifecycleManager.getInstance().getState() === ('QUEUEING') && !isQueuePausedRef.current && sessionIdRef.current && sessionTokenRef.current && callbacksRef.current) {
         console.log('[Lifecycle] Queue active — forcing immediate heartbeat registration');
         void realtimeManager.joinQueue(sessionIdRef.current, sessionTokenRef.current, callbacksRef.current);
       }
@@ -1526,7 +1526,7 @@ export function useVideoChat(
 
     const handleOnline = () => {
       console.log('[Lifecycle] Internet connection restored');
-      if (LifecycleManager.getInstance().getState() === ('SEARCHING' as any) && !isQueuePausedRef.current && sessionIdRef.current && sessionTokenRef.current && callbacksRef.current) {
+      if (LifecycleManager.getInstance().getState() === ('QUEUEING') && !isQueuePausedRef.current && sessionIdRef.current && sessionTokenRef.current && callbacksRef.current) {
         void realtimeManager.joinQueue(sessionIdRef.current, sessionTokenRef.current, callbacksRef.current);
       }
     };

@@ -15,6 +15,7 @@ import {
 import { getSupabase } from '../database/client.js';
 import matchRoutes from './match.js';
 import notificationRoutes from './notifications.js';
+import { metricsRepository } from '../database/repositories/index.js';
 import { matchmakerMetrics } from '../matchmaking/matchingEngine.js';
 import { broadcastToSession } from '../services/broadcast.js';
 import { validateSession } from '../services/matchService.js';
@@ -493,25 +494,27 @@ router.get('/analytics', async (req, res, next) => {
       }
     });
 
-    res.json({
-      success: true,
-      data: {
-        onlineNow: waitingCount.count ?? 0,
-        totalMatches: matchesCount.count ?? 0,
-        totalLikes: likesCount.count ?? 0,
-        totalReports: reportsCount.count ?? 0,
-        topInterests: Object.entries(interestsFreq).sort((a, b) => b[1] - a[1]).slice(0, 5),
-        topLocations: Object.entries(locationsFreq).sort((a, b) => b[1] - a[1]).slice(0, 5),
-        topLanguages: Object.entries(languagesFreq).sort((a, b) => b[1] - a[1]).slice(0, 5),
-        matchmaker: {
-          totalSearchingUsers: matchmakerMetrics.totalSearchingUsers,
-          averageWaitTime: matchmakerMetrics.averageWaitTime,
-          maximumWaitTime: matchmakerMetrics.maximumWaitTime,
-          successfulMatches: matchmakerMetrics.successfulMatches,
-          failedMatches: matchmakerMetrics.failedMatches,
-          rematches: matchmakerMetrics.rematches,
-          abandonedSearches: matchmakerMetrics.abandonedSearches,
-        }
+        const matchmakerDB = await metricsRepository.getGlobalMatchmakerMetrics();
+
+        res.json({
+          success: true,
+          data: {
+            onlineNow: waitingCount.count ?? 0,
+            totalMatches: matchesCount.count ?? 0,
+            totalLikes: likesCount.count ?? 0,
+            totalReports: reportsCount.count ?? 0,
+            topInterests: Object.entries(interestsFreq).sort((a, b) => b[1] - a[1]).slice(0, 5),
+            topLocations: Object.entries(locationsFreq).sort((a, b) => b[1] - a[1]).slice(0, 5),
+            topLanguages: Object.entries(languagesFreq).sort((a, b) => b[1] - a[1]).slice(0, 5),
+            matchmaker: {
+              totalSearchingUsers: matchmakerDB.total_searching_users || matchmakerMetrics.totalSearchingUsers,
+              averageWaitTime: Number(matchmakerDB.average_wait_time) || matchmakerMetrics.averageWaitTime,
+              maximumWaitTime: Number(matchmakerDB.maximum_wait_time) || matchmakerMetrics.maximumWaitTime,
+              successfulMatches: Number(matchmakerDB.successful_matches) || matchmakerMetrics.successfulMatches,
+              failedMatches: Number(matchmakerDB.failed_matches) || matchmakerMetrics.failedMatches,
+              rematches: Number(matchmakerDB.rematches) || matchmakerMetrics.rematches,
+              abandonedSearches: Number(matchmakerDB.abandoned_searches) || matchmakerMetrics.abandonedSearches,
+            }
       }
     });
   } catch (err) {

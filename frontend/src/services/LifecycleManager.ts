@@ -113,7 +113,8 @@ export class LifecycleManager extends EventEmitter {
   }
 
   public joinQueue() {
-    if (['HOME', 'CONFIGURING', 'TEARDOWN'].includes(this.currentState)) {
+    if (this.currentState === 'QUEUEING') return; // Idempotent
+    if (['HOME', 'CONFIGURING', 'TEARDOWN', 'ENDED'].includes(this.currentState)) {
       this.transitionTo('QUEUEING');
     } else {
       console.warn(`[LifecycleManager] Cannot join queue from ${this.currentState}`);

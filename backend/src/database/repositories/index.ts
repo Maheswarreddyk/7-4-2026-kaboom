@@ -308,8 +308,53 @@ export const metricsRepository = {
       .select()
       .single();
 
-    if (error || !data) handleSupabaseError(error, 'Failed to record metrics');
+    if (error || !data) handleSupabaseError(error, 'Failed to record server metrics');
     return data as ServerMetrics;
+  },
+
+  async flushMatchmakerMetrics(
+    totalSearching: number,
+    avgWait: number,
+    maxWait: number,
+    succMatches: number,
+    failMatches: number,
+    rematches: number,
+    abandoned: number
+  ): Promise<void> {
+    const { error } = await getSupabase().rpc('update_matchmaker_metrics', {
+      p_total_searching_users: totalSearching,
+      p_avg_wait: avgWait,
+      p_max_wait: maxWait,
+      p_succ: succMatches,
+      p_fail: failMatches,
+      p_rematches: rematches,
+      p_abandoned: abandoned
+    });
+    if (error) {
+      console.error('[Metrics] Failed to flush global matchmaker metrics to DB:', error);
+    }
+  },
+
+  async getGlobalMatchmakerMetrics(): Promise<any> {
+    const { data, error } = await getSupabase()
+      .from('matchmaker_metrics')
+      .select('*')
+      .eq('id', 1)
+      .single();
+    
+    if (error) {
+      console.warn('[Metrics] Could not read global matchmaker metrics, defaulting to 0');
+      return {
+        total_searching_users: 0,
+        average_wait_time: 0,
+        maximum_wait_time: 0,
+        successful_matches: 0,
+        failed_matches: 0,
+        rematches: 0,
+        abandoned_searches: 0
+      };
+    }
+    return data;
   },
 
   async getLatest(): Promise<ServerMetrics | null> {

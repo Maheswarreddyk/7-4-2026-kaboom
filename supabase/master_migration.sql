@@ -1067,3 +1067,58 @@ BEGIN
   END IF;
 END$$;
 
+ 
+ 
+-- ==========================================
+-- matchmaker_metrics
+-- Persistent global metrics for the matchmaking engine
+-- ==========================================
+
+CREATE TABLE matchmaker_metrics (
+  id INTEGER PRIMARY KEY DEFAULT 1,
+  total_searching_users INTEGER NOT NULL DEFAULT 0,
+  average_wait_time NUMERIC(10, 2) NOT NULL DEFAULT 0,
+  maximum_wait_time NUMERIC(10, 2) NOT NULL DEFAULT 0,
+  successful_matches BIGINT NOT NULL DEFAULT 0,
+  failed_matches BIGINT NOT NULL DEFAULT 0,
+  rematches BIGINT NOT NULL DEFAULT 0,
+  abandoned_searches BIGINT NOT NULL DEFAULT 0,
+  CONSTRAINT single_row CHECK (id = 1)
+);
+
+COMMENT ON TABLE matchmaker_metrics IS 'Singleton table storing persistent matchmaker metrics';
+
+INSERT INTO matchmaker_metrics (id) VALUES (1) ON CONFLICT DO NOTHING;
+
+ALTER TABLE matchmaker_metrics ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow public read on matchmaker_metrics" ON matchmaker_metrics FOR SELECT USING (true);
+CREATE POLICY "Deny public write on matchmaker_metrics" ON matchmaker_metrics FOR INSERT WITH CHECK (false);
+CREATE POLICY "Deny public update on matchmaker_metrics" ON matchmaker_metrics FOR UPDATE USING (false);
+GRANT ALL ON matchmaker_metrics TO service_role;
+GRANT SELECT ON matchmaker_metrics TO anon, authenticated;
+
+-- Add helper RPC to update matchmaker metrics atomically
+CREATE OR REPLACE FUNCTION update_matchmaker_metrics(
+  p_total_searching_users INTEGER,
+  p_avg_wait NUMERIC,
+  p_max_wait NUMERIC,
+  p_succ BIGINT,
+  p_fail BIGINT,
+  p_rematches BIGINT,
+  p_abandoned BIGINT
+)
+RETURNS VOID AS $$
+BEGIN
+  UPDATE matchmaker_metrics SET
+    total_searching_users = p_total_searching_users,
+    average_wait_time = average_wait_time + p_avg_wait,
+    maximum_wait_time = GREATEST(maximum_wait_time, p_max_wait),
+    successful_matches = successful_matches + p_succ,
+    failed_matches = failed_matches + p_fail,
+    rematches = rematches + p_rematches,
+    abandoned_searches = abandoned_searches + p_abandoned
+  WHERE id = 1;
+END;
+$$ LANGUAGE plpgsql;
+
+GRANT EXECUTE ON FUNCTION update_matchmaker_metrics TO service_role;

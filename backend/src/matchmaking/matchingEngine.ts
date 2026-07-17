@@ -16,6 +16,12 @@ import {
   type SessionProfile,
 } from './scoringEngine.js';
 import {
+  sessionRepository,
+  matchRepository,
+  reportRepository,
+  metricsRepository,
+} from '../database/repositories/index.js';
+import {
   confirmReservation,
   createReservation,
   rollbackReservation,
@@ -416,6 +422,27 @@ export async function runGlobalMatchCycle(supabase: SupabaseClient): Promise<voi
 
   try {
     // 2. Queue healing has been decoupled to runGlobalHealCycle (Phase 4 Perf Optimization)
+
+    // [BE-003] Centralize Metrics: Flush local metric deltas to persistent storage
+    try {
+      await metricsRepository.flushMatchmakerMetrics(
+        matchmakerMetrics.totalSearchingUsers,
+        matchmakerMetrics.averageWaitTime,
+        matchmakerMetrics.maximumWaitTime,
+        matchmakerMetrics.successfulMatches,
+        matchmakerMetrics.failedMatches,
+        matchmakerMetrics.rematches,
+        matchmakerMetrics.abandonedSearches
+      );
+      
+      matchmakerMetrics.successfulMatches = 0;
+      matchmakerMetrics.failedMatches = 0;
+      matchmakerMetrics.rematches = 0;
+      matchmakerMetrics.abandonedSearches = 0;
+      matchmakerMetrics.maximumWaitTime = 0;
+    } catch (e) {
+      console.error('[Matchmaker] Error flushing metrics:', e);
+    }
 
     // 3. Expire stale reservations
     const expiredCount = await expireStaleReservations(supabase);
