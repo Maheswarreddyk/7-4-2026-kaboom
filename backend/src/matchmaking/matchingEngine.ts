@@ -1,8 +1,10 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
 import { HEARTBEAT_STALE_MS, RESERVATION_TIMEOUT_MS } from './config.js';
-import { getIceServers } from '../config/index.js';
 import { broadcastToSession } from '../services/broadcast.js';
+import { getIceServers } from '../config/index.js';
+
+import { isDeepStrictEqual } from 'util';
 import {
   expireStaleReservations,
   getReservedSessionIds,
@@ -165,40 +167,49 @@ async function loadBatchedExclusions(supabase: SupabaseClient, sessionIds: strin
     endedMatchesMap.set(id, new Map());
   });
 
-  // Load bounded history on a per-user basis
-  await Promise.all(sessionIds.map(async (id) => {
+  // Chunk IDs into groups of 20 to avoid URL length limits in PostgREST
+  const chunkSize = 20;
+  for (let i = 0; i < sessionIds.length; i += chunkSize) {
+    const chunk = sessionIds.slice(i, i + chunkSize);
+    const idList = `(${chunk.join(',')})`;
+
+    // Use a single query per table for the whole chunk
     const [recentMatches, reports, endedMatches] = await Promise.all([
       supabase
         .from('matches')
         .select('user_a, user_b')
-        .or(`user_a.eq.${id},user_b.eq.${id}`)
+        .or(`user_a.in.${idList},user_b.in.${idList}`)
         .order('started_at', { ascending: false })
-        .limit(20),
+        .limit(1000), // higher limit since it's for multiple users
       supabase
         .from('reports')
         .select('reporter_session, reported_session')
-        .or(`reporter_session.eq.${id},reported_session.eq.${id}`),
+        .or(`reporter_session.in.${idList},reported_session.in.${idList}`),
       supabase
         .from('matches')
         .select('user_a, user_b, ended_at')
         .not('ended_at', 'is', null)
-        .or(`user_a.eq.${id},user_b.eq.${id}`)
+        .or(`user_a.in.${idList},user_b.in.${idList}`)
         .order('ended_at', { ascending: false })
-        .limit(20)
+        .limit(1000)
     ]);
 
-    recentMatches.data?.forEach(m => {
-      recentPartnersMap.get(id)!.add(m.user_a === id ? m.user_b : m.user_a);
+    // Populate maps
+    recentMatches.data?.forEach((m: any) => {
+      if (chunk.includes(m.user_a)) recentPartnersMap.get(m.user_a)!.add(m.user_b);
+      if (chunk.includes(m.user_b)) recentPartnersMap.get(m.user_b)!.add(m.user_a);
     });
 
-    reports.data?.forEach(r => {
-      reportedIdsMap.get(id)!.add(r.reporter_session === id ? r.reported_session : r.reporter_session);
+    reports.data?.forEach((r: any) => {
+      if (chunk.includes(r.reporter_session)) reportedIdsMap.get(r.reporter_session)!.add(r.reported_session);
+      if (chunk.includes(r.reported_session)) reportedIdsMap.get(r.reported_session)!.add(r.reporter_session);
     });
 
-    endedMatches.data?.forEach(m => {
-      endedMatchesMap.get(id)!.set(m.user_a === id ? m.user_b : m.user_a, m.ended_at);
+    endedMatches.data?.forEach((m: any) => {
+      if (chunk.includes(m.user_a)) endedMatchesMap.get(m.user_a)!.set(m.user_b, m.ended_at);
+      if (chunk.includes(m.user_b)) endedMatchesMap.get(m.user_b)!.set(m.user_a, m.ended_at);
     });
-  }));
+  }
 
   return { recentPartnersMap, reportedIdsMap, endedMatchesMap };
 }
@@ -569,19 +580,66 @@ export async function runGlobalMatchCycle(supabase: SupabaseClient): Promise<voi
         continue;
       }
 
-      // Found a match!
-      const bestMatch = ranked[0];
-      const sessionIdB = bestMatch.sessionId;
+      // MATCH-002: Implement explicit fallback loop upon a lock failure
+      let reservationSuccess = false;
+      let bestMatch: any = null;
+      let reservation: any = null;
+      let retryCount = 0;
+      const MAX_RETRIES = 3;
 
-      console.log(`[Matchmaker] Found match: ${sessionIdA} and ${sessionIdB} (score=${bestMatch.weightedScore}, reason=${bestMatch.reason})`);
+      for (const candidate of ranked) {
+        if (retryCount >= MAX_RETRIES) {
+          console.warn(`[Matchmaker] MATCH-002: Exceeded max reservation retries (${MAX_RETRIES}) for ${sessionIdA}`);
+          break;
+        }
 
-      // Create reservation atomically (includes KS-014 FSM lock to RESERVED)
-      const reservation = await createReservation(supabase, sessionIdA, sessionIdB);
-      if (!reservation.success) {
-        console.error(`[Matchmaker] Failed to reserve: ${reservation.reason}`);
-        matchmakerMetrics.failedMatches += 1;
+        const candidateId = candidate.sessionId;
+
+        // MATCH-001 Optimistic Re-check: re-read preferences to catch mid-cycle updates
+        const { data: freshProfiles } = await supabase
+          .from('visitor_sessions')
+          .select('id, match_mode, match_attributes, match_constraints')
+          .in('id', [sessionIdA, candidateId]);
+
+        const freshA = freshProfiles?.find(p => p.id === sessionIdA);
+        const freshB = freshProfiles?.find(p => p.id === candidateId);
+        
+        const candidateEntry = activeWaiting.find(w => w.session_id === candidateId);
+
+        const aDrift = !isDeepStrictEqual(freshA?.match_attributes, entryA.visitor_sessions.match_attributes) ||
+                       !isDeepStrictEqual(freshA?.match_constraints, entryA.visitor_sessions.match_constraints) ||
+                       freshA?.match_mode !== entryA.visitor_sessions.match_mode;
+        
+        const bDrift = candidateEntry && (!isDeepStrictEqual(freshB?.match_attributes, candidateEntry.visitor_sessions.match_attributes) ||
+                       !isDeepStrictEqual(freshB?.match_constraints, candidateEntry.visitor_sessions.match_constraints) ||
+                       freshB?.match_mode !== candidateEntry.visitor_sessions.match_mode);
+
+        if (aDrift || bDrift) {
+           console.warn(`[Matchmaker] MATCH-001: Preference drift detected mid-cycle. Aborting reservation attempt.`);
+           // Break entirely, forcing a re-score in the next 1-second cycle
+           break;
+        }
+
+        // Create reservation atomically (includes KS-014 FSM lock to RESERVED)
+        reservation = await createReservation(supabase, sessionIdA, candidateId);
+        if (reservation.success) {
+          reservationSuccess = true;
+          bestMatch = candidate;
+          break;
+        } else {
+          console.error(`[Matchmaker] Failed to reserve ${candidateId} for ${sessionIdA}: ${reservation.reason}`);
+          matchmakerMetrics.failedMatches += 1;
+          retryCount++;
+          AnalyticsLogger.logEvent('RESERVATION_RACE_RETRY' as any, sessionIdA, candidateId);
+        }
+      }
+
+      if (!reservationSuccess) {
         continue;
       }
+
+      const sessionIdB = bestMatch.sessionId;
+      console.log(`[Matchmaker] Found match: ${sessionIdA} and ${sessionIdB} (score=${bestMatch.weightedScore}, reason=${bestMatch.reason})`);
 
       const userA = sessionIdA < sessionIdB ? sessionIdA : sessionIdB;
       const userB = sessionIdA < sessionIdB ? sessionIdB : sessionIdA;
@@ -761,12 +819,8 @@ export async function runMatchCycle(
     throw new AppError(401, 'Invalid session');
   }
 
-  // 1. Join queue (idempotent)
-  const queueResult = await joinQueueEntry(supabase, sessionId);
-  const waitingSeconds = queueResult.waitingSeconds;
-
   // Helper to load partner details and return full matched state
-  const getMatchedReturnPayload = async (matchObj: any) => {
+  const getMatchedReturnPayload = async (matchObj: any, waitingSeconds: number) => {
     const partnerId = matchObj.user_a === sessionId ? matchObj.user_b : matchObj.user_a;
     const { data: partnerSession } = await supabase
       .from('visitor_sessions')
@@ -800,11 +854,15 @@ export async function runMatchCycle(
     };
   };
 
-  // 2. If they already have an active match, return it
+  // 1. If they already have an active match, return it
   const existingMatch = await findActiveMatch(supabase, sessionId);
   if (existingMatch) {
-    return await getMatchedReturnPayload(existingMatch);
+    return await getMatchedReturnPayload(existingMatch, 0); // waitingSeconds not needed if already matched
   }
+
+  // 2. Join queue (idempotent)
+  const queueResult = await joinQueueEntry(supabase, sessionId);
+  const waitingSeconds = queueResult.waitingSeconds;
 
   // 3. Run the global matching cycle to try matching users
   await runGlobalMatchCycle(supabase);
@@ -812,7 +870,7 @@ export async function runMatchCycle(
   // 4. Re-check if this user got matched during the global matching cycle
   const newMatch = await findActiveMatch(supabase, sessionId);
   if (newMatch) {
-    return await getMatchedReturnPayload(newMatch);
+    return await getMatchedReturnPayload(newMatch, waitingSeconds);
   }
 
   // 5. Still waiting

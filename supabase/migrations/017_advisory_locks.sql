@@ -49,15 +49,11 @@ BEGIN
 
   -- Both locked successfully, create the reservation
   INSERT INTO reservations (
-    user_a, 
-    user_b, 
     initiator_session_id, 
     partner_session_id, 
     status, 
     expires_at
   ) VALUES (
-    p_initiator_id,
-    p_partner_id,
     p_initiator_id,
     p_partner_id,
     'pending',

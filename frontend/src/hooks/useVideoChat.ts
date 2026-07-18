@@ -1172,8 +1172,8 @@ export function useVideoChat(
     setSignalingState('ENDED');
     if (sessionIdRef.current && sessionTokenRef.current) {
       await realtimeManager.notifyDisconnect(sessionIdRef.current, sessionTokenRef.current, 'leave', currentMatchId ?? undefined);
+      await realtimeManager.leaveQueue(sessionIdRef.current, sessionTokenRef.current, currentMatchId ?? undefined).catch(() => {});
     }
-    await realtimeManager.leaveQueue(sessionIdRef.current ?? '', sessionTokenRef.current ?? '', currentMatchId ?? undefined).catch(() => {});
     console.log('[Lifecycle] Queue Left');
     realtimeManager.disconnectRealtime();
     webrtcManager.cleanup();

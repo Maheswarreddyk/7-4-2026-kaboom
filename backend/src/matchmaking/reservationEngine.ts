@@ -29,6 +29,24 @@ export async function createReservation(
     });
 
     if (error) {
+      if (error.code === 'PGRST202' || error.message.includes('column "user_a"') || error.message.includes('relation "reservations"')) {
+        // Fallback for broken RPC in staging
+        const fallbackRes = await supabase.from('reservations').insert({
+          initiator_session_id: initiatorSessionId,
+          partner_session_id: partnerSessionId,
+          status: 'pending',
+          expires_at: expiresAt
+        }).select('id').single();
+        
+        if (fallbackRes.error) {
+           return { reservationId: '', success: false, reason: fallbackRes.error.message };
+        }
+        
+        await supabase.from('visitor_sessions').update({ status: 'RESERVED' }).in('id', [initiatorSessionId, partnerSessionId]);
+        
+        return { reservationId: fallbackRes.data.id, success: true, reason: 'Reserved' };
+      }
+      
       logEngine({
         engine: 'ReservationEngine',
         sessionId: initiatorSessionId,

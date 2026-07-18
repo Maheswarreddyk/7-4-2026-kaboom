@@ -119,6 +119,7 @@ export function VideoPlayer({
             'transition-all duration-700 w-full h-full',
             fullscreen ? 'object-cover' : 'object-contain',
             mirrored && 'scale-x-[-1]',
+            !mirrored && 'remote-video',
             frozen && 'blur-[4px] grayscale-[0.3] brightness-[0.8]',
             isStarting && 'blur-[12px] scale-105 brightness-110 grayscale-[0.5]'
           )}

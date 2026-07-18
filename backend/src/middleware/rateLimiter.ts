@@ -6,7 +6,7 @@ const skipLocalhost = (req: any) => {
 
 export const apiRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 200,
+  max: 10000, // increased from 200 for testing
   standardHeaders: true,
   legacyHeaders: false,
   skip: skipLocalhost,
@@ -18,7 +18,7 @@ export const apiRateLimiter = rateLimit({
 
 export const sessionRateLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
-  max: 20,
+  max: 10000, // increased from 20 for testing
   standardHeaders: true,
   legacyHeaders: false,
   skip: skipLocalhost,

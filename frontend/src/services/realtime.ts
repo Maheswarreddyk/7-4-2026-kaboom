@@ -313,12 +313,16 @@ export class RealtimeManager {
     }
   }
 
-  async joinQueue(sessionId: string, sessionToken: string, callbacks: RealtimeCallbacks) {
-    const result = await apiPost<{ success: boolean; data: Record<string, unknown> }>('/match/join', {
-      sessionId,
-      sessionToken,
-    });
+  private isJoiningQueue = false;
 
+  async joinQueue(sessionId: string, sessionToken: string, callbacks: RealtimeCallbacks) {
+    if (this.isJoiningQueue) return;
+    this.isJoiningQueue = true;
+    try {
+      const result = await apiPost<{ success: boolean; data: Record<string, unknown> }>('/match/join', {
+        sessionId,
+        sessionToken,
+      });
     const data = result.data;
 
     if (data.status === 'waiting') {
@@ -345,6 +349,9 @@ export class RealtimeManager {
       } else {
         callbacks.onError?.({ message: 'Failed to subscribe to match channel.' });
       }
+    }
+    } finally {
+      this.isJoiningQueue = false;
     }
   }
 
