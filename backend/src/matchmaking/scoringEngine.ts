@@ -157,6 +157,11 @@ export function calculateCompatibility(
       const val1 = user1.match_attributes?.[key] || [];
       const val2 = user2.match_attributes?.[key] || [];
       
+      // FIX: If A's attribute is empty/missing, it's not a constraint to match against
+      if (!val1 || val1.length === 0) {
+        continue;
+      }
+      
       // Exact match required for strict constraints
       if (val1.length !== val2.length) return false;
       const exactMatch = val1.every(v => val2.includes(v));

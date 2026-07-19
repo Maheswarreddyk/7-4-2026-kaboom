@@ -29,7 +29,7 @@ export const sessionRepository = {
         browser: data.browser ?? null,
         device: data.device ?? null,
         platform: data.platform ?? null,
-        status: 'IDLE',
+        status: 'READY',
       })
       .select()
       .single();
@@ -73,7 +73,7 @@ export const sessionRepository = {
     const { error } = await getSupabase()
       .from('visitor_sessions')
       .update({
-        status: 'ENDED',
+        status: 'TERMINATED',
         ended_at: new Date().toISOString(),
       })
       .eq('id', id);
@@ -87,7 +87,7 @@ export const sessionRepository = {
     const { count, error } = await getSupabase()
       .from('visitor_sessions')
       .select('*', { count: 'exact', head: true })
-      .in('status', ['IDLE', 'READY', 'SEARCHING', 'RESERVED', 'MATCHED', 'SIGNALING', 'CONNECTED', 'PARTNER_LEFT', 'REQUEUEING']);
+      .in('status', ['READY', 'SEARCHING', 'RESERVED', 'MATCHED', 'SIGNALING', 'CONNECTED', 'PARTNER_LEFT', 'REQUEUEING']);
 
     if (error) handleSupabaseError(error, 'Failed to count active sessions');
     return count ?? 0;

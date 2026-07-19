@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import pg from 'pg';
 import crypto from 'crypto';
 import { HEARTBEAT_STALE_MS, RESERVATION_TIMEOUT_MS } from './config.js';
 import { broadcastToSession } from '../services/broadcast.js';
@@ -33,10 +34,8 @@ import { AnalyticsLogger } from '../analytics/logger.js';
 import { AppError } from '../middleware/errorHandler.js';
 
 // ============================================================
-// Concurrency Mutex Configuration
+// Concurrency Mutex Configuration (Handled via pg_try_advisory_xact_lock)
 // ============================================================
-let isHealCycleRunning = false;
-const MATCHMAKER_LOCK_ID = 8888;
 
 // ============================================================
 // In-Memory Queue Cache & Invalidation
@@ -72,28 +71,28 @@ export const matchmakerMetrics: QueueMetrics = {
 // Explicit FSM Transition Validator (V4.1 Requirement 1)
 // ============================================================
 const VALID_TRANSITIONS: Record<string, string[]> = {
-  'CREATED': ['READY', 'SEARCHING', 'ENDED'],
-  'READY': ['SEARCHING', 'ENDED'],
-  'SEARCHING': ['RESERVED', 'READY', 'ENDED'],
-  'RESERVED': ['MATCHED', 'SEARCHING', 'ENDED'],
-  'MATCHED': ['SIGNALING', 'REQUEUEING', 'ENDED'],
-  'SIGNALING': ['CONNECTED', 'REQUEUEING', 'ENDED'],
-  'CONNECTED': ['PARTNER_LEFT', 'REQUEUEING', 'ENDED'],
-  'PARTNER_LEFT': ['REQUEUEING', 'ENDED'],
-  'REQUEUEING': ['SEARCHING', 'ENDED'],
-  'ENDED': ['READY', 'SEARCHING'],
+  'CREATED': ['READY', 'SEARCHING', 'TERMINATED'],
+  'READY': ['SEARCHING', 'TERMINATED'],
+  'SEARCHING': ['RESERVED', 'READY', 'TERMINATED'],
+  'RESERVED': ['MATCHED', 'SEARCHING', 'TERMINATED'],
+  'MATCHED': ['SIGNALING', 'REQUEUEING', 'TERMINATED'],
+  'SIGNALING': ['CONNECTED', 'REQUEUEING', 'TERMINATED'],
+  'CONNECTED': ['PARTNER_LEFT', 'REQUEUEING', 'TERMINATED'],
+  'PARTNER_LEFT': ['REQUEUEING', 'TERMINATED'],
+  'REQUEUEING': ['SEARCHING', 'TERMINATED'],
+  'TERMINATED': [],
 };
 
 const VALID_FROM_STATES: Record<string, string[]> = {
-  'READY': ['CREATED', 'SEARCHING', 'ENDED', 'IDLE', 'MATCHED', 'SIGNALING', 'CONNECTED', 'PARTNER_LEFT', 'REQUEUEING'],
-  'SEARCHING': ['CREATED', 'READY', 'RESERVED', 'REQUEUEING', 'ENDED', 'IDLE', 'MATCHED', 'SIGNALING', 'CONNECTED', 'PARTNER_LEFT'],
+  'READY': ['CREATED', 'SEARCHING', 'MATCHED', 'SIGNALING', 'CONNECTED', 'PARTNER_LEFT', 'REQUEUEING'],
+  'SEARCHING': ['CREATED', 'READY', 'RESERVED', 'REQUEUEING', 'MATCHED', 'SIGNALING', 'CONNECTED', 'PARTNER_LEFT'],
   'RESERVED': ['SEARCHING'],
   'MATCHED': ['RESERVED'],
   'SIGNALING': ['MATCHED'],
   'CONNECTED': ['SIGNALING'],
   'PARTNER_LEFT': ['MATCHED', 'SIGNALING', 'CONNECTED'],
   'REQUEUEING': ['MATCHED', 'SIGNALING', 'CONNECTED', 'PARTNER_LEFT', 'SEARCHING'],
-  'ENDED': ['CREATED', 'READY', 'SEARCHING', 'RESERVED', 'MATCHED', 'SIGNALING', 'CONNECTED', 'PARTNER_LEFT', 'REQUEUEING', 'IDLE']
+  'TERMINATED': ['CREATED', 'READY', 'SEARCHING', 'RESERVED', 'MATCHED', 'SIGNALING', 'CONNECTED', 'PARTNER_LEFT', 'REQUEUEING']
 };
 
 export async function transitionSessionStatus(
@@ -228,17 +227,22 @@ export async function runGlobalHealCycle(supabase: SupabaseClient): Promise<void
     return;
   }
 
-  if (isHealCycleRunning) {
-    return; // Another instance is healing
-  }
-  isHealCycleRunning = true;
-  lastHealTime = Date.now();
+  const client = new pg.Client({ connectionString: process.env.DATABASE_URL });
+  try {
+    await client.connect();
+    await client.query('BEGIN');
+    const { rows } = await client.query('SELECT pg_try_advisory_xact_lock(9999) as acquired');
+    if (!rows[0].acquired) {
+      // Another instance is healing
+      return;
+    }
+
+    lastHealTime = Date.now();
 
   const now = new Date().toISOString();
   const heartbeatThreshold = new Date(Date.now() - HEARTBEAT_STALE_MS).toISOString();
 
-  try {
-    // --- 1. Session in waiting state, but queue entry is missing ---
+  // --- 1. Session in waiting state, but queue entry is missing ---
     const { data: waitingSessions } = await supabase
       .from('visitor_sessions')
       .select('id, queue_entered_at')
@@ -290,8 +294,8 @@ export async function runGlobalHealCycle(supabase: SupabaseClient): Promise<void
           continue;
         }
 
-        if (profile.status === 'ENDED' || profile.status === 'ended') {
-          console.log(`[Self-Healing] Session ${entry.session_id} is ENDED. Expiring queue entry...`);
+        if (profile.status === 'TERMINATED' || profile.status === 'ended') {
+          console.log(`[Self-Healing] Session ${entry.session_id} is TERMINATED. Expiring queue entry...`);
           await supabase.from('waiting_queue').update({ status: 'expired' }).eq('id', entry.id);
         } else if (profile.status === 'CONNECTED' || profile.status === 'MATCHED' || profile.status === 'matched') {
           console.log(`[Self-Healing] Session ${entry.session_id} is active in match (${profile.status}). Marking queue matched...`);
@@ -306,8 +310,8 @@ export async function runGlobalHealCycle(supabase: SupabaseClient): Promise<void
             console.log(`[Self-Healing] Stale heartbeat for queue entry ${entry.id}. Expiring queue entry...`);
             await supabase.from('waiting_queue').update({ status: 'expired' }).eq('id', entry.id);
             // DEFECT-001 Fix: Only attempt READY transition if session is not already in a terminal state.
-            // Transitioning an ENDED session to READY generates a false-positive FSM warning.
-            if (profile.status !== 'ENDED' && profile.status !== 'ended') {
+            // Transitioning a TERMINATED session to READY generates a false-positive FSM warning.
+            if (profile.status !== 'TERMINATED' && profile.status !== 'ended') {
               await transitionSessionStatus(supabase, entry.session_id, 'READY', 'Self-healing heartbeat expired');
             }
           }
@@ -363,7 +367,7 @@ export async function runGlobalHealCycle(supabase: SupabaseClient): Promise<void
           await supabase.from('temporary_messages').delete().eq('match_id', m.id);
           await supabase.from('reservations').delete().eq('match_id', m.id);
 
-          // Re-queue any active peer (upsert pattern — avoid duplicate queue rows), and mark stale peer as ENDED
+          // Re-queue any active peer (upsert pattern — avoid duplicate queue rows), and mark stale peer as TERMINATED
           if (!staleA && m.user_a) {
             console.log(`[Self-Healing] Requeuing active partner A: ${m.user_a}`);
             await transitionSessionStatus(supabase, m.user_a, 'SEARCHING', 'Peer disconnected match cleanup');
@@ -386,8 +390,8 @@ export async function runGlobalHealCycle(supabase: SupabaseClient): Promise<void
               });
             }
           } else if (staleA && m.user_a) {
-            console.log(`[Self-Healing] Marking stale partner A as ENDED: ${m.user_a}`);
-            await transitionSessionStatus(supabase, m.user_a, 'ENDED', 'Stale peer match cleanup');
+            console.log(`[Self-Healing] Marking stale partner A as TERMINATED: ${m.user_a}`);
+            await transitionSessionStatus(supabase, m.user_a, 'TERMINATED', 'Stale peer match cleanup');
           }
 
           if (!staleB && m.user_b) {
@@ -411,8 +415,8 @@ export async function runGlobalHealCycle(supabase: SupabaseClient): Promise<void
               });
             }
           } else if (staleB && m.user_b) {
-            console.log(`[Self-Healing] Marking stale partner B as ENDED: ${m.user_b}`);
-            await transitionSessionStatus(supabase, m.user_b, 'ENDED', 'Stale peer match cleanup');
+            console.log(`[Self-Healing] Marking stale partner B as TERMINATED: ${m.user_b}`);
+            await transitionSessionStatus(supabase, m.user_b, 'TERMINATED', 'Stale peer match cleanup');
           }
         }
       }
@@ -420,7 +424,8 @@ export async function runGlobalHealCycle(supabase: SupabaseClient): Promise<void
   } catch (err) {
     console.error('[Self-Healing] Error during queue healing:', err instanceof Error ? err.message : err);
   } finally {
-    isHealCycleRunning = false;
+    try { await client.query('COMMIT'); } catch(e){}
+    await client.end();
   }
 }
 
@@ -431,7 +436,18 @@ export async function runGlobalHealCycle(supabase: SupabaseClient): Promise<void
 export async function runGlobalMatchCycle(supabase: SupabaseClient): Promise<void> {
   const start = Date.now();
 
+  const client = new pg.Client({ connectionString: process.env.DATABASE_URL });
   try {
+    await client.connect();
+    await client.query('BEGIN');
+    const { rows } = await client.query('SELECT pg_try_advisory_xact_lock(8888) as acquired');
+    if (!rows[0].acquired) {
+      // Jitter backoff and skip cycle to avoid tight loop contention
+      const delay = Math.min(Math.random() * 150 + 50, 200); // 50-200ms
+      await new Promise(r => setTimeout(r, delay));
+      return;
+    }
+
     // 2. Queue healing has been decoupled to runGlobalHealCycle (Phase 4 Perf Optimization)
 
     // [BE-003] Centralize Metrics: Flush local metric deltas to persistent storage
@@ -631,6 +647,9 @@ export async function runGlobalMatchCycle(supabase: SupabaseClient): Promise<voi
           matchmakerMetrics.failedMatches += 1;
           retryCount++;
           AnalyticsLogger.logEvent('RESERVATION_RACE_RETRY' as any, sessionIdA, candidateId);
+          // STEP 2: Exponential backoff with jitter
+          const delay = Math.min(50 * Math.pow(2, retryCount) + Math.random() * 50, 400);
+          await new Promise(r => setTimeout(r, delay));
         }
       }
 
@@ -789,6 +808,9 @@ export async function runGlobalMatchCycle(supabase: SupabaseClient): Promise<voi
     }
   } catch (err) {
     console.error('[Matchmaker] Error during cycle:', err);
+  } finally {
+    try { await client.query('COMMIT'); } catch(e){}
+    await client.end();
   }
 }
 

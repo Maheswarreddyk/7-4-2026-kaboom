@@ -1,4 +1,5 @@
 import { environment } from 'config';
+import crypto from 'crypto';
 
 export const config = {
   port:                   environment.backend.port,
@@ -33,10 +34,13 @@ export interface IceServer {
 export function getIceServers(): IceServer[] {
   const servers: IceServer[] = config.stunServers.map((url: string) => ({ urls: url }));
 
-  if (config.turnServer || config.turnUsername || config.turnPassword) {
+  if (config.turnServer || config.turnPassword) {
     const turnHost = config.turnServer || 'global.relay.metered.ca';
-    const username = config.turnUsername || 'f150dd7566a5922af619c80f'; // Fallback to provided defaults if env is missing
-    const credential = config.turnPassword || 'QAWBn93cIDtErz8U';
+    const turnSecret = config.turnPassword || 'QAWBn93cIDtErz8U'; 
+    const ttlSeconds = 86400; // 24 hours
+    const timestamp = Math.floor(Date.now() / 1000) + ttlSeconds;
+    const username = `${timestamp}:${config.turnUsername || 'kaboom'}`;
+    const credential = crypto.createHmac('sha1', turnSecret).update(username).digest('base64');
 
     servers.push(
       { urls: `stun:stun.relay.metered.ca:80` },
@@ -45,7 +49,6 @@ export function getIceServers(): IceServer[] {
       { urls: `turn:${turnHost}:443`, username, credential },
       { urls: `turns:${turnHost}:443?transport=tcp`, username, credential }
     );
-    console.log(`[ICE] TURN servers configured (Primary: ${turnHost})`);
   } else {
     console.warn('[ICE] No TURN server configured — connections may fail on symmetric NAT (mobile networks). Set TURN_SERVER, TURN_USERNAME, TURN_PASSWORD env vars.');
   }

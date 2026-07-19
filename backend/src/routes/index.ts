@@ -59,8 +59,8 @@ router.post('/session/heartbeat', async (req, res, next) => {
     if (fetchErr) throw new AppError(401, 'Invalid session');
 
     // V9 State Synchronization Guardrail
-    // If frontend thinks it is IDLE or SEARCHING, but DB thinks it is matched, we have a desync.
-    if (clientState && ['IDLE', 'SEARCHING', 'REQUEUEING'].includes(clientState)) {
+    // If frontend thinks it is READY or SEARCHING, but DB thinks it is matched, we have a desync.
+    if (clientState && ['READY', 'SEARCHING', 'REQUEUEING'].includes(clientState)) {
       if (['RESERVED', 'READY', 'CONNECTED'].includes(session.status) && session.match_id) {
         console.warn(`[Sync Guardrail] Desync detected for ${sessionId}: Client is ${clientState}, DB is ${session.status}. Forcing cleanup.`);
         
@@ -79,8 +79,8 @@ router.post('/session/heartbeat', async (req, res, next) => {
         // Destroy the ghost match
         await supabase.from('matches').update({ status: 'ended', ended_at: new Date().toISOString() }).eq('id', session.match_id);
         
-        // Reset this user to IDLE (they will be re-queued by the frontend if they are SEARCHING)
-        await supabase.from('visitor_sessions').update({ status: 'IDLE', match_id: null }).eq('id', sessionId);
+        // Reset this user to READY (they will be re-queued by the frontend if they are SEARCHING)
+        await supabase.from('visitor_sessions').update({ status: 'READY', match_id: null }).eq('id', sessionId);
       }
     }
 
@@ -165,6 +165,32 @@ router.post('/preferences', async (req, res, next) => {
     const { sessionId, sessionToken, preferences } = req.body;
     const session = await validateSession(sessionId, sessionToken);
     if (!session) return res.status(401).json({ error: 'Invalid or expired session' });
+
+    const normalizeString = (str: any) => typeof str === 'string' ? str.toLowerCase().trim() : str;
+    const normalizeArray = (arr: any) => Array.isArray(arr) ? arr.map(s => typeof s === 'string' ? s.toLowerCase().trim() : s) : arr;
+    const normalizeObjectValues = (obj: any) => {
+      if (!obj || typeof obj !== 'object') return obj;
+      const normalized = { ...obj };
+      for (const key in normalized) {
+        if (typeof normalized[key] === 'string') {
+          normalized[key] = normalized[key].toLowerCase().trim();
+        } else if (Array.isArray(normalized[key])) {
+          normalized[key] = normalizeArray(normalized[key]);
+        }
+      }
+      return normalized;
+    };
+
+    preferences.country = normalizeString(preferences.country);
+    preferences.state = normalizeString(preferences.state);
+    preferences.district = normalizeString(preferences.district);
+    preferences.city = normalizeString(preferences.city);
+    // if university is sent in future
+    preferences.university = normalizeString(preferences.university); 
+    preferences.display_name = normalizeString(preferences.display_name);
+    preferences.looking_for = normalizeArray(preferences.looking_for);
+    preferences.interest_tags = normalizeArray(preferences.interest_tags);
+    preferences.match_attributes = normalizeObjectValues(preferences.match_attributes);
 
     const { error } = await getSupabase()
       .from('visitor_sessions')
