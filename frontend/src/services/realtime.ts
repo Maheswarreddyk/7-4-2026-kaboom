@@ -399,7 +399,6 @@ export class RealtimeManager {
   }
 
   async leaveQueue(sessionId: string, sessionToken: string, matchId?: string) {
-    if (this.queueJoinTimer) clearTimeout(this.queueJoinTimer);
     try {
       await apiPost('/match/leave', { sessionId, sessionToken, matchId });
     } catch (error: any) {

@@ -83,7 +83,7 @@ export function useVideoChat(
   const startReconnectCountdownRef = useRef<any>(null);
   const startChatRef = useRef<any>(null);
   const updateSessionLifecycleStateRef = useRef<any>(null);
-  const handleNextRef = useRef<() => Promise<void>>(async () => {});
+  const handleNextRef = useRef<(reason?: 'next' | 'reported' | 'error' | 'timeout') => Promise<void>>(async () => {});
 
   useEffect(() => {
     onReactionRef.current = onReaction;

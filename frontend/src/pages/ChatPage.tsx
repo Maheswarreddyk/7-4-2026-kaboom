@@ -436,32 +436,6 @@ export function ChatPage() {
   // Search Elapsed timer state
   const [searchElapsed, setSearchElapsed] = useState(0);
   const [showMatchRadar, setShowMatchRadar] = useState(false);
-  const [showFindAnyoneModal, setShowFindAnyoneModal] = useState(false);
-
-  const handleFindAnyone = async () => {
-    setShowFindAnyoneModal(false);
-    if (!session || !session.sessionId || !session.sessionToken) return;
-    
-    // Clear local storage preferences
-    safeLocalStorage.setItem('kaboom_match_mode', 'RANDOM');
-    safeLocalStorage.setJSON('kaboom_match_constraints', {});
-    safeLocalStorage.setJSON('kaboom_match_attributes', {});
-    
-    // Submit empty preferences to backend
-    try {
-      await apiService.submitPreferences(session.sessionId, session.sessionToken, {
-        match_mode: 'RANDOM',
-        match_constraints: {},
-        match_attributes: {}
-      });
-      // Backend matchmaking loop will pick up the updated session automatically.
-      setMatchMode('RANDOM');
-      showToast('success', 'Preferences cleared. Matching anyone!');
-    } catch (err) {
-      console.error('Failed to update preferences:', err);
-      showToast('error', 'Failed to update preferences.');
-    }
-  };
 
   useEffect(() => {
     if (isSearching) {
@@ -470,9 +444,6 @@ export function ChatPage() {
           const next = prev + 1;
           if (next === 10 && !localStorage.getItem('kaboom_push_subscribed')) {
             setShowMatchRadar(true);
-          }
-          if (next === 120 && (matchMode === 'PREFER' || matchMode === 'STRICT')) {
-            setShowFindAnyoneModal(true);
           }
           return next;
         });
