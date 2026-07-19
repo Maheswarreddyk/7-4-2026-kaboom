@@ -378,7 +378,7 @@ export function useVideoChat(
     const mediaCheckTimeoutRef = { current: null as any };
 
     const checkAndSetConnected = async () => {
-      const pc = webrtcManager.getPeerConnection();
+      
       if (!isMountedRef.current || LifecycleManager.getInstance().getState() !== 'AWAITING_MEDIA') {
         if (mediaCheckTimeoutRef.current) clearTimeout(mediaCheckTimeoutRef.current);
         return;
