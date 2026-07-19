@@ -14,6 +14,8 @@ import { MatchRadarPrompt } from '../components/MatchRadarPrompt.js';
 import { useSession } from '../contexts/SessionContext.js';
 import { useToast } from '../contexts/ToastContext.js';
 import { useVideoChat } from '../hooks/useVideoChat.js';
+import { webrtcManager } from '../webrtc/index.js';
+import { realtimeManager } from '../services/realtime.js';
 import { useLifecycle } from '../hooks/useLifecycle.js';
 import { LifecycleManager } from '../services/LifecycleManager.js';
 import { useTabLeader } from '../hooks/useTabLeader.js';
@@ -300,11 +302,12 @@ export function ChatPage() {
 
   useEffect(() => {
     return () => {
-      console.log('[ChatPage] Component unmounting — cleaning up WebRTC and session tracks...');
-      stopChat().catch((e) => console.warn('[ChatPage] Unmount stopChat failed:', e));
+      console.log('[ChatPage] Component unmounting — performing local cleanup only to avoid Strict Mode races.');
+      realtimeManager.disconnectRealtime();
+      webrtcManager.cleanup();
+      // API cleanup is handled explicitly by navigation blockers and beforeunload listeners.
     };
-  }, [stopChat]);
-
+  }, []);
 
   const isConnected = lifecycleState === 'CONNECTED';
   const isSearching = ['QUEUEING', 'MATCH_FOUND', 'NEGOTIATING', 'MEDIA_SETUP'].includes(lifecycleState);

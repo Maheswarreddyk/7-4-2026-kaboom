@@ -40,6 +40,7 @@ export interface ScoreResult {
     reason: 'strict_filters' | 'prefer_filters' | 'random';
     confidence: number;
     matchedBy: string[];
+    matchedByDetails?: Record<string, any>;
   };
 }
 
@@ -47,13 +48,14 @@ function scoreMutualPreference(self: SessionProfile, partner: SessionProfile): {
   const selfWants =
     !self.looking_for ||
     self.looking_for.length === 0 ||
-    self.looking_for.includes('Anyone') ||
+    self.looking_for.includes('anyone') ||
     (partner.gender && self.looking_for.includes(partner.gender));
   const partnerWants =
     !partner.looking_for ||
     partner.looking_for.length === 0 ||
-    partner.looking_for.includes('Anyone') ||
+    partner.looking_for.includes('anyone') ||
     (self.gender && partner.looking_for.includes(self.gender));
+  console.log(`[Scoring] Mutual Pref - selfWants=${selfWants} partnerWants=${partnerWants} self.looking_for=${JSON.stringify(self.looking_for)} partner.looking_for=${JSON.stringify(partner.looking_for)}`);
 
   if (selfWants && partnerWants) {
     // Phase 4: Mutual Preference Maximization 
@@ -144,39 +146,140 @@ export function calculateCompatibility(
   endedMatchesMap?: Map<string, string>,
   queueDepth: number = 0
 ): ScoreResult | null {
-  if (partner.status === 'ended') return null;
-  if (reportedIds.has(partner.id)) return null;
+  console.log(`[Scoring] Evaluating ${self.id} vs ${partner.id}`);
+  if (partner.status === 'ended') { console.log(`[Scoring] partner status ended`); return null; }
+  if (reportedIds.has(partner.id)) { console.log(`[Scoring] partner reported`); return null; }
 
-  // 1. Evaluate Generic Constraints for STRICT mode
+  // Check rematch cooldown logic
+  const isPreviousPartner = partner.id === self.last_partner;
+  if (isPreviousPartner) {
+    const phase = getRelaxationPhase(waitingSeconds, queueDepth);
+    if (phase !== 'allow_previous' && phase !== 'random') {
+      return null;
+    }
+    
+    const lastEndedAt = endedMatchesMap?.get(partner.id);
+    if (lastEndedAt) {
+      const elapsedMs = Date.now() - new Date(lastEndedAt).getTime();
+      if (elapsedMs < REMATE_COOLDOWN_MS) {
+        console.log(`[Scoring] Rematch blocked by cooldown: ${self.id} and ${partner.id}`);
+        return null;
+      }
+    }
+  }
+
+  const effectiveMode = (self.match_mode === 'STRICT' || partner.match_mode === 'STRICT') 
+    ? 'STRICT' 
+    : (self.match_mode === 'PREFER' || partner.match_mode === 'PREFER') 
+      ? 'PREFER' 
+      : 'RANDOM';
+
+  if (effectiveMode === 'RANDOM') {
+    return calculateRandomCompatibility(self, partner, recentPartners);
+  } else if (effectiveMode === 'STRICT') {
+    return calculateStrictCompatibility(self, partner, waitingSeconds, recentPartners, queueDepth);
+  } else {
+    return calculatePreferCompatibility(self, partner, waitingSeconds, recentPartners, endedMatchesMap, queueDepth);
+  }
+}
+
+function calculateRandomCompatibility(
+  self: SessionProfile,
+  partner: SessionProfile,
+  recentPartners: Set<string>
+): ScoreResult | null {
+  const mutualPref = scoreMutualPreference(self, partner);
+  if (!mutualPref) return null; // Hard block for gender mismatch
+
+  let score = mutualPref.points;
+  if (recentPartners.has(partner.id)) score -= MATCH_WEIGHTS.recentPartnerPenalty;
+
+  return {
+    rawScore: score,
+    weightedScore: score,
+    reason: mutualPref.note,
+    threshold: 0,
+    phase: 'random',
+    rank: 0,
+    passesThreshold: true,
+    reasonMetadata: {
+      reason: 'random',
+      confidence: 50,
+      matchedBy: ['🎲 Random Match'],
+      matchedByDetails: {}
+    }
+  };
+}
+
+function calculateStrictCompatibility(
+  self: SessionProfile,
+  partner: SessionProfile,
+  waitingSeconds: number,
+  recentPartners: Set<string>,
+  queueDepth: number
+): ScoreResult | null {
+  const mutualPref = scoreMutualPreference(self, partner);
+  if (!mutualPref) return null;
+
   const evaluateStrictConstraints = (user1: SessionProfile, user2: SessionProfile): boolean => {
     if (user1.match_mode !== 'STRICT') return true;
     const constraints = user1.match_constraints || {};
     for (const [key, isStrict] of Object.entries(constraints)) {
       if (!isStrict) continue;
-      
       const val1 = user1.match_attributes?.[key] || [];
       const val2 = user2.match_attributes?.[key] || [];
-      
-      // FIX: If A's attribute is empty/missing, it's not a constraint to match against
-      if (!val1 || val1.length === 0) {
-        continue;
-      }
-      
-      // Exact match required for strict constraints
+      if (!val1 || val1.length === 0) continue;
       if (val1.length !== val2.length) return false;
       const exactMatch = val1.every(v => val2.includes(v));
-      if (!exactMatch) {
-        return false;
-      }
+      if (!exactMatch) return false;
     }
     return true;
   };
 
-  // Both parties must satisfy each other's strict constraints
   if (!evaluateStrictConstraints(self, partner) || !evaluateStrictConstraints(partner, self)) {
     return null;
   }
 
+  // Strict interest tags: ALL of A's tags must be in B's tags, and vice versa if they have them.
+  if (self.interest_tags && self.interest_tags.length > 0) {
+    if (!partner.interest_tags || partner.interest_tags.length === 0) return null;
+    const allMatch = self.interest_tags.every(tag => partner.interest_tags!.includes(tag));
+    if (!allMatch) return null;
+  }
+  if (partner.interest_tags && partner.interest_tags.length > 0) {
+    if (!self.interest_tags || self.interest_tags.length === 0) return null;
+    const allMatch = partner.interest_tags.every(tag => self.interest_tags!.includes(tag));
+    if (!allMatch) return null;
+  }
+
+  let score = mutualPref.points + 100;
+  if (recentPartners.has(partner.id)) score -= MATCH_WEIGHTS.recentPartnerPenalty;
+
+  return {
+    rawScore: score,
+    weightedScore: score,
+    reason: mutualPref.note + ', Strict Match (+100)',
+    threshold: 0,
+    phase: getRelaxationPhase(waitingSeconds, queueDepth),
+    rank: 0,
+    passesThreshold: true,
+    reasonMetadata: {
+      reason: 'strict_filters',
+      confidence: 100,
+      matchedBy: ['🎯 Exact Match'],
+      matchedByDetails: {}
+    }
+  };
+}
+
+function calculatePreferCompatibility(
+  self: SessionProfile,
+  partner: SessionProfile,
+  waitingSeconds: number,
+  recentPartners: Set<string>,
+  endedMatchesMap: Map<string, string> | undefined,
+  queueDepth: number
+): ScoreResult | null {
   const phase = getRelaxationPhase(waitingSeconds, queueDepth);
   const threshold = getMinScoreThreshold(phase, queueDepth);
 
@@ -199,7 +302,7 @@ export function calculateCompatibility(
 
   // Calculate scores
   const mutualPref = scoreMutualPreference(self, partner);
-  if (!mutualPref) return null; // Hard block for gender mismatch
+  if (!mutualPref) { console.log(`[Scoring] mutual pref failed`); return null; }
 
   const parts = [
     mutualPref,
@@ -278,6 +381,7 @@ export function calculateCompatibility(
 
   const weightedScore = rawScore;
   const passesThreshold = phase === 'random' ? true : weightedScore >= threshold;
+  console.log(`[Scoring] Final score=${weightedScore} threshold=${threshold} phase=${phase} passes=${passesThreshold}`);
 
   // Determine structured match reason
   const isStrictMatch = self.match_mode === 'STRICT' || partner.match_mode === 'STRICT';

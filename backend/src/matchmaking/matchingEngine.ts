@@ -589,14 +589,7 @@ export async function runGlobalMatchCycle(supabase: SupabaseClient): Promise<voi
 
       let ranked = rankCandidates(scoredCandidates, waitingSecondsA, activeWaiting.length);
 
-      if (ranked.length === 0 && scoredCandidates.length > 0 && waitingSecondsA >= 25) {
-        // Relax: fall back to best compatibility score if waiting > 25 seconds
-        const bestFallback = [...scoredCandidates].sort((a, b) => b.weightedScore - a.weightedScore)[0];
-        ranked = [{ ...bestFallback, rank: 1, passesThreshold: true }];
-      }
-
       if (ranked.length === 0) {
-        console.log(`[Matchmaker] No compatible candidates for session ${sessionIdA} (waiting ${waitingSecondsA}s)`);
         continue;
       }
 

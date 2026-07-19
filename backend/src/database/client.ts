@@ -5,6 +5,7 @@ let supabase: SupabaseClient | null = null;
 
 export function getSupabase(): SupabaseClient {
   if (!supabase) {
+    console.log('[DEBUG] getSupabase config:', { url: config.supabaseUrl, keyLength: config.supabaseServiceRoleKey?.length });
     supabase = createClient(config.supabaseUrl, config.supabaseServiceRoleKey, {
       auth: {
         autoRefreshToken: false,

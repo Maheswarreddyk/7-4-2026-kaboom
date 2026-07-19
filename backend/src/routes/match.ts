@@ -119,4 +119,32 @@ router.post('/connected', queueLimiter, async (req, res, next) => {
   }
 });
 
+router.post('/ping', async (req, res) => {
+  try {
+    const { sessionId } = req.body;
+    if (!sessionId) {
+      return res.status(400).json({ error: 'sessionId required' });
+    }
+    
+    console.log(`[Ping] Pinging User sessionId: ${sessionId}`);
+    
+    const { broadcastToSession } = await import('../services/broadcast.js');
+
+    // Send standard ping
+    await broadcastToSession(sessionId, 'ping', { time: Date.now() });
+
+    // Send FAKE MATCHED EVENT to test if frontend receives it!
+    await broadcastToSession(sessionId, 'matched', {
+      matchId: 'test-match-id',
+      partnerSessionId: 'fake-partner-id',
+      isInitiator: true,
+      iceServers: [],
+    });
+
+    res.json({ success: true, message: `Ping + Matched sent to ${sessionId}` });
+  } catch (err) {
+    return res.status(500).json({ error: 'Failed to ping', details: err instanceof Error ? err.message : String(err) });
+  }
+});
+
 export default router;

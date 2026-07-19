@@ -39,6 +39,7 @@ export async function createReservation(
         }).select('id').single();
         
         if (fallbackRes.error) {
+           await supabase.from('visitor_sessions').update({ status: 'SEARCHING' }).in('id', [initiatorSessionId, partnerSessionId]);
            return { reservationId: '', success: false, reason: fallbackRes.error.message };
         }
         
@@ -54,11 +55,13 @@ export async function createReservation(
         reason: error.message,
         durationMs: Date.now() - start,
       });
+      await supabase.from('visitor_sessions').update({ status: 'SEARCHING' }).in('id', [initiatorSessionId, partnerSessionId]);
       return { reservationId: '', success: false, reason: error.message };
     }
 
     if (!data.success) {
       console.warn(`[ReservationEngine] Reservation failed: ${data.reason}`);
+      await supabase.from('visitor_sessions').update({ status: 'SEARCHING' }).in('id', [initiatorSessionId, partnerSessionId]);
       return { reservationId: '', success: false, reason: data.reason };
     }
 

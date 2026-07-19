@@ -10,7 +10,7 @@
     "simulator"
   ],
   "scripts": {
-    "dev": "vercel dev",
+    "dev": "concurrently \"npm run dev -w indiatv-frontend\" \"npm run dev --prefix backend\"",
     "dev:frontend": "npm run dev -w indiatv-frontend",
     "build": "npm run build -w config && npm run build -w indiatv-frontend && node scripts/copy-build.js && npm run build --prefix backend",
     "start": "node backend/dist/index.js",
@@ -30,9 +30,7 @@
   },
   "devDependencies": {
     "@types/uuid": "^10.0.0",
-    "@vercel/node": "^5.1.14",
-    "concurrently": "^9.1.2",
-    "vercel": "^41.6.0"
+    "concurrently": "^9.1.2"
   },
   "engines": {
     "node": ">=18.0.0"

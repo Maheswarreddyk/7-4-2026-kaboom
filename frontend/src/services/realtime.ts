@@ -43,6 +43,7 @@ export interface RealtimeCallbacks {
 const API_BASE = environment.apiUrl;
 
 async function apiPost<T>(path: string, body: Record<string, unknown>): Promise<T> {
+  console.log(`[API_POST] Sending POST to: ${API_BASE}/api${path}`);
   const response = await fetch(`${API_BASE}/api${path}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -241,11 +242,26 @@ export class RealtimeManager {
           resolved = true;
           reject(new Error('WebSocket connection timed out'));
         }
-      }, 30000);
+      }, 5000);
 
       this.sessionChannel = supabase
-        .channel(`session:${sessionId}`, { config: { broadcast: { self: false } } })
+        .channel(`session:${sessionId}`, { config: { broadcast: { self: false, ack: true } } })
+        
+      setInterval(() => {
+        if (this.sessionChannel) {
+          console.log(`[Realtime] Channel session:${sessionId} status is currently: ${this.sessionChannel.state}`);
+        }
+      }, 5000);
+
+      this.sessionChannel
+        .on('broadcast', { event: '*' }, (payload) => {
+          console.log(`[Realtime] ⚡ received ANY broadcast:`, payload);
+        })
+        .on('broadcast', { event: 'ping' }, (payload) => {
+          console.log(`[Realtime] 🏓 PING RECEIVED!`, payload);
+        })
         .on('broadcast', { event: 'matched' }, ({ payload }) => {
+          console.log(`[Realtime] 🔥 matched event fired for session! Payload:`, payload);
           const data = payload as {
             matchId: string;
             partnerSessionId: string;

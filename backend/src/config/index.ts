@@ -32,26 +32,14 @@ export interface IceServer {
  * TURN servers are added (UDP + TCP fallback) for NAT traversal on mobile networks.
  */
 export function getIceServers(): IceServer[] {
-  const servers: IceServer[] = config.stunServers.map((url: string) => ({ urls: url }));
-
-  if (config.turnServer || config.turnPassword) {
-    const turnHost = config.turnServer || 'global.relay.metered.ca';
-    const turnSecret = config.turnPassword || 'QAWBn93cIDtErz8U'; 
-    const ttlSeconds = 86400; // 24 hours
-    const timestamp = Math.floor(Date.now() / 1000) + ttlSeconds;
-    const username = `${timestamp}:${config.turnUsername || 'kaboom'}`;
-    const credential = crypto.createHmac('sha1', turnSecret).update(username).digest('base64');
-
-    servers.push(
-      { urls: `stun:stun.relay.metered.ca:80` },
-      { urls: `turn:${turnHost}:80`, username, credential },
-      { urls: `turn:${turnHost}:80?transport=tcp`, username, credential },
-      { urls: `turn:${turnHost}:443`, username, credential },
-      { urls: `turns:${turnHost}:443?transport=tcp`, username, credential }
-    );
-  } else {
-    console.warn('[ICE] No TURN server configured — connections may fail on symmetric NAT (mobile networks). Set TURN_SERVER, TURN_USERNAME, TURN_PASSWORD env vars.');
-  }
-
-  return servers;
+  return [
+    {
+      urls: "stun:stun.relay.metered.ca:80"
+    },
+    {
+      urls: "turns:global.relay.metered.ca:443?transport=tcp",
+      username: "75ce0488e2b6dd463873fe19",
+      credential: "86h9uzIutQ27P3Mq"
+    }
+  ];
 }

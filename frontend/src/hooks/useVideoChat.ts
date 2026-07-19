@@ -146,6 +146,30 @@ export function useVideoChat(
     }
   }, []);
 
+  // Polling fallback to check if we missed a Realtime broadcast (FE-001 fix)
+  useEffect(() => {
+    let interval: any = null;
+    if (chatState.status === 'SEARCHING' && sessionIdRef.current && sessionTokenRef.current) {
+      interval = setInterval(async () => {
+        try {
+          const status = await apiService.getMatchStatus(sessionIdRef.current!, sessionTokenRef.current!);
+          if (status?.status === 'matched') {
+            console.log('[Polling Fallback] Found missed match from backend!', status);
+            const lm = LifecycleManager.getInstance();
+            if (lm.getState() === 'QUEUEING') {
+              lm.onMatchFound(status);
+            }
+          }
+        } catch (err) {
+          // Ignore polling errors
+        }
+      }, 5000);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [chatState.status]);
+
   // V24 Lifecycle Manager Sync
   useEffect(() => {
     const handleLMState = ({ state, metadata }: any) => {
@@ -346,14 +370,24 @@ export function useVideoChat(
   }, []);
 
   const setupWebRTC = useCallback(async () => {
-    let mediaCheckTimeout: any = null;
+    // Reset media check timeout if any exists
+    if (webrtcTimeoutRef.current) {
+      clearTimeout(webrtcTimeoutRef.current);
+      webrtcTimeoutRef.current = null;
+    }
+    const mediaCheckTimeoutRef = { current: null as any };
 
     const checkAndSetConnected = async () => {
+      const pc = webrtcManager.getPeerConnection();
+      if (!isMountedRef.current || LifecycleManager.getInstance().getState() !== 'AWAITING_MEDIA') {
+        if (mediaCheckTimeoutRef.current) clearTimeout(mediaCheckTimeoutRef.current);
+        return;
+      }
       const isIceConnected = webrtcManager.getConnectionState() === 'connected';
       if (!isIceConnected) {
         TimelineTelemetry.log('SyncGate', 'ICE disconnected', { state: webrtcManager.getConnectionState() });
         console.warn(`[Sync Gate] Blocked CONNECTED transition. ICE: ${webrtcManager.getConnectionState()}`);
-        if (mediaCheckTimeout) clearTimeout(mediaCheckTimeout);
+        if (mediaCheckTimeoutRef.current) clearTimeout(mediaCheckTimeoutRef.current);
         return;
       }
 
@@ -367,8 +401,8 @@ export function useVideoChat(
       if (!hasRemoteAudio || !hasRemoteVideo) {
         TimelineTelemetry.log('SyncGate', 'Tracks missing or not live', { audio: hasRemoteAudio, video: hasRemoteVideo });
         console.warn(`[Sync Gate] Blocked CONNECTED transition. Audio: ${hasRemoteAudio}, Video: ${hasRemoteVideo}. Re-checking...`);
-        if (mediaCheckTimeout) clearTimeout(mediaCheckTimeout);
-        mediaCheckTimeout = setTimeout(checkAndSetConnected, 100);
+        if (mediaCheckTimeoutRef.current) clearTimeout(mediaCheckTimeoutRef.current);
+        mediaCheckTimeoutRef.current = setTimeout(checkAndSetConnected, 100);
         return;
       }
 
@@ -395,7 +429,8 @@ export function useVideoChat(
         if (audioBytes > 0 && videoBytes > 0) {
           TimelineTelemetry.log('SyncGate', 'Media bytes confirmed flowing', { audioBytes, videoBytes });
           console.log(`[Sync Gate] Media flowing. Audio bytes: ${audioBytes}, Video bytes: ${videoBytes}`);
-          if (mediaCheckTimeout) clearTimeout(mediaCheckTimeout);
+          if (mediaCheckTimeoutRef.current) clearTimeout(mediaCheckTimeoutRef.current);
+          LifecycleManager.getInstance().onConnected();
           
           // Bidirectional Agreement: Ask backend to verify the other party also has media
           if (sessionIdRef.current && sessionTokenRef.current && matchIdRef.current) {
@@ -406,8 +441,8 @@ export function useVideoChat(
         } else {
           TimelineTelemetry.log('SyncGate', 'Media bytes 0 - waiting for packets', { audioBytes, videoBytes });
           console.warn(`[Sync Gate] ICE connected but media bytes not flowing. Re-checking...`);
-          if (mediaCheckTimeout) clearTimeout(mediaCheckTimeout);
-          mediaCheckTimeout = setTimeout(checkAndSetConnected, 100);
+          if (mediaCheckTimeoutRef.current) clearTimeout(mediaCheckTimeoutRef.current);
+          mediaCheckTimeoutRef.current = setTimeout(checkAndSetConnected, 100);
         }
       } catch (err) {
         console.error('[Sync Gate] Failed to retrieve stats:', err);

@@ -59,12 +59,12 @@ export const MATCH_WEIGHTS = {
 // ============================================================
 
 export const RELAXATION_THRESHOLDS = {
-  strict: 5,
-  relaxInterests: 10,
-  relaxLanguage: 15,
-  relaxLocation: 20,
-  allowPrevious: 25,
-  random: 25,
+  strict: 3,
+  relaxInterests: 6,
+  relaxLanguage: 10,
+  relaxLocation: 15,
+  allowPrevious: 20,
+  random: 20,
 } as const;
 
 export type RelaxationPhase =
@@ -95,17 +95,12 @@ export function getRelaxationPhase(waitingSeconds: number, queueDepth: number = 
 }
 
 export function getMinScoreThreshold(phase: RelaxationPhase, queueDepth: number = 0): number {
-  // Phase 4: Dynamic Base Thresholds
-  let modifier = 0;
-  if (queueDepth >= 10) modifier = 20; // Stricter if highly populated
-  else if (queueDepth <= 2) modifier = -20; // Looser if unpopulated
-
   switch (phase) {
-    case 'strict':          return 140 + modifier;
-    case 'relax_interests': return 110 + modifier;
-    case 'relax_language':  return 80 + modifier;
-    case 'relax_location':  return 50 + modifier;
-    case 'allow_previous':  return 30 + modifier;
+    case 'strict':          return 60;
+    case 'relax_interests': return 40;
+    case 'relax_language':  return 20;
+    case 'relax_location':  return 10;
+    case 'allow_previous':  return 5;
     case 'random':          return Number.NEGATIVE_INFINITY;
   }
 }
