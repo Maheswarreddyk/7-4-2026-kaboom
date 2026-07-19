@@ -1187,6 +1187,12 @@ export async function markMediaConnected(
   console.log(`[/media_ready] [${requestId}] user_a_media_ready=${updatedMatch.user_a_media_ready} user_b_media_ready=${updatedMatch.user_b_media_ready} bothReady=${bothReady}`);
 
   if (bothReady) {
+    // Phase 6: Reset negotiation failures on successful media connection
+    import('./queueEngine.js').then(module => {
+      module.negotiationFailures.delete(match.user_a);
+      module.negotiationFailures.delete(match.user_b);
+    }).catch(console.error);
+
     // Only transition the session status if BOTH are ready
     await Promise.all([
       transitionSessionStatus(supabase, match.user_a, 'CONNECTED', 'Media flow established for both users'),

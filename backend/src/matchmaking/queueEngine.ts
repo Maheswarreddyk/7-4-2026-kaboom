@@ -255,6 +255,9 @@ export async function getReservedSessionIds(supabase: SupabaseClient): Promise<S
 /**
  * Expire reservations that have passed their TTL and return affected sessions to the queue.
  */
+// Track consecutive negotiation failures
+export const negotiationFailures = new Map<string, number>();
+
 export async function expireStaleReservations(supabase: SupabaseClient): Promise<number> {
   try {
     const now = new Date().toISOString();
@@ -276,19 +279,48 @@ export async function expireStaleReservations(supabase: SupabaseClient): Promise
       ].filter(Boolean)));
 
       if (sessionIds.length) {
-        await supabase
-          .from('waiting_queue')
-          .update({ status: 'waiting' })
-          .in('session_id', sessionIds)
-          .eq('status', 'matched');
+        const toRequeue: string[] = [];
+        const toBan: string[] = [];
 
-        await supabase
-          .from('visitor_sessions')
-          .update({ status: 'SEARCHING' })
-          .in('id', sessionIds);
+        for (const sid of sessionIds) {
+          const fails = (negotiationFailures.get(sid) || 0) + 1;
+          negotiationFailures.set(sid, fails);
+          
+          if (fails >= 3) {
+            console.warn(`[QueueEngine] Session ${sid} failed negotiation 3 times. Dropping to HOME.`);
+            toBan.push(sid);
+          } else {
+            toRequeue.push(sid);
+          }
+        }
+
+        if (toRequeue.length > 0) {
+          await supabase
+            .from('waiting_queue')
+            .update({ status: 'waiting' })
+            .in('session_id', toRequeue)
+            .eq('status', 'matched');
+
+          await supabase
+            .from('visitor_sessions')
+            .update({ status: 'SEARCHING' })
+            .in('id', toRequeue);
+        }
+
+        if (toBan.length > 0) {
+          await supabase
+            .from('waiting_queue')
+            .update({ status: 'left' })
+            .in('session_id', toBan);
+            
+          await supabase
+            .from('visitor_sessions')
+            .update({ status: 'ended', ended_at: now })
+            .in('id', toBan);
+        }
       }
 
-      console.log(`[QueueEngine] Expired stale reservation ${r.id} — returned ${sessionIds.length} sessions to queue`);
+      console.log(`[QueueEngine] Expired stale reservation ${r.id} — returned ${sessionIds.length} sessions`);
     }
     return expired.length;
   } catch {

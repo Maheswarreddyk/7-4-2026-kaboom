@@ -244,21 +244,21 @@ export function useVideoChat(
 
     if (partnerReconnectTimerRef.current) clearTimeout(partnerReconnectTimerRef.current);
     
-    updateChatState({ connectionStatus: 'reconnecting', reconnectCountdown: 10 });
+    updateChatState({ connectionStatus: 'reconnecting', reconnectCountdown: 5 });
 
-    let count = 10;
+    let count = 5;
     reconnectIntervalRef.current = setInterval(() => {
       count -= 1;
       console.log(`[Grace Period Countdown] ${count}s remaining...`);
       updateChatState({ reconnectCountdown: count });
 
       if (count <= 0) {
-        console.log('[Grace Period] Reconnect countdown expired. Cleaning up...');
+        console.log('[Grace Period] Reconnect countdown expired. Invoking Next Partner flow...');
         if (reconnectIntervalRef.current) {
           clearInterval(reconnectIntervalRef.current);
           reconnectIntervalRef.current = null;
         }
-        executePartnerLeftTeardown("Couldn't establish the previous connection. Finding another person...");
+        void handleNextRef.current('error');
       }
     }, 1000);
 
@@ -268,9 +268,9 @@ export function useVideoChat(
         clearInterval(reconnectIntervalRef.current);
         reconnectIntervalRef.current = null;
       }
-      executePartnerLeftTeardown("Couldn't establish the previous connection. Finding another person...");
-    }, 10500);
-  }, [executePartnerLeftTeardown, updateChatState]);
+      void handleNextRef.current('error');
+    }, 5500);
+  }, [updateChatState]);
 
   sessionIdRef.current = sessionId;
   sessionTokenRef.current = sessionToken;
@@ -491,11 +491,20 @@ export function useVideoChat(
     }) => {
       if (!isMountedRef.current) return;
       if (skipInProgressRef.current && LifecycleManager.getInstance().getState() !== ('QUEUEING')) return;
+      
+      const currentState = LifecycleManager.getInstance().getState();
+      
+      // If user cancelled right as match arrived, drop it
+      if (currentState === 'ENDED' || currentState === 'HOME') {
+        console.log('[Signaling] Match arrived after user cancelled. Dropping silently.');
+        realtimeManager.leaveMatchChannel();
+        return;
+      }
+
       if (
-        LifecycleManager.getInstance().getState() === 'MATCH_FOUND' ||
-        LifecycleManager.getInstance().getState() === ('MATCH_FOUND') ||
-        LifecycleManager.getInstance().getState() === 'NEGOTIATING' ||
-        LifecycleManager.getInstance().getState() === 'CONNECTED'
+        currentState === 'MATCH_FOUND' ||
+        currentState === 'NEGOTIATING' ||
+        currentState === 'CONNECTED'
       ) {
         console.log('[Signaling] Already in post-match pipeline. Ignoring duplicate matched event.');
         return;
@@ -1113,7 +1122,38 @@ export function useVideoChat(
       const callbacks = buildCallbacks();
       callbacksRef.current = callbacks;
       setSignalingState('CONNECTING_REALTIME');
-      realtimeManager.connectRealtime(sessionId, sessionToken, callbacks);
+      
+      try {
+        await realtimeManager.connectRealtime(sessionId, sessionToken, callbacks);
+      } catch (wsError: any) {
+        console.warn('[Realtime] WebSocket connection failed after 3 attempts. Falling back to standard polling for match status.');
+        // Standard polling fallback for matchmaking
+        setSignalingState('SEARCHING');
+        const pollInterval = setInterval(async () => {
+          try {
+             if (LifecycleManager.getInstance().getState() === 'ENDED' || LifecycleManager.getInstance().getState() === 'HOME') {
+               clearInterval(pollInterval);
+               return;
+             }
+             const statusRes = await apiService.getMatchStatus(sessionId, sessionToken);
+             if (statusRes && statusRes.status === 'matched') {
+               clearInterval(pollInterval);
+               console.log('[Lifecycle] Resuming active match via polling fallback');
+               await handleMatchedRef.current?.(statusRes);
+               await handleStartNegotiationRef.current?.(statusRes);
+             } else if (statusRes && statusRes.status === 'searching') {
+               // still searching
+             } else if (!statusRes || statusRes.status === 'waiting') {
+               // attempt to join queue via REST
+               // We would need a REST endpoint to join queue if WebSocket is entirely dead.
+               // Currently `apiService` does not have a joinQueue endpoint, so polling will just check status.
+             }
+          } catch (e) {
+             console.error('[Polling] Failed to poll match status:', e);
+          }
+        }, 3000);
+        return; // Early return since we can't join Realtime queue
+      }
 
       // --- Wave 3 Refresh Logic ---
       const statusRes = await apiService.getMatchStatus(sessionId, sessionToken);
@@ -1181,7 +1221,7 @@ export function useVideoChat(
     matchIdRef.current = null;
   }, [clearAllTimers]);
 
-  const handleNext = useCallback(async () => {
+  const handleNext = useCallback(async (reason: string = 'next') => {
     if (!sessionIdRef.current || !sessionTokenRef.current || !callbacksRef.current) return;
     if (skipInProgressRef.current) return;
 
@@ -1193,7 +1233,7 @@ export function useVideoChat(
 
     skipInProgressRef.current = true;
     const currentMatchId = matchIdRef.current;
-    console.log(`[Queue] handleNext: switching to next partner... (Current Match: ${currentMatchId})`);
+    console.log(`[Queue] handleNext: switching to next partner... (Current Match: ${currentMatchId}, reason: ${reason})`);
     setSignalingState('REQUEUEING');
 
     clearAllTimers();
@@ -1216,7 +1256,7 @@ export function useVideoChat(
     });
 
     try {
-      await realtimeManager.nextPartner(sessionIdRef.current, sessionTokenRef.current, callbacksRef.current, currentMatchId ?? undefined);
+      await realtimeManager.nextPartner(sessionIdRef.current, sessionTokenRef.current, callbacksRef.current, currentMatchId ?? undefined, reason);
       if (!isMountedRef.current) return;
       
       if (LifecycleManager.getInstance().getState() === ('QUEUEING')) {
@@ -1230,7 +1270,12 @@ export function useVideoChat(
       
       // Only release lock after successful requeue
       skipInProgressRef.current = false;
-    } catch (error) {
+    } catch (error: any) {
+      if (error.status === 409) {
+        console.warn('[Queue] 409 Conflict ignored during nextPartner (matched concurrently).');
+        skipInProgressRef.current = false;
+        return;
+      }
       console.error('Error switching to next partner:', error);
       showToast('error', 'Failed to find a new partner. Retrying...');
       if (sessionIdRef.current && sessionTokenRef.current) {

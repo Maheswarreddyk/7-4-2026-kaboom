@@ -88,6 +88,8 @@ export const statsService = {
   },
 };
 
+import { nextPartner } from './matchService.js';
+
 export const reportService = {
   async submitReport(data: ReportRequest) {
     const report = await reportRepository.create({

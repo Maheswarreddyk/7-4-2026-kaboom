@@ -108,8 +108,8 @@ export class HintEngine {
 
     // 3. Waiting Queue state hints
     if (state.appState === 'waiting') {
-      // If waiting for a long time (>30s), advise relaxing filters
-      if (state.waitingSeconds >= 30 && !this.lastHint?.includes('relax')) {
+      // If waiting for a long time (>60s), advise relaxing filters
+      if (state.waitingSeconds >= 60 && !this.lastHint?.includes('relax')) {
         return "💡 Long wait time? Try relaxing location/gender filters to search broader.";
       }
       

@@ -215,17 +215,17 @@ async function requeuePartner(partnerId: string): Promise<void> {
   }
 }
 
-export async function nextPartner(sessionId: string, sessionToken: string, targetMatchId?: string) {
+export async function nextPartner(sessionId: string, sessionToken: string, targetMatchId?: string, reason: MatchEndReason = 'next') {
   const session = await validateSession(sessionId, sessionToken);
   if (!session) throw new Error('Invalid session');
 
   console.log(`[Next] Next clicked for session ${sessionId} (target match: ${targetMatchId})`);
   invalidateMatchmakerCache();
 
-  // KS-006: If we are already requeuing or searching, silently drop redundant skips
+  // KS-006: If we are already requeuing or searching, throw error to trigger 409 Conflict
   if (session.status === 'REQUEUEING' || session.status === 'SEARCHING') {
     console.warn(`[MatchService] nextPartner redundant skip blocked for ${sessionId} (status=${session.status})`);
-    return { status: 'waiting' as const };
+    throw new Error('Illegal state transition: User is already searching or requeuing');
   }
 
   // Transition clicker state to REQUEUEING (V4.1 Requirement 8)
@@ -236,7 +236,7 @@ export async function nextPartner(sessionId: string, sessionToken: string, targe
   }
 
   // KS-007: Only end the specific match we intended to skip
-  const ended = await endActiveMatch(sessionId, 'next', targetMatchId);
+  const ended = await endActiveMatch(sessionId, reason, targetMatchId);
 
   // Perform cleanups in order (V4.1 Requirement 8)
   if (ended?.match?.id) {
@@ -248,8 +248,8 @@ export async function nextPartner(sessionId: string, sessionToken: string, targe
 
   if (ended?.partnerId) {
     // Notify partner they are being requeued
-    await transitionSessionStatus(getSupabase(), ended.partnerId, 'REQUEUEING', 'Partner clicked Next');
-    await broadcastToSession(ended.partnerId, 'partner_left', { reason: 'next' });
+    await transitionSessionStatus(getSupabase(), ended.partnerId, 'REQUEUEING', 'Partner skipped');
+    await broadcastToSession(ended.partnerId, 'partner_left', { reason });
     await requeuePartner(ended.partnerId);
   }
 

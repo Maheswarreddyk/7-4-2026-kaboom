@@ -47,20 +47,26 @@ router.post('/leave', queueLimiter, async (req, res, next) => {
     }
     await leaveQueue(sessionId, sessionToken, matchId);
     res.json({ success: true });
-  } catch (err) {
+  } catch (err: any) {
+    if (err.message && err.message.includes('Illegal state transition')) {
+      return res.status(409).json({ success: false, error: err.message });
+    }
     next(err);
   }
 });
 
 router.post('/next', queueLimiter, async (req, res, next) => {
   try {
-    const { sessionId, sessionToken, matchId } = req.body;
+    const { sessionId, sessionToken, matchId, reason } = req.body;
     if (!sessionId || !sessionToken) {
       return res.status(400).json({ error: 'sessionId and sessionToken are required' });
     }
-    const result = await nextPartner(sessionId, sessionToken, matchId);
+    const result = await nextPartner(sessionId, sessionToken, matchId, reason || 'next');
     res.json({ success: true, data: result });
-  } catch (err) {
+  } catch (err: any) {
+    if (err.message && err.message.includes('Illegal state transition')) {
+      return res.status(409).json({ success: false, error: err.message });
+    }
     next(err);
   }
 });

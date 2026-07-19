@@ -152,9 +152,20 @@ export class WebRTCManager {
       this.callbacks.onRemoteStream?.(this.remoteStream);
     };
 
+    let hasNonHostCandidate = false;
+
     this.peerConnection.onicecandidate = (event) => {
       if (event.candidate) {
+        if (event.candidate.type !== 'host') {
+          hasNonHostCandidate = true;
+        }
         this.callbacks.onIceCandidate?.(event.candidate.toJSON());
+      } else {
+        // ICE gathering complete
+        if (!hasNonHostCandidate) {
+          console.warn('[WebRTC] ICE gathering complete but only host candidates found. Fast-failing connection.');
+          this.callbacks.onConnectionStateChange?.('failed' as RTCPeerConnectionState);
+        }
       }
     };
 

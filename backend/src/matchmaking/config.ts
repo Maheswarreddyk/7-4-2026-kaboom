@@ -6,7 +6,7 @@ import { environment } from 'config';
 // ============================================================
 
 /** How long a queue heartbeat stays valid before a user is pruned from active candidates (ms) */
-export const HEARTBEAT_STALE_MS = 45_000; // 45s — was 12s (too tight for mobile)
+export const HEARTBEAT_STALE_MS = 10_000; // 10s — per immediate session cleanup directive
 
 /** How long a reservation lock is held before expiring (ms) */
 export const RESERVATION_TIMEOUT_MS = 20_000; // 20s signaling timeout as per V4.1 requirement
