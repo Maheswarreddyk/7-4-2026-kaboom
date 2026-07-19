@@ -1,0 +1,91 @@
+[
+  {
+    "userId": "625a756a-4568-4764-b19e-07c8fead77cd",
+    "sessionId": "39293eb8-6ece-4147-b235-3a2aa34242d5",
+    "browserContextId": "149.0.7827.55",
+    "behavior": "HAPPY_PATH",
+    "totalQueueWaitTimeMs": 0,
+    "totalConnectionEstablishmentTimeMs": 0,
+    "totalConnectedDurationMs": 0,
+    "finalOutcome": "PENDING",
+    "actions": [
+      {
+        "timestamp": "2026-07-18T13:30:42.739Z",
+        "previousState": "INITIAL",
+        "currentState": "CHAT_PAGE",
+        "action": "Navigate",
+        "result": "Loaded",
+        "durationMs": 25234,
+        "success": true
+      },
+      {
+        "timestamp": "2026-07-18T13:30:47.752Z",
+        "previousState": "CHAT_PAGE",
+        "currentState": "QUEUEING",
+        "action": "ClickStartChat",
+        "result": "Joined queue",
+        "durationMs": 5006,
+        "success": true
+      }
+    ],
+    "scenarioMode": "RANDOM",
+    "scenarioTags": [],
+    "profile": {
+      "name": "RandomMatch_001_625a756a",
+      "gender": "MALE",
+      "lookingFor": "NONBINARY",
+      "bio": "I am a digital twin (Behavior: HAPPY_PATH, Mode: RANDOM)."
+    },
+    "joinTime": "2026-07-18T13:30:47.751Z",
+    "queueEntryTime": "2026-07-18T13:30:47.752Z"
+  },
+  {
+    "userId": "dedaf017-f38c-4866-8269-afebd1fd0ade",
+    "sessionId": "",
+    "browserContextId": "149.0.7827.55",
+    "behavior": "HAPPY_PATH",
+    "totalQueueWaitTimeMs": 0,
+    "totalConnectionEstablishmentTimeMs": 0,
+    "totalConnectedDurationMs": 0,
+    "finalOutcome": "ERROR",
+    "actions": [
+      {
+        "timestamp": "2026-07-18T13:31:08.186Z",
+        "previousState": "INITIAL",
+        "currentState": "ERROR",
+        "action": "Error",
+        "result": "Unhandled error",
+        "durationMs": 35120,
+        "success": false,
+        "error": "page.goto: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - navigating to \"http://localhost:5173/chat\", waiting until \"networkidle\"\u001b[22m\n"
+      }
+    ],
+    "scenarioMode": "RANDOM",
+    "scenarioTags": [],
+    "profile": {
+      "name": "RandomMatch_002_dedaf017",
+      "gender": "MALE",
+      "lookingFor": "FEMALE",
+      "bio": "I am a digital twin (Behavior: HAPPY_PATH, Mode: RANDOM)."
+    }
+  },
+  {
+    "userId": "e48c4240-a164-43ea-9a5b-a1b0232e30fd",
+    "sessionId": "",
+    "browserContextId": "149.0.7827.55",
+    "behavior": "HAPPY_PATH",
+    "totalQueueWaitTimeMs": 0,
+    "totalConnectionEstablishmentTimeMs": 0,
+    "totalConnectedDurationMs": 0,
+    "finalOutcome": "PENDING",
+    "actions": [],
+    "scenarioMode": "RANDOM",
+    "scenarioTags": [],
+    "profile": {
+      "name": "RandomMatch_003_e48c4240",
+      "gender": "MALE",
+      "lookingFor": "MALE",
+      "bio": "I am a digital twin (Behavior: HAPPY_PATH, Mode: RANDOM)."
+    }
+  }
+]

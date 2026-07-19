@@ -1,0 +1,182 @@
+[
+  {
+    "userId": "0c48c4d6-26ba-4a0e-b2a0-b18cdcd35c11",
+    "sessionId": "",
+    "browserContextId": "149.0.7827.55",
+    "behavior": "SKIP_EARLY",
+    "totalQueueWaitTimeMs": 0,
+    "totalConnectionEstablishmentTimeMs": 0,
+    "totalConnectedDurationMs": 0,
+    "finalOutcome": "ERROR",
+    "actions": [
+      {
+        "timestamp": "2026-07-18T06:54:39.719Z",
+        "previousState": "INITIAL",
+        "currentState": "CHAT_PAGE",
+        "action": "Navigate",
+        "result": "Loaded",
+        "durationMs": 8842,
+        "success": true
+      },
+      {
+        "timestamp": "2026-07-18T06:54:46.777Z",
+        "previousState": "CHAT_PAGE",
+        "currentState": "QUEUEING",
+        "action": "ClickStartChat",
+        "result": "Joined queue",
+        "durationMs": 5016,
+        "success": true
+      },
+      {
+        "timestamp": "2026-07-18T06:55:46.805Z",
+        "previousState": "QUEUEING",
+        "currentState": "ERROR",
+        "action": "Error",
+        "result": "Unhandled error",
+        "durationMs": 75929,
+        "success": false,
+        "error": "Timeout waiting for match"
+      }
+    ],
+    "joinTime": "2026-07-18T06:54:46.776Z",
+    "queueEntryTime": "2026-07-18T06:54:46.777Z"
+  },
+  {
+    "userId": "31a2b9b0-b168-4894-8bdf-b416c1289150",
+    "sessionId": "",
+    "browserContextId": "149.0.7827.55",
+    "behavior": "HAPPY_PATH",
+    "totalQueueWaitTimeMs": 0,
+    "totalConnectionEstablishmentTimeMs": 0,
+    "totalConnectedDurationMs": 0,
+    "finalOutcome": "ERROR",
+    "actions": [
+      {
+        "timestamp": "2026-07-18T06:55:04.093Z",
+        "previousState": "INITIAL",
+        "currentState": "CHAT_PAGE",
+        "action": "Navigate",
+        "result": "Loaded",
+        "durationMs": 8033,
+        "success": true
+      },
+      {
+        "timestamp": "2026-07-18T06:55:11.327Z",
+        "previousState": "CHAT_PAGE",
+        "currentState": "QUEUEING",
+        "action": "ClickStartChat",
+        "result": "Joined queue",
+        "durationMs": 5189,
+        "success": true
+      },
+      {
+        "timestamp": "2026-07-18T06:56:11.542Z",
+        "previousState": "QUEUEING",
+        "currentState": "ERROR",
+        "action": "Error",
+        "result": "Unhandled error",
+        "durationMs": 75482,
+        "success": false,
+        "error": "Timeout waiting for match"
+      }
+    ],
+    "joinTime": "2026-07-18T06:55:11.323Z",
+    "queueEntryTime": "2026-07-18T06:55:11.361Z"
+  },
+  {
+    "userId": "e7a8ef67-927f-436f-b677-f42cdad8d100",
+    "sessionId": "",
+    "browserContextId": "149.0.7827.55",
+    "behavior": "HAPPY_PATH",
+    "totalQueueWaitTimeMs": 0,
+    "totalConnectionEstablishmentTimeMs": 0,
+    "totalConnectedDurationMs": 0,
+    "finalOutcome": "PENDING",
+    "actions": [
+      {
+        "timestamp": "2026-07-18T06:55:08.459Z",
+        "previousState": "INITIAL",
+        "currentState": "CHAT_PAGE",
+        "action": "Navigate",
+        "result": "Loaded",
+        "durationMs": 8613,
+        "success": true
+      },
+      {
+        "timestamp": "2026-07-18T06:55:15.596Z",
+        "previousState": "CHAT_PAGE",
+        "currentState": "QUEUEING",
+        "action": "ClickStartChat",
+        "result": "Joined queue",
+        "durationMs": 5062,
+        "success": true
+      }
+    ],
+    "joinTime": "2026-07-18T06:55:15.596Z",
+    "queueEntryTime": "2026-07-18T06:55:15.597Z"
+  },
+  {
+    "userId": "6f759df2-a3e3-40ec-a952-a368dd24b4c6",
+    "sessionId": "",
+    "browserContextId": "149.0.7827.55",
+    "behavior": "HAPPY_PATH",
+    "totalQueueWaitTimeMs": 0,
+    "totalConnectionEstablishmentTimeMs": 0,
+    "totalConnectedDurationMs": 0,
+    "finalOutcome": "PENDING",
+    "actions": [
+      {
+        "timestamp": "2026-07-18T06:55:19.764Z",
+        "previousState": "INITIAL",
+        "currentState": "CHAT_PAGE",
+        "action": "Navigate",
+        "result": "Loaded",
+        "durationMs": 14136,
+        "success": true
+      },
+      {
+        "timestamp": "2026-07-18T06:55:27.156Z",
+        "previousState": "CHAT_PAGE",
+        "currentState": "QUEUEING",
+        "action": "ClickStartChat",
+        "result": "Joined queue",
+        "durationMs": 5080,
+        "success": true
+      }
+    ],
+    "joinTime": "2026-07-18T06:55:27.155Z",
+    "queueEntryTime": "2026-07-18T06:55:27.156Z"
+  },
+  {
+    "userId": "e74f05fa-b2f7-4b42-b736-81e9be1ed6cd",
+    "sessionId": "",
+    "browserContextId": "149.0.7827.55",
+    "behavior": "ABANDON_QUEUE",
+    "totalQueueWaitTimeMs": 0,
+    "totalConnectionEstablishmentTimeMs": 0,
+    "totalConnectedDurationMs": 0,
+    "finalOutcome": "PENDING",
+    "actions": [
+      {
+        "timestamp": "2026-07-18T06:55:27.486Z",
+        "previousState": "INITIAL",
+        "currentState": "CHAT_PAGE",
+        "action": "Navigate",
+        "result": "Loaded",
+        "durationMs": 17647,
+        "success": true
+      },
+      {
+        "timestamp": "2026-07-18T06:55:34.681Z",
+        "previousState": "CHAT_PAGE",
+        "currentState": "QUEUEING",
+        "action": "ClickStartChat",
+        "result": "Joined queue",
+        "durationMs": 5014,
+        "success": true
+      }
+    ],
+    "joinTime": "2026-07-18T06:55:34.680Z",
+    "queueEntryTime": "2026-07-18T06:55:34.681Z"
+  }
+]

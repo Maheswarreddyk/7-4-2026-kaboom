@@ -16,7 +16,7 @@ export const config = {
   queueStaleMs:           environment.backend.queueTimeout * 1000,
   matchStaleMs:           environment.backend.matchTimeout * 1000,
   metricsIntervalMs:      60 * 1000,
-  cleanupIntervalMs:      30 * 1000,
+  cleanupIntervalMs:      5 * 1000, // 5s for fast 10s heartbeat cleanup
 };
 
 export interface IceServer {

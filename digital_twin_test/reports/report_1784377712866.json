@@ -1,0 +1,294 @@
+[
+  {
+    "userId": "271c9b5e-1326-44bd-83a1-7d098b6113f7",
+    "sessionId": "569624c5-b4c4-4c05-acf0-2a8d3ed20508",
+    "browserContextId": "149.0.7827.55",
+    "behavior": "ABANDON_QUEUE",
+    "totalQueueWaitTimeMs": 0,
+    "totalConnectionEstablishmentTimeMs": 0,
+    "totalConnectedDurationMs": 0,
+    "finalOutcome": "PENDING",
+    "actions": [
+      {
+        "timestamp": "2026-07-18T12:27:27.652Z",
+        "previousState": "INITIAL",
+        "currentState": "CHAT_PAGE",
+        "action": "Navigate",
+        "result": "Loaded",
+        "durationMs": 10363,
+        "success": true
+      },
+      {
+        "timestamp": "2026-07-18T12:27:32.826Z",
+        "previousState": "CHAT_PAGE",
+        "currentState": "QUEUEING",
+        "action": "ClickStartChat",
+        "result": "Joined queue",
+        "durationMs": 5016,
+        "success": true
+      },
+      {
+        "timestamp": "2026-07-18T12:28:32.841Z",
+        "previousState": "QUEUEING",
+        "currentState": "DISCONNECTED",
+        "action": "AbandonQueue",
+        "result": "Left queue",
+        "durationMs": 60015,
+        "success": true
+      }
+    ],
+    "scenarioMode": "RANDOM",
+    "scenarioTags": [],
+    "profile": {
+      "name": "RandomMatch_001_271c9b5e",
+      "gender": "MALE",
+      "lookingFor": "FEMALE",
+      "bio": "I am a digital twin (Behavior: ABANDON_QUEUE, Mode: RANDOM)."
+    },
+    "joinTime": "2026-07-18T12:27:32.826Z",
+    "queueEntryTime": "2026-07-18T12:27:32.826Z"
+  },
+  {
+    "userId": "d2bce873-fd11-402b-ae3e-3702bd94b8a7",
+    "sessionId": "c04556b1-b801-4ca3-888f-e9c35ebc6e17",
+    "browserContextId": "149.0.7827.55",
+    "behavior": "NETWORK_INTERRUPT",
+    "totalQueueWaitTimeMs": 0,
+    "totalConnectionEstablishmentTimeMs": 0,
+    "totalConnectedDurationMs": 0,
+    "finalOutcome": "PENDING",
+    "actions": [
+      {
+        "timestamp": "2026-07-18T12:27:32.472Z",
+        "previousState": "INITIAL",
+        "currentState": "CHAT_PAGE",
+        "action": "Navigate",
+        "result": "Loaded",
+        "durationMs": 11472,
+        "success": true
+      },
+      {
+        "timestamp": "2026-07-18T12:27:37.507Z",
+        "previousState": "CHAT_PAGE",
+        "currentState": "QUEUEING",
+        "action": "ClickStartChat",
+        "result": "Joined queue",
+        "durationMs": 5007,
+        "success": true
+      }
+    ],
+    "scenarioMode": "RANDOM",
+    "scenarioTags": [],
+    "profile": {
+      "name": "RandomMatch_002_d2bce873",
+      "gender": "ANY",
+      "lookingFor": "NONBINARY",
+      "bio": "I am a digital twin (Behavior: NETWORK_INTERRUPT, Mode: RANDOM)."
+    },
+    "joinTime": "2026-07-18T12:27:37.507Z",
+    "queueEntryTime": "2026-07-18T12:27:37.507Z"
+  },
+  {
+    "userId": "c559ff17-9771-4261-b129-6816ebec2507",
+    "sessionId": "12a40884-37b8-47ad-8dcb-8cca421d4223",
+    "browserContextId": "149.0.7827.55",
+    "behavior": "HAPPY_PATH",
+    "totalQueueWaitTimeMs": 0,
+    "totalConnectionEstablishmentTimeMs": 0,
+    "totalConnectedDurationMs": 0,
+    "finalOutcome": "PENDING",
+    "actions": [
+      {
+        "timestamp": "2026-07-18T12:27:34.120Z",
+        "previousState": "INITIAL",
+        "currentState": "CHAT_PAGE",
+        "action": "Navigate",
+        "result": "Loaded",
+        "durationMs": 7617,
+        "success": true
+      },
+      {
+        "timestamp": "2026-07-18T12:27:39.157Z",
+        "previousState": "CHAT_PAGE",
+        "currentState": "QUEUEING",
+        "action": "ClickStartChat",
+        "result": "Joined queue",
+        "durationMs": 5004,
+        "success": true
+      }
+    ],
+    "scenarioMode": "RANDOM",
+    "scenarioTags": [],
+    "profile": {
+      "name": "RandomMatch_003_c559ff17",
+      "gender": "MALE",
+      "lookingFor": "MALE",
+      "bio": "I am a digital twin (Behavior: HAPPY_PATH, Mode: RANDOM)."
+    },
+    "joinTime": "2026-07-18T12:27:39.157Z",
+    "queueEntryTime": "2026-07-18T12:27:39.157Z"
+  },
+  {
+    "userId": "f41ea16c-4a93-4a75-8880-4606bb4794fe",
+    "sessionId": "f8b85724-1a12-4899-bd0a-9a7403e32f2a",
+    "browserContextId": "149.0.7827.55",
+    "behavior": "HARD_CLOSE",
+    "totalQueueWaitTimeMs": 0,
+    "totalConnectionEstablishmentTimeMs": 0,
+    "totalConnectedDurationMs": 0,
+    "finalOutcome": "PENDING",
+    "actions": [
+      {
+        "timestamp": "2026-07-18T12:27:52.388Z",
+        "previousState": "INITIAL",
+        "currentState": "CHAT_PAGE",
+        "action": "Navigate",
+        "result": "Loaded",
+        "durationMs": 25835,
+        "success": true
+      },
+      {
+        "timestamp": "2026-07-18T12:27:57.409Z",
+        "previousState": "CHAT_PAGE",
+        "currentState": "QUEUEING",
+        "action": "ClickStartChat",
+        "result": "Joined queue",
+        "durationMs": 5010,
+        "success": true
+      }
+    ],
+    "scenarioMode": "RANDOM",
+    "scenarioTags": [],
+    "profile": {
+      "name": "RandomMatch_004_f41ea16c",
+      "gender": "FEMALE",
+      "lookingFor": "NONBINARY",
+      "bio": "I am a digital twin (Behavior: HARD_CLOSE, Mode: RANDOM)."
+    },
+    "joinTime": "2026-07-18T12:27:57.409Z",
+    "queueEntryTime": "2026-07-18T12:27:57.409Z"
+  },
+  {
+    "userId": "95a8e4a9-5012-45d5-8381-bc88425a5016",
+    "sessionId": "fba941af-fade-47f9-8c91-5f0102549d26",
+    "browserContextId": "149.0.7827.55",
+    "behavior": "HAPPY_PATH",
+    "totalQueueWaitTimeMs": 0,
+    "totalConnectionEstablishmentTimeMs": 0,
+    "totalConnectedDurationMs": 0,
+    "finalOutcome": "PENDING",
+    "actions": [
+      {
+        "timestamp": "2026-07-18T12:27:52.567Z",
+        "previousState": "INITIAL",
+        "currentState": "CHAT_PAGE",
+        "action": "Navigate",
+        "result": "Loaded",
+        "durationMs": 25712,
+        "success": true
+      },
+      {
+        "timestamp": "2026-07-18T12:27:57.580Z",
+        "previousState": "CHAT_PAGE",
+        "currentState": "QUEUEING",
+        "action": "ClickStartChat",
+        "result": "Joined queue",
+        "durationMs": 5004,
+        "success": true
+      }
+    ],
+    "scenarioMode": "RANDOM",
+    "scenarioTags": [],
+    "profile": {
+      "name": "RandomMatch_005_95a8e4a9",
+      "gender": "MALE",
+      "lookingFor": "MALE",
+      "bio": "I am a digital twin (Behavior: HAPPY_PATH, Mode: RANDOM)."
+    },
+    "joinTime": "2026-07-18T12:27:57.580Z",
+    "queueEntryTime": "2026-07-18T12:27:57.580Z"
+  },
+  {
+    "userId": "17198a7b-d722-4400-b775-10104ed1d163",
+    "sessionId": "",
+    "browserContextId": "149.0.7827.55",
+    "behavior": "HAPPY_PATH",
+    "totalQueueWaitTimeMs": 0,
+    "totalConnectionEstablishmentTimeMs": 0,
+    "totalConnectedDurationMs": 0,
+    "finalOutcome": "ERROR",
+    "actions": [
+      {
+        "timestamp": "2026-07-18T12:28:03.937Z",
+        "previousState": "INITIAL",
+        "currentState": "ERROR",
+        "action": "Error",
+        "result": "Unhandled error",
+        "durationMs": 31537,
+        "success": false,
+        "error": "page.goto: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - navigating to \"http://localhost:5173/chat\", waiting until \"networkidle\"\u001b[22m\n"
+      }
+    ],
+    "scenarioMode": "RANDOM",
+    "scenarioTags": [],
+    "profile": {
+      "name": "RandomMatch_006_17198a7b",
+      "gender": "NONBINARY",
+      "lookingFor": "ANY",
+      "bio": "I am a digital twin (Behavior: HAPPY_PATH, Mode: RANDOM)."
+    }
+  },
+  {
+    "userId": "f6d08673-c9a1-4b62-a193-7473f78a2649",
+    "sessionId": "32a97c4e-8e44-45a6-b31e-2e16017bad0c",
+    "browserContextId": "149.0.7827.55",
+    "behavior": "HAPPY_PATH",
+    "totalQueueWaitTimeMs": 0,
+    "totalConnectionEstablishmentTimeMs": 0,
+    "totalConnectedDurationMs": 0,
+    "finalOutcome": "PENDING",
+    "actions": [
+      {
+        "timestamp": "2026-07-18T12:28:23.018Z",
+        "previousState": "INITIAL",
+        "currentState": "CHAT_PAGE",
+        "action": "Navigate",
+        "result": "Loaded",
+        "durationMs": 28433,
+        "success": true
+      },
+      {
+        "timestamp": "2026-07-18T12:28:28.039Z",
+        "previousState": "CHAT_PAGE",
+        "currentState": "QUEUEING",
+        "action": "ClickStartChat",
+        "result": "Joined queue",
+        "durationMs": 5014,
+        "success": true
+      }
+    ],
+    "scenarioMode": "RANDOM",
+    "scenarioTags": [],
+    "profile": {
+      "name": "RandomMatch_007_f6d08673",
+      "gender": "MALE",
+      "lookingFor": "MALE",
+      "bio": "I am a digital twin (Behavior: HAPPY_PATH, Mode: RANDOM)."
+    },
+    "joinTime": "2026-07-18T12:28:28.038Z",
+    "queueEntryTime": "2026-07-18T12:28:28.039Z"
+  },
+  {
+    "userId": "d09cc00f-784f-47e1-9cc0-cba8caa9132a",
+    "sessionId": "",
+    "browserContextId": "149.0.7827.55",
+    "behavior": "SKIP_EARLY",
+    "totalQueueWaitTimeMs": 0,
+    "totalConnectionEstablishmentTimeMs": 0,
+    "totalConnectedDurationMs": 0,
+    "finalOutcome": "PENDING",
+    "actions": [],
+    "scenarioMode": "RANDOM",
+    "scenarioTags": []
+  }
+]

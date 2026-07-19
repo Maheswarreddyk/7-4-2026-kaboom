@@ -1,0 +1,567 @@
+[
+  {
+    "userId": "5d21c228-b3b5-4e3b-92ce-09b4238526f0",
+    "sessionId": "",
+    "browserContextId": "149.0.7827.55",
+    "behavior": "HARD_CLOSE",
+    "totalQueueWaitTimeMs": 0,
+    "totalConnectionEstablishmentTimeMs": 0,
+    "totalConnectedDurationMs": 0,
+    "finalOutcome": "ERROR",
+    "actions": [
+      {
+        "timestamp": "2026-07-18T16:15:55.490Z",
+        "previousState": "INITIAL",
+        "currentState": "ERROR",
+        "action": "Error",
+        "result": "Unhandled error",
+        "durationMs": 2440,
+        "success": false,
+        "error": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:5173/\nCall log:\n\u001b[2m  - navigating to \"http://localhost:5173/\", waiting until \"load\"\u001b[22m\n"
+      }
+    ],
+    "scenarioMode": "RANDOM",
+    "scenarioTags": []
+  },
+  {
+    "userId": "9b8fd374-c51c-47bf-9ed2-7397562f2e24",
+    "sessionId": "",
+    "browserContextId": "149.0.7827.55",
+    "behavior": "NETWORK_INTERRUPT",
+    "totalQueueWaitTimeMs": 0,
+    "totalConnectionEstablishmentTimeMs": 0,
+    "totalConnectedDurationMs": 0,
+    "finalOutcome": "ERROR",
+    "actions": [
+      {
+        "timestamp": "2026-07-18T16:15:56.668Z",
+        "previousState": "INITIAL",
+        "currentState": "ERROR",
+        "action": "Error",
+        "result": "Unhandled error",
+        "durationMs": 2415,
+        "success": false,
+        "error": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:5173/\nCall log:\n\u001b[2m  - navigating to \"http://localhost:5173/\", waiting until \"load\"\u001b[22m\n"
+      }
+    ],
+    "scenarioMode": "RANDOM",
+    "scenarioTags": []
+  },
+  {
+    "userId": "8e4fbbe4-20c7-4b91-abb1-42344c3d7008",
+    "sessionId": "",
+    "browserContextId": "149.0.7827.55",
+    "behavior": "HAPPY_PATH",
+    "totalQueueWaitTimeMs": 0,
+    "totalConnectionEstablishmentTimeMs": 0,
+    "totalConnectedDurationMs": 0,
+    "finalOutcome": "ERROR",
+    "actions": [
+      {
+        "timestamp": "2026-07-18T16:15:57.455Z",
+        "previousState": "INITIAL",
+        "currentState": "ERROR",
+        "action": "Error",
+        "result": "Unhandled error",
+        "durationMs": 2427,
+        "success": false,
+        "error": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:5173/\nCall log:\n\u001b[2m  - navigating to \"http://localhost:5173/\", waiting until \"load\"\u001b[22m\n"
+      }
+    ],
+    "scenarioMode": "RANDOM",
+    "scenarioTags": []
+  },
+  {
+    "userId": "c888df07-f626-46ba-8a23-1c1ee2882d8e",
+    "sessionId": "",
+    "browserContextId": "149.0.7827.55",
+    "behavior": "HAPPY_PATH",
+    "totalQueueWaitTimeMs": 0,
+    "totalConnectionEstablishmentTimeMs": 0,
+    "totalConnectedDurationMs": 0,
+    "finalOutcome": "ERROR",
+    "actions": [
+      {
+        "timestamp": "2026-07-18T16:15:59.892Z",
+        "previousState": "INITIAL",
+        "currentState": "ERROR",
+        "action": "Error",
+        "result": "Unhandled error",
+        "durationMs": 2434,
+        "success": false,
+        "error": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:5173/\nCall log:\n\u001b[2m  - navigating to \"http://localhost:5173/\", waiting until \"load\"\u001b[22m\n"
+      }
+    ],
+    "scenarioMode": "RANDOM",
+    "scenarioTags": []
+  },
+  {
+    "userId": "0c349273-37a1-4210-924b-c188b8fc9138",
+    "sessionId": "",
+    "browserContextId": "149.0.7827.55",
+    "behavior": "SKIP_EARLY",
+    "totalQueueWaitTimeMs": 0,
+    "totalConnectionEstablishmentTimeMs": 0,
+    "totalConnectedDurationMs": 0,
+    "finalOutcome": "ERROR",
+    "actions": [
+      {
+        "timestamp": "2026-07-18T16:16:00.053Z",
+        "previousState": "INITIAL",
+        "currentState": "ERROR",
+        "action": "Error",
+        "result": "Unhandled error",
+        "durationMs": 2423,
+        "success": false,
+        "error": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:5173/\nCall log:\n\u001b[2m  - navigating to \"http://localhost:5173/\", waiting until \"load\"\u001b[22m\n"
+      }
+    ],
+    "scenarioMode": "RANDOM",
+    "scenarioTags": []
+  },
+  {
+    "userId": "723cb87a-4e73-46ba-943e-553f39144df9",
+    "sessionId": "",
+    "browserContextId": "149.0.7827.55",
+    "behavior": "HARD_CLOSE",
+    "totalQueueWaitTimeMs": 0,
+    "totalConnectionEstablishmentTimeMs": 0,
+    "totalConnectedDurationMs": 0,
+    "finalOutcome": "ERROR",
+    "actions": [
+      {
+        "timestamp": "2026-07-18T16:16:02.287Z",
+        "previousState": "INITIAL",
+        "currentState": "ERROR",
+        "action": "Error",
+        "result": "Unhandled error",
+        "durationMs": 2449,
+        "success": false,
+        "error": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:5173/\nCall log:\n\u001b[2m  - navigating to \"http://localhost:5173/\", waiting until \"load\"\u001b[22m\n"
+      }
+    ],
+    "scenarioMode": "RANDOM",
+    "scenarioTags": []
+  },
+  {
+    "userId": "d71b3e40-f983-4575-9139-f5b66616c39a",
+    "sessionId": "",
+    "browserContextId": "149.0.7827.55",
+    "behavior": "SKIP_EARLY",
+    "totalQueueWaitTimeMs": 0,
+    "totalConnectionEstablishmentTimeMs": 0,
+    "totalConnectedDurationMs": 0,
+    "finalOutcome": "ERROR",
+    "actions": [
+      {
+        "timestamp": "2026-07-18T16:16:03.356Z",
+        "previousState": "INITIAL",
+        "currentState": "ERROR",
+        "action": "Error",
+        "result": "Unhandled error",
+        "durationMs": 2418,
+        "success": false,
+        "error": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:5173/\nCall log:\n\u001b[2m  - navigating to \"http://localhost:5173/\", waiting until \"load\"\u001b[22m\n"
+      }
+    ],
+    "scenarioMode": "RANDOM",
+    "scenarioTags": []
+  },
+  {
+    "userId": "9781fb48-ce36-4c29-a45a-532a756c779c",
+    "sessionId": "",
+    "browserContextId": "149.0.7827.55",
+    "behavior": "HAPPY_PATH",
+    "totalQueueWaitTimeMs": 0,
+    "totalConnectionEstablishmentTimeMs": 0,
+    "totalConnectedDurationMs": 0,
+    "finalOutcome": "ERROR",
+    "actions": [
+      {
+        "timestamp": "2026-07-18T16:16:07.008Z",
+        "previousState": "INITIAL",
+        "currentState": "ERROR",
+        "action": "Error",
+        "result": "Unhandled error",
+        "durationMs": 2428,
+        "success": false,
+        "error": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:5173/\nCall log:\n\u001b[2m  - navigating to \"http://localhost:5173/\", waiting until \"load\"\u001b[22m\n"
+      }
+    ],
+    "scenarioMode": "RANDOM",
+    "scenarioTags": []
+  },
+  {
+    "userId": "ff2f91b0-8276-4875-adc8-0362526f0727",
+    "sessionId": "",
+    "browserContextId": "149.0.7827.55",
+    "behavior": "HARD_CLOSE",
+    "totalQueueWaitTimeMs": 0,
+    "totalConnectionEstablishmentTimeMs": 0,
+    "totalConnectedDurationMs": 0,
+    "finalOutcome": "ERROR",
+    "actions": [
+      {
+        "timestamp": "2026-07-18T16:16:14.146Z",
+        "previousState": "INITIAL",
+        "currentState": "ERROR",
+        "action": "Error",
+        "result": "Unhandled error",
+        "durationMs": 2422,
+        "success": false,
+        "error": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:5173/\nCall log:\n\u001b[2m  - navigating to \"http://localhost:5173/\", waiting until \"load\"\u001b[22m\n"
+      }
+    ],
+    "scenarioMode": "RANDOM",
+    "scenarioTags": []
+  },
+  {
+    "userId": "5cbf5f58-74e5-4860-a073-3dc588920183",
+    "sessionId": "",
+    "browserContextId": "149.0.7827.55",
+    "behavior": "HARD_CLOSE",
+    "totalQueueWaitTimeMs": 0,
+    "totalConnectionEstablishmentTimeMs": 0,
+    "totalConnectedDurationMs": 0,
+    "finalOutcome": "ERROR",
+    "actions": [
+      {
+        "timestamp": "2026-07-18T16:16:15.012Z",
+        "previousState": "INITIAL",
+        "currentState": "ERROR",
+        "action": "Error",
+        "result": "Unhandled error",
+        "durationMs": 2415,
+        "success": false,
+        "error": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:5173/\nCall log:\n\u001b[2m  - navigating to \"http://localhost:5173/\", waiting until \"load\"\u001b[22m\n"
+      }
+    ],
+    "scenarioMode": "RANDOM",
+    "scenarioTags": []
+  },
+  {
+    "userId": "f331f347-1bc8-4510-8c6a-ac2fc104c324",
+    "sessionId": "",
+    "browserContextId": "149.0.7827.55",
+    "behavior": "HAPPY_PATH",
+    "totalQueueWaitTimeMs": 0,
+    "totalConnectionEstablishmentTimeMs": 0,
+    "totalConnectedDurationMs": 0,
+    "finalOutcome": "ERROR",
+    "actions": [
+      {
+        "timestamp": "2026-07-18T16:16:17.391Z",
+        "previousState": "INITIAL",
+        "currentState": "ERROR",
+        "action": "Error",
+        "result": "Unhandled error",
+        "durationMs": 2424,
+        "success": false,
+        "error": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:5173/\nCall log:\n\u001b[2m  - navigating to \"http://localhost:5173/\", waiting until \"load\"\u001b[22m\n"
+      }
+    ],
+    "scenarioMode": "RANDOM",
+    "scenarioTags": []
+  },
+  {
+    "userId": "c5cc3933-89e3-4d95-9cc9-cb3b3800f078",
+    "sessionId": "",
+    "browserContextId": "149.0.7827.55",
+    "behavior": "HAPPY_PATH",
+    "totalQueueWaitTimeMs": 0,
+    "totalConnectionEstablishmentTimeMs": 0,
+    "totalConnectedDurationMs": 0,
+    "finalOutcome": "ERROR",
+    "actions": [
+      {
+        "timestamp": "2026-07-18T16:16:24.141Z",
+        "previousState": "INITIAL",
+        "currentState": "ERROR",
+        "action": "Error",
+        "result": "Unhandled error",
+        "durationMs": 2426,
+        "success": false,
+        "error": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:5173/\nCall log:\n\u001b[2m  - navigating to \"http://localhost:5173/\", waiting until \"load\"\u001b[22m\n"
+      }
+    ],
+    "scenarioMode": "RANDOM",
+    "scenarioTags": []
+  },
+  {
+    "userId": "428db860-9689-4f53-9965-613eba426f86",
+    "sessionId": "",
+    "browserContextId": "149.0.7827.55",
+    "behavior": "NETWORK_INTERRUPT",
+    "totalQueueWaitTimeMs": 0,
+    "totalConnectionEstablishmentTimeMs": 0,
+    "totalConnectedDurationMs": 0,
+    "finalOutcome": "ERROR",
+    "actions": [
+      {
+        "timestamp": "2026-07-18T16:16:24.202Z",
+        "previousState": "INITIAL",
+        "currentState": "ERROR",
+        "action": "Error",
+        "result": "Unhandled error",
+        "durationMs": 2408,
+        "success": false,
+        "error": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:5173/\nCall log:\n\u001b[2m  - navigating to \"http://localhost:5173/\", waiting until \"load\"\u001b[22m\n"
+      }
+    ],
+    "scenarioMode": "RANDOM",
+    "scenarioTags": []
+  },
+  {
+    "userId": "a90878bc-0a84-444c-ab30-f9f680d2ce42",
+    "sessionId": "",
+    "browserContextId": "149.0.7827.55",
+    "behavior": "ABANDON_QUEUE",
+    "totalQueueWaitTimeMs": 0,
+    "totalConnectionEstablishmentTimeMs": 0,
+    "totalConnectedDurationMs": 0,
+    "finalOutcome": "ERROR",
+    "actions": [
+      {
+        "timestamp": "2026-07-18T16:16:27.132Z",
+        "previousState": "INITIAL",
+        "currentState": "ERROR",
+        "action": "Error",
+        "result": "Unhandled error",
+        "durationMs": 2431,
+        "success": false,
+        "error": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:5173/\nCall log:\n\u001b[2m  - navigating to \"http://localhost:5173/\", waiting until \"load\"\u001b[22m\n"
+      }
+    ],
+    "scenarioMode": "RANDOM",
+    "scenarioTags": []
+  },
+  {
+    "userId": "8a502dd4-1128-436d-a01a-b3add8e8a1f0",
+    "sessionId": "",
+    "browserContextId": "149.0.7827.55",
+    "behavior": "HAPPY_PATH",
+    "totalQueueWaitTimeMs": 0,
+    "totalConnectionEstablishmentTimeMs": 0,
+    "totalConnectedDurationMs": 0,
+    "finalOutcome": "ERROR",
+    "actions": [
+      {
+        "timestamp": "2026-07-18T16:16:30.239Z",
+        "previousState": "INITIAL",
+        "currentState": "ERROR",
+        "action": "Error",
+        "result": "Unhandled error",
+        "durationMs": 2416,
+        "success": false,
+        "error": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:5173/\nCall log:\n\u001b[2m  - navigating to \"http://localhost:5173/\", waiting until \"load\"\u001b[22m\n"
+      }
+    ],
+    "scenarioMode": "RANDOM",
+    "scenarioTags": []
+  },
+  {
+    "userId": "2affbfd7-6a94-4bae-a6a7-33d552d31cdd",
+    "sessionId": "",
+    "browserContextId": "149.0.7827.55",
+    "behavior": "HARD_CLOSE",
+    "totalQueueWaitTimeMs": 0,
+    "totalConnectionEstablishmentTimeMs": 0,
+    "totalConnectedDurationMs": 0,
+    "finalOutcome": "ERROR",
+    "actions": [
+      {
+        "timestamp": "2026-07-18T16:16:31.094Z",
+        "previousState": "INITIAL",
+        "currentState": "ERROR",
+        "action": "Error",
+        "result": "Unhandled error",
+        "durationMs": 2414,
+        "success": false,
+        "error": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:5173/\nCall log:\n\u001b[2m  - navigating to \"http://localhost:5173/\", waiting until \"load\"\u001b[22m\n"
+      }
+    ],
+    "scenarioMode": "RANDOM",
+    "scenarioTags": []
+  },
+  {
+    "userId": "71fce1df-c312-46f2-ad2a-51b95a6b021a",
+    "sessionId": "",
+    "browserContextId": "149.0.7827.55",
+    "behavior": "HAPPY_PATH",
+    "totalQueueWaitTimeMs": 0,
+    "totalConnectionEstablishmentTimeMs": 0,
+    "totalConnectedDurationMs": 0,
+    "finalOutcome": "ERROR",
+    "actions": [
+      {
+        "timestamp": "2026-07-18T16:16:32.792Z",
+        "previousState": "INITIAL",
+        "currentState": "ERROR",
+        "action": "Error",
+        "result": "Unhandled error",
+        "durationMs": 2381,
+        "success": false,
+        "error": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:5173/\nCall log:\n\u001b[2m  - navigating to \"http://localhost:5173/\", waiting until \"load\"\u001b[22m\n"
+      }
+    ],
+    "scenarioMode": "RANDOM",
+    "scenarioTags": []
+  },
+  {
+    "userId": "6a156fc9-66cb-4ed8-9d5f-35685c995ef1",
+    "sessionId": "",
+    "browserContextId": "149.0.7827.55",
+    "behavior": "HAPPY_PATH",
+    "totalQueueWaitTimeMs": 0,
+    "totalConnectionEstablishmentTimeMs": 0,
+    "totalConnectedDurationMs": 0,
+    "finalOutcome": "ERROR",
+    "actions": [
+      {
+        "timestamp": "2026-07-18T16:16:33.624Z",
+        "previousState": "INITIAL",
+        "currentState": "ERROR",
+        "action": "Error",
+        "result": "Unhandled error",
+        "durationMs": 2421,
+        "success": false,
+        "error": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:5173/\nCall log:\n\u001b[2m  - navigating to \"http://localhost:5173/\", waiting until \"load\"\u001b[22m\n"
+      }
+    ],
+    "scenarioMode": "RANDOM",
+    "scenarioTags": []
+  },
+  {
+    "userId": "577d84d4-5c50-4381-95c5-2ef1a5cca0e3",
+    "sessionId": "",
+    "browserContextId": "149.0.7827.55",
+    "behavior": "HAPPY_PATH",
+    "totalQueueWaitTimeMs": 0,
+    "totalConnectionEstablishmentTimeMs": 0,
+    "totalConnectedDurationMs": 0,
+    "finalOutcome": "ERROR",
+    "actions": [
+      {
+        "timestamp": "2026-07-18T16:16:35.021Z",
+        "previousState": "INITIAL",
+        "currentState": "ERROR",
+        "action": "Error",
+        "result": "Unhandled error",
+        "durationMs": 2413,
+        "success": false,
+        "error": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:5173/\nCall log:\n\u001b[2m  - navigating to \"http://localhost:5173/\", waiting until \"load\"\u001b[22m\n"
+      }
+    ],
+    "scenarioMode": "RANDOM",
+    "scenarioTags": []
+  },
+  {
+    "userId": "3ab737fc-d0ce-4aab-b10a-d46c7306b07d",
+    "sessionId": "",
+    "browserContextId": "149.0.7827.55",
+    "behavior": "HAPPY_PATH",
+    "totalQueueWaitTimeMs": 0,
+    "totalConnectionEstablishmentTimeMs": 0,
+    "totalConnectedDurationMs": 0,
+    "finalOutcome": "ERROR",
+    "actions": [
+      {
+        "timestamp": "2026-07-18T16:16:39.471Z",
+        "previousState": "INITIAL",
+        "currentState": "ERROR",
+        "action": "Error",
+        "result": "Unhandled error",
+        "durationMs": 2426,
+        "success": false,
+        "error": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:5173/\nCall log:\n\u001b[2m  - navigating to \"http://localhost:5173/\", waiting until \"load\"\u001b[22m\n"
+      }
+    ],
+    "scenarioMode": "RANDOM",
+    "scenarioTags": []
+  },
+  {
+    "userId": "ede990c1-00a9-4a2d-b50a-9704241d4d62",
+    "sessionId": "",
+    "browserContextId": "149.0.7827.55",
+    "behavior": "HAPPY_PATH",
+    "totalQueueWaitTimeMs": 0,
+    "totalConnectionEstablishmentTimeMs": 0,
+    "totalConnectedDurationMs": 0,
+    "finalOutcome": "ERROR",
+    "actions": [
+      {
+        "timestamp": "2026-07-18T16:16:41.004Z",
+        "previousState": "INITIAL",
+        "currentState": "ERROR",
+        "action": "Error",
+        "result": "Unhandled error",
+        "durationMs": 2433,
+        "success": false,
+        "error": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:5173/\nCall log:\n\u001b[2m  - navigating to \"http://localhost:5173/\", waiting until \"load\"\u001b[22m\n"
+      }
+    ],
+    "scenarioMode": "RANDOM",
+    "scenarioTags": []
+  },
+  {
+    "userId": "f9379e34-10b1-4eda-916b-a8f76e554499",
+    "sessionId": "",
+    "browserContextId": "149.0.7827.55",
+    "behavior": "HAPPY_PATH",
+    "totalQueueWaitTimeMs": 0,
+    "totalConnectionEstablishmentTimeMs": 0,
+    "totalConnectedDurationMs": 0,
+    "finalOutcome": "ERROR",
+    "actions": [
+      {
+        "timestamp": "2026-07-18T16:16:42.754Z",
+        "previousState": "INITIAL",
+        "currentState": "ERROR",
+        "action": "Error",
+        "result": "Unhandled error",
+        "durationMs": 2416,
+        "success": false,
+        "error": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:5173/\nCall log:\n\u001b[2m  - navigating to \"http://localhost:5173/\", waiting until \"load\"\u001b[22m\n"
+      }
+    ],
+    "scenarioMode": "RANDOM",
+    "scenarioTags": []
+  },
+  {
+    "userId": "44586851-144d-474e-abf2-b970ef2aaa70",
+    "sessionId": "",
+    "browserContextId": "149.0.7827.55",
+    "behavior": "HARD_CLOSE",
+    "totalQueueWaitTimeMs": 0,
+    "totalConnectionEstablishmentTimeMs": 0,
+    "totalConnectedDurationMs": 0,
+    "finalOutcome": "ERROR",
+    "actions": [
+      {
+        "timestamp": "2026-07-18T16:16:43.143Z",
+        "previousState": "INITIAL",
+        "currentState": "ERROR",
+        "action": "Error",
+        "result": "Unhandled error",
+        "durationMs": 2446,
+        "success": false,
+        "error": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:5173/\nCall log:\n\u001b[2m  - navigating to \"http://localhost:5173/\", waiting until \"load\"\u001b[22m\n"
+      }
+    ],
+    "scenarioMode": "RANDOM",
+    "scenarioTags": []
+  },
+  {
+    "userId": "5f1111fc-560f-4ab7-81b3-787a5ee56d5c",
+    "sessionId": "",
+    "browserContextId": "149.0.7827.55",
+    "behavior": "ABANDON_QUEUE",
+    "totalQueueWaitTimeMs": 0,
+    "totalConnectionEstablishmentTimeMs": 0,
+    "totalConnectedDurationMs": 0,
+    "finalOutcome": "PENDING",
+    "actions": [],
+    "scenarioMode": "RANDOM",
+    "scenarioTags": []
+  }
+]

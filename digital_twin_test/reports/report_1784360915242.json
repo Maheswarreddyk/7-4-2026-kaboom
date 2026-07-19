@@ -1,0 +1,919 @@
+[
+  {
+    "userId": "335f81ab-3732-45c0-b3e8-3d87e075fb12",
+    "sessionId": "",
+    "browserContextId": "149.0.7827.55",
+    "behavior": "HAPPY_PATH",
+    "totalQueueWaitTimeMs": 0,
+    "totalConnectionEstablishmentTimeMs": 0,
+    "totalConnectedDurationMs": 0,
+    "finalOutcome": "ERROR",
+    "actions": [
+      {
+        "timestamp": "2026-07-18T07:48:28.554Z",
+        "previousState": "INITIAL",
+        "currentState": "ERROR",
+        "action": "Error",
+        "result": "Unhandled error",
+        "durationMs": 48607,
+        "success": false,
+        "error": "page.goto: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - navigating to \"http://localhost:5173/chat\", waiting until \"networkidle\"\u001b[22m\n"
+      }
+    ],
+    "scenarioMode": "RANDOM",
+    "scenarioTags": [],
+    "profile": {
+      "name": "RandomMatch_001_335f81ab",
+      "gender": "MALE",
+      "lookingFor": "FEMALE",
+      "bio": "I am a digital twin (Behavior: HAPPY_PATH, Mode: RANDOM)."
+    }
+  },
+  {
+    "userId": "dc5120e4-5272-4768-a783-352612bb2907",
+    "sessionId": "",
+    "browserContextId": "149.0.7827.55",
+    "behavior": "SKIP_EARLY",
+    "totalQueueWaitTimeMs": 0,
+    "totalConnectionEstablishmentTimeMs": 0,
+    "totalConnectedDurationMs": 0,
+    "finalOutcome": "ERROR",
+    "actions": [
+      {
+        "timestamp": "2026-07-18T07:48:31.114Z",
+        "previousState": "INITIAL",
+        "currentState": "ERROR",
+        "action": "Error",
+        "result": "Unhandled error",
+        "durationMs": 50753,
+        "success": false,
+        "error": "page.goto: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - navigating to \"http://localhost:5173/chat\", waiting until \"networkidle\"\u001b[22m\n"
+      }
+    ],
+    "scenarioMode": "RANDOM",
+    "scenarioTags": [],
+    "profile": {
+      "name": "RandomMatch_002_dc5120e4",
+      "gender": "MALE",
+      "lookingFor": "NONBINARY",
+      "bio": "I am a digital twin (Behavior: SKIP_EARLY, Mode: RANDOM)."
+    }
+  },
+  {
+    "userId": "83ef10e3-7582-44e2-a643-3f5f4926c1a3",
+    "sessionId": "",
+    "browserContextId": "149.0.7827.55",
+    "behavior": "SKIP_EARLY",
+    "totalQueueWaitTimeMs": 0,
+    "totalConnectionEstablishmentTimeMs": 0,
+    "totalConnectedDurationMs": 0,
+    "finalOutcome": "ERROR",
+    "actions": [
+      {
+        "timestamp": "2026-07-18T07:48:24.309Z",
+        "previousState": "INITIAL",
+        "currentState": "ERROR",
+        "action": "Error",
+        "result": "Unhandled error",
+        "durationMs": 43795,
+        "success": false,
+        "error": "page.goto: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - navigating to \"http://localhost:5173/chat\", waiting until \"networkidle\"\u001b[22m\n"
+      }
+    ],
+    "scenarioMode": "RANDOM",
+    "scenarioTags": [],
+    "profile": {
+      "name": "RandomMatch_003_83ef10e3",
+      "gender": "FEMALE",
+      "lookingFor": "MALE",
+      "bio": "I am a digital twin (Behavior: SKIP_EARLY, Mode: RANDOM)."
+    }
+  },
+  {
+    "userId": "c6377fa0-58e0-49b9-a102-6bbc6035edd6",
+    "sessionId": "",
+    "browserContextId": "149.0.7827.55",
+    "behavior": "ABANDON_QUEUE",
+    "totalQueueWaitTimeMs": 0,
+    "totalConnectionEstablishmentTimeMs": 0,
+    "totalConnectedDurationMs": 0,
+    "finalOutcome": "ERROR",
+    "actions": [
+      {
+        "timestamp": "2026-07-18T07:48:31.142Z",
+        "previousState": "INITIAL",
+        "currentState": "ERROR",
+        "action": "Error",
+        "result": "Unhandled error",
+        "durationMs": 50202,
+        "success": false,
+        "error": "page.goto: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - navigating to \"http://localhost:5173/chat\", waiting until \"networkidle\"\u001b[22m\n"
+      }
+    ],
+    "scenarioMode": "RANDOM",
+    "scenarioTags": [],
+    "profile": {
+      "name": "RandomMatch_004_c6377fa0",
+      "gender": "NONBINARY",
+      "lookingFor": "ANY",
+      "bio": "I am a digital twin (Behavior: ABANDON_QUEUE, Mode: RANDOM)."
+    }
+  },
+  {
+    "userId": "860ac813-6bd5-4dae-a5d2-1b39858bd31f",
+    "sessionId": "",
+    "browserContextId": "149.0.7827.55",
+    "behavior": "HAPPY_PATH",
+    "totalQueueWaitTimeMs": 0,
+    "totalConnectionEstablishmentTimeMs": 0,
+    "totalConnectedDurationMs": 0,
+    "finalOutcome": "ERROR",
+    "actions": [
+      {
+        "timestamp": "2026-07-18T07:48:24.299Z",
+        "previousState": "INITIAL",
+        "currentState": "ERROR",
+        "action": "Error",
+        "result": "Unhandled error",
+        "durationMs": 42911,
+        "success": false,
+        "error": "page.goto: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - navigating to \"http://localhost:5173/chat\", waiting until \"networkidle\"\u001b[22m\n"
+      }
+    ],
+    "scenarioMode": "RANDOM",
+    "scenarioTags": [],
+    "profile": {
+      "name": "RandomMatch_005_860ac813",
+      "gender": "FEMALE",
+      "lookingFor": "MALE",
+      "bio": "I am a digital twin (Behavior: HAPPY_PATH, Mode: RANDOM)."
+    }
+  },
+  {
+    "userId": "23f3140e-453e-4489-8d91-8260946083a5",
+    "sessionId": "",
+    "browserContextId": "149.0.7827.55",
+    "behavior": "NETWORK_INTERRUPT",
+    "totalQueueWaitTimeMs": 0,
+    "totalConnectionEstablishmentTimeMs": 0,
+    "totalConnectedDurationMs": 0,
+    "finalOutcome": "ERROR",
+    "actions": [
+      {
+        "timestamp": "2026-07-18T07:48:31.147Z",
+        "previousState": "INITIAL",
+        "currentState": "ERROR",
+        "action": "Error",
+        "result": "Unhandled error",
+        "durationMs": 49730,
+        "success": false,
+        "error": "page.goto: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - navigating to \"http://localhost:5173/chat\", waiting until \"networkidle\"\u001b[22m\n"
+      }
+    ],
+    "scenarioMode": "RANDOM",
+    "scenarioTags": [],
+    "profile": {
+      "name": "RandomMatch_006_23f3140e",
+      "gender": "ANY",
+      "lookingFor": "ANY",
+      "bio": "I am a digital twin (Behavior: NETWORK_INTERRUPT, Mode: RANDOM)."
+    }
+  },
+  {
+    "userId": "db058ed8-077b-4312-b7ff-1b705ba945f6",
+    "sessionId": "",
+    "browserContextId": "149.0.7827.55",
+    "behavior": "HAPPY_PATH",
+    "totalQueueWaitTimeMs": 0,
+    "totalConnectionEstablishmentTimeMs": 0,
+    "totalConnectedDurationMs": 0,
+    "finalOutcome": "ERROR",
+    "actions": [
+      {
+        "timestamp": "2026-07-18T07:48:28.566Z",
+        "previousState": "INITIAL",
+        "currentState": "ERROR",
+        "action": "Error",
+        "result": "Unhandled error",
+        "durationMs": 46829,
+        "success": false,
+        "error": "page.goto: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - navigating to \"http://localhost:5173/chat\", waiting until \"networkidle\"\u001b[22m\n"
+      }
+    ],
+    "scenarioMode": "RANDOM",
+    "scenarioTags": [],
+    "profile": {
+      "name": "RandomMatch_007_db058ed8",
+      "gender": "FEMALE",
+      "lookingFor": "FEMALE",
+      "bio": "I am a digital twin (Behavior: HAPPY_PATH, Mode: RANDOM)."
+    }
+  },
+  {
+    "userId": "2b3ca421-0a4d-408c-a557-86000c00b521",
+    "sessionId": "",
+    "browserContextId": "149.0.7827.55",
+    "behavior": "HAPPY_PATH",
+    "totalQueueWaitTimeMs": 0,
+    "totalConnectionEstablishmentTimeMs": 0,
+    "totalConnectedDurationMs": 0,
+    "finalOutcome": "ERROR",
+    "actions": [
+      {
+        "timestamp": "2026-07-18T07:48:31.141Z",
+        "previousState": "INITIAL",
+        "currentState": "ERROR",
+        "action": "Error",
+        "result": "Unhandled error",
+        "durationMs": 48911,
+        "success": false,
+        "error": "page.goto: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - navigating to \"http://localhost:5173/chat\", waiting until \"networkidle\"\u001b[22m\n"
+      }
+    ],
+    "scenarioMode": "RANDOM",
+    "scenarioTags": [],
+    "profile": {
+      "name": "RandomMatch_008_2b3ca421",
+      "gender": "MALE",
+      "lookingFor": "MALE",
+      "bio": "I am a digital twin (Behavior: HAPPY_PATH, Mode: RANDOM)."
+    }
+  },
+  {
+    "userId": "7c528055-fc5f-4641-97c7-56e1e974b347",
+    "sessionId": "",
+    "browserContextId": "149.0.7827.55",
+    "behavior": "HARD_CLOSE",
+    "totalQueueWaitTimeMs": 0,
+    "totalConnectionEstablishmentTimeMs": 0,
+    "totalConnectedDurationMs": 0,
+    "finalOutcome": "ERROR",
+    "actions": [
+      {
+        "timestamp": "2026-07-18T07:48:26.523Z",
+        "previousState": "INITIAL",
+        "currentState": "ERROR",
+        "action": "Error",
+        "result": "Unhandled error",
+        "durationMs": 44213,
+        "success": false,
+        "error": "page.goto: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - navigating to \"http://localhost:5173/chat\", waiting until \"networkidle\"\u001b[22m\n"
+      }
+    ],
+    "scenarioMode": "RANDOM",
+    "scenarioTags": [],
+    "profile": {
+      "name": "RandomMatch_009_7c528055",
+      "gender": "NONBINARY",
+      "lookingFor": "MALE",
+      "bio": "I am a digital twin (Behavior: HARD_CLOSE, Mode: RANDOM)."
+    }
+  },
+  {
+    "userId": "cce10f30-21e4-405a-ac79-fda107b09a7e",
+    "sessionId": "",
+    "browserContextId": "149.0.7827.55",
+    "behavior": "HAPPY_PATH",
+    "totalQueueWaitTimeMs": 0,
+    "totalConnectionEstablishmentTimeMs": 0,
+    "totalConnectedDurationMs": 0,
+    "finalOutcome": "ERROR",
+    "actions": [
+      {
+        "timestamp": "2026-07-18T07:48:31.119Z",
+        "previousState": "INITIAL",
+        "currentState": "ERROR",
+        "action": "Error",
+        "result": "Unhandled error",
+        "durationMs": 48125,
+        "success": false,
+        "error": "page.goto: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - navigating to \"http://localhost:5173/chat\", waiting until \"networkidle\"\u001b[22m\n"
+      }
+    ],
+    "scenarioMode": "RANDOM",
+    "scenarioTags": [],
+    "profile": {
+      "name": "RandomMatch_010_cce10f30",
+      "gender": "NONBINARY",
+      "lookingFor": "ANY",
+      "bio": "I am a digital twin (Behavior: HAPPY_PATH, Mode: RANDOM)."
+    }
+  },
+  {
+    "userId": "417db19b-24d4-461f-97b2-08df5aedc06b",
+    "sessionId": "",
+    "browserContextId": "149.0.7827.55",
+    "behavior": "HAPPY_PATH",
+    "totalQueueWaitTimeMs": 0,
+    "totalConnectionEstablishmentTimeMs": 0,
+    "totalConnectedDurationMs": 0,
+    "finalOutcome": "ERROR",
+    "actions": [
+      {
+        "timestamp": "2026-07-18T07:48:28.547Z",
+        "previousState": "INITIAL",
+        "currentState": "ERROR",
+        "action": "Error",
+        "result": "Unhandled error",
+        "durationMs": 44760,
+        "success": false,
+        "error": "page.goto: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - navigating to \"http://localhost:5173/chat\", waiting until \"networkidle\"\u001b[22m\n"
+      }
+    ],
+    "scenarioMode": "RANDOM",
+    "scenarioTags": [],
+    "profile": {
+      "name": "RandomMatch_011_417db19b",
+      "gender": "ANY",
+      "lookingFor": "ANY",
+      "bio": "I am a digital twin (Behavior: HAPPY_PATH, Mode: RANDOM)."
+    }
+  },
+  {
+    "userId": "c0a8cabc-a56e-414c-8f1e-71f7c36bbe99",
+    "sessionId": "",
+    "browserContextId": "149.0.7827.55",
+    "behavior": "HAPPY_PATH",
+    "totalQueueWaitTimeMs": 0,
+    "totalConnectionEstablishmentTimeMs": 0,
+    "totalConnectedDurationMs": 0,
+    "finalOutcome": "ERROR",
+    "actions": [
+      {
+        "timestamp": "2026-07-18T07:48:31.123Z",
+        "previousState": "INITIAL",
+        "currentState": "ERROR",
+        "action": "Error",
+        "result": "Unhandled error",
+        "durationMs": 46626,
+        "success": false,
+        "error": "page.goto: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - navigating to \"http://localhost:5173/chat\", waiting until \"networkidle\"\u001b[22m\n"
+      }
+    ],
+    "scenarioMode": "RANDOM",
+    "scenarioTags": [],
+    "profile": {
+      "name": "RandomMatch_012_c0a8cabc",
+      "gender": "ANY",
+      "lookingFor": "FEMALE",
+      "bio": "I am a digital twin (Behavior: HAPPY_PATH, Mode: RANDOM)."
+    }
+  },
+  {
+    "userId": "fe900f65-b994-4c03-8991-bf16c692d531",
+    "sessionId": "",
+    "browserContextId": "149.0.7827.55",
+    "behavior": "ABANDON_QUEUE",
+    "totalQueueWaitTimeMs": 0,
+    "totalConnectionEstablishmentTimeMs": 0,
+    "totalConnectedDurationMs": 0,
+    "finalOutcome": "ERROR",
+    "actions": [
+      {
+        "timestamp": "2026-07-18T07:48:28.541Z",
+        "previousState": "INITIAL",
+        "currentState": "ERROR",
+        "action": "Error",
+        "result": "Unhandled error",
+        "durationMs": 43803,
+        "success": false,
+        "error": "page.goto: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - navigating to \"http://localhost:5173/chat\", waiting until \"networkidle\"\u001b[22m\n"
+      }
+    ],
+    "scenarioMode": "RANDOM",
+    "scenarioTags": [],
+    "profile": {
+      "name": "RandomMatch_013_fe900f65",
+      "gender": "NONBINARY",
+      "lookingFor": "ANY",
+      "bio": "I am a digital twin (Behavior: ABANDON_QUEUE, Mode: RANDOM)."
+    }
+  },
+  {
+    "userId": "aa1c93b2-b475-4e71-83d5-bfe85b40b742",
+    "sessionId": "",
+    "browserContextId": "149.0.7827.55",
+    "behavior": "HAPPY_PATH",
+    "totalQueueWaitTimeMs": 0,
+    "totalConnectionEstablishmentTimeMs": 0,
+    "totalConnectedDurationMs": 0,
+    "finalOutcome": "ERROR",
+    "actions": [
+      {
+        "timestamp": "2026-07-18T07:48:31.121Z",
+        "previousState": "INITIAL",
+        "currentState": "ERROR",
+        "action": "Error",
+        "result": "Unhandled error",
+        "durationMs": 46164,
+        "success": false,
+        "error": "page.goto: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - navigating to \"http://localhost:5173/chat\", waiting until \"networkidle\"\u001b[22m\n"
+      }
+    ],
+    "scenarioMode": "RANDOM",
+    "scenarioTags": [],
+    "profile": {
+      "name": "RandomMatch_014_aa1c93b2",
+      "gender": "FEMALE",
+      "lookingFor": "ANY",
+      "bio": "I am a digital twin (Behavior: HAPPY_PATH, Mode: RANDOM)."
+    }
+  },
+  {
+    "userId": "c4618ccf-6f80-44c1-8217-6722eab90d83",
+    "sessionId": "",
+    "browserContextId": "149.0.7827.55",
+    "behavior": "NETWORK_INTERRUPT",
+    "totalQueueWaitTimeMs": 0,
+    "totalConnectionEstablishmentTimeMs": 0,
+    "totalConnectedDurationMs": 0,
+    "finalOutcome": "ERROR",
+    "actions": [
+      {
+        "timestamp": "2026-07-18T07:48:28.551Z",
+        "previousState": "INITIAL",
+        "currentState": "ERROR",
+        "action": "Error",
+        "result": "Unhandled error",
+        "durationMs": 43013,
+        "success": false,
+        "error": "page.goto: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - navigating to \"http://localhost:5173/chat\", waiting until \"networkidle\"\u001b[22m\n"
+      }
+    ],
+    "scenarioMode": "RANDOM",
+    "scenarioTags": [],
+    "profile": {
+      "name": "RandomMatch_015_c4618ccf",
+      "gender": "FEMALE",
+      "lookingFor": "MALE",
+      "bio": "I am a digital twin (Behavior: NETWORK_INTERRUPT, Mode: RANDOM)."
+    }
+  },
+  {
+    "userId": "668e0c2c-82e3-4a5f-a8d3-75d681b7e081",
+    "sessionId": "",
+    "browserContextId": "149.0.7827.55",
+    "behavior": "ABANDON_QUEUE",
+    "totalQueueWaitTimeMs": 0,
+    "totalConnectionEstablishmentTimeMs": 0,
+    "totalConnectedDurationMs": 0,
+    "finalOutcome": "PENDING",
+    "actions": [],
+    "scenarioMode": "RANDOM",
+    "scenarioTags": [],
+    "profile": {
+      "name": "RandomMatch_016_668e0c2c",
+      "gender": "ANY",
+      "lookingFor": "FEMALE",
+      "bio": "I am a digital twin (Behavior: ABANDON_QUEUE, Mode: RANDOM)."
+    }
+  },
+  {
+    "userId": "8c55fe35-6ab7-4c80-87b4-75e49940f8f1",
+    "sessionId": "",
+    "browserContextId": "149.0.7827.55",
+    "behavior": "SKIP_EARLY",
+    "totalQueueWaitTimeMs": 0,
+    "totalConnectionEstablishmentTimeMs": 0,
+    "totalConnectedDurationMs": 0,
+    "finalOutcome": "ERROR",
+    "actions": [
+      {
+        "timestamp": "2026-07-18T07:48:20.285Z",
+        "previousState": "INITIAL",
+        "currentState": "ERROR",
+        "action": "Error",
+        "result": "Unhandled error",
+        "durationMs": 31578,
+        "success": false,
+        "error": "page.goto: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - navigating to \"http://localhost:5173/\", waiting until \"load\"\u001b[22m\n"
+      }
+    ],
+    "scenarioMode": "RANDOM",
+    "scenarioTags": []
+  },
+  {
+    "userId": "5b2ece30-015c-47b7-8e4d-e007d1a5c0ff",
+    "sessionId": "",
+    "browserContextId": "149.0.7827.55",
+    "behavior": "HARD_CLOSE",
+    "totalQueueWaitTimeMs": 0,
+    "totalConnectionEstablishmentTimeMs": 0,
+    "totalConnectedDurationMs": 0,
+    "finalOutcome": "PENDING",
+    "actions": [],
+    "scenarioMode": "RANDOM",
+    "scenarioTags": []
+  },
+  {
+    "userId": "d9812163-1d23-42a3-ac30-92a10fb051dd",
+    "sessionId": "",
+    "browserContextId": "149.0.7827.55",
+    "behavior": "HAPPY_PATH",
+    "totalQueueWaitTimeMs": 0,
+    "totalConnectionEstablishmentTimeMs": 0,
+    "totalConnectedDurationMs": 0,
+    "finalOutcome": "PENDING",
+    "actions": [],
+    "scenarioMode": "RANDOM",
+    "scenarioTags": []
+  },
+  {
+    "userId": "3f8afd5d-3051-4a3a-b128-412d25f8ff05",
+    "sessionId": "",
+    "browserContextId": "149.0.7827.55",
+    "behavior": "HAPPY_PATH",
+    "totalQueueWaitTimeMs": 0,
+    "totalConnectionEstablishmentTimeMs": 0,
+    "totalConnectedDurationMs": 0,
+    "finalOutcome": "PENDING",
+    "actions": [],
+    "scenarioMode": "RANDOM",
+    "scenarioTags": []
+  },
+  {
+    "userId": "2d921674-2cf6-48e4-9ce1-242ecc465165",
+    "sessionId": "",
+    "browserContextId": "149.0.7827.55",
+    "behavior": "SKIP_EARLY",
+    "totalQueueWaitTimeMs": 0,
+    "totalConnectionEstablishmentTimeMs": 0,
+    "totalConnectedDurationMs": 0,
+    "finalOutcome": "PENDING",
+    "actions": [],
+    "scenarioMode": "RANDOM",
+    "scenarioTags": []
+  },
+  {
+    "userId": "6c84f72d-6e1b-488f-ad21-0ff3b6153fe9",
+    "sessionId": "",
+    "browserContextId": "149.0.7827.55",
+    "behavior": "ABANDON_QUEUE",
+    "totalQueueWaitTimeMs": 0,
+    "totalConnectionEstablishmentTimeMs": 0,
+    "totalConnectedDurationMs": 0,
+    "finalOutcome": "PENDING",
+    "actions": [],
+    "scenarioMode": "RANDOM",
+    "scenarioTags": []
+  },
+  {
+    "userId": "8b21fa62-1bda-4794-8b0c-8c1546d01747",
+    "sessionId": "",
+    "browserContextId": "149.0.7827.55",
+    "behavior": "HAPPY_PATH",
+    "totalQueueWaitTimeMs": 0,
+    "totalConnectionEstablishmentTimeMs": 0,
+    "totalConnectedDurationMs": 0,
+    "finalOutcome": "PENDING",
+    "actions": [],
+    "scenarioMode": "RANDOM",
+    "scenarioTags": []
+  },
+  {
+    "userId": "b083eabb-6d8f-4f88-a099-b5b37f53a93d",
+    "sessionId": "",
+    "browserContextId": "149.0.7827.55",
+    "behavior": "NETWORK_INTERRUPT",
+    "totalQueueWaitTimeMs": 0,
+    "totalConnectionEstablishmentTimeMs": 0,
+    "totalConnectedDurationMs": 0,
+    "finalOutcome": "PENDING",
+    "actions": [],
+    "scenarioMode": "RANDOM",
+    "scenarioTags": []
+  },
+  {
+    "userId": "9b1c824a-8830-450d-8df5-c626975662b4",
+    "sessionId": "",
+    "browserContextId": "149.0.7827.55",
+    "behavior": "HAPPY_PATH",
+    "totalQueueWaitTimeMs": 0,
+    "totalConnectionEstablishmentTimeMs": 0,
+    "totalConnectedDurationMs": 0,
+    "finalOutcome": "PENDING",
+    "actions": [],
+    "scenarioMode": "RANDOM",
+    "scenarioTags": []
+  },
+  {
+    "userId": "a11be58b-0b72-4b92-8e36-815197e80b09",
+    "sessionId": "",
+    "browserContextId": "149.0.7827.55",
+    "behavior": "NETWORK_INTERRUPT",
+    "totalQueueWaitTimeMs": 0,
+    "totalConnectionEstablishmentTimeMs": 0,
+    "totalConnectedDurationMs": 0,
+    "finalOutcome": "PENDING",
+    "actions": [],
+    "scenarioMode": "RANDOM",
+    "scenarioTags": []
+  },
+  {
+    "userId": "1585d399-79da-4721-a8c6-a3e2f2540a15",
+    "sessionId": "",
+    "browserContextId": "149.0.7827.55",
+    "behavior": "NETWORK_INTERRUPT",
+    "totalQueueWaitTimeMs": 0,
+    "totalConnectionEstablishmentTimeMs": 0,
+    "totalConnectedDurationMs": 0,
+    "finalOutcome": "PENDING",
+    "actions": [],
+    "scenarioMode": "RANDOM",
+    "scenarioTags": []
+  },
+  {
+    "userId": "3530e4ca-ce14-4723-b142-499cd5e7db96",
+    "sessionId": "",
+    "browserContextId": "149.0.7827.55",
+    "behavior": "ABANDON_QUEUE",
+    "totalQueueWaitTimeMs": 0,
+    "totalConnectionEstablishmentTimeMs": 0,
+    "totalConnectedDurationMs": 0,
+    "finalOutcome": "PENDING",
+    "actions": [],
+    "scenarioMode": "RANDOM",
+    "scenarioTags": []
+  },
+  {
+    "userId": "7b64c8b6-2566-4038-bb3c-2b8f581a631b",
+    "sessionId": "",
+    "browserContextId": "149.0.7827.55",
+    "behavior": "HAPPY_PATH",
+    "totalQueueWaitTimeMs": 0,
+    "totalConnectionEstablishmentTimeMs": 0,
+    "totalConnectedDurationMs": 0,
+    "finalOutcome": "PENDING",
+    "actions": [],
+    "scenarioMode": "RANDOM",
+    "scenarioTags": []
+  },
+  {
+    "userId": "370f7fea-2621-438b-bf3e-2d9311bf6447",
+    "sessionId": "",
+    "browserContextId": "149.0.7827.55",
+    "behavior": "HAPPY_PATH",
+    "totalQueueWaitTimeMs": 0,
+    "totalConnectionEstablishmentTimeMs": 0,
+    "totalConnectedDurationMs": 0,
+    "finalOutcome": "PENDING",
+    "actions": [],
+    "scenarioMode": "PREFER",
+    "scenarioTags": [
+      "Gaming",
+      "Travel",
+      "Music"
+    ]
+  },
+  {
+    "userId": "673aec8d-b9cd-4e6b-b231-a6faf225b3cb",
+    "sessionId": "",
+    "browserContextId": "149.0.7827.55",
+    "behavior": "NETWORK_INTERRUPT",
+    "totalQueueWaitTimeMs": 0,
+    "totalConnectionEstablishmentTimeMs": 0,
+    "totalConnectedDurationMs": 0,
+    "finalOutcome": "PENDING",
+    "actions": [],
+    "scenarioMode": "PREFER",
+    "scenarioTags": [
+      "Music",
+      "Photography",
+      "Cooking"
+    ]
+  },
+  {
+    "userId": "cfa6cd86-36d2-4685-9968-59e71e7dfa05",
+    "sessionId": "",
+    "browserContextId": "149.0.7827.55",
+    "behavior": "HAPPY_PATH",
+    "totalQueueWaitTimeMs": 0,
+    "totalConnectionEstablishmentTimeMs": 0,
+    "totalConnectedDurationMs": 0,
+    "finalOutcome": "PENDING",
+    "actions": [],
+    "scenarioMode": "PREFER",
+    "scenarioTags": [
+      "Gaming",
+      "Fitness",
+      "Music"
+    ]
+  },
+  {
+    "userId": "ad68a324-37f0-4787-9c0d-71e4937a90a3",
+    "sessionId": "",
+    "browserContextId": "149.0.7827.55",
+    "behavior": "HARD_CLOSE",
+    "totalQueueWaitTimeMs": 0,
+    "totalConnectionEstablishmentTimeMs": 0,
+    "totalConnectedDurationMs": 0,
+    "finalOutcome": "PENDING",
+    "actions": [],
+    "scenarioMode": "PREFER",
+    "scenarioTags": [
+      "Gaming",
+      "Movies",
+      "Travel"
+    ]
+  },
+  {
+    "userId": "54f11aaf-8dea-4973-ace3-b08b64c85f07",
+    "sessionId": "",
+    "browserContextId": "149.0.7827.55",
+    "behavior": "HAPPY_PATH",
+    "totalQueueWaitTimeMs": 0,
+    "totalConnectionEstablishmentTimeMs": 0,
+    "totalConnectedDurationMs": 0,
+    "finalOutcome": "PENDING",
+    "actions": [],
+    "scenarioMode": "PREFER",
+    "scenarioTags": [
+      "Reading",
+      "Travel",
+      "Movies"
+    ]
+  },
+  {
+    "userId": "3b1e9959-64d5-4729-a790-cd706a06e163",
+    "sessionId": "",
+    "browserContextId": "149.0.7827.55",
+    "behavior": "HARD_CLOSE",
+    "totalQueueWaitTimeMs": 0,
+    "totalConnectionEstablishmentTimeMs": 0,
+    "totalConnectedDurationMs": 0,
+    "finalOutcome": "PENDING",
+    "actions": [],
+    "scenarioMode": "RANDOM",
+    "scenarioTags": []
+  },
+  {
+    "userId": "c4e3d2fc-f80e-423e-a477-b411012d9902",
+    "sessionId": "",
+    "browserContextId": "149.0.7827.55",
+    "behavior": "SKIP_EARLY",
+    "totalQueueWaitTimeMs": 0,
+    "totalConnectionEstablishmentTimeMs": 0,
+    "totalConnectedDurationMs": 0,
+    "finalOutcome": "PENDING",
+    "actions": [],
+    "scenarioMode": "PREFER",
+    "scenarioTags": [
+      "Gaming",
+      "Movies",
+      "Travel"
+    ]
+  },
+  {
+    "userId": "deb0563a-98cd-491e-ba47-6bbf4e50511e",
+    "sessionId": "",
+    "browserContextId": "149.0.7827.55",
+    "behavior": "HAPPY_PATH",
+    "totalQueueWaitTimeMs": 0,
+    "totalConnectionEstablishmentTimeMs": 0,
+    "totalConnectedDurationMs": 0,
+    "finalOutcome": "PENDING",
+    "actions": [],
+    "scenarioMode": "PREFER",
+    "scenarioTags": [
+      "Reading",
+      "Travel",
+      "Movies"
+    ]
+  },
+  {
+    "userId": "86707240-160b-4265-93a1-514c06087217",
+    "sessionId": "",
+    "browserContextId": "149.0.7827.55",
+    "behavior": "HARD_CLOSE",
+    "totalQueueWaitTimeMs": 0,
+    "totalConnectionEstablishmentTimeMs": 0,
+    "totalConnectedDurationMs": 0,
+    "finalOutcome": "PENDING",
+    "actions": [],
+    "scenarioMode": "PREFER",
+    "scenarioTags": [
+      "Gaming",
+      "Travel",
+      "Music"
+    ]
+  },
+  {
+    "userId": "1b360541-1404-4353-8fe5-a40e2f1f4a58",
+    "sessionId": "",
+    "browserContextId": "149.0.7827.55",
+    "behavior": "HAPPY_PATH",
+    "totalQueueWaitTimeMs": 0,
+    "totalConnectionEstablishmentTimeMs": 0,
+    "totalConnectedDurationMs": 0,
+    "finalOutcome": "PENDING",
+    "actions": [],
+    "scenarioMode": "PREFER",
+    "scenarioTags": [
+      "Music",
+      "Photography",
+      "Cooking"
+    ]
+  },
+  {
+    "userId": "e3166365-8aa4-4174-9760-1cbfb06128eb",
+    "sessionId": "",
+    "browserContextId": "149.0.7827.55",
+    "behavior": "HAPPY_PATH",
+    "totalQueueWaitTimeMs": 0,
+    "totalConnectionEstablishmentTimeMs": 0,
+    "totalConnectedDurationMs": 0,
+    "finalOutcome": "PENDING",
+    "actions": [],
+    "scenarioMode": "PREFER",
+    "scenarioTags": [
+      "Gaming",
+      "Fitness",
+      "Music"
+    ]
+  },
+  {
+    "userId": "fc2475af-9353-495f-a170-253131c5a6b9",
+    "sessionId": "",
+    "browserContextId": "149.0.7827.55",
+    "behavior": "SKIP_EARLY",
+    "totalQueueWaitTimeMs": 0,
+    "totalConnectionEstablishmentTimeMs": 0,
+    "totalConnectedDurationMs": 0,
+    "finalOutcome": "PENDING",
+    "actions": [],
+    "scenarioMode": "PREFER",
+    "scenarioTags": [
+      "Gaming",
+      "Movies",
+      "Travel"
+    ]
+  },
+  {
+    "userId": "4980f644-ad4f-4665-a648-64f5fd5f4897",
+    "sessionId": "",
+    "browserContextId": "149.0.7827.55",
+    "behavior": "HAPPY_PATH",
+    "totalQueueWaitTimeMs": 0,
+    "totalConnectionEstablishmentTimeMs": 0,
+    "totalConnectedDurationMs": 0,
+    "finalOutcome": "PENDING",
+    "actions": [],
+    "scenarioMode": "PREFER",
+    "scenarioTags": [
+      "Reading",
+      "Travel",
+      "Movies"
+    ]
+  },
+  {
+    "userId": "74fb7f64-795f-4393-acd1-f8574c85638f",
+    "sessionId": "",
+    "browserContextId": "149.0.7827.55",
+    "behavior": "HAPPY_PATH",
+    "totalQueueWaitTimeMs": 0,
+    "totalConnectionEstablishmentTimeMs": 0,
+    "totalConnectedDurationMs": 0,
+    "finalOutcome": "PENDING",
+    "actions": [],
+    "scenarioMode": "PREFER",
+    "scenarioTags": [
+      "Gaming",
+      "Travel",
+      "Music"
+    ]
+  },
+  {
+    "userId": "16a923c5-f524-4905-b453-274761225221",
+    "sessionId": "",
+    "browserContextId": "149.0.7827.55",
+    "behavior": "HAPPY_PATH",
+    "totalQueueWaitTimeMs": 0,
+    "totalConnectionEstablishmentTimeMs": 0,
+    "totalConnectedDurationMs": 0,
+    "finalOutcome": "PENDING",
+    "actions": [],
+    "scenarioMode": "PREFER",
+    "scenarioTags": [
+      "Gaming",
+      "Travel",
+      "Music"
+    ]
+  },
+  {
+    "userId": "8d1185c7-cf7b-4be7-b7ee-5dd1556eeb07",
+    "sessionId": "",
+    "browserContextId": "149.0.7827.55",
+    "behavior": "SKIP_EARLY",
+    "totalQueueWaitTimeMs": 0,
+    "totalConnectionEstablishmentTimeMs": 0,
+    "totalConnectedDurationMs": 0,
+    "finalOutcome": "PENDING",
+    "actions": [],
+    "scenarioMode": "PREFER",
+    "scenarioTags": [
+      "Music",
+      "Photography",
+      "Cooking"
+    ]
+  }
+]

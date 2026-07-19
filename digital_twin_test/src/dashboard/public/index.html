@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Digital Twin Load Test Dashboard</title>
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+        body { font-family: system-ui; background: #0f172a; color: #f8fafc; margin: 0; padding: 20px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+        .card { background: #1e293b; padding: 20px; border-radius: 8px; }
+        .stat { font-size: 2em; font-weight: bold; color: #38bdf8; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { text-align: left; padding: 8px; border-bottom: 1px solid #334155; }
+        .status-SUCCESS { color: #4ade80; }
+        .status-ERROR { color: #f87171; }
+        .status-PENDING { color: #fbbf24; }
+    </style>
+</head>
+<body>
+    <h1>Digital Twin Load Test</h1>
+    <div class="grid">
+        <div class="card">
+            <h3>Active Users</h3>
+            <div id="activeUsers" class="stat">0</div>
+        </div>
+        <div class="card">
+            <h3>Matches Formed</h3>
+            <div id="matchesFormed" class="stat">0</div>
+        </div>
+        <div class="card">
+            <h3>Errors</h3>
+            <div id="errorsCount" class="stat status-ERROR">0</div>
+        </div>
+    </div>
+
+    <h2>Live Activity Log</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>User ID</th>
+                <th>Behavior</th>
+                <th>State</th>
+                <th>Outcome</th>
+            </tr>
+        </thead>
+        <tbody id="activityLog">
+        </tbody>
+    </table>
+
+    <script>
+        const socket = io();
+        const users = new Map();
+
+        function updateUI() {
+            let active = 0, matches = 0, errors = 0;
+            const tbody = document.getElementById('activityLog');
+            tbody.innerHTML = '';
+            
+            // Sort by most recently updated based on actions array length or similar
+            const sortedUsers = Array.from(users.values()).reverse().slice(0, 50);
+
+            for (const user of sortedUsers) {
+                if (user.finalOutcome === 'PENDING') active++;
+                if (user.matchId) matches++;
+                if (user.finalOutcome === 'ERROR') errors++;
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${user.userId.substring(0,8)}...</td>
+                    <td>${user.behavior}</td>
+                    <td>${user.actions.length > 0 ? user.actions[user.actions.length - 1].currentState : 'INITIAL'}</td>
+                    <td class="status-${user.finalOutcome}">${user.finalOutcome}</td>
+                `;
+                tbody.appendChild(tr);
+            }
+
+            document.getElementById('activeUsers').innerText = active;
+            document.getElementById('matchesFormed').innerText = matches;
+            document.getElementById('errorsCount').innerText = errors;
+        }
+
+        socket.on('update', (trail) => {
+            users.set(trail.userId, trail);
+            updateUI();
+        });
+    </script>
+</body>
+</html>

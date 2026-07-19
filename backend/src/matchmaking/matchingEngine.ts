@@ -366,6 +366,10 @@ export async function runGlobalHealCycle(supabase: SupabaseClient): Promise<void
 
           await supabase.from('temporary_messages').delete().eq('match_id', m.id);
           await supabase.from('reservations').delete().eq('match_id', m.id);
+          
+          // Broadcast teardown to both users so they don't get stuck in MATCH_FOUND or NEGOTIATING
+          if (m.user_a) broadcastToSession(m.user_a, 'partner_left', { reason: 'healing_cycle_teardown' }).catch(() => {});
+          if (m.user_b) broadcastToSession(m.user_b, 'partner_left', { reason: 'healing_cycle_teardown' }).catch(() => {});
 
           // Re-queue any active peer (upsert pattern — avoid duplicate queue rows), and mark stale peer as TERMINATED
           if (!staleA && m.user_a) {

@@ -1,0 +1,127 @@
+[
+  {
+    "userId": "80b4135b-4cd5-4e46-8afc-e57356342d1d",
+    "sessionId": "",
+    "browserContextId": "149.0.7827.55",
+    "behavior": "SKIP_EARLY",
+    "totalQueueWaitTimeMs": 0,
+    "totalConnectionEstablishmentTimeMs": 0,
+    "totalConnectedDurationMs": 0,
+    "finalOutcome": "ERROR",
+    "actions": [
+      {
+        "timestamp": "2026-07-18T06:49:25.437Z",
+        "previousState": "INITIAL",
+        "currentState": "HOMEPAGE",
+        "action": "Navigate",
+        "result": "Loaded",
+        "durationMs": 12851,
+        "success": true
+      },
+      {
+        "timestamp": "2026-07-18T06:49:56.483Z",
+        "previousState": "HOMEPAGE",
+        "currentState": "ERROR",
+        "action": "Error",
+        "result": "Unhandled error",
+        "durationMs": 43897,
+        "success": false,
+        "error": "page.click: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('button:has-text(\"Start Chat\")')\u001b[22m\n"
+      }
+    ]
+  },
+  {
+    "userId": "6f928824-d5bb-4b54-8278-35290c14e429",
+    "sessionId": "",
+    "browserContextId": "149.0.7827.55",
+    "behavior": "ABANDON_QUEUE",
+    "totalQueueWaitTimeMs": 0,
+    "totalConnectionEstablishmentTimeMs": 0,
+    "totalConnectedDurationMs": 0,
+    "finalOutcome": "ERROR",
+    "actions": [
+      {
+        "timestamp": "2026-07-18T06:49:25.424Z",
+        "previousState": "INITIAL",
+        "currentState": "HOMEPAGE",
+        "action": "Navigate",
+        "result": "Loaded",
+        "durationMs": 11841,
+        "success": true
+      },
+      {
+        "timestamp": "2026-07-18T06:49:56.488Z",
+        "previousState": "HOMEPAGE",
+        "currentState": "ERROR",
+        "action": "Error",
+        "result": "Unhandled error",
+        "durationMs": 42905,
+        "success": false,
+        "error": "page.click: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('button:has-text(\"Start Chat\")')\u001b[22m\n"
+      }
+    ]
+  },
+  {
+    "userId": "25be1b62-ff81-43c0-b6bc-8cb887e7db46",
+    "sessionId": "",
+    "browserContextId": "149.0.7827.55",
+    "behavior": "HARD_CLOSE",
+    "totalQueueWaitTimeMs": 0,
+    "totalConnectionEstablishmentTimeMs": 0,
+    "totalConnectedDurationMs": 0,
+    "finalOutcome": "PENDING",
+    "actions": [
+      {
+        "timestamp": "2026-07-18T06:49:30.545Z",
+        "previousState": "INITIAL",
+        "currentState": "HOMEPAGE",
+        "action": "Navigate",
+        "result": "Loaded",
+        "durationMs": 3316,
+        "success": true
+      }
+    ]
+  },
+  {
+    "userId": "facde760-1598-4172-8f42-4f7ba12296d5",
+    "sessionId": "",
+    "browserContextId": "149.0.7827.55",
+    "behavior": "SKIP_EARLY",
+    "totalQueueWaitTimeMs": 0,
+    "totalConnectionEstablishmentTimeMs": 0,
+    "totalConnectedDurationMs": 0,
+    "finalOutcome": "PENDING",
+    "actions": [
+      {
+        "timestamp": "2026-07-18T06:49:31.287Z",
+        "previousState": "INITIAL",
+        "currentState": "HOMEPAGE",
+        "action": "Navigate",
+        "result": "Loaded",
+        "durationMs": 2827,
+        "success": true
+      }
+    ]
+  },
+  {
+    "userId": "9c1f18f9-d93b-4200-96ed-cfd2e5dd91da",
+    "sessionId": "",
+    "browserContextId": "149.0.7827.55",
+    "behavior": "HAPPY_PATH",
+    "totalQueueWaitTimeMs": 0,
+    "totalConnectionEstablishmentTimeMs": 0,
+    "totalConnectedDurationMs": 0,
+    "finalOutcome": "PENDING",
+    "actions": [
+      {
+        "timestamp": "2026-07-18T06:49:46.427Z",
+        "previousState": "INITIAL",
+        "currentState": "HOMEPAGE",
+        "action": "Navigate",
+        "result": "Loaded",
+        "durationMs": 2537,
+        "success": true
+      }
+    ]
+  }
+]

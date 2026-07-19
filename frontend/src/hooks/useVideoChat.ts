@@ -119,15 +119,11 @@ export function useVideoChat(
       if (!isMountedRef.current) return;
       const state = LifecycleManager.getInstance().getState();
       if (state !== 'CONNECTED' && state !== ('IDLE' as any) && state !== 'ENDED') {
-        console.warn(`[WebRTC Timeout] Connection did not establish within 15s (current status: ${state}). Re-entering queue...`);
-        showToast('warning', 'Connection timed out. Finding someone else...');
-        if (sessionIdRef.current && sessionTokenRef.current) {
-          realtimeManager.notifyDisconnect(sessionIdRef.current, sessionTokenRef.current, 'leave', matchIdRef.current ?? undefined).catch(() => {});
-        }
-        void triggerAutoRejoinRef.current();
+        console.warn(`[WebRTC Timeout] Connection did not establish within 15s (current status: ${state}). Tearing down match...`);
+        executePartnerLeftTeardownRef.current?.('Connection timed out. Finding someone else...');
       }
     }, 15000); // 15s timeout (V4.1 Requirement 14)
-  }, [showToast, clearWebRTCTimeout]);
+  }, [clearWebRTCTimeout]);
 
   const setSignalingState = useCallback((state: SessionStatus) => {
     const lm = LifecycleManager.getInstance();
@@ -654,7 +650,6 @@ export function useVideoChat(
     }) => {
       if (skipInProgressRef.current) return;
       if (
-        LifecycleManager.getInstance().getState() === ('MATCH_FOUND') ||
         LifecycleManager.getInstance().getState() === 'NEGOTIATING' ||
         LifecycleManager.getInstance().getState() === 'CONNECTED'
       ) {
@@ -1405,9 +1400,9 @@ export function useVideoChat(
       }
     };
 
-    // Send immediate heartbeat on connect, then tick every 20 seconds
+    // Send immediate heartbeat on connect, then tick every 3 seconds
     void runHeartbeat();
-    activeHeartbeatIntervalRef.current = setInterval(runHeartbeat, 20000);
+    activeHeartbeatIntervalRef.current = setInterval(runHeartbeat, 3000);
 
     return () => {
       if (activeHeartbeatIntervalRef.current) {

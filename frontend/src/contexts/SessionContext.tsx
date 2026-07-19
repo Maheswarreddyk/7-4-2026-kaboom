@@ -11,6 +11,7 @@ import { apiService } from '../services/api.js';
 import type { SessionData, StatsData } from '../types/index.js';
 import { STORAGE_KEYS } from '../types/index.js';
 import { safeLocalStorage } from '../utils/index.js';
+import { resetToCleanState } from '../utils/cleanup.js';
 
 interface SessionLifecycle {
   state: 'CONNECTED' | 'QUEUE' | 'IDLE' | 'LEAVING' | 'DESTROYED';
@@ -74,32 +75,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     }
     setSession(null);
 
-    // Clear all temporary matchmaking/queue states and search filters
-    const keysToRemove = [
-      STORAGE_KEYS.SESSION_ID,
-      STORAGE_KEYS.SESSION_TOKEN,
-      'kaboom_session_lifecycle',
-      'kaboom_gender',
-      'kaboom_looking',
-      'kaboom_match_mode',
-      'kaboom_match_constraints',
-      'kaboom_university',
-      'kaboom_education_tags',
-      'kaboom_interest_tags',
-      'kaboom_country',
-      'kaboom_city',
-      'kaboom_languages',
-      'kaboom_session',
-      'kaboom_queue',
-      'kaboom_match',
-      'kaboom_partner',
-      'kaboom_search_preferences',
-      'kaboom_waiting',
-      'kaboom_filters',
-      'kaboom_match_policy',
-      'kaboom_current_state'
-    ];
-    keysToRemove.forEach(key => safeLocalStorage.removeItem(key));
+    // Clear session and matching state, but preserve user filters 
+    resetToCleanState('COLD_START', true);
   }, []);
 
   useEffect(() => {

@@ -1,0 +1,152 @@
+[
+  {
+    "userId": "19e7c8e3-6f8a-4f35-b69a-d04c16aebe3f",
+    "sessionId": "",
+    "browserContextId": "149.0.7827.55",
+    "behavior": "ABANDON_QUEUE",
+    "totalQueueWaitTimeMs": 0,
+    "totalConnectionEstablishmentTimeMs": 0,
+    "totalConnectedDurationMs": 0,
+    "finalOutcome": "PENDING",
+    "actions": [
+      {
+        "timestamp": "2026-07-18T07:04:51.942Z",
+        "previousState": "INITIAL",
+        "currentState": "CHAT_PAGE",
+        "action": "Navigate",
+        "result": "Loaded",
+        "durationMs": 10591,
+        "success": true
+      },
+      {
+        "timestamp": "2026-07-18T07:04:59.000Z",
+        "previousState": "CHAT_PAGE",
+        "currentState": "QUEUEING",
+        "action": "ClickStartChat",
+        "result": "Joined queue",
+        "durationMs": 5016,
+        "success": true
+      },
+      {
+        "timestamp": "2026-07-18T07:05:59.005Z",
+        "previousState": "QUEUEING",
+        "currentState": "DISCONNECTED",
+        "action": "AbandonQueue",
+        "result": "Left queue",
+        "durationMs": 60004,
+        "success": true
+      }
+    ],
+    "profile": {
+      "name": "Twin_19e7c8e3",
+      "gender": "MALE",
+      "lookingFor": "ANY",
+      "bio": "I am a digital twin (Behavior: ABANDON_QUEUE). Looking for ANY."
+    },
+    "joinTime": "2026-07-18T07:04:59.000Z",
+    "queueEntryTime": "2026-07-18T07:04:59.001Z"
+  },
+  {
+    "userId": "327f4f5b-3ba5-427c-b412-e956409c4fa2",
+    "sessionId": "",
+    "browserContextId": "149.0.7827.55",
+    "behavior": "HAPPY_PATH",
+    "totalQueueWaitTimeMs": 0,
+    "totalConnectionEstablishmentTimeMs": 0,
+    "totalConnectedDurationMs": 0,
+    "finalOutcome": "PENDING",
+    "actions": [
+      {
+        "timestamp": "2026-07-18T07:05:02.656Z",
+        "previousState": "INITIAL",
+        "currentState": "CHAT_PAGE",
+        "action": "Navigate",
+        "result": "Loaded",
+        "durationMs": 7314,
+        "success": true
+      },
+      {
+        "timestamp": "2026-07-18T07:05:09.710Z",
+        "previousState": "CHAT_PAGE",
+        "currentState": "QUEUEING",
+        "action": "ClickStartChat",
+        "result": "Joined queue",
+        "durationMs": 5015,
+        "success": true
+      }
+    ],
+    "profile": {
+      "name": "Twin_327f4f5b",
+      "gender": "ANY",
+      "lookingFor": "NONBINARY",
+      "bio": "I am a digital twin (Behavior: HAPPY_PATH). Looking for NONBINARY."
+    },
+    "joinTime": "2026-07-18T07:05:09.709Z",
+    "queueEntryTime": "2026-07-18T07:05:09.710Z"
+  },
+  {
+    "userId": "5dfa6597-ecb7-4a2a-b90b-5c6d340bfff8",
+    "sessionId": "",
+    "browserContextId": "149.0.7827.55",
+    "behavior": "ABANDON_QUEUE",
+    "totalQueueWaitTimeMs": 0,
+    "totalConnectionEstablishmentTimeMs": 0,
+    "totalConnectedDurationMs": 0,
+    "finalOutcome": "PENDING",
+    "actions": [
+      {
+        "timestamp": "2026-07-18T07:05:45.398Z",
+        "previousState": "INITIAL",
+        "currentState": "CHAT_PAGE",
+        "action": "Navigate",
+        "result": "Loaded",
+        "durationMs": 7953,
+        "success": true
+      },
+      {
+        "timestamp": "2026-07-18T07:05:52.437Z",
+        "previousState": "CHAT_PAGE",
+        "currentState": "QUEUEING",
+        "action": "ClickStartChat",
+        "result": "Joined queue",
+        "durationMs": 5014,
+        "success": true
+      }
+    ],
+    "profile": {
+      "name": "Twin_5dfa6597",
+      "gender": "FEMALE",
+      "lookingFor": "MALE",
+      "bio": "I am a digital twin (Behavior: ABANDON_QUEUE). Looking for MALE."
+    },
+    "joinTime": "2026-07-18T07:05:52.437Z",
+    "queueEntryTime": "2026-07-18T07:05:52.437Z"
+  },
+  {
+    "userId": "e5825207-5153-48be-8a97-780ae340b48e",
+    "sessionId": "",
+    "browserContextId": "149.0.7827.55",
+    "behavior": "HAPPY_PATH",
+    "totalQueueWaitTimeMs": 0,
+    "totalConnectionEstablishmentTimeMs": 0,
+    "totalConnectedDurationMs": 0,
+    "finalOutcome": "PENDING",
+    "actions": [
+      {
+        "timestamp": "2026-07-18T07:05:55.528Z",
+        "previousState": "INITIAL",
+        "currentState": "CHAT_PAGE",
+        "action": "Navigate",
+        "result": "Loaded",
+        "durationMs": 9191,
+        "success": true
+      }
+    ],
+    "profile": {
+      "name": "Twin_e5825207",
+      "gender": "ANY",
+      "lookingFor": "ANY",
+      "bio": "I am a digital twin (Behavior: HAPPY_PATH). Looking for ANY."
+    }
+  }
+]

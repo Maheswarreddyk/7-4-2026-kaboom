@@ -1,0 +1,29 @@
+{
+  "name": "digital_twin_test",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test:smoke": "set TOTAL_USERS=5&& set DURATION_MINUTES=1&& set HEADLESS=false&& npx tsx src/runner.ts",
+    "test:load": "set TOTAL_USERS=100&& set DURATION_MINUTES=3&& set HEADLESS=true&& npx tsx src/runner.ts",
+    "test:actual": "set TOTAL_USERS=500&& set DURATION_MINUTES=60&& set HEADLESS=true&& npx tsx src/runner.ts"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.110.7",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "playwright": "^1.61.1",
+    "socket.io": "^4.8.3",
+    "uuid": "^14.0.1"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/node": "^26.1.1",
+    "@types/uuid": "^10.0.0",
+    "tsx": "^4.23.1",
+    "typescript": "^7.0.2"
+  }
+}

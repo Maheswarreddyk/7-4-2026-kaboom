@@ -122,8 +122,8 @@ export const cleanupService = {
     const matchCutoff = new Date(Date.now() - matchStaleMs).toISOString();
     const now = new Date().toISOString();
 
-    // Stale heartbeat cutoff: 60s
-    const heartbeatCutoff = new Date(Date.now() - 60_000).toISOString();
+    // Stale heartbeat cutoff: 10s (V4.1 Requirement 12 - Aggressive cleanup)
+    const heartbeatCutoff = new Date(Date.now() - 10_000).toISOString();
 
     const [queueExpired, matchExpired] = await Promise.all([
       queueRepository.expireStale(queueCutoff),

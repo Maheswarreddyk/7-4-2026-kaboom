@@ -21,6 +21,7 @@ import { broadcastToSession } from '../services/broadcast.js';
 import { validateSession } from '../services/matchService.js';
 import { requireBackendReady } from '../middleware/readiness.js';
 import { AppError } from '../middleware/errorHandler.js';
+import { runFullSessionCleanup } from '../services/sessionCleanup.js';
 
 const router = Router();
 
@@ -41,6 +42,37 @@ router.use('/admin/notifications', adminNotificationRoutes);
 router.post('/start-session', sessionRateLimiter, sessionController.startSession);
 router.post('/end-session', sessionController.endSession);
 router.post('/restore-session', sessionController.restoreSession);
+
+// Immediate Session Cleanup Directive
+router.post('/session/cleanup', async (req, res, next) => {
+  try {
+    // sendBeacon sends as text/plain — parse manually if needed
+    let body = req.body;
+    if (typeof body === 'string') {
+      try { body = JSON.parse(body); } catch { return res.sendStatus(400); }
+    }
+    
+    // Explicitly parse body if it is empty because of express.text() or no middleware
+    if (Buffer.isBuffer(body)) {
+      try { body = JSON.parse(body.toString()); } catch {}
+    } else if (!body || Object.keys(body).length === 0) {
+      // Try parsing from raw string if body-parser didn't catch it
+      return res.sendStatus(400); 
+    }
+
+    const { sessionId, reason } = body;
+    if (!sessionId) return res.sendStatus(400);
+    
+    // Run cleanup — do not await non-critical parts for response
+    await runFullSessionCleanup(sessionId, reason);
+    
+    // sendBeacon doesn't care about the response body, but must get 204
+    res.sendStatus(204);
+  } catch (err) {
+    console.error('[Session Cleanup Endpoint Error]:', err);
+    res.sendStatus(500);
+  }
+});
 router.post('/session/heartbeat', async (req, res, next) => {
   try {
     const { sessionId, sessionToken, clientState } = req.body;
