@@ -1,56 +1,52 @@
-import { Request, Response, NextFunction } from 'express';
+import type { Context, Next } from 'hono';
 
-// In-memory locks and throttles (Instance-local)
 const queueLocks = new Set<string>();
 const queueTimestamps = new Map<string, number>();
 
 const QUEUE_COOLDOWN_MS = 1000;
 
-// Phase 4: Prevent memory leak by cleaning up old timestamps every 5 minutes
-setInterval(() => {
-  const now = Date.now();
-  for (const [key, timestamp] of queueTimestamps.entries()) {
-    if (now - timestamp > QUEUE_COOLDOWN_MS * 10) {
-      queueTimestamps.delete(key);
+export const queueLimiter = async (c: Context, next: Next) => {
+  let body: any = {};
+  try {
+    const contentType = c.req.header('content-type') || '';
+    if (contentType.includes('application/json')) {
+      body = await c.req.json();
+    } else if (contentType) {
+      body = await c.req.parseBody();
     }
-  }
-}, 5 * 60 * 1000).unref();
-
-export const queueLimiter = (req: Request, res: Response, next: NextFunction) => {
-  const { sessionId } = req.body;
-  if (!sessionId) {
-    // If no sessionId, just pass through (let the route handler fail it)
-    return next();
-  }
+  } catch(e) {}
+  
+  const sessionId = body?.sessionId;
+  if (!sessionId) return next();
 
   const now = Date.now();
-  const lockKey = `${sessionId}:${req.path}`;
+  const lockKey = sessionId + ':' + c.req.path;
 
-  // 1. Concurrency Lock: Prevent multiple requests for the same endpoint at exactly the same time
   if (queueLocks.has(lockKey)) {
-    console.warn(`[QueueLimiter] Rejected concurrent request for session ${sessionId} (${req.path})`);
-    return res.status(429).json({ success: false, error: 'Request already in progress.' });
+    console.warn('[QueueLimiter] Rejected concurrent request for session ' + sessionId + ' (' + c.req.path + ')');
+    return c.json({ success: false, error: 'Request already in progress.' }, 429);
   }
 
-  // 2. Throttling: Prevent rapid sequential requests to the same endpoint
   const lastTime = queueTimestamps.get(lockKey) || 0;
   if (now - lastTime < QUEUE_COOLDOWN_MS) {
-    console.warn(`[QueueLimiter] Rejected rapid request for session ${sessionId} (${req.path})`);
-    return res.status(429).json({ success: false, error: 'Too many requests. Please wait a moment.' });
+    console.warn('[QueueLimiter] Rejected rapid request for session ' + sessionId + ' (' + c.req.path + ')');
+    return c.json({ success: false, error: 'Too many requests. Please wait a moment.' }, 429);
   }
 
-  // Acquire lock and update timestamp
   queueLocks.add(lockKey);
   queueTimestamps.set(lockKey, now);
 
-  // Release the lock when the response finishes or errors
-  res.on('finish', () => {
+  try {
+    await next();
+  } finally {
     queueLocks.delete(lockKey);
-  });
-
-  res.on('close', () => {
-    queueLocks.delete(lockKey);
-  });
-
-  next();
+    
+    if (Math.random() < 0.05) {
+      const expiration = Date.now() - (QUEUE_COOLDOWN_MS * 10);
+      for (const [key, timestamp] of queueTimestamps.entries()) {
+        if (timestamp < expiration) queueTimestamps.delete(key);
+      }
+    }
+  }
 };
+

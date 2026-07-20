@@ -28,7 +28,9 @@ export async function safeRunGlobalMatchCycle(): Promise<void> {
   }
 }
 
-export async function validateSession(sessionId: string, sessionToken?: string) {
+export async function validateSession(sessionId: string, sessionToken: string) {
+  if (!sessionId || !sessionToken) return null;
+
   const { data, error } = await getSupabase()
     .from('visitor_sessions')
     .select('*')
@@ -37,7 +39,7 @@ export async function validateSession(sessionId: string, sessionToken?: string) 
 
   if (error) handleSupabaseError(error, 'Failed to validate session');
   if (!data) return null;
-  if (sessionToken && data.session_token !== sessionToken) return null;
+  if (data.session_token !== sessionToken) return null;
   if (data.status === 'ended') return null;
   return data;
 }
@@ -185,8 +187,8 @@ export async function leaveQueue(sessionId: string, sessionToken: string, target
  * Re-queue a partner after their previous partner left.
  */
 async function requeuePartner(partnerId: string): Promise<void> {
-  const partner = await validateSession(partnerId);
-  if (!partner) {
+  const { data: partner } = await getSupabase().from('visitor_sessions').select('*').eq('id', partnerId).maybeSingle();
+  if (!partner || partner.status === 'ended') {
     console.log(`[MatchService] requeuePartner: session ${partnerId} not found or ended`);
     return;
   }

@@ -70,8 +70,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const cleanupSearchSession = useCallback(() => {
     console.log('[Lifecycle] Cleanup Complete');
     const storedId = safeLocalStorage.getItem(STORAGE_KEYS.SESSION_ID);
-    if (storedId) {
-      apiService.endSession(storedId).catch(() => {});
+    const storedToken = safeLocalStorage.getItem(STORAGE_KEYS.SESSION_TOKEN);
+    if (storedId && storedToken) {
+      apiService.endSession(storedId, storedToken).catch(() => {});
     }
     setSession(null);
 
@@ -169,7 +170,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     console.log('[Lifecycle] Session Destroyed via endSession');
     try {
       updateSessionLifecycleState('DESTROYED');
-      await apiService.endSession(session.sessionId);
+      await apiService.endSession(session.sessionId, session.sessionToken);
     } finally {
       cleanupSearchSession();
     }

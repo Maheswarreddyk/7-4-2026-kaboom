@@ -1,4 +1,4 @@
-import type { NextFunction, Request, Response } from 'express';
+
 import { DatabaseError } from '../database/client.js';
 
 export class AppError extends Error {
@@ -12,55 +12,40 @@ export class AppError extends Error {
   }
 }
 
-export function notFoundHandler(_req: Request, res: Response): void {
-  res.status(404).json({
-    success: false,
-    error: 'Route not found',
-  });
+export function notFoundHandler(c: any): void {
+  return c.json({ error: "Internal Error" }, 500);
 }
 
 export function globalErrorHandler(
   err: Error,
-  _req: Request,
-  res: Response,
-  _next: NextFunction
+  _c: any,
+  c: any,
+  _next: any
 ): void {
   console.error('[Error]', err);
 
   if (err instanceof AppError) {
-    res.status(err.statusCode).json({
-      success: false,
-      error: err.message,
-    });
+    return c.json({ error: "Internal Error" }, 500);
     return;
   }
 
   if (err instanceof DatabaseError) {
-    res.status(503).json({
-      success: false,
-      error: 'Database service unavailable. Please check Supabase configuration.',
-    });
+    return c.json({ error: "Internal Error" }, 500);
     return;
   }
 
   if (err.message && err.message.includes('CORS')) {
-    res.status(403).json({
-      success: false,
-      error: 'Forbidden: Origin not allowed by CORS',
-    });
+    return c.json({ error: "Internal Error" }, 500);
     return;
   }
 
-  res.status(500).json({
-    success: false,
-    error: 'Internal server error',
-  });
+  return c.json({ error: "Internal Error" }, 500);
 }
 
 export function asyncHandler(
-  fn: (req: Request, res: Response, next: NextFunction) => Promise<void>
+  fn: (c: any, next: any) => Promise<void>
 ) {
-  return (req: Request, res: Response, next: NextFunction): void => {
+  return (c: any, next: any): void => {
     fn(req, res, next).catch(next);
   };
 }

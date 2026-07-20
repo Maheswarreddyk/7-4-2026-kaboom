@@ -1,10 +1,10 @@
-import { Request, Response, NextFunction } from 'express';
+
 
 // Read from env var — fallback to local dev token
 const MVP_ADMIN_TOKEN = process.env.ADMIN_TOKEN;
 
-export const requireAdminToken = (req: Request, res: Response, next: NextFunction) => {
-  const authHeader = req.headers.authorization;
+export const requireAdminToken = (c: any, next: any) => {
+  const authHeader = c.req.header().authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     res.status(401).json({ error: 'Unauthorized: Missing or invalid token' });
     return;

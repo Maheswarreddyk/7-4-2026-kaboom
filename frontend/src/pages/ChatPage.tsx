@@ -979,6 +979,7 @@ export function ChatPage() {
     try {
       await apiService.submitReport(
         session.sessionId,
+        session.sessionToken,
         (chatState as any).partnerSessionId,
         reason,
         notes || undefined

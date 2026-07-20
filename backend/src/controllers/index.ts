@@ -1,4 +1,4 @@
-import type { Request, Response } from 'express';
+
 import { checkDatabaseConnection } from '../database/client.js';
 import { matchmakerMetrics } from '../matchmaking/matchingEngine.js';
 import {
@@ -14,7 +14,7 @@ import { startupManager } from '../utils/startupState.js';
 const VALID_REPORT_REASONS: ReportReason[] = ['spam', 'nudity', 'abuse', 'harassment', 'other'];
 
 export const healthController = {
-  getHealth: asyncHandler(async (_req: Request, res: Response) => {
+  getHealth: asyncHandler(async (c: any) => {
     const startupProgress = startupManager.getProgressInfo();
     
     res.json({
@@ -31,15 +31,15 @@ export const healthController = {
 };
 
 export const statsController = {
-  getStats: asyncHandler(async (_req: Request, res: Response) => {
+  getStats: asyncHandler(async (c: any) => {
     const stats = await statsService.getStats(matchmakerMetrics.totalSearchingUsers);
-    res.json({ success: true, data: stats });
+    return c.json({ success: true, data: stats });
   }),
 };
 
 export const sessionController = {
-  startSession: asyncHandler(async (req: Request, res: Response) => {
-    const { country, browser, device, platform } = req.body ?? {};
+  startSession: asyncHandler(async (c: any) => {
+    const { country, browser, device, platform } = (await c.req.json()) ?? {};
 
     const session = await sessionService.startSession({
       country,
@@ -59,25 +59,26 @@ export const sessionController = {
     });
   }),
 
-  endSession: asyncHandler(async (req: Request, res: Response) => {
-    const { sessionId } = req.body ?? {};
+  endSession: asyncHandler(async (c: any) => {
+    const { sessionId, sessionToken } = (await c.req.json()) ?? {};
 
-    if (!sessionId || typeof sessionId !== 'string') {
-      throw new AppError(400, 'sessionId is required');
+    if (!sessionId || !sessionToken || typeof sessionId !== 'string') {
+      throw new AppError(400, 'sessionId and sessionToken are required');
     }
 
-    const session = await sessionService.getSession(sessionId);
+    const { validateSession } = await import('../services/matchService.js');
+    const session = await validateSession(sessionId, sessionToken);
     if (!session) {
-      throw new AppError(404, 'Session not found');
+      throw new AppError(401, 'Invalid or expired session');
     }
 
     await sessionService.endSession(sessionId);
 
-    res.json({ success: true, message: 'Session ended' });
+    return c.json({ success: true, message: 'Session ended' });
   }),
 
-  restoreSession: asyncHandler(async (req: Request, res: Response) => {
-    const { sessionId, sessionToken } = req.body ?? {};
+  restoreSession: asyncHandler(async (c: any) => {
+    const { sessionId, sessionToken } = (await c.req.json()) ?? {};
 
     if (!sessionId || !sessionToken) {
       throw new AppError(400, 'sessionId and sessionToken are required');
@@ -108,11 +109,17 @@ export const sessionController = {
 };
 
 export const reportController = {
-  submitReport: asyncHandler(async (req: Request, res: Response) => {
-    const { reporterSessionId, reportedSessionId, reason, notes } = req.body ?? {};
+  submitReport: asyncHandler(async (c: any) => {
+    const { reporterSessionId, reporterSessionToken, reportedSessionId, reason, notes } = (await c.req.json()) ?? {};
 
-    if (!reporterSessionId || !reportedSessionId || !reason) {
-      throw new AppError(400, 'reporterSessionId, reportedSessionId, and reason are required');
+    if (!reporterSessionId || !reporterSessionToken || !reportedSessionId || !reason) {
+      throw new AppError(400, 'reporterSessionId, reporterSessionToken, reportedSessionId, and reason are required');
+    }
+
+    const { validateSession } = await import('../services/matchService.js');
+    const session = await validateSession(reporterSessionId, reporterSessionToken);
+    if (!session) {
+      throw new AppError(401, 'Invalid or expired session');
     }
 
     if (!VALID_REPORT_REASONS.includes(reason)) {
@@ -126,16 +133,22 @@ export const reportController = {
       notes,
     });
 
-    res.status(201).json({ success: true, data: report });
+    return c.json({ success: true, data: report }, 201);
   }),
 };
 
 export const feedbackController = {
-  submitFeedback: asyncHandler(async (req: Request, res: Response) => {
-    const { sessionId, rating, feedback } = req.body ?? {};
+  submitFeedback: asyncHandler(async (c: any) => {
+    const { sessionId, sessionToken, rating, feedback } = (await c.req.json()) ?? {};
 
-    if (!sessionId || typeof rating !== 'number') {
-      throw new AppError(400, 'sessionId and rating are required');
+    if (!sessionId || !sessionToken || typeof rating !== 'number') {
+      throw new AppError(400, 'sessionId, sessionToken, and rating are required');
+    }
+
+    const { validateSession } = await import('../services/matchService.js');
+    const session = await validateSession(sessionId, sessionToken);
+    if (!session) {
+      throw new AppError(401, 'Invalid or expired session');
     }
 
     if (rating < 1 || rating > 5) {
@@ -144,6 +157,6 @@ export const feedbackController = {
 
     const entry = await feedbackService.submitFeedback({ sessionId, rating, feedback });
 
-    res.status(201).json({ success: true, data: entry });
+    return c.json({ success: true, data: entry }, 201);
   }),
 };

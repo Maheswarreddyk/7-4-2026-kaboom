@@ -1,9 +1,35 @@
-import { Router } from 'express';
+import { Hono } from 'hono';
 import { getSupabase } from '../database/client.js';
 
-const router = Router();
+const router = new Hono();
 
-router.post('/subscribe', async (req, res, next) => {
+router.post('/subscribe', async (c: any) => {
+
+    let body: any = {};
+    try {
+      const contentType = c.req.header('content-type') || '';
+      if (contentType.includes('application/json')) {
+        body = await c.req.json();
+      } else if (contentType) {
+        body = await c.req.parseBody();
+      }
+    } catch(e) {}
+    
+    const req: any = {
+      body,
+      query: c.req.query(),
+      params: c.req.param(),
+      headers: c.req.header(),
+      path: c.req.path
+    };
+    
+    const res: any = {
+      json: (d: any) => c.json(d),
+      status: (s: any) => ({ json: (d: any) => c.json(d, s) }),
+      sendStatus: (s: any) => c.body(null, s),
+      setHeader: (k: string, v: string) => c.header(k, v)
+    };
+    const next = (err?: any) => { if(err) throw err; };
   try {
     const { subscription, sessionId, browser, os, deviceType } = req.body;
     

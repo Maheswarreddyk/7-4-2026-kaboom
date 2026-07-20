@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Hono } from 'hono';
 import {
   feedbackController,
   healthController,
@@ -7,9 +7,9 @@ import {
   statsController,
 } from '../controllers/index.js';
 import {
-  apiRateLimiter,
-  reportRateLimiter,
-  sessionRateLimiter,
+  rateLimiter,
+  rateLimiter,
+  rateLimiter,
 } from '../middleware/rateLimiter.js';
 
 import { getSupabase } from '../database/client.js';
@@ -23,28 +23,54 @@ import { requireBackendReady } from '../middleware/readiness.js';
 import { AppError } from '../middleware/errorHandler.js';
 import { runFullSessionCleanup } from '../services/sessionCleanup.js';
 
-const router = Router();
+const router = new Hono();
 
-router.use(apiRateLimiter);
+// // router.use(rateLimiter); // Removed for Edge compatibility // Removed for Edge compatibility
 
 // Unprotected routes (available during warmup)
 router.get('/health', healthController.getHealth);
 router.get('/stats', statsController.getStats);
 
 // Readiness Middleware - protects all following routes during startup
-router.use(requireBackendReady);
+// // router.use(requireBackendReady);
 
-router.use('/match', matchRoutes);
-router.use('/notifications', notificationRoutes);
+router.route('/match', matchRoutes);
+router.route('/notifications', notificationRoutes);
 import adminNotificationRoutes from './admin-notifications.js';
-router.use('/admin/notifications', adminNotificationRoutes);
+router.route('/admin/notifications', adminNotificationRoutes);
 
-router.post('/start-session', sessionRateLimiter, sessionController.startSession);
+router.post('/start-session', sessionController.startSession);
 router.post('/end-session', sessionController.endSession);
 router.post('/restore-session', sessionController.restoreSession);
 
 // Immediate Session Cleanup Directive
-router.post('/session/cleanup', async (req, res, next) => {
+router.post('/session/cleanup', async (c: any) => {
+
+    let body: any = {};
+    try {
+      const contentType = c.req.header('content-type') || '';
+      if (contentType.includes('application/json')) {
+        body = await c.req.json();
+      } else if (contentType) {
+        body = await c.req.parseBody();
+      }
+    } catch(e) {}
+    
+    const req: any = {
+      body,
+      query: c.req.query(),
+      params: c.req.param(),
+      headers: c.req.header(),
+      path: c.req.path
+    };
+    
+    const res: any = {
+      json: (d: any) => c.json(d),
+      status: (s: any) => ({ json: (d: any) => c.json(d, s) }),
+      sendStatus: (s: any) => c.body(null, s),
+      setHeader: (k: string, v: string) => c.header(k, v)
+    };
+    const next = (err?: any) => { if(err) throw err; };
   try {
     // sendBeacon sends as text/plain — parse manually if needed
     let body = req.body;
@@ -73,7 +99,33 @@ router.post('/session/cleanup', async (req, res, next) => {
     res.sendStatus(500);
   }
 });
-router.post('/session/heartbeat', async (req, res, next) => {
+router.post('/session/heartbeat', async (c: any) => {
+
+    let body: any = {};
+    try {
+      const contentType = c.req.header('content-type') || '';
+      if (contentType.includes('application/json')) {
+        body = await c.req.json();
+      } else if (contentType) {
+        body = await c.req.parseBody();
+      }
+    } catch(e) {}
+    
+    const req: any = {
+      body,
+      query: c.req.query(),
+      params: c.req.param(),
+      headers: c.req.header(),
+      path: c.req.path
+    };
+    
+    const res: any = {
+      json: (d: any) => c.json(d),
+      status: (s: any) => ({ json: (d: any) => c.json(d, s) }),
+      sendStatus: (s: any) => c.body(null, s),
+      setHeader: (k: string, v: string) => c.header(k, v)
+    };
+    const next = (err?: any) => { if(err) throw err; };
   try {
     const { sessionId, sessionToken, clientState } = req.body;
     if (!sessionId || !sessionToken) {
@@ -127,7 +179,7 @@ router.post('/session/heartbeat', async (req, res, next) => {
     next(err);
   }
 });
-router.post('/report', reportRateLimiter, reportController.submitReport);
+router.post('/report', reportController.submitReport);
 router.post('/feedback', feedbackController.submitFeedback);
 
 const SEEDED_UNIVERSITIES = [
@@ -192,7 +244,33 @@ const SEEDED_UNIVERSITIES = [
 
 const universityCache = new Map<string, any[]>();
 
-router.post('/preferences', async (req, res, next) => {
+router.post('/preferences', async (c: any) => {
+
+    let body: any = {};
+    try {
+      const contentType = c.req.header('content-type') || '';
+      if (contentType.includes('application/json')) {
+        body = await c.req.json();
+      } else if (contentType) {
+        body = await c.req.parseBody();
+      }
+    } catch(e) {}
+    
+    const req: any = {
+      body,
+      query: c.req.query(),
+      params: c.req.param(),
+      headers: c.req.header(),
+      path: c.req.path
+    };
+    
+    const res: any = {
+      json: (d: any) => c.json(d),
+      status: (s: any) => ({ json: (d: any) => c.json(d, s) }),
+      sendStatus: (s: any) => c.body(null, s),
+      setHeader: (k: string, v: string) => c.header(k, v)
+    };
+    const next = (err?: any) => { if(err) throw err; };
   try {
     const { sessionId, sessionToken, preferences } = req.body;
     const session = await validateSession(sessionId, sessionToken);
@@ -281,7 +359,33 @@ router.post('/preferences', async (req, res, next) => {
   }
 });
 
-router.get('/universities', async (req, res, next) => {
+router.get('/universities', async (c: any) => {
+
+    let body: any = {};
+    try {
+      const contentType = c.req.header('content-type') || '';
+      if (contentType.includes('application/json')) {
+        body = await c.req.json();
+      } else if (contentType) {
+        body = await c.req.parseBody();
+      }
+    } catch(e) {}
+    
+    const req: any = {
+      body,
+      query: c.req.query(),
+      params: c.req.param(),
+      headers: c.req.header(),
+      path: c.req.path
+    };
+    
+    const res: any = {
+      json: (d: any) => c.json(d),
+      status: (s: any) => ({ json: (d: any) => c.json(d, s) }),
+      sendStatus: (s: any) => c.body(null, s),
+      setHeader: (k: string, v: string) => c.header(k, v)
+    };
+    const next = (err?: any) => { if(err) throw err; };
   try {
     const query = (req.query.q as string || '').trim();
     if (!query || query.length < 2) {
@@ -352,7 +456,33 @@ router.get('/universities', async (req, res, next) => {
   }
 });
 
-router.get('/locations', async (req, res, next) => {
+router.get('/locations', async (c: any) => {
+
+    let body: any = {};
+    try {
+      const contentType = c.req.header('content-type') || '';
+      if (contentType.includes('application/json')) {
+        body = await c.req.json();
+      } else if (contentType) {
+        body = await c.req.parseBody();
+      }
+    } catch(e) {}
+    
+    const req: any = {
+      body,
+      query: c.req.query(),
+      params: c.req.param(),
+      headers: c.req.header(),
+      path: c.req.path
+    };
+    
+    const res: any = {
+      json: (d: any) => c.json(d),
+      status: (s: any) => ({ json: (d: any) => c.json(d, s) }),
+      sendStatus: (s: any) => c.body(null, s),
+      setHeader: (k: string, v: string) => c.header(k, v)
+    };
+    const next = (err?: any) => { if(err) throw err; };
   try {
     const query = req.query.q as string;
     if (!query) return res.json({ success: true, data: [] });
@@ -367,7 +497,33 @@ router.get('/locations', async (req, res, next) => {
   }
 });
 
-router.get('/interests', async (req, res, next) => {
+router.get('/interests', async (c: any) => {
+
+    let body: any = {};
+    try {
+      const contentType = c.req.header('content-type') || '';
+      if (contentType.includes('application/json')) {
+        body = await c.req.json();
+      } else if (contentType) {
+        body = await c.req.parseBody();
+      }
+    } catch(e) {}
+    
+    const req: any = {
+      body,
+      query: c.req.query(),
+      params: c.req.param(),
+      headers: c.req.header(),
+      path: c.req.path
+    };
+    
+    const res: any = {
+      json: (d: any) => c.json(d),
+      status: (s: any) => ({ json: (d: any) => c.json(d, s) }),
+      sendStatus: (s: any) => c.body(null, s),
+      setHeader: (k: string, v: string) => c.header(k, v)
+    };
+    const next = (err?: any) => { if(err) throw err; };
   try {
     const query = req.query.q as string;
     if (!query) return res.json({ success: true, data: [] });
@@ -382,7 +538,33 @@ router.get('/interests', async (req, res, next) => {
   }
 });
 
-router.post('/like', async (req, res, next) => {
+router.post('/like', async (c: any) => {
+
+    let body: any = {};
+    try {
+      const contentType = c.req.header('content-type') || '';
+      if (contentType.includes('application/json')) {
+        body = await c.req.json();
+      } else if (contentType) {
+        body = await c.req.parseBody();
+      }
+    } catch(e) {}
+    
+    const req: any = {
+      body,
+      query: c.req.query(),
+      params: c.req.param(),
+      headers: c.req.header(),
+      path: c.req.path
+    };
+    
+    const res: any = {
+      json: (d: any) => c.json(d),
+      status: (s: any) => ({ json: (d: any) => c.json(d, s) }),
+      sendStatus: (s: any) => c.body(null, s),
+      setHeader: (k: string, v: string) => c.header(k, v)
+    };
+    const next = (err?: any) => { if(err) throw err; };
   try {
     const { sessionId, sessionToken, matchId } = req.body;
     const session = await validateSession(sessionId, sessionToken);
@@ -434,7 +616,33 @@ router.post('/like', async (req, res, next) => {
   }
 });
 
-router.post('/chat', async (req, res, next) => {
+router.post('/chat', async (c: any) => {
+
+    let body: any = {};
+    try {
+      const contentType = c.req.header('content-type') || '';
+      if (contentType.includes('application/json')) {
+        body = await c.req.json();
+      } else if (contentType) {
+        body = await c.req.parseBody();
+      }
+    } catch(e) {}
+    
+    const req: any = {
+      body,
+      query: c.req.query(),
+      params: c.req.param(),
+      headers: c.req.header(),
+      path: c.req.path
+    };
+    
+    const res: any = {
+      json: (d: any) => c.json(d),
+      status: (s: any) => ({ json: (d: any) => c.json(d, s) }),
+      sendStatus: (s: any) => c.body(null, s),
+      setHeader: (k: string, v: string) => c.header(k, v)
+    };
+    const next = (err?: any) => { if(err) throw err; };
   try {
     const { sessionId, sessionToken, matchId, message } = req.body;
     const session = await validateSession(sessionId, sessionToken);
@@ -484,7 +692,33 @@ router.post('/chat', async (req, res, next) => {
   }
 });
 
-router.get('/chat/:matchId', async (req, res, next) => {
+router.get('/chat/:matchId', async (c: any) => {
+
+    let body: any = {};
+    try {
+      const contentType = c.req.header('content-type') || '';
+      if (contentType.includes('application/json')) {
+        body = await c.req.json();
+      } else if (contentType) {
+        body = await c.req.parseBody();
+      }
+    } catch(e) {}
+    
+    const req: any = {
+      body,
+      query: c.req.query(),
+      params: c.req.param(),
+      headers: c.req.header(),
+      path: c.req.path
+    };
+    
+    const res: any = {
+      json: (d: any) => c.json(d),
+      status: (s: any) => ({ json: (d: any) => c.json(d, s) }),
+      sendStatus: (s: any) => c.body(null, s),
+      setHeader: (k: string, v: string) => c.header(k, v)
+    };
+    const next = (err?: any) => { if(err) throw err; };
   try {
     const { matchId } = req.params;
     const sessionId = req.headers['x-session-id'] as string;
@@ -521,7 +755,33 @@ router.get('/chat/:matchId', async (req, res, next) => {
   }
 });
 
-router.get('/analytics', async (req, res, next) => {
+router.get('/analytics', async (c: any) => {
+
+    let body: any = {};
+    try {
+      const contentType = c.req.header('content-type') || '';
+      if (contentType.includes('application/json')) {
+        body = await c.req.json();
+      } else if (contentType) {
+        body = await c.req.parseBody();
+      }
+    } catch(e) {}
+    
+    const req: any = {
+      body,
+      query: c.req.query(),
+      params: c.req.param(),
+      headers: c.req.header(),
+      path: c.req.path
+    };
+    
+    const res: any = {
+      json: (d: any) => c.json(d),
+      status: (s: any) => ({ json: (d: any) => c.json(d, s) }),
+      sendStatus: (s: any) => c.body(null, s),
+      setHeader: (k: string, v: string) => c.header(k, v)
+    };
+    const next = (err?: any) => { if(err) throw err; };
   try {
     const authHeader = req.headers.authorization;
     const expectedToken = process.env.ADMIN_TOKEN;

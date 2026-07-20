@@ -77,8 +77,8 @@ export const apiService = {
     };
   },
 
-  async endSession(sessionId: string): Promise<void> {
-    await api.post('/end-session', { sessionId });
+  async endSession(sessionId: string, sessionToken: string): Promise<void> {
+    await api.post('/end-session', { sessionId, sessionToken });
   },
 
   async restoreSession(sessionId: string, sessionToken: string): Promise<SessionData> {
@@ -98,12 +98,14 @@ export const apiService = {
 
   async submitReport(
     reporterSessionId: string,
+    reporterSessionToken: string,
     reportedSessionId: string,
     reason: ReportReason,
     notes?: string
   ): Promise<void> {
     await api.post('/report', {
       reporterSessionId,
+      reporterSessionToken,
       reportedSessionId,
       reason,
       notes,
@@ -112,10 +114,11 @@ export const apiService = {
 
   async submitFeedback(
     sessionId: string,
+    sessionToken: string,
     rating: number,
     feedback?: string
   ): Promise<void> {
-    await api.post('/feedback', { sessionId, rating, feedback });
+    await api.post('/feedback', { sessionId, sessionToken, rating, feedback });
   },
 
   async submitPreferences(

@@ -1,15 +1,41 @@
-import { Router } from 'express';
+import { Hono } from 'hono';
 import { requireAdminToken } from '../middleware/adminAuth.js';
 import { CampaignManager } from '../notifications/CampaignManager.js';
 import { TemplateEngine } from '../notifications/TemplateEngine.js';
 
 import { getSupabase } from '../database/client.js';
 
-const router = Router();
+const router = new Hono();
 
 router.use(requireAdminToken);
 
-router.get('/stats', async (req, res, next) => {
+router.get('/stats', async (c: any) => {
+
+    let body: any = {};
+    try {
+      const contentType = c.req.header('content-type') || '';
+      if (contentType.includes('application/json')) {
+        body = await c.req.json();
+      } else if (contentType) {
+        body = await c.req.parseBody();
+      }
+    } catch(e) {}
+    
+    const req: any = {
+      body,
+      query: c.req.query(),
+      params: c.req.param(),
+      headers: c.req.header(),
+      path: c.req.path
+    };
+    
+    const res: any = {
+      json: (d: any) => c.json(d),
+      status: (s: any) => ({ json: (d: any) => c.json(d, s) }),
+      sendStatus: (s: any) => c.body(null, s),
+      setHeader: (k: string, v: string) => c.header(k, v)
+    };
+    const next = (err?: any) => { if(err) throw err; };
   try {
     const supabase = getSupabase();
     
@@ -41,7 +67,33 @@ router.get('/stats', async (req, res, next) => {
   }
 });
 
-router.get('/history', async (req, res, next) => {
+router.get('/history', async (c: any) => {
+
+    let body: any = {};
+    try {
+      const contentType = c.req.header('content-type') || '';
+      if (contentType.includes('application/json')) {
+        body = await c.req.json();
+      } else if (contentType) {
+        body = await c.req.parseBody();
+      }
+    } catch(e) {}
+    
+    const req: any = {
+      body,
+      query: c.req.query(),
+      params: c.req.param(),
+      headers: c.req.header(),
+      path: c.req.path
+    };
+    
+    const res: any = {
+      json: (d: any) => c.json(d),
+      status: (s: any) => ({ json: (d: any) => c.json(d, s) }),
+      sendStatus: (s: any) => c.body(null, s),
+      setHeader: (k: string, v: string) => c.header(k, v)
+    };
+    const next = (err?: any) => { if(err) throw err; };
   try {
     const supabase = getSupabase();
     
@@ -71,7 +123,33 @@ router.get('/history', async (req, res, next) => {
   }
 });
 
-router.post('/broadcast', async (req, res, next) => {
+router.post('/broadcast', async (c: any) => {
+
+    let body: any = {};
+    try {
+      const contentType = c.req.header('content-type') || '';
+      if (contentType.includes('application/json')) {
+        body = await c.req.json();
+      } else if (contentType) {
+        body = await c.req.parseBody();
+      }
+    } catch(e) {}
+    
+    const req: any = {
+      body,
+      query: c.req.query(),
+      params: c.req.param(),
+      headers: c.req.header(),
+      path: c.req.path
+    };
+    
+    const res: any = {
+      json: (d: any) => c.json(d),
+      status: (s: any) => ({ json: (d: any) => c.json(d, s) }),
+      sendStatus: (s: any) => c.body(null, s),
+      setHeader: (k: string, v: string) => c.header(k, v)
+    };
+    const next = (err?: any) => { if(err) throw err; };
   try {
     const { campaignId, templateType, context, deepLink, audienceSegments } = req.body;
 
@@ -92,7 +170,33 @@ router.post('/broadcast', async (req, res, next) => {
   }
 });
 
-router.post('/test', async (req, res, next) => {
+router.post('/test', async (c: any) => {
+
+    let body: any = {};
+    try {
+      const contentType = c.req.header('content-type') || '';
+      if (contentType.includes('application/json')) {
+        body = await c.req.json();
+      } else if (contentType) {
+        body = await c.req.parseBody();
+      }
+    } catch(e) {}
+    
+    const req: any = {
+      body,
+      query: c.req.query(),
+      params: c.req.param(),
+      headers: c.req.header(),
+      path: c.req.path
+    };
+    
+    const res: any = {
+      json: (d: any) => c.json(d),
+      status: (s: any) => ({ json: (d: any) => c.json(d, s) }),
+      sendStatus: (s: any) => c.body(null, s),
+      setHeader: (k: string, v: string) => c.header(k, v)
+    };
+    const next = (err?: any) => { if(err) throw err; };
   try {
     const { subscriptionJson, templateType, context, deepLink } = req.body;
     

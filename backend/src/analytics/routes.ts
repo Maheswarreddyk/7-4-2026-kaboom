@@ -7,66 +7,66 @@ const router = Router();
 
 router.use(requireAdminToken);
 
-router.post('/sync', async (req, res) => {
+router.post('/sync', async (c) => {
   try {
     const result = await etlService.syncAnalytics();
-    res.json(result);
+    return c.json(result);
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    return c.json({ error: err.message });
   }
 });
 
-router.get('/overview', async (req, res) => {
+router.get('/overview', async (c) => {
   try {
     const data = await analyticsService.getOverview();
-    res.json(data);
+    return c.json(data);
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    return c.json({ error: err.message });
   }
 });
 
-router.get('/trends', async (req, res) => {
+router.get('/trends', async (c) => {
   try {
     const data = await analyticsService.getTrends();
-    res.json(data);
+    return c.json(data);
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    return c.json({ error: err.message });
   }
 });
 
-router.get('/audience', async (req, res) => {
+router.get('/audience', async (c) => {
   try {
     const data = await analyticsService.getAudience();
-    res.json(data);
+    return c.json(data);
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    return c.json({ error: err.message });
   }
 });
 
-router.get('/match-analytics', async (req, res) => {
+router.get('/match-analytics', async (c) => {
   try {
     const data = await analyticsService.getMatchAnalytics();
-    res.json(data);
+    return c.json(data);
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    return c.json({ error: err.message });
   }
 });
 
-router.get('/notifications', async (req, res) => {
+router.get('/notifications', async (c) => {
   try {
     const data = await analyticsService.getNotifications();
-    res.json(data);
+    return c.json(data);
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    return c.json({ error: err.message });
   }
 });
 
-router.get('/live-feed', async (req, res) => {
+router.get('/live-feed', async (c) => {
   try {
     const data = await analyticsService.getActivityFeed();
-    res.json(data);
+    return c.json(data);
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    return c.json({ error: err.message });
   }
 });
 

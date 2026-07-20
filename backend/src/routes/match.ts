@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Hono } from 'hono';
 import {
   joinQueue,
   leaveQueue,
@@ -9,9 +9,35 @@ import {
 } from '../services/matchService.js';
 import { queueLimiter } from '../middleware/queueLimiter.js';
 
-const router = Router();
+const router = new Hono();
 
-router.post('/join', queueLimiter, async (req, res, next) => {
+router.post('/join', queueLimiter, async (c: any) => {
+
+    let body: any = {};
+    try {
+      const contentType = c.req.header('content-type') || '';
+      if (contentType.includes('application/json')) {
+        body = await c.req.json();
+      } else if (contentType) {
+        body = await c.req.parseBody();
+      }
+    } catch(e) {}
+    
+    const req: any = {
+      body,
+      query: c.req.query(),
+      params: c.req.param(),
+      headers: c.req.header(),
+      path: c.req.path
+    };
+    
+    const res: any = {
+      json: (d: any) => c.json(d),
+      status: (s: any) => ({ json: (d: any) => c.json(d, s) }),
+      sendStatus: (s: any) => c.body(null, s),
+      setHeader: (k: string, v: string) => c.header(k, v)
+    };
+    const next = (err?: any) => { if(err) throw err; };
   try {
     const { sessionId, sessionToken } = req.body;
     if (!sessionId || !sessionToken) {
@@ -24,7 +50,33 @@ router.post('/join', queueLimiter, async (req, res, next) => {
   }
 });
 
-router.get('/status', queueLimiter, async (req, res, next) => {
+router.get('/status', queueLimiter, async (c: any) => {
+
+    let body: any = {};
+    try {
+      const contentType = c.req.header('content-type') || '';
+      if (contentType.includes('application/json')) {
+        body = await c.req.json();
+      } else if (contentType) {
+        body = await c.req.parseBody();
+      }
+    } catch(e) {}
+    
+    const req: any = {
+      body,
+      query: c.req.query(),
+      params: c.req.param(),
+      headers: c.req.header(),
+      path: c.req.path
+    };
+    
+    const res: any = {
+      json: (d: any) => c.json(d),
+      status: (s: any) => ({ json: (d: any) => c.json(d, s) }),
+      sendStatus: (s: any) => c.body(null, s),
+      setHeader: (k: string, v: string) => c.header(k, v)
+    };
+    const next = (err?: any) => { if(err) throw err; };
   try {
     // Get headers
     const sessionId = req.headers['x-session-id'] as string;
@@ -39,7 +91,33 @@ router.get('/status', queueLimiter, async (req, res, next) => {
   }
 });
 
-router.post('/leave', queueLimiter, async (req, res, next) => {
+router.post('/leave', queueLimiter, async (c: any) => {
+
+    let body: any = {};
+    try {
+      const contentType = c.req.header('content-type') || '';
+      if (contentType.includes('application/json')) {
+        body = await c.req.json();
+      } else if (contentType) {
+        body = await c.req.parseBody();
+      }
+    } catch(e) {}
+    
+    const req: any = {
+      body,
+      query: c.req.query(),
+      params: c.req.param(),
+      headers: c.req.header(),
+      path: c.req.path
+    };
+    
+    const res: any = {
+      json: (d: any) => c.json(d),
+      status: (s: any) => ({ json: (d: any) => c.json(d, s) }),
+      sendStatus: (s: any) => c.body(null, s),
+      setHeader: (k: string, v: string) => c.header(k, v)
+    };
+    const next = (err?: any) => { if(err) throw err; };
   try {
     const { sessionId, sessionToken, matchId } = req.body;
     if (!sessionId || !sessionToken) {
@@ -55,7 +133,33 @@ router.post('/leave', queueLimiter, async (req, res, next) => {
   }
 });
 
-router.post('/next', queueLimiter, async (req, res, next) => {
+router.post('/next', queueLimiter, async (c: any) => {
+
+    let body: any = {};
+    try {
+      const contentType = c.req.header('content-type') || '';
+      if (contentType.includes('application/json')) {
+        body = await c.req.json();
+      } else if (contentType) {
+        body = await c.req.parseBody();
+      }
+    } catch(e) {}
+    
+    const req: any = {
+      body,
+      query: c.req.query(),
+      params: c.req.param(),
+      headers: c.req.header(),
+      path: c.req.path
+    };
+    
+    const res: any = {
+      json: (d: any) => c.json(d),
+      status: (s: any) => ({ json: (d: any) => c.json(d, s) }),
+      sendStatus: (s: any) => c.body(null, s),
+      setHeader: (k: string, v: string) => c.header(k, v)
+    };
+    const next = (err?: any) => { if(err) throw err; };
   try {
     const { sessionId, sessionToken, matchId, reason } = req.body;
     if (!sessionId || !sessionToken) {
@@ -71,7 +175,33 @@ router.post('/next', queueLimiter, async (req, res, next) => {
   }
 });
 
-router.post('/disconnect', queueLimiter, async (req, res, next) => {
+router.post('/disconnect', queueLimiter, async (c: any) => {
+
+    let body: any = {};
+    try {
+      const contentType = c.req.header('content-type') || '';
+      if (contentType.includes('application/json')) {
+        body = await c.req.json();
+      } else if (contentType) {
+        body = await c.req.parseBody();
+      }
+    } catch(e) {}
+    
+    const req: any = {
+      body,
+      query: c.req.query(),
+      params: c.req.param(),
+      headers: c.req.header(),
+      path: c.req.path
+    };
+    
+    const res: any = {
+      json: (d: any) => c.json(d),
+      status: (s: any) => ({ json: (d: any) => c.json(d, s) }),
+      sendStatus: (s: any) => c.body(null, s),
+      setHeader: (k: string, v: string) => c.header(k, v)
+    };
+    const next = (err?: any) => { if(err) throw err; };
   try {
     const { sessionId, sessionToken, reason, matchId } = req.body;
     if (!sessionId || !sessionToken) {
@@ -84,7 +214,33 @@ router.post('/disconnect', queueLimiter, async (req, res, next) => {
   }
 });
 
-router.post('/ready', queueLimiter, async (req, res, next) => {
+router.post('/ready', queueLimiter, async (c: any) => {
+
+    let body: any = {};
+    try {
+      const contentType = c.req.header('content-type') || '';
+      if (contentType.includes('application/json')) {
+        body = await c.req.json();
+      } else if (contentType) {
+        body = await c.req.parseBody();
+      }
+    } catch(e) {}
+    
+    const req: any = {
+      body,
+      query: c.req.query(),
+      params: c.req.param(),
+      headers: c.req.header(),
+      path: c.req.path
+    };
+    
+    const res: any = {
+      json: (d: any) => c.json(d),
+      status: (s: any) => ({ json: (d: any) => c.json(d, s) }),
+      sendStatus: (s: any) => c.body(null, s),
+      setHeader: (k: string, v: string) => c.header(k, v)
+    };
+    const next = (err?: any) => { if(err) throw err; };
   try {
     const { sessionId, sessionToken, matchId } = req.body;
     if (!sessionId || !sessionToken || !matchId) {
@@ -101,7 +257,33 @@ router.post('/ready', queueLimiter, async (req, res, next) => {
   }
 });
 
-router.post('/connected', queueLimiter, async (req, res, next) => {
+router.post('/connected', queueLimiter, async (c: any) => {
+
+    let body: any = {};
+    try {
+      const contentType = c.req.header('content-type') || '';
+      if (contentType.includes('application/json')) {
+        body = await c.req.json();
+      } else if (contentType) {
+        body = await c.req.parseBody();
+      }
+    } catch(e) {}
+    
+    const req: any = {
+      body,
+      query: c.req.query(),
+      params: c.req.param(),
+      headers: c.req.header(),
+      path: c.req.path
+    };
+    
+    const res: any = {
+      json: (d: any) => c.json(d),
+      status: (s: any) => ({ json: (d: any) => c.json(d, s) }),
+      sendStatus: (s: any) => c.body(null, s),
+      setHeader: (k: string, v: string) => c.header(k, v)
+    };
+    const next = (err?: any) => { if(err) throw err; };
   try {
     const { sessionId, sessionToken, matchId } = req.body;
     if (!sessionId || !sessionToken || !matchId) {
@@ -119,7 +301,33 @@ router.post('/connected', queueLimiter, async (req, res, next) => {
   }
 });
 
-router.post('/ping', async (req, res) => {
+router.post('/ping', async (c: any) => {
+
+    let body: any = {};
+    try {
+      const contentType = c.req.header('content-type') || '';
+      if (contentType.includes('application/json')) {
+        body = await c.req.json();
+      } else if (contentType) {
+        body = await c.req.parseBody();
+      }
+    } catch(e) {}
+    
+    const req: any = {
+      body,
+      query: c.req.query(),
+      params: c.req.param(),
+      headers: c.req.header(),
+      path: c.req.path
+    };
+    
+    const res: any = {
+      json: (d: any) => c.json(d),
+      status: (s: any) => ({ json: (d: any) => c.json(d, s) }),
+      sendStatus: (s: any) => c.body(null, s),
+      setHeader: (k: string, v: string) => c.header(k, v)
+    };
+    const next = (err?: any) => { if(err) throw err; };
   try {
     const { sessionId } = req.body;
     if (!sessionId) {
