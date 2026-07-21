@@ -36,8 +36,7 @@ app.use('*', cors({
 app.use('*', secureHeaders());
 
 app.use('*', async (c, next) => {
-  globalThis.process = globalThis.process || { env: {} };
-  globalThis.process.env = { ...globalThis.process.env, ...c.env };
+  (globalThis as any).__env = c.env;
   await next();
 });
 
@@ -57,8 +56,7 @@ app.route('/api', routes);
 export default {
   fetch: app.fetch,
   async scheduled(event: any, env: Env, ctx: any) {
-    globalThis.process = globalThis.process || { env: {} };
-    globalThis.process.env = { ...globalThis.process.env, ...env };
+    (globalThis as any).__env = env;
     
     // Dynamic import to avoid evaluating everything globally at cold start
     const { runGlobalMatchCycle, runGlobalHealCycle } = await import('./matchmaking/matchingEngine.js');
