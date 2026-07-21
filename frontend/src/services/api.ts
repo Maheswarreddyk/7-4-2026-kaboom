@@ -31,7 +31,8 @@ export class ApiError extends Error {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    const status = error.response?.status;
+    // Default to 503 Service Unavailable if status is undefined (e.g. CORS/Network Error)
+    const status = error.response?.status || 503;
     const message =
       error.response?.data?.error ||
       (status === 404 ? `Endpoint not found: ${error.config?.url}` : null) ||

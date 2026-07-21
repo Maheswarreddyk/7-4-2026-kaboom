@@ -44,12 +44,13 @@ router.post('/subscribe', async (c: any) => {
       .from('push_subscriptions')
       .upsert({
         session_id: sessionId || null,
+        endpoint: subscription.endpoint,
         subscription_json: subscription,
         browser,
         os,
         device_type: deviceType,
         last_seen: new Date().toISOString()
-      }, { onConflict: 'subscription_json' })
+      }, { onConflict: 'endpoint' })
       .select('id')
       .single();
 

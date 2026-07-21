@@ -52,7 +52,7 @@ export class CampaignManager {
         failedCount++;
         if (err.statusCode === 410 || err.statusCode === 404) {
           // Subscription revoked or expired
-          await supabase.from('push_subscriptions').update({ enabled: false }).eq('subscription_json->>endpoint', subJSON.endpoint);
+          await supabase.from('push_subscriptions').update({ enabled: false }).eq('endpoint', subJSON.endpoint);
         }
       }
     });
