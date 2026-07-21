@@ -46,6 +46,12 @@ app.use('*', async (c, next) => {
   await next();
 });
 
+app.onError((err, c) => {
+  console.error('[Global Error]', err);
+  return c.json({ error: err.message, stack: err.stack, name: err.name }, 500);
+});
+
+
 app.route('/api', routes);
 
 export default {
