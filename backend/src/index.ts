@@ -45,6 +45,12 @@ app.use('*', async (c, next) => {
   await next();
 });
 
+app.get('/api/debug-env', (c) => {
+  const keys = c.env ? Object.keys(c.env) : [];
+  return c.json({ keys, type: typeof c.env, isNull: c.env === null });
+});
+
+
 app.onError((err, c) => {
   console.error('[Global Error]', err);
   return c.json({ error: err.message, stack: err.stack, name: err.name }, 500);
