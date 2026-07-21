@@ -4,10 +4,12 @@ let supabase: SupabaseClient | null = null;
 let cachedUrl: string = '';
 let cachedKey: string = '';
 
+import { getEnv } from '../context.js';
+
 export function getSupabase(): SupabaseClient {
-  const env = (globalThis as any).__env || {};
-  const url = (env.SUPABASE_URL as string) || (globalThis.process?.env?.SUPABASE_URL as string) || '';
-  const key = (env.SUPABASE_SERVICE_ROLE_KEY as string) || (globalThis.process?.env?.SUPABASE_SERVICE_ROLE_KEY as string) || '';
+  const env = getEnv();
+  const url = (env.SUPABASE_URL as string) || '';
+  const key = (env.SUPABASE_SERVICE_ROLE_KEY as string) || '';
 
 
   // If env changed (new request with real keys) or client not yet created, rebuild

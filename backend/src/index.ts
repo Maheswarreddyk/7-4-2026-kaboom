@@ -33,11 +33,13 @@ app.use('*', cors({
   credentials: true,
 }));
 
+import { envStorage } from './context.js';
+
 app.use('*', secureHeaders());
 
 app.use('*', async (c, next) => {
   (globalThis as any).__env = c.env;
-  await next();
+  return envStorage.run(c.env, () => next());
 });
 
 app.use('*', async (c, next) => {
@@ -64,13 +66,18 @@ export default {
   async scheduled(event: any, env: Env, ctx: any) {
     (globalThis as any).__env = env;
     
-    // Dynamic import to avoid evaluating everything globally at cold start
-    const { runGlobalMatchCycle, runGlobalHealCycle } = await import('./matchmaking/matchingEngine.js');
-    const { getSupabase } = await import('./database/client.js');
-    
-    const supabase = getSupabase();
-    
-    ctx.waitUntil(runGlobalHealCycle(supabase).catch(console.error));
-    await runGlobalMatchCycle(supabase).catch(console.error);
+    return envStorage.run(env, async () => {
+      // Dynamic import to avoid evaluating everything globally at cold start
+      const { runGlobalMatchCycle, runGlobalHealCycle } = await import('./matchmaking/matchingEngine.js');
+      const { getSupabase } = await import('./database/client.js');
+      
+      const supabase = getSupabase();
+      
+      // We pass the Cloudflare environment to matching engine
+      // ctx.waitUntil is used to ensure the heal cycle finishes even if the cron ends early
+      ctx.waitUntil(runGlobalHealCycle(supabase).catch(console.error));
+      
+      await runGlobalMatchCycle(supabase).catch(console.error);
+    });
   }
 };
