@@ -17,7 +17,7 @@ export const healthController = {
   getHealth: asyncHandler(async (c: any) => {
     const startupProgress = startupManager.getProgressInfo();
     
-    res.json({
+    return c.json({
       success: true,
       ready: startupProgress.state === 'READY' || startupProgress.state === 'DEGRADED',
       status: startupProgress.state,
@@ -48,7 +48,7 @@ export const sessionController = {
       platform,
     });
 
-    res.status(201).json({
+    return c.json({
       success: true,
       data: {
         sessionId: session.id,
@@ -56,7 +56,7 @@ export const sessionController = {
         createdAt: session.created_at,
         status: session.status,
       },
-    });
+    }, 201);
   }),
 
   endSession: asyncHandler(async (c: any) => {
@@ -91,7 +91,7 @@ export const sessionController = {
 
     const { session, match } = result;
 
-    res.json({
+    return c.json({
       success: true,
       data: {
         sessionId: session.id,

@@ -1,4 +1,4 @@
-import { environment } from '../../../config/environment.js';
+// No external imports needed for matchmaking config
 
 // ============================================================
 // Central Timing Constants
@@ -36,22 +36,22 @@ export const SCHEDULER_INTERVAL_MS = 1_500;
 export const RECONNECT_DELAY_MS = 500;
 
 // ============================================================
-// Match Weights — all from environment
+// Match Weights
 // ============================================================
 
 export const MATCH_WEIGHTS = {
-  mutualPreference:     environment.matchmaking.weights.mutualPreference,
-  languagePerMatch:     environment.matchmaking.weights.languagePerMatch,
-  languageMax:          environment.matchmaking.weights.languageMax,
-  city:                 environment.matchmaking.weights.city,
-  district:             environment.matchmaking.weights.district,
-  state:                environment.matchmaking.weights.state,
-  country:              environment.matchmaking.weights.country,
-  interestPerMatch:     environment.matchmaking.weights.interestPerMatch,
-  interestMax:          environment.matchmaking.weights.interestMax,
-  waitingPerSecond:     environment.matchmaking.weights.waitingPerSecond,
-  waitingMax:           environment.matchmaking.weights.waitingMax,
-  recentPartnerPenalty: environment.matchmaking.weights.recentPartnerPenalty,
+  mutualPreference:     50,
+  languagePerMatch:     20,
+  languageMax:          40,
+  city:                 40,
+  district:             35,
+  state:                30,
+  country:              20,
+  interestPerMatch:     5,
+  interestMax:          40,
+  waitingPerSecond:     1,
+  waitingMax:           60,
+  recentPartnerPenalty: 100,
 };
 
 // ============================================================

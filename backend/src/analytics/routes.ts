@@ -1,9 +1,9 @@
-import { Router } from 'express';
+import { Hono } from 'hono';
 import { analyticsService } from './service.js';
 import { etlService } from './etlService.js';
 import { requireAdminToken } from '../middleware/adminAuth.js';
 
-const router = Router();
+const router = new Hono();
 
 router.use(requireAdminToken);
 

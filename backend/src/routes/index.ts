@@ -6,11 +6,7 @@ import {
   sessionController,
   statsController,
 } from '../controllers/index.js';
-import {
-  rateLimiter,
-  rateLimiter,
-  rateLimiter,
-} from '../middleware/rateLimiter.js';
+import { rateLimiter } from '../middleware/rateLimiter.js';
 
 import { getSupabase } from '../database/client.js';
 import matchRoutes from './match.js';

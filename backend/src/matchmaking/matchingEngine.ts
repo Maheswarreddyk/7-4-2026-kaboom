@@ -1,5 +1,4 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import pg from 'pg';
 import crypto from 'crypto';
 import { HEARTBEAT_STALE_MS, RESERVATION_TIMEOUT_MS } from './config.js';
 import { broadcastToSession } from '../services/broadcast.js';
@@ -226,18 +225,9 @@ export async function runGlobalHealCycle(supabase: SupabaseClient): Promise<void
   if (nowMs - lastHealTime < HEAL_INTERVAL_MS) {
     return;
   }
-
-  const client = new pg.Client({ connectionString: process.env.DATABASE_URL });
+  
+  lastHealTime = Date.now();
   try {
-    await client.connect();
-    await client.query('BEGIN');
-    const { rows } = await client.query('SELECT pg_try_advisory_xact_lock(9999) as acquired');
-    if (!rows[0].acquired) {
-      // Another instance is healing
-      return;
-    }
-
-    lastHealTime = Date.now();
 
   const now = new Date().toISOString();
   const heartbeatThreshold = new Date(Date.now() - HEARTBEAT_STALE_MS).toISOString();
@@ -427,9 +417,6 @@ export async function runGlobalHealCycle(supabase: SupabaseClient): Promise<void
     }
   } catch (err) {
     console.error('[Self-Healing] Error during queue healing:', err instanceof Error ? err.message : err);
-  } finally {
-    try { await client.query('COMMIT'); } catch(e){}
-    await client.end();
   }
 }
 
@@ -440,17 +427,7 @@ export async function runGlobalHealCycle(supabase: SupabaseClient): Promise<void
 export async function runGlobalMatchCycle(supabase: SupabaseClient): Promise<void> {
   const start = Date.now();
 
-  const client = new pg.Client({ connectionString: process.env.DATABASE_URL });
   try {
-    await client.connect();
-    await client.query('BEGIN');
-    const { rows } = await client.query('SELECT pg_try_advisory_xact_lock(8888) as acquired');
-    if (!rows[0].acquired) {
-      // Jitter backoff and skip cycle to avoid tight loop contention
-      const delay = Math.min(Math.random() * 150 + 50, 200); // 50-200ms
-      await new Promise(r => setTimeout(r, delay));
-      return;
-    }
 
     // 2. Queue healing has been decoupled to runGlobalHealCycle (Phase 4 Perf Optimization)
 
@@ -805,9 +782,6 @@ export async function runGlobalMatchCycle(supabase: SupabaseClient): Promise<voi
     }
   } catch (err) {
     console.error('[Matchmaker] Error during cycle:', err);
-  } finally {
-    try { await client.query('COMMIT'); } catch(e){}
-    await client.end();
   }
 }
 

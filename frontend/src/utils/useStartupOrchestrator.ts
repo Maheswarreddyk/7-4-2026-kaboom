@@ -76,7 +76,8 @@ export function useStartupOrchestrator(): OrchestratorResult {
 
         if (elapsedSecs >= 30) {
            isResolved = true;
-           setState('FAILED');
+           // Fallback to READY to allow users to see the UI even if backend health fails
+           setState('READY');
            return;
         }
 

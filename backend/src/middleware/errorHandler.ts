@@ -43,9 +43,13 @@ export function globalErrorHandler(
 }
 
 export function asyncHandler(
-  fn: (c: any, next: any) => Promise<void>
+  fn: (c: any, next: any) => Promise<any>
 ) {
-  return (c: any, next: any): void => {
-    fn(req, res, next).catch(next);
+  return async (c: any, next: any): Promise<any> => {
+    try {
+      return await fn(c, next);
+    } catch (err) {
+      throw err;
+    }
   };
 }
