@@ -1,7 +1,6 @@
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { getSupabaseClient } from './supabase.js';
 import type { IceServerConfig } from '../types/index.js';
-import { environment } from 'config';
 
 export interface RealtimeCallbacks {
   onWaiting?: (data: { queuePosition: number; message: string }) => void;
@@ -40,7 +39,7 @@ export interface RealtimeCallbacks {
   onReconnect?: () => void;
 }
 
-const API_BASE = environment.apiUrl;
+const API_BASE = (import.meta.env.VITE_API_URL || '').replace(/\/api$/, '');
 
 async function apiPost<T>(path: string, body: Record<string, unknown>): Promise<T> {
   console.log(`[API_POST] Sending POST to: ${API_BASE}/api${path}`);

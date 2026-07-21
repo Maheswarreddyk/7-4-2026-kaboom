@@ -1,6 +1,6 @@
 import { safeLocalStorage } from './safeStorage.js';
 import { STORAGE_KEYS } from '../types/index.js';
-import { environment } from 'config';
+
 
 export function resetToCleanState(reason: string, keepFilters: boolean = false) {
   console.log(`[Cleanup] Resetting to clean state (Reason: ${reason}, KeepFilters: ${keepFilters})`);
@@ -42,7 +42,7 @@ export async function cleanupSession(reason: string) {
   const sessionId = safeLocalStorage.getItem(STORAGE_KEYS.SESSION_ID);
   
   if (sessionId) {
-    const apiUrl = environment.apiUrl || '';
+    const apiUrl = (import.meta.env.VITE_API_URL || '').replace(/\/api$/, '');
     // Tell the backend (fire and forget — page might be closing)
     navigator.sendBeacon(`${apiUrl}/api/session/cleanup`, JSON.stringify({ sessionId, reason }));
   }

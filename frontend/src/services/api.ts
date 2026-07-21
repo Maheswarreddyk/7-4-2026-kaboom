@@ -1,12 +1,11 @@
 import axios from 'axios';
-import { environment } from 'config';
 import type { ReportReason, SessionData, StatsData } from '../types/index.js';
 import { getBrowserInfo, retry } from '../utils/index.js';
 
-const API_URL = environment.apiUrl;
+const API_URL = import.meta.env.VITE_API_URL || '';
 
 const api = axios.create({
-  baseURL: `${API_URL}/api`,
+  baseURL: API_URL.endsWith('/api') ? API_URL : `${API_URL}/api`,
   timeout: 15000,
   headers: {
     'Content-Type': 'application/json',
@@ -14,7 +13,7 @@ const api = axios.create({
 });
 
 api.interceptors.request.use((config) => {
-  if (environment.nodeEnv === 'development') {
+  if (import.meta.env.DEV) {
     console.log(`[API] ${config.method?.toUpperCase()} ${config.baseURL}${config.url}`);
   }
   return config;

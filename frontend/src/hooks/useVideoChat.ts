@@ -7,7 +7,6 @@ import { realtimeManager } from '../services/realtime.js';
 import { webrtcManager } from '../webrtc/index.js';
 import type { ChatState, ConnectionStatus, SessionStatus } from '../types/index.js';
 import { LifecycleManager } from '../services/LifecycleManager.js';
-import { environment } from 'config';
 import { safeLocalStorage } from '../utils/index.js';
 import { useAudioUX } from './useAudioUX.js';
 
@@ -197,7 +196,7 @@ export function useVideoChat(
       const logTime = new Date().toLocaleTimeString();
       const entry = `${logTime} ${current} -> ${mappedState} (LM: ${state})`;
       transitionLogRef.current.push(entry);
-      if (environment.nodeEnv === 'development') {
+      if (import.meta.env.DEV) {
         console.log(`%c[FSM LOG] ${entry}`, 'color: #f59e0b; font-weight: bold;');
       }
 
@@ -1494,7 +1493,7 @@ export function useVideoChat(
 
   // Mobile Lifecycle Event Listeners: visibilitychange, pagehide, freeze/resume, online/offline
   useEffect(() => {
-    const API_BASE = environment.apiUrl;
+    const API_BASE = import.meta.env.VITE_API_URL || '';
     let visibilityDebounceTimer: any = null;
 
     const suspendLocalMedia = () => {
