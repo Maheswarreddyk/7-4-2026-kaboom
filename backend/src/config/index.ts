@@ -1,4 +1,4 @@
-import { environment } from 'config';
+import { environment } from '../../../config/environment.js';
 import crypto from 'crypto';
 
 export const config = {
