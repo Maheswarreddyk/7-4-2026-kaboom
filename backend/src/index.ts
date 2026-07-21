@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
-// Trigger backend auto-deploy with native wrangler
+// Trigger backend auto-deploy with Node 22
 import { secureHeaders } from 'hono/secure-headers';
 import routes from './routes/index.js';
 
