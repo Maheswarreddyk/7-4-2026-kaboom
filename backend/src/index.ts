@@ -14,7 +14,20 @@ const app = new Hono<{ Bindings: Env }>();
 
 app.use('*', cors({
   origin: (origin) => {
-    return origin;
+    const allowedOrigins = [
+      'https://kaboom-tv.com',
+      'https://www.kaboom-tv.com',
+      'http://localhost:5173',
+      'http://localhost:3000'
+    ];
+    if (!origin || allowedOrigins.includes(origin)) {
+      return origin;
+    }
+    // Allow Pages preview deployments ending in .pages.dev
+    if (origin.endsWith('.pages.dev')) {
+      return origin;
+    }
+    return 'https://kaboom-tv.com';
   },
   credentials: true,
 }));
