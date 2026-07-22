@@ -160,7 +160,7 @@ export class RealtimeManager {
         }
       }, SUBSCRIBE_TIMEOUT_MS);
 
-      this.matchChannel?.subscribe((status) => {
+      this.matchChannel?.subscribe((status, err) => {
         if (status === 'SUBSCRIBED') {
           clearTimeout(subscribeTimeout);
           // FE-006 fix: explicitly abort if timeout already fired
@@ -178,6 +178,7 @@ export class RealtimeManager {
           clearTimeout(subscribeTimeout);
           this.isMatchChannelConnected = false;
           console.warn(`[Realtime] Match channel ${matchId} status: ${status} — aborting subscription`);
+          console.error(`[Realtime TRACE] Join response/error payload for match channel:`, err);
           resolveAndUnlock(false);
         }
       });
@@ -318,7 +319,7 @@ export class RealtimeManager {
         .on('broadcast', { event: 'message_seen' }, ({ payload }) => {
           callbacks.onMessageSeen?.(payload as { matchId: string; senderId: string });
         })
-        .subscribe((status) => {
+        .subscribe((status, err) => {
           console.log(`[Realtime] Session channel status: ${status}`);
           if (status === 'SUBSCRIBED') {
             if (!resolved) {
@@ -332,6 +333,7 @@ export class RealtimeManager {
           }
           if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
             console.warn(`[Realtime] Session channel error (attempt ${attempt}): ${status}`);
+            console.error(`[Realtime TRACE] Join response/error payload for session channel:`, err);
             if (!resolved) {
               if (attempt < 3) {
                 console.log(`[Realtime] Retrying connection (attempt ${attempt + 1})...`);
