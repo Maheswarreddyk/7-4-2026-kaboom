@@ -81,7 +81,7 @@ export interface ChatState {
   partnerProfile?: {
     displayName: string;
     bio?: string;
-    matchMode?: 'RANDOM' | 'PREFER' | 'STRICT';
+    matchMode?: 'RANDOM' | 'PREFER' | 'STRICT' | 'SMART' | 'EXACT';
     matchConstraints?: Record<string, boolean>;
     matchAttributes?: Record<string, string[]>;
     city?: string | null;
