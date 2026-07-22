@@ -33,7 +33,7 @@ export async function logToDb(
   try {
     await supabase.from('connection_logs').insert({
       session_id: sessionId,
-      event,
+      event_type: event,
       details,
     });
   } catch (err) {

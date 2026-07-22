@@ -26,6 +26,7 @@ export const config = {
   get matchStaleMs() { return parseInt((getEnv().MATCH_TIMEOUT as string) || '1800', 10) * 1000; },
   get metricsIntervalMs() { return 60 * 1000; },
   get cleanupIntervalMs() { return 5 * 1000; },
+  get adminToken() { return (getEnv().ADMIN_TOKEN as string) || ''; },
 };
 
 export interface IceServer {

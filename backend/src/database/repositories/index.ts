@@ -384,7 +384,7 @@ export const connectionLogRepository = {
       .from('connection_logs')
       .insert({
         session_id: sessionId,
-        event,
+        event_type: event,
         details,
       })
       .select()

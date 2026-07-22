@@ -1,7 +1,9 @@
 // Read from env var — fallback to local dev token
 
+import { config } from '../config/index.js';
+
 export const requireAdminToken = async (c: any, next: any) => {
-  const MVP_ADMIN_TOKEN = process.env.ADMIN_TOKEN;
+  const MVP_ADMIN_TOKEN = config.adminToken;
   const authHeader = c.req.header('authorization');
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return c.json({ error: 'Unauthorized: Missing or invalid token' }, 401);

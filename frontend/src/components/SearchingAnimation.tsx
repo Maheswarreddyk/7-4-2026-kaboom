@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useMemo } from 'react';
 import { useResponsiveLayout } from '../hooks/useResponsiveLayout.js';
 import { cn, safeLocalStorage } from '../utils/index.js';
 
@@ -27,15 +27,19 @@ export function SearchingAnimation({
   const [fadingText, setFadingText] = useState('Starting search...');
   const [fadeOpacity, setFadeOpacity] = useState(1);
 
+  const { uni, langs, interests, cityPref } = useMemo(() => {
+    return {
+      uni: safeLocalStorage.getItem('kaboom_university') || '',
+      langs: safeLocalStorage.getJSON<string[]>('kaboom_languages', []),
+      interests: safeLocalStorage.getJSON<string[]>('kaboom_interest_tags', []),
+      cityPref: safeLocalStorage.getItem('kaboom_city') || ''
+    };
+  }, []);
+
   const getSearchMessage = () => {
     if (status === 'MATCH_FOUND' || status === 'NEGOTIATING' || status === 'ICE_CONNECTING' || status === 'CONNECTED') {
       return 'Connecting...';
     }
-
-    const uni = safeLocalStorage.getItem('kaboom_university') || '';
-    const langs = safeLocalStorage.getJSON<string[]>('kaboom_languages', []);
-    const interests = safeLocalStorage.getJSON<string[]>('kaboom_interest_tags', []);
-    const cityPref = safeLocalStorage.getItem('kaboom_city') || '';
 
     if (isQueuePaused) {
       return 'Search paused...';

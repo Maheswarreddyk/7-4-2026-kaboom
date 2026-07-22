@@ -40,7 +40,12 @@ export const statsController = {
 
 export const sessionController = {
   startSession: asyncHandler(async (c: any) => {
-    const { country, browser, device, platform } = (await c.req.json()) ?? {};
+    const payload = (await c.req.json().catch(() => {})) ?? {};
+    let { country, browser, device, platform } = payload;
+    
+    if (!country) {
+      country = c.req.header('cf-ipcountry') || c.req.header('x-real-ip') || 'Unknown';
+    }
 
     let authUserId: string | undefined;
     const authHeader = c.req.header('Authorization');

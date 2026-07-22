@@ -68,7 +68,7 @@ export async function endActiveMatch(sessionId: string, reason: MatchEndReason, 
     .from('connection_logs')
     .insert({
       session_id: sessionId,
-      event: 'match_end',
+      event_type: 'match_end',
       details: { matchId: match.id, reason },
     });
 
@@ -286,7 +286,7 @@ export async function nextPartner(sessionId: string, sessionToken: string, targe
     await requeuePartner(ended.partnerId);
   }
 
-  await getSupabase().from('connection_logs').insert({ session_id: sessionId, event: 'next', details: {} });
+  await getSupabase().from('connection_logs').insert({ session_id: sessionId, event_type: 'next', details: {} });
   return joinQueue(sessionId, sessionToken);
 }
 

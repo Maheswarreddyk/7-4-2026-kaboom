@@ -48,17 +48,7 @@ app.use('*', async (c, next) => {
   await next();
 });
 
-app.get('/api/debug-env', async (c) => {
-  const keys = c.env ? Object.keys(c.env) : [];
-  try {
-    const { getSupabase } = await import('./database/client.js');
-    const supabase = getSupabase();
-    const { data, error, status, statusText } = await supabase.from('waiting_queue').select('id').limit(1);
-    return c.json({ keys, dbData: data, dbError: error, status, statusText });
-  } catch (err: any) {
-    return c.json({ keys, catchError: err.message, stack: err.stack });
-  }
-});
+
 
 
 app.onError((err, c) => {

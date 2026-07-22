@@ -16,6 +16,7 @@ import { validateSession } from '../services/matchService.js';
 import { requireBackendReady } from '../middleware/readiness.js';
 import { AppError } from '../middleware/errorHandler.js';
 import { runFullSessionCleanup } from '../services/sessionCleanup.js';
+import { config } from '../config/index.js';
 
 const router = new Hono();
 
@@ -33,12 +34,12 @@ router.route('/notifications', notificationRoutes);
 import adminNotificationRoutes from './admin-notifications.js';
 router.route('/admin/notifications', adminNotificationRoutes);
 
-router.post('/start-session', sessionController.startSession);
+router.post('/start-session', rateLimiter, sessionController.startSession);
 router.post('/end-session', sessionController.endSession);
 router.post('/restore-session', sessionController.restoreSession);
 
 // Immediate Session Cleanup Directive
-router.post('/session/cleanup', async (c: any) => {
+router.post('/session/cleanup', rateLimiter, async (c: any) => {
 
     let body: any = {};
     try {
@@ -80,8 +81,11 @@ router.post('/session/cleanup', async (c: any) => {
       return res.sendStatus(400); 
     }
 
-    const { sessionId, reason } = body;
-    if (!sessionId) return res.sendStatus(400);
+    const { sessionId, sessionToken, reason } = body;
+    if (!sessionId || !sessionToken) return res.sendStatus(400);
+    
+    const validSession = await validateSession(sessionId, sessionToken);
+    if (!validSession) return res.sendStatus(403);
     
     // Run cleanup — do not await non-critical parts for response
     await runFullSessionCleanup(sessionId, reason);
@@ -779,7 +783,7 @@ router.get('/analytics', async (c: any) => {
     const next = (err?: any) => { if(err) throw err; };
   try {
     const authHeader = req.headers.authorization;
-    const expectedToken = process.env.ADMIN_TOKEN;
+    const expectedToken = config.adminToken;
     if (!authHeader || !expectedToken || authHeader !== `Bearer ${expectedToken}`) {
       return res.status(401).json({ error: 'Unauthorized' });
     }

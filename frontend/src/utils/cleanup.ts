@@ -40,11 +40,12 @@ export function resetToCleanState(reason: string, keepFilters: boolean = false) 
 
 export async function cleanupSession(reason: string) {
   const sessionId = safeLocalStorage.getItem(STORAGE_KEYS.SESSION_ID);
+  const sessionToken = safeLocalStorage.getItem(STORAGE_KEYS.SESSION_TOKEN);
   
-  if (sessionId) {
+  if (sessionId && sessionToken) {
     const apiUrl = (import.meta.env.VITE_API_URL || '').replace(/\/api$/, '');
     // Tell the backend (fire and forget — page might be closing)
-    navigator.sendBeacon(`${apiUrl}/api/session/cleanup`, JSON.stringify({ sessionId, reason }));
+    navigator.sendBeacon(`${apiUrl}/api/session/cleanup`, JSON.stringify({ sessionId, sessionToken, reason }));
   }
   
   // Reset all local state
