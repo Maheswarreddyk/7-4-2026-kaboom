@@ -5,6 +5,8 @@ compatibility_flags = ["nodejs_compat"]
 
 [vars]
 NODE_ENV = "production"
+SUPABASE_URL = "https://khdchqwieoqljevdhpvc.supabase.co"
+SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtoZGNocXdpZW9xbGpldmRocHZjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ2MTcxODUsImV4cCI6MjEwMDE5MzE4NX0.GEyVVWlMZB-gbFV7QTVmbVCkMSJ3s507aHRYRiYP51Q"
 
 [triggers]
 crons = ["* * * * *"]

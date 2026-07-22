@@ -23,3 +23,17 @@ When starting a new task, read why the code exists, what has already been tried,
   2. The RPC return type changed to JSONB (`{success, match_id}`), but the backend API still tried to parse it as a flat UUID.
 - **Lessons:** Contract consistency is critical. An RPC signature change must trigger a full system audit.
 - **Future Opportunities:** Fully automated Digital Twin simulator that runs continuously.
+
+## Milestone 9: Authentication & Environment Parity (Zero Assumption Audit)
+- **Objective:** Finalize production certification and resolve architectural schema drift.
+- **Architecture:** Transitioned strictly to Supabase Anonymous Auth for the Realtime identity layer. Dropped legacy custom JWT issuance to eliminate conflict with Supabase's native auth model.
+- **Problems Found:** Production database schema drifted from SQL migrations (`match_mode_type` ENUM and `matches.status` column missing in `100_fresh_schema.sql`). Duplicate Realtime RLS policies caused evaluation overhead. Backend environment variables used `process.env` instead of Cloudflare's `env` bindings via Hono.
+- **Root Causes:** 
+  1. Quick fixes applied directly to the production database via Supabase UI weren't backported to the repository.
+  2. Legacy JWT mechanisms were partially ripped out but left artifacts in RLS policies.
+- **Lessons:** The SQL migration scripts in the repository MUST be the absolute source of truth. If a fix is made in production, it must immediately be reflected in the `.sql` files.
+- **Fixes Applied:** 
+  - Bound `visitor_sessions.id` directly to `auth.uid()` from the Anonymous JWT to seamlessly integrate with native Realtime RLS.
+  - Refactored `config/index.ts` to strictly use Hono `getEnv()`.
+  - Synced schema drift (`100_fresh_schema.sql`).
+  - Purged duplicate `"Authorize Match Channel"` policy.

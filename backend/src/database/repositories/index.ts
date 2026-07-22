@@ -23,13 +23,13 @@ export const sessionRepository = {
     platform?: string;
   }): Promise<VisitorSession> {
     const insertData: any = {
+      ...(data.authUserId ? { id: data.authUserId } : {}),
       session_token: data.sessionToken,
       country: data.country ?? null,
       browser: data.browser ?? null,
       device: data.device ?? null,
       platform: data.platform ?? null,
       status: 'READY',
-      supabase_user_id: data.authUserId ?? null,
     };
 
     const { data: session, error } = await getSupabase()

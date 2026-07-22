@@ -18,6 +18,9 @@ DROP TABLE IF EXISTS visitor_sessions CASCADE;
 
 -- 3. Core Tables
 
+DROP TYPE IF EXISTS match_mode_type CASCADE;
+CREATE TYPE match_mode_type AS ENUM ('RANDOM', 'SMART', 'EXACT');
+
 -- visitor_sessions
 CREATE TABLE visitor_sessions (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -39,7 +42,7 @@ CREATE TABLE visitor_sessions (
     campus VARCHAR(255),
     
     -- Matchmaking
-    match_mode VARCHAR(20) DEFAULT 'RANDOM',
+    match_mode match_mode_type DEFAULT 'RANDOM',
     match_attributes JSONB DEFAULT '{}'::jsonb,
     match_constraints JSONB DEFAULT '{}'::jsonb,
     last_partner UUID,
@@ -71,6 +74,7 @@ CREATE TABLE matches (
     match_score INTEGER,
     matched_reason TEXT,
     match_reason_metadata JSONB,
+    status VARCHAR(50) DEFAULT 'active' NOT NULL,
     user_a_ready BOOLEAN DEFAULT false,
     user_b_ready BOOLEAN DEFAULT false,
     negotiation_started BOOLEAN DEFAULT false,

@@ -22,19 +22,6 @@ ALTER TABLE reports ADD CONSTRAINT reports_reported_session_fkey FOREIGN KEY (re
 -- Ensure Realtime extension exists and realtime schema exists (they are internal to Supabase)
 -- NOTE: We apply RLS to realtime.messages to secure broadcast channels.
 
-DROP POLICY IF EXISTS "Authorize Match Channel" ON realtime.messages;
-CREATE POLICY "Authorize Match Channel"
-ON realtime.messages
-FOR INSERT 
-TO authenticated
-WITH CHECK (
-  (extension = 'broadcast' OR extension = 'presence')
-  AND topic LIKE 'match:%'
-  AND EXISTS (
-    SELECT 1 FROM public.matches 
-    WHERE id = CAST(split_part(topic, ':', 2) AS UUID)
-    AND (user_a = auth.uid() OR user_b = auth.uid())
-  )
-);
+-- Superseded by milestone4.sql
 
 COMMIT;
