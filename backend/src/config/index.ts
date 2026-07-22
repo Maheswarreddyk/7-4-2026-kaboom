@@ -36,29 +36,38 @@ export interface IceServer {
 }
 
 export function getIceServers(): IceServer[] {
-  return [
-    {
-      urls: "stun:stun.relay.metered.ca:80",
-    },
-    {
-      urls: "turn:global.relay.metered.ca:80",
-      username: "75ce0488e2b6dd463873fe19",
-      credential: "86h9uzIutQ27P3Mq",
-    },
-    {
-      urls: "turn:global.relay.metered.ca:80?transport=tcp",
-      username: "75ce0488e2b6dd463873fe19",
-      credential: "86h9uzIutQ27P3Mq",
-    },
-    {
-      urls: "turn:global.relay.metered.ca:443",
-      username: "75ce0488e2b6dd463873fe19",
-      credential: "86h9uzIutQ27P3Mq",
-    },
-    {
-      urls: "turns:global.relay.metered.ca:443?transport=tcp",
-      username: "75ce0488e2b6dd463873fe19",
-      credential: "86h9uzIutQ27P3Mq",
-    },
-  ];
+  const servers: IceServer[] = [];
+  
+  // Add STUN servers
+  for (const stun of config.stunServers) {
+    servers.push({ urls: stun });
+  }
+
+  // Add TURN server if configured
+  if (config.turnServer && config.turnUsername && config.turnPassword) {
+    const transportTcp = config.turnServer.includes('?') ? '&transport=tcp' : '?transport=tcp';
+    
+    // Add UDP and TCP variants
+    servers.push({
+      urls: config.turnServer,
+      username: config.turnUsername,
+      credential: config.turnPassword,
+    });
+    servers.push({
+      urls: `${config.turnServer}${transportTcp}`,
+      username: config.turnUsername,
+      credential: config.turnPassword,
+    });
+  } else {
+    // Fallback hardcoded if no env variables, since user previously provided these
+    servers.push(
+      { urls: "stun:stun.relay.metered.ca:80" },
+      { urls: "turn:global.relay.metered.ca:80", username: "75ce0488e2b6dd463873fe19", credential: "86h9uzIutQ27P3Mq" },
+      { urls: "turn:global.relay.metered.ca:80?transport=tcp", username: "75ce0488e2b6dd463873fe19", credential: "86h9uzIutQ27P3Mq" },
+      { urls: "turn:global.relay.metered.ca:443", username: "75ce0488e2b6dd463873fe19", credential: "86h9uzIutQ27P3Mq" },
+      { urls: "turns:global.relay.metered.ca:443?transport=tcp", username: "75ce0488e2b6dd463873fe19", credential: "86h9uzIutQ27P3Mq" }
+    );
+  }
+
+  return servers;
 }

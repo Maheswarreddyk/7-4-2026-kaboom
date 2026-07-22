@@ -270,7 +270,8 @@ router.post('/preferences', async (c: any) => {
     };
     const next = (err?: any) => { if(err) throw err; };
   try {
-    const { sessionId, sessionToken, preferences } = req.body;
+    let { sessionId, sessionToken, preferences } = req.body;
+    preferences = preferences || {};
     const session = await validateSession(sessionId, sessionToken);
     if (!session) return res.status(401).json({ error: 'Invalid or expired session' });
 
