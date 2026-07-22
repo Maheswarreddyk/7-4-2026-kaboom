@@ -29,10 +29,8 @@ export const sessionRepository = {
       device: data.device ?? null,
       platform: data.platform ?? null,
       status: 'READY',
+      supabase_user_id: data.authUserId ?? null,
     };
-    if (data.authUserId) {
-      insertData.id = data.authUserId;
-    }
 
     const { data: session, error } = await getSupabase()
       .from('visitor_sessions')

@@ -1,4 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
+
 import {
   connectionLogRepository,
   feedbackRepository,
@@ -15,6 +16,9 @@ import type {
   StatsResponse,
   VisitorSession,
 } from '../types/index.js';
+import { getEnv } from '../context.js';
+
+
 
 export const sessionService = {
   async startSession(data: StartSessionRequest): Promise<VisitorSession> {

@@ -99,5 +99,26 @@ When a bug is discovered, do not stop at the first error. Continue until the Roo
 ## Code Quality
 Every change should leave the codebase in a better state than before. Avoid duplicate logic, hidden assumptions, tight coupling, magic values, and unclear naming.
 
+## Architectural Change Protocol
+Whenever a change affects any of these:
+- Authentication
+- Database schema
+- RPC contracts
+- Realtime
+- WebRTC
+- Session lifecycle
+- API contracts
+
+Gravity must produce before coding:
+1. ADR
+2. Sequence diagram
+3. State transition impact
+4. Failure matrix
+5. Rollback plan
+6. Verification plan
+7. Repository-wide dependency audit
+
+Only after those are approved may implementation begin. That single rule prevents many classes of regression.
+
 ## Final Principle
 Every decision should make Kaboom easier to understand, easier to maintain, and more reliable than it was before. If a change solves today's problem but increases tomorrow's complexity, redesign it before implementing it.

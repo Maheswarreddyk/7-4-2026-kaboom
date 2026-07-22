@@ -16,3 +16,4 @@ export function getSupabaseClient(): SupabaseClient {
   }
   return client;
 }
+
