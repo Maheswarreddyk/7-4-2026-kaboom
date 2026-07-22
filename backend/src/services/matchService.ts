@@ -98,7 +98,8 @@ export async function joinQueue(sessionId: string, sessionToken: string, matchMo
   });
 
   // Call the new highly-concurrent PL/pgSQL RPC
-  const { data: matchId, error: rpcErr } = await supabase.rpc('execute_matchmaking', { p_session_id: sessionId });
+  const { data: rpcResult, error: rpcErr } = await supabase.rpc('execute_matchmaking', { p_session_id: sessionId });
+  const matchId = rpcResult?.success ? rpcResult.match_id : null;
   
   if (matchId) {
     const { data: match } = await supabase.from('matches').select('*').eq('id', matchId).single();
@@ -260,7 +261,9 @@ async function requeuePartner(partnerId: string): Promise<void> {
   await supabase.from('visitor_sessions').update({ status: 'SEARCHING', queue_entered_at: now }).eq('id', partnerId);
   await supabase.from('waiting_queue').upsert({ session_id: partnerId, status: 'waiting', joined_at: now, last_seen: now });
   
-  const { data: matchId } = await supabase.rpc('execute_matchmaking', { p_session_id: partnerId });
+  const { data: rpcResult } = await supabase.rpc('execute_matchmaking', { p_session_id: partnerId });
+  const matchId = rpcResult?.success ? rpcResult.match_id : null;
+  
   if (matchId) {
     const { data: match } = await supabase.from('matches').select('*').eq('id', matchId).single();
     if (match) {
