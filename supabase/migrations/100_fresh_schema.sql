@@ -25,6 +25,9 @@ CREATE TYPE match_mode_type AS ENUM ('RANDOM', 'SMART', 'EXACT');
 CREATE TABLE visitor_sessions (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     session_token UUID NOT NULL DEFAULT uuid_generate_v4(),
+    browser VARCHAR(255),
+    device VARCHAR(255),
+    platform VARCHAR(255),
     
     -- Profile
     display_name VARCHAR(100),
