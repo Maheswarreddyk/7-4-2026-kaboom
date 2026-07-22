@@ -79,6 +79,7 @@ export interface ConnectionLog {
 }
 
 export interface StartSessionRequest {
+  authUserId?: string;
   country?: string;
   browser?: string;
   device?: string;

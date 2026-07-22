@@ -579,14 +579,25 @@ export function ChatPage() {
 
   const getLocalContainerStyle = useCallback((): React.CSSProperties => {
     if (isSearching) {
-      // Searching state style: floating preview at top-left
-      return {
-        width: '100px',
-        height: '100px',
-        left: '16px',
-        top: '76px', // under header
-        zIndex: 10,
-      };
+      if (isLandscape) {
+        return {
+          width: '50%',
+          height: '100%',
+          left: 0,
+          top: 0,
+          zIndex: 10,
+          borderRadius: 0,
+        };
+      } else {
+        return {
+          width: '100%',
+          height: '50%',
+          left: 0,
+          top: 0,
+          zIndex: 10,
+          borderRadius: 0,
+        };
+      }
     }
 
     if (videoLayout === 'split') {
@@ -1301,29 +1312,37 @@ export function ChatPage() {
       {/* ── QUEUE LAYER (QueueCard Controls Dashboard) ── */}
       {isSearching && (
         <div 
-          className="pointer-events-auto"
-          style={getStyle('queue-card')}
-          data-layout-id="queue-card"
+          className="pointer-events-auto absolute"
+          style={isLandscape ? {
+            width: '50%', height: '100%', left: '50%', top: 0, zIndex: 10
+          } : {
+            width: '100%', height: '50%', left: 0, top: '50%', zIndex: 10
+          }}
+          data-layout-id="queue-card-split"
         >
-          {showMatchRadar && (
-            <MatchRadarPrompt
-              onDismiss={() => setShowMatchRadar(false)}
-              sessionId={session?.sessionId}
-            />
-          )}
-          <QueueCard
-            elapsed={searchElapsed}
-            matchMode={activeMatchMode}
-            isQueuePaused={isQueuePaused}
-            onOpenPreferences={() => {
-              setShowPreferenceModal(true);
-            }}
-            onResumeQueue={resumeQueue}
-            onPauseQueue={pauseQueue}
-            onLeaveQueue={handleLeave}
-            stats={queueStats}
-            onDisableStrict={handleDisableStrict}
-          />
+          <div className="w-full h-full flex flex-col items-center justify-center p-4 md:p-8">
+            <div className="w-full max-w-md flex flex-col gap-4">
+              {showMatchRadar && (
+                <MatchRadarPrompt
+                  onDismiss={() => setShowMatchRadar(false)}
+                  sessionId={session?.sessionId}
+                />
+              )}
+              <QueueCard
+                elapsed={searchElapsed}
+                matchMode={activeMatchMode}
+                isQueuePaused={isQueuePaused}
+                onOpenPreferences={() => {
+                  setShowPreferenceModal(true);
+                }}
+                onResumeQueue={resumeQueue}
+                onPauseQueue={pauseQueue}
+                onLeaveQueue={handleLeave}
+                stats={queueStats}
+                onDisableStrict={handleDisableStrict}
+              />
+            </div>
+          </div>
         </div>
       )}
 

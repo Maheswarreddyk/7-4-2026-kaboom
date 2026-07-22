@@ -75,6 +75,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       apiService.endSession(storedId, storedToken).catch(() => {});
     }
     setSession(null);
+    
+    // Clear Supabase auth state so next startSession creates a fresh anonymous user
+    import('../services/supabase.js').then(({ getSupabaseClient }) => {
+      getSupabaseClient().auth.signOut().catch(() => {});
+    });
 
     // Clear session and matching state, but preserve user filters 
     resetToCleanState('COLD_START', true);

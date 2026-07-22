@@ -5,21 +5,15 @@ var __getOwnPropNames = Object.getOwnPropertyNames;
 var __getProtoOf = Object.getPrototypeOf;
 var __hasOwnProp = Object.prototype.hasOwnProperty;
 var __name = (target, value) => __defProp(target, "name", { value, configurable: true });
-var __require = /* @__PURE__ */ ((x) => typeof require !== "undefined" ? require : typeof Proxy !== "undefined" ? new Proxy(x, {
-  get: (a, b) => (typeof require !== "undefined" ? require : a)[b]
-}) : x)(function(x) {
-  if (typeof require !== "undefined") return require.apply(this, arguments);
-  throw Error('Dynamic require of "' + x + '" is not supported');
-});
-var __esm = (fn, res2, err) => function __init() {
+var __esm = (fn, res, err) => function __init() {
   if (err) throw err[0];
   try {
-    return fn && (res2 = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res2;
+    return fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res;
   } catch (e) {
     throw err = [e], e;
   }
 };
-var __commonJS = (cb, mod) => function __require2() {
+var __commonJS = (cb, mod) => function __require() {
   try {
     return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
   } catch (e) {
@@ -74,13 +68,6 @@ function notImplemented(name) {
   return Object.assign(fn, { __unenv__: true });
 }
 // @__NO_SIDE_EFFECTS__
-function notImplementedAsync(name) {
-  const fn = /* @__PURE__ */ notImplemented(name);
-  fn.__promisify__ = () => /* @__PURE__ */ notImplemented(name + ".__promisify__");
-  fn.native = fn;
-  return fn;
-}
-// @__NO_SIDE_EFFECTS__
 function notImplementedClass(name) {
   return class {
     __unenv__ = true;
@@ -98,7 +85,6 @@ var init_utils = __esm({
     __name(rawHeaders, "rawHeaders");
     __name(createNotImplementedError, "createNotImplementedError");
     __name(notImplemented, "notImplemented");
-    __name(notImplementedAsync, "notImplementedAsync");
     __name(notImplementedClass, "notImplementedClass");
   }
 });
@@ -1170,6402 +1156,6 @@ var init_modules_watch_stub = __esm({
   }
 });
 
-// node-built-in-modules:events
-import libDefault from "events";
-var require_events = __commonJS({
-  "node-built-in-modules:events"(exports, module) {
-    init_modules_watch_stub();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_process();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_console();
-    init_performance2();
-    module.exports = libDefault;
-  }
-});
-
-// ../node_modules/postgres-array/index.js
-var require_postgres_array = __commonJS({
-  "../node_modules/postgres-array/index.js"(exports) {
-    "use strict";
-    init_modules_watch_stub();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_process();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_console();
-    init_performance2();
-    exports.parse = function(source, transform) {
-      return new ArrayParser(source, transform).parse();
-    };
-    var ArrayParser = class _ArrayParser {
-      static {
-        __name(this, "ArrayParser");
-      }
-      constructor(source, transform) {
-        this.source = source;
-        this.transform = transform || identity;
-        this.position = 0;
-        this.entries = [];
-        this.recorded = [];
-        this.dimension = 0;
-      }
-      isEof() {
-        return this.position >= this.source.length;
-      }
-      nextCharacter() {
-        var character = this.source[this.position++];
-        if (character === "\\") {
-          return {
-            value: this.source[this.position++],
-            escaped: true
-          };
-        }
-        return {
-          value: character,
-          escaped: false
-        };
-      }
-      record(character) {
-        this.recorded.push(character);
-      }
-      newEntry(includeEmpty) {
-        var entry;
-        if (this.recorded.length > 0 || includeEmpty) {
-          entry = this.recorded.join("");
-          if (entry === "NULL" && !includeEmpty) {
-            entry = null;
-          }
-          if (entry !== null) entry = this.transform(entry);
-          this.entries.push(entry);
-          this.recorded = [];
-        }
-      }
-      consumeDimensions() {
-        if (this.source[0] === "[") {
-          while (!this.isEof()) {
-            var char = this.nextCharacter();
-            if (char.value === "=") break;
-          }
-        }
-      }
-      parse(nested) {
-        var character, parser, quote2;
-        this.consumeDimensions();
-        while (!this.isEof()) {
-          character = this.nextCharacter();
-          if (character.value === "{" && !quote2) {
-            this.dimension++;
-            if (this.dimension > 1) {
-              parser = new _ArrayParser(this.source.substr(this.position - 1), this.transform);
-              this.entries.push(parser.parse(true));
-              this.position += parser.position - 2;
-            }
-          } else if (character.value === "}" && !quote2) {
-            this.dimension--;
-            if (!this.dimension) {
-              this.newEntry();
-              if (nested) return this.entries;
-            }
-          } else if (character.value === '"' && !character.escaped) {
-            if (quote2) this.newEntry(true);
-            quote2 = !quote2;
-          } else if (character.value === "," && !quote2) {
-            this.newEntry();
-          } else {
-            this.record(character.value);
-          }
-        }
-        if (this.dimension !== 0) {
-          throw new Error("array dimension not balanced");
-        }
-        return this.entries;
-      }
-    };
-    function identity(value) {
-      return value;
-    }
-    __name(identity, "identity");
-  }
-});
-
-// ../node_modules/pg-types/lib/arrayParser.js
-var require_arrayParser = __commonJS({
-  "../node_modules/pg-types/lib/arrayParser.js"(exports, module) {
-    init_modules_watch_stub();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_process();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_console();
-    init_performance2();
-    var array = require_postgres_array();
-    module.exports = {
-      create: /* @__PURE__ */ __name(function(source, transform) {
-        return {
-          parse: /* @__PURE__ */ __name(function() {
-            return array.parse(source, transform);
-          }, "parse")
-        };
-      }, "create")
-    };
-  }
-});
-
-// ../node_modules/postgres-date/index.js
-var require_postgres_date = __commonJS({
-  "../node_modules/postgres-date/index.js"(exports, module) {
-    "use strict";
-    init_modules_watch_stub();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_process();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_console();
-    init_performance2();
-    var DATE_TIME = /(\d{1,})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2})(\.\d{1,})?.*?( BC)?$/;
-    var DATE = /^(\d{1,})-(\d{2})-(\d{2})( BC)?$/;
-    var TIME_ZONE = /([Z+-])(\d{2})?:?(\d{2})?:?(\d{2})?/;
-    var INFINITY = /^-?infinity$/;
-    module.exports = /* @__PURE__ */ __name(function parseDate(isoDate) {
-      if (INFINITY.test(isoDate)) {
-        return Number(isoDate.replace("i", "I"));
-      }
-      var matches = DATE_TIME.exec(isoDate);
-      if (!matches) {
-        return getDate(isoDate) || null;
-      }
-      var isBC = !!matches[8];
-      var year = parseInt(matches[1], 10);
-      if (isBC) {
-        year = bcYearToNegativeYear(year);
-      }
-      var month = parseInt(matches[2], 10) - 1;
-      var day = matches[3];
-      var hour = parseInt(matches[4], 10);
-      var minute = parseInt(matches[5], 10);
-      var second = parseInt(matches[6], 10);
-      var ms = matches[7];
-      ms = ms ? 1e3 * parseFloat(ms) : 0;
-      var date;
-      var offset = timeZoneOffset(isoDate);
-      if (offset != null) {
-        date = new Date(Date.UTC(year, month, day, hour, minute, second, ms));
-        if (is0To99(year)) {
-          date.setUTCFullYear(year);
-        }
-        if (offset !== 0) {
-          date.setTime(date.getTime() - offset);
-        }
-      } else {
-        date = new Date(year, month, day, hour, minute, second, ms);
-        if (is0To99(year)) {
-          date.setFullYear(year);
-        }
-      }
-      return date;
-    }, "parseDate");
-    function getDate(isoDate) {
-      var matches = DATE.exec(isoDate);
-      if (!matches) {
-        return;
-      }
-      var year = parseInt(matches[1], 10);
-      var isBC = !!matches[4];
-      if (isBC) {
-        year = bcYearToNegativeYear(year);
-      }
-      var month = parseInt(matches[2], 10) - 1;
-      var day = matches[3];
-      var date = new Date(year, month, day);
-      if (is0To99(year)) {
-        date.setFullYear(year);
-      }
-      return date;
-    }
-    __name(getDate, "getDate");
-    function timeZoneOffset(isoDate) {
-      if (isoDate.endsWith("+00")) {
-        return 0;
-      }
-      var zone = TIME_ZONE.exec(isoDate.split(" ")[1]);
-      if (!zone) return;
-      var type = zone[1];
-      if (type === "Z") {
-        return 0;
-      }
-      var sign = type === "-" ? -1 : 1;
-      var offset = parseInt(zone[2], 10) * 3600 + parseInt(zone[3] || 0, 10) * 60 + parseInt(zone[4] || 0, 10);
-      return offset * sign * 1e3;
-    }
-    __name(timeZoneOffset, "timeZoneOffset");
-    function bcYearToNegativeYear(year) {
-      return -(year - 1);
-    }
-    __name(bcYearToNegativeYear, "bcYearToNegativeYear");
-    function is0To99(num) {
-      return num >= 0 && num < 100;
-    }
-    __name(is0To99, "is0To99");
-  }
-});
-
-// ../node_modules/xtend/mutable.js
-var require_mutable = __commonJS({
-  "../node_modules/xtend/mutable.js"(exports, module) {
-    init_modules_watch_stub();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_process();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_console();
-    init_performance2();
-    module.exports = extend;
-    var hasOwnProperty = Object.prototype.hasOwnProperty;
-    function extend(target) {
-      for (var i = 1; i < arguments.length; i++) {
-        var source = arguments[i];
-        for (var key in source) {
-          if (hasOwnProperty.call(source, key)) {
-            target[key] = source[key];
-          }
-        }
-      }
-      return target;
-    }
-    __name(extend, "extend");
-  }
-});
-
-// ../node_modules/postgres-interval/index.js
-var require_postgres_interval = __commonJS({
-  "../node_modules/postgres-interval/index.js"(exports, module) {
-    "use strict";
-    init_modules_watch_stub();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_process();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_console();
-    init_performance2();
-    var extend = require_mutable();
-    module.exports = PostgresInterval;
-    function PostgresInterval(raw2) {
-      if (!(this instanceof PostgresInterval)) {
-        return new PostgresInterval(raw2);
-      }
-      extend(this, parse(raw2));
-    }
-    __name(PostgresInterval, "PostgresInterval");
-    var properties = ["seconds", "minutes", "hours", "days", "months", "years"];
-    PostgresInterval.prototype.toPostgres = function() {
-      var filtered = properties.filter(this.hasOwnProperty, this);
-      if (this.milliseconds && filtered.indexOf("seconds") < 0) {
-        filtered.push("seconds");
-      }
-      if (filtered.length === 0) return "0";
-      return filtered.map(function(property) {
-        var value = this[property] || 0;
-        if (property === "seconds" && this.milliseconds) {
-          value = (value + this.milliseconds / 1e3).toFixed(6).replace(/\.?0+$/, "");
-        }
-        return value + " " + property;
-      }, this).join(" ");
-    };
-    var propertiesISOEquivalent = {
-      years: "Y",
-      months: "M",
-      days: "D",
-      hours: "H",
-      minutes: "M",
-      seconds: "S"
-    };
-    var dateProperties = ["years", "months", "days"];
-    var timeProperties = ["hours", "minutes", "seconds"];
-    PostgresInterval.prototype.toISOString = PostgresInterval.prototype.toISO = function() {
-      var datePart = dateProperties.map(buildProperty, this).join("");
-      var timePart = timeProperties.map(buildProperty, this).join("");
-      return "P" + datePart + "T" + timePart;
-      function buildProperty(property) {
-        var value = this[property] || 0;
-        if (property === "seconds" && this.milliseconds) {
-          value = (value + this.milliseconds / 1e3).toFixed(6).replace(/0+$/, "");
-        }
-        return value + propertiesISOEquivalent[property];
-      }
-      __name(buildProperty, "buildProperty");
-    };
-    var NUMBER = "([+-]?\\d+)";
-    var YEAR = NUMBER + "\\s+years?";
-    var MONTH = NUMBER + "\\s+mons?";
-    var DAY = NUMBER + "\\s+days?";
-    var TIME = "([+-])?([\\d]*):(\\d\\d):(\\d\\d)\\.?(\\d{1,6})?";
-    var INTERVAL = new RegExp([YEAR, MONTH, DAY, TIME].map(function(regexString) {
-      return "(" + regexString + ")?";
-    }).join("\\s*"));
-    var positions = {
-      years: 2,
-      months: 4,
-      days: 6,
-      hours: 9,
-      minutes: 10,
-      seconds: 11,
-      milliseconds: 12
-    };
-    var negatives = ["hours", "minutes", "seconds", "milliseconds"];
-    function parseMilliseconds(fraction) {
-      var microseconds = fraction + "000000".slice(fraction.length);
-      return parseInt(microseconds, 10) / 1e3;
-    }
-    __name(parseMilliseconds, "parseMilliseconds");
-    function parse(interval) {
-      if (!interval) return {};
-      var matches = INTERVAL.exec(interval);
-      var isNegative = matches[8] === "-";
-      return Object.keys(positions).reduce(function(parsed, property) {
-        var position = positions[property];
-        var value = matches[position];
-        if (!value) return parsed;
-        value = property === "milliseconds" ? parseMilliseconds(value) : parseInt(value, 10);
-        if (!value) return parsed;
-        if (isNegative && ~negatives.indexOf(property)) {
-          value *= -1;
-        }
-        parsed[property] = value;
-        return parsed;
-      }, {});
-    }
-    __name(parse, "parse");
-  }
-});
-
-// ../node_modules/postgres-bytea/index.js
-var require_postgres_bytea = __commonJS({
-  "../node_modules/postgres-bytea/index.js"(exports, module) {
-    "use strict";
-    init_modules_watch_stub();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_process();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_console();
-    init_performance2();
-    var bufferFrom = Buffer.from || Buffer;
-    module.exports = /* @__PURE__ */ __name(function parseBytea(input) {
-      if (/^\\x/.test(input)) {
-        return bufferFrom(input.substr(2), "hex");
-      }
-      var output = "";
-      var i = 0;
-      while (i < input.length) {
-        if (input[i] !== "\\") {
-          output += input[i];
-          ++i;
-        } else {
-          if (/[0-7]{3}/.test(input.substr(i + 1, 3))) {
-            output += String.fromCharCode(parseInt(input.substr(i + 1, 3), 8));
-            i += 4;
-          } else {
-            var backslashes = 1;
-            while (i + backslashes < input.length && input[i + backslashes] === "\\") {
-              backslashes++;
-            }
-            for (var k = 0; k < Math.floor(backslashes / 2); ++k) {
-              output += "\\";
-            }
-            i += Math.floor(backslashes / 2) * 2;
-          }
-        }
-      }
-      return bufferFrom(output, "binary");
-    }, "parseBytea");
-  }
-});
-
-// ../node_modules/pg-types/lib/textParsers.js
-var require_textParsers = __commonJS({
-  "../node_modules/pg-types/lib/textParsers.js"(exports, module) {
-    init_modules_watch_stub();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_process();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_console();
-    init_performance2();
-    var array = require_postgres_array();
-    var arrayParser = require_arrayParser();
-    var parseDate = require_postgres_date();
-    var parseInterval = require_postgres_interval();
-    var parseByteA = require_postgres_bytea();
-    function allowNull(fn) {
-      return /* @__PURE__ */ __name(function nullAllowed(value) {
-        if (value === null) return value;
-        return fn(value);
-      }, "nullAllowed");
-    }
-    __name(allowNull, "allowNull");
-    function parseBool(value) {
-      if (value === null) return value;
-      return value === "TRUE" || value === "t" || value === "true" || value === "y" || value === "yes" || value === "on" || value === "1";
-    }
-    __name(parseBool, "parseBool");
-    function parseBoolArray(value) {
-      if (!value) return null;
-      return array.parse(value, parseBool);
-    }
-    __name(parseBoolArray, "parseBoolArray");
-    function parseBaseTenInt(string) {
-      return parseInt(string, 10);
-    }
-    __name(parseBaseTenInt, "parseBaseTenInt");
-    function parseIntegerArray(value) {
-      if (!value) return null;
-      return array.parse(value, allowNull(parseBaseTenInt));
-    }
-    __name(parseIntegerArray, "parseIntegerArray");
-    function parseBigIntegerArray(value) {
-      if (!value) return null;
-      return array.parse(value, allowNull(function(entry) {
-        return parseBigInteger(entry).trim();
-      }));
-    }
-    __name(parseBigIntegerArray, "parseBigIntegerArray");
-    var parsePointArray = /* @__PURE__ */ __name(function(value) {
-      if (!value) {
-        return null;
-      }
-      var p = arrayParser.create(value, function(entry) {
-        if (entry !== null) {
-          entry = parsePoint(entry);
-        }
-        return entry;
-      });
-      return p.parse();
-    }, "parsePointArray");
-    var parseFloatArray = /* @__PURE__ */ __name(function(value) {
-      if (!value) {
-        return null;
-      }
-      var p = arrayParser.create(value, function(entry) {
-        if (entry !== null) {
-          entry = parseFloat(entry);
-        }
-        return entry;
-      });
-      return p.parse();
-    }, "parseFloatArray");
-    var parseStringArray = /* @__PURE__ */ __name(function(value) {
-      if (!value) {
-        return null;
-      }
-      var p = arrayParser.create(value);
-      return p.parse();
-    }, "parseStringArray");
-    var parseDateArray = /* @__PURE__ */ __name(function(value) {
-      if (!value) {
-        return null;
-      }
-      var p = arrayParser.create(value, function(entry) {
-        if (entry !== null) {
-          entry = parseDate(entry);
-        }
-        return entry;
-      });
-      return p.parse();
-    }, "parseDateArray");
-    var parseIntervalArray = /* @__PURE__ */ __name(function(value) {
-      if (!value) {
-        return null;
-      }
-      var p = arrayParser.create(value, function(entry) {
-        if (entry !== null) {
-          entry = parseInterval(entry);
-        }
-        return entry;
-      });
-      return p.parse();
-    }, "parseIntervalArray");
-    var parseByteAArray = /* @__PURE__ */ __name(function(value) {
-      if (!value) {
-        return null;
-      }
-      return array.parse(value, allowNull(parseByteA));
-    }, "parseByteAArray");
-    var parseInteger = /* @__PURE__ */ __name(function(value) {
-      return parseInt(value, 10);
-    }, "parseInteger");
-    var parseBigInteger = /* @__PURE__ */ __name(function(value) {
-      var valStr = String(value);
-      if (/^\d+$/.test(valStr)) {
-        return valStr;
-      }
-      return value;
-    }, "parseBigInteger");
-    var parseJsonArray = /* @__PURE__ */ __name(function(value) {
-      if (!value) {
-        return null;
-      }
-      return array.parse(value, allowNull(JSON.parse));
-    }, "parseJsonArray");
-    var parsePoint = /* @__PURE__ */ __name(function(value) {
-      if (value[0] !== "(") {
-        return null;
-      }
-      value = value.substring(1, value.length - 1).split(",");
-      return {
-        x: parseFloat(value[0]),
-        y: parseFloat(value[1])
-      };
-    }, "parsePoint");
-    var parseCircle = /* @__PURE__ */ __name(function(value) {
-      if (value[0] !== "<" && value[1] !== "(") {
-        return null;
-      }
-      var point = "(";
-      var radius = "";
-      var pointParsed = false;
-      for (var i = 2; i < value.length - 1; i++) {
-        if (!pointParsed) {
-          point += value[i];
-        }
-        if (value[i] === ")") {
-          pointParsed = true;
-          continue;
-        } else if (!pointParsed) {
-          continue;
-        }
-        if (value[i] === ",") {
-          continue;
-        }
-        radius += value[i];
-      }
-      var result = parsePoint(point);
-      result.radius = parseFloat(radius);
-      return result;
-    }, "parseCircle");
-    var init = /* @__PURE__ */ __name(function(register) {
-      register(20, parseBigInteger);
-      register(21, parseInteger);
-      register(23, parseInteger);
-      register(26, parseInteger);
-      register(700, parseFloat);
-      register(701, parseFloat);
-      register(16, parseBool);
-      register(1082, parseDate);
-      register(1114, parseDate);
-      register(1184, parseDate);
-      register(600, parsePoint);
-      register(651, parseStringArray);
-      register(718, parseCircle);
-      register(1e3, parseBoolArray);
-      register(1001, parseByteAArray);
-      register(1005, parseIntegerArray);
-      register(1007, parseIntegerArray);
-      register(1028, parseIntegerArray);
-      register(1016, parseBigIntegerArray);
-      register(1017, parsePointArray);
-      register(1021, parseFloatArray);
-      register(1022, parseFloatArray);
-      register(1231, parseFloatArray);
-      register(1014, parseStringArray);
-      register(1015, parseStringArray);
-      register(1008, parseStringArray);
-      register(1009, parseStringArray);
-      register(1040, parseStringArray);
-      register(1041, parseStringArray);
-      register(1115, parseDateArray);
-      register(1182, parseDateArray);
-      register(1185, parseDateArray);
-      register(1186, parseInterval);
-      register(1187, parseIntervalArray);
-      register(17, parseByteA);
-      register(114, JSON.parse.bind(JSON));
-      register(3802, JSON.parse.bind(JSON));
-      register(199, parseJsonArray);
-      register(3807, parseJsonArray);
-      register(3907, parseStringArray);
-      register(2951, parseStringArray);
-      register(791, parseStringArray);
-      register(1183, parseStringArray);
-      register(1270, parseStringArray);
-    }, "init");
-    module.exports = {
-      init
-    };
-  }
-});
-
-// ../node_modules/pg-int8/index.js
-var require_pg_int8 = __commonJS({
-  "../node_modules/pg-int8/index.js"(exports, module) {
-    "use strict";
-    init_modules_watch_stub();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_process();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_console();
-    init_performance2();
-    var BASE = 1e6;
-    function readInt8(buffer) {
-      var high = buffer.readInt32BE(0);
-      var low = buffer.readUInt32BE(4);
-      var sign = "";
-      if (high < 0) {
-        high = ~high + (low === 0);
-        low = ~low + 1 >>> 0;
-        sign = "-";
-      }
-      var result = "";
-      var carry;
-      var t;
-      var digits;
-      var pad;
-      var l;
-      var i;
-      {
-        carry = high % BASE;
-        high = high / BASE >>> 0;
-        t = 4294967296 * carry + low;
-        low = t / BASE >>> 0;
-        digits = "" + (t - BASE * low);
-        if (low === 0 && high === 0) {
-          return sign + digits + result;
-        }
-        pad = "";
-        l = 6 - digits.length;
-        for (i = 0; i < l; i++) {
-          pad += "0";
-        }
-        result = pad + digits + result;
-      }
-      {
-        carry = high % BASE;
-        high = high / BASE >>> 0;
-        t = 4294967296 * carry + low;
-        low = t / BASE >>> 0;
-        digits = "" + (t - BASE * low);
-        if (low === 0 && high === 0) {
-          return sign + digits + result;
-        }
-        pad = "";
-        l = 6 - digits.length;
-        for (i = 0; i < l; i++) {
-          pad += "0";
-        }
-        result = pad + digits + result;
-      }
-      {
-        carry = high % BASE;
-        high = high / BASE >>> 0;
-        t = 4294967296 * carry + low;
-        low = t / BASE >>> 0;
-        digits = "" + (t - BASE * low);
-        if (low === 0 && high === 0) {
-          return sign + digits + result;
-        }
-        pad = "";
-        l = 6 - digits.length;
-        for (i = 0; i < l; i++) {
-          pad += "0";
-        }
-        result = pad + digits + result;
-      }
-      {
-        carry = high % BASE;
-        t = 4294967296 * carry + low;
-        digits = "" + t % BASE;
-        return sign + digits + result;
-      }
-    }
-    __name(readInt8, "readInt8");
-    module.exports = readInt8;
-  }
-});
-
-// ../node_modules/pg-types/lib/binaryParsers.js
-var require_binaryParsers = __commonJS({
-  "../node_modules/pg-types/lib/binaryParsers.js"(exports, module) {
-    init_modules_watch_stub();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_process();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_console();
-    init_performance2();
-    var parseInt64 = require_pg_int8();
-    var parseBits = /* @__PURE__ */ __name(function(data, bits, offset, invert, callback) {
-      offset = offset || 0;
-      invert = invert || false;
-      callback = callback || function(lastValue, newValue, bits2) {
-        return lastValue * Math.pow(2, bits2) + newValue;
-      };
-      var offsetBytes = offset >> 3;
-      var inv = /* @__PURE__ */ __name(function(value) {
-        if (invert) {
-          return ~value & 255;
-        }
-        return value;
-      }, "inv");
-      var mask = 255;
-      var firstBits = 8 - offset % 8;
-      if (bits < firstBits) {
-        mask = 255 << 8 - bits & 255;
-        firstBits = bits;
-      }
-      if (offset) {
-        mask = mask >> offset % 8;
-      }
-      var result = 0;
-      if (offset % 8 + bits >= 8) {
-        result = callback(0, inv(data[offsetBytes]) & mask, firstBits);
-      }
-      var bytes = bits + offset >> 3;
-      for (var i = offsetBytes + 1; i < bytes; i++) {
-        result = callback(result, inv(data[i]), 8);
-      }
-      var lastBits = (bits + offset) % 8;
-      if (lastBits > 0) {
-        result = callback(result, inv(data[bytes]) >> 8 - lastBits, lastBits);
-      }
-      return result;
-    }, "parseBits");
-    var parseFloatFromBits = /* @__PURE__ */ __name(function(data, precisionBits, exponentBits) {
-      var bias = Math.pow(2, exponentBits - 1) - 1;
-      var sign = parseBits(data, 1);
-      var exponent = parseBits(data, exponentBits, 1);
-      if (exponent === 0) {
-        return 0;
-      }
-      var precisionBitsCounter = 1;
-      var parsePrecisionBits = /* @__PURE__ */ __name(function(lastValue, newValue, bits) {
-        if (lastValue === 0) {
-          lastValue = 1;
-        }
-        for (var i = 1; i <= bits; i++) {
-          precisionBitsCounter /= 2;
-          if ((newValue & 1 << bits - i) > 0) {
-            lastValue += precisionBitsCounter;
-          }
-        }
-        return lastValue;
-      }, "parsePrecisionBits");
-      var mantissa = parseBits(data, precisionBits, exponentBits + 1, false, parsePrecisionBits);
-      if (exponent == Math.pow(2, exponentBits + 1) - 1) {
-        if (mantissa === 0) {
-          return sign === 0 ? Infinity : -Infinity;
-        }
-        return NaN;
-      }
-      return (sign === 0 ? 1 : -1) * Math.pow(2, exponent - bias) * mantissa;
-    }, "parseFloatFromBits");
-    var parseInt16 = /* @__PURE__ */ __name(function(value) {
-      if (parseBits(value, 1) == 1) {
-        return -1 * (parseBits(value, 15, 1, true) + 1);
-      }
-      return parseBits(value, 15, 1);
-    }, "parseInt16");
-    var parseInt32 = /* @__PURE__ */ __name(function(value) {
-      if (parseBits(value, 1) == 1) {
-        return -1 * (parseBits(value, 31, 1, true) + 1);
-      }
-      return parseBits(value, 31, 1);
-    }, "parseInt32");
-    var parseFloat32 = /* @__PURE__ */ __name(function(value) {
-      return parseFloatFromBits(value, 23, 8);
-    }, "parseFloat32");
-    var parseFloat64 = /* @__PURE__ */ __name(function(value) {
-      return parseFloatFromBits(value, 52, 11);
-    }, "parseFloat64");
-    var parseNumeric = /* @__PURE__ */ __name(function(value) {
-      var sign = parseBits(value, 16, 32);
-      if (sign == 49152) {
-        return NaN;
-      }
-      var weight = Math.pow(1e4, parseBits(value, 16, 16));
-      var result = 0;
-      var digits = [];
-      var ndigits = parseBits(value, 16);
-      for (var i = 0; i < ndigits; i++) {
-        result += parseBits(value, 16, 64 + 16 * i) * weight;
-        weight /= 1e4;
-      }
-      var scale = Math.pow(10, parseBits(value, 16, 48));
-      return (sign === 0 ? 1 : -1) * Math.round(result * scale) / scale;
-    }, "parseNumeric");
-    var parseDate = /* @__PURE__ */ __name(function(isUTC, value) {
-      var sign = parseBits(value, 1);
-      var rawValue = parseBits(value, 63, 1);
-      var result = new Date((sign === 0 ? 1 : -1) * rawValue / 1e3 + 9466848e5);
-      if (!isUTC) {
-        result.setTime(result.getTime() + result.getTimezoneOffset() * 6e4);
-      }
-      result.usec = rawValue % 1e3;
-      result.getMicroSeconds = function() {
-        return this.usec;
-      };
-      result.setMicroSeconds = function(value2) {
-        this.usec = value2;
-      };
-      result.getUTCMicroSeconds = function() {
-        return this.usec;
-      };
-      return result;
-    }, "parseDate");
-    var parseArray = /* @__PURE__ */ __name(function(value) {
-      var dim = parseBits(value, 32);
-      var flags = parseBits(value, 32, 32);
-      var elementType = parseBits(value, 32, 64);
-      var offset = 96;
-      var dims = [];
-      for (var i = 0; i < dim; i++) {
-        dims[i] = parseBits(value, 32, offset);
-        offset += 32;
-        offset += 32;
-      }
-      var parseElement = /* @__PURE__ */ __name(function(elementType2) {
-        var length = parseBits(value, 32, offset);
-        offset += 32;
-        if (length == 4294967295) {
-          return null;
-        }
-        var result;
-        if (elementType2 == 23 || elementType2 == 20) {
-          result = parseBits(value, length * 8, offset);
-          offset += length * 8;
-          return result;
-        } else if (elementType2 == 25) {
-          result = value.toString(this.encoding, offset >> 3, (offset += length << 3) >> 3);
-          return result;
-        } else {
-          console.log("ERROR: ElementType not implemented: " + elementType2);
-        }
-      }, "parseElement");
-      var parse = /* @__PURE__ */ __name(function(dimension, elementType2) {
-        var array = [];
-        var i2;
-        if (dimension.length > 1) {
-          var count3 = dimension.shift();
-          for (i2 = 0; i2 < count3; i2++) {
-            array[i2] = parse(dimension, elementType2);
-          }
-          dimension.unshift(count3);
-        } else {
-          for (i2 = 0; i2 < dimension[0]; i2++) {
-            array[i2] = parseElement(elementType2);
-          }
-        }
-        return array;
-      }, "parse");
-      return parse(dims, elementType);
-    }, "parseArray");
-    var parseText = /* @__PURE__ */ __name(function(value) {
-      return value.toString("utf8");
-    }, "parseText");
-    var parseBool = /* @__PURE__ */ __name(function(value) {
-      if (value === null) return null;
-      return parseBits(value, 8) > 0;
-    }, "parseBool");
-    var init = /* @__PURE__ */ __name(function(register) {
-      register(20, parseInt64);
-      register(21, parseInt16);
-      register(23, parseInt32);
-      register(26, parseInt32);
-      register(1700, parseNumeric);
-      register(700, parseFloat32);
-      register(701, parseFloat64);
-      register(16, parseBool);
-      register(1114, parseDate.bind(null, false));
-      register(1184, parseDate.bind(null, true));
-      register(1e3, parseArray);
-      register(1007, parseArray);
-      register(1016, parseArray);
-      register(1008, parseArray);
-      register(1009, parseArray);
-      register(25, parseText);
-    }, "init");
-    module.exports = {
-      init
-    };
-  }
-});
-
-// ../node_modules/pg-types/lib/builtins.js
-var require_builtins = __commonJS({
-  "../node_modules/pg-types/lib/builtins.js"(exports, module) {
-    init_modules_watch_stub();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_process();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_console();
-    init_performance2();
-    module.exports = {
-      BOOL: 16,
-      BYTEA: 17,
-      CHAR: 18,
-      INT8: 20,
-      INT2: 21,
-      INT4: 23,
-      REGPROC: 24,
-      TEXT: 25,
-      OID: 26,
-      TID: 27,
-      XID: 28,
-      CID: 29,
-      JSON: 114,
-      XML: 142,
-      PG_NODE_TREE: 194,
-      SMGR: 210,
-      PATH: 602,
-      POLYGON: 604,
-      CIDR: 650,
-      FLOAT4: 700,
-      FLOAT8: 701,
-      ABSTIME: 702,
-      RELTIME: 703,
-      TINTERVAL: 704,
-      CIRCLE: 718,
-      MACADDR8: 774,
-      MONEY: 790,
-      MACADDR: 829,
-      INET: 869,
-      ACLITEM: 1033,
-      BPCHAR: 1042,
-      VARCHAR: 1043,
-      DATE: 1082,
-      TIME: 1083,
-      TIMESTAMP: 1114,
-      TIMESTAMPTZ: 1184,
-      INTERVAL: 1186,
-      TIMETZ: 1266,
-      BIT: 1560,
-      VARBIT: 1562,
-      NUMERIC: 1700,
-      REFCURSOR: 1790,
-      REGPROCEDURE: 2202,
-      REGOPER: 2203,
-      REGOPERATOR: 2204,
-      REGCLASS: 2205,
-      REGTYPE: 2206,
-      UUID: 2950,
-      TXID_SNAPSHOT: 2970,
-      PG_LSN: 3220,
-      PG_NDISTINCT: 3361,
-      PG_DEPENDENCIES: 3402,
-      TSVECTOR: 3614,
-      TSQUERY: 3615,
-      GTSVECTOR: 3642,
-      REGCONFIG: 3734,
-      REGDICTIONARY: 3769,
-      JSONB: 3802,
-      REGNAMESPACE: 4089,
-      REGROLE: 4096
-    };
-  }
-});
-
-// ../node_modules/pg-types/index.js
-var require_pg_types = __commonJS({
-  "../node_modules/pg-types/index.js"(exports) {
-    init_modules_watch_stub();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_process();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_console();
-    init_performance2();
-    var textParsers = require_textParsers();
-    var binaryParsers = require_binaryParsers();
-    var arrayParser = require_arrayParser();
-    var builtinTypes = require_builtins();
-    exports.getTypeParser = getTypeParser;
-    exports.setTypeParser = setTypeParser;
-    exports.arrayParser = arrayParser;
-    exports.builtins = builtinTypes;
-    var typeParsers = {
-      text: {},
-      binary: {}
-    };
-    function noParse(val) {
-      return String(val);
-    }
-    __name(noParse, "noParse");
-    function getTypeParser(oid, format) {
-      format = format || "text";
-      if (!typeParsers[format]) {
-        return noParse;
-      }
-      return typeParsers[format][oid] || noParse;
-    }
-    __name(getTypeParser, "getTypeParser");
-    function setTypeParser(oid, format, parseFn) {
-      if (typeof format == "function") {
-        parseFn = format;
-        format = "text";
-      }
-      typeParsers[format][oid] = parseFn;
-    }
-    __name(setTypeParser, "setTypeParser");
-    textParsers.init(function(oid, converter) {
-      typeParsers.text[oid] = converter;
-    });
-    binaryParsers.init(function(oid, converter) {
-      typeParsers.binary[oid] = converter;
-    });
-  }
-});
-
-// ../node_modules/pg/lib/defaults.js
-var require_defaults = __commonJS({
-  "../node_modules/pg/lib/defaults.js"(exports, module) {
-    "use strict";
-    init_modules_watch_stub();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_process();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_console();
-    init_performance2();
-    var user;
-    try {
-      user = process.platform === "win32" ? process.env.USERNAME : process.env.USER;
-    } catch {
-    }
-    module.exports = {
-      // database host. defaults to localhost
-      host: "localhost",
-      // database user's name
-      user,
-      // name of database to connect
-      database: void 0,
-      // database user's password
-      password: null,
-      // a Postgres connection string to be used instead of setting individual connection items
-      // NOTE:  Setting this value will cause it to override any other value (such as database or user) defined
-      // in the defaults object.
-      connectionString: void 0,
-      // database port
-      port: 5432,
-      // number of rows to return at a time from a prepared statement's
-      // portal. 0 will return all rows at once
-      rows: 0,
-      // binary result mode
-      binary: false,
-      // Connection pool options - see https://github.com/brianc/node-pg-pool
-      // number of connections to use in connection pool
-      // 0 will disable connection pooling
-      max: 10,
-      // max milliseconds a client can go unused before it is removed
-      // from the pool and destroyed
-      idleTimeoutMillis: 3e4,
-      client_encoding: "",
-      ssl: false,
-      // SSL negotiation style: 'postgres' (traditional SSLRequest) or 'direct'
-      sslnegotiation: void 0,
-      application_name: void 0,
-      fallback_application_name: void 0,
-      options: void 0,
-      parseInputDatesAsUTC: false,
-      // max milliseconds any query using this connection will execute for before timing out in error.
-      // false=unlimited
-      statement_timeout: false,
-      // Abort any statement that waits longer than the specified duration in milliseconds while attempting to acquire a lock.
-      // false=unlimited
-      lock_timeout: false,
-      // Terminate any session with an open transaction that has been idle for longer than the specified duration in milliseconds
-      // false=unlimited
-      idle_in_transaction_session_timeout: false,
-      // max milliseconds to wait for query to complete (client side)
-      query_timeout: false,
-      connect_timeout: 0,
-      keepalives: 1,
-      keepalives_idle: 0
-    };
-    var pgTypes = require_pg_types();
-    var parseBigInteger = pgTypes.getTypeParser(20, "text");
-    var parseBigIntegerArray = pgTypes.getTypeParser(1016, "text");
-    module.exports.__defineSetter__("parseInt8", function(val) {
-      pgTypes.setTypeParser(20, "text", val ? pgTypes.getTypeParser(23, "text") : parseBigInteger);
-      pgTypes.setTypeParser(1016, "text", val ? pgTypes.getTypeParser(1007, "text") : parseBigIntegerArray);
-    });
-  }
-});
-
-// node-built-in-modules:util/types
-import libDefault2 from "util/types";
-var require_types = __commonJS({
-  "node-built-in-modules:util/types"(exports, module) {
-    init_modules_watch_stub();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_process();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_console();
-    init_performance2();
-    module.exports = libDefault2;
-  }
-});
-
-// ../node_modules/pg/lib/utils.js
-var require_utils = __commonJS({
-  "../node_modules/pg/lib/utils.js"(exports, module) {
-    "use strict";
-    init_modules_watch_stub();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_process();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_console();
-    init_performance2();
-    var defaults2 = require_defaults();
-    var { isDate } = require_types();
-    function escapeElement(elementRepresentation) {
-      const escaped = elementRepresentation.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
-      return '"' + escaped + '"';
-    }
-    __name(escapeElement, "escapeElement");
-    function arrayString(val) {
-      let result = "{";
-      for (let i = 0; i < val.length; i++) {
-        if (i > 0) {
-          result += ",";
-        }
-        let item = val[i];
-        if (item == null) {
-          result += "NULL";
-        } else if (Array.isArray(item)) {
-          result += arrayString(item);
-        } else if (ArrayBuffer.isView(item)) {
-          if (!(item instanceof Buffer)) {
-            item = Buffer.from(item.buffer, item.byteOffset, item.byteLength);
-          }
-          result += "\\\\x" + item.toString("hex");
-        } else {
-          result += escapeElement(prepareValue(item));
-        }
-      }
-      result += "}";
-      return result;
-    }
-    __name(arrayString, "arrayString");
-    var prepareValue = /* @__PURE__ */ __name(function(val, seen) {
-      if (val == null) {
-        return null;
-      }
-      if (typeof val === "object") {
-        if (val instanceof Buffer) {
-          return val;
-        }
-        if (ArrayBuffer.isView(val)) {
-          return Buffer.from(val.buffer, val.byteOffset, val.byteLength);
-        }
-        if (isDate(val)) {
-          if (defaults2.parseInputDatesAsUTC) {
-            return dateToStringUTC(val);
-          } else {
-            return dateToString(val);
-          }
-        }
-        if (Array.isArray(val)) {
-          return arrayString(val);
-        }
-        return prepareObject(val, seen);
-      }
-      return val.toString();
-    }, "prepareValue");
-    function prepareObject(val, seen) {
-      if (val && typeof val.toPostgres === "function") {
-        seen = seen || [];
-        if (seen.indexOf(val) !== -1) {
-          throw new Error('circular reference detected while preparing "' + val + '" for query');
-        }
-        seen.push(val);
-        return prepareValue(val.toPostgres(prepareValue), seen);
-      }
-      return JSON.stringify(val);
-    }
-    __name(prepareObject, "prepareObject");
-    function dateToString(date) {
-      let offset = -date.getTimezoneOffset();
-      let year = date.getFullYear();
-      const isBCYear = year < 1;
-      if (isBCYear) year = Math.abs(year) + 1;
-      let ret = String(year).padStart(4, "0") + "-" + String(date.getMonth() + 1).padStart(2, "0") + "-" + String(date.getDate()).padStart(2, "0") + "T" + String(date.getHours()).padStart(2, "0") + ":" + String(date.getMinutes()).padStart(2, "0") + ":" + String(date.getSeconds()).padStart(2, "0") + "." + String(date.getMilliseconds()).padStart(3, "0");
-      if (offset < 0) {
-        ret += "-";
-        offset *= -1;
-      } else {
-        ret += "+";
-      }
-      ret += String(Math.floor(offset / 60)).padStart(2, "0") + ":" + String(offset % 60).padStart(2, "0");
-      if (isBCYear) ret += " BC";
-      return ret;
-    }
-    __name(dateToString, "dateToString");
-    function dateToStringUTC(date) {
-      let year = date.getUTCFullYear();
-      const isBCYear = year < 1;
-      if (isBCYear) year = Math.abs(year) + 1;
-      let ret = String(year).padStart(4, "0") + "-" + String(date.getUTCMonth() + 1).padStart(2, "0") + "-" + String(date.getUTCDate()).padStart(2, "0") + "T" + String(date.getUTCHours()).padStart(2, "0") + ":" + String(date.getUTCMinutes()).padStart(2, "0") + ":" + String(date.getUTCSeconds()).padStart(2, "0") + "." + String(date.getUTCMilliseconds()).padStart(3, "0");
-      ret += "+00:00";
-      if (isBCYear) ret += " BC";
-      return ret;
-    }
-    __name(dateToStringUTC, "dateToStringUTC");
-    function normalizeQueryConfig(config3, values, callback) {
-      config3 = typeof config3 === "string" ? { text: config3 } : config3;
-      if (values) {
-        if (typeof values === "function") {
-          config3.callback = values;
-        } else {
-          config3.values = values;
-        }
-      }
-      if (callback) {
-        config3.callback = callback;
-      }
-      return config3;
-    }
-    __name(normalizeQueryConfig, "normalizeQueryConfig");
-    var escapeIdentifier2 = /* @__PURE__ */ __name(function(str) {
-      return '"' + str.replace(/"/g, '""') + '"';
-    }, "escapeIdentifier");
-    var escapeLiteral2 = /* @__PURE__ */ __name(function(str) {
-      let hasBackslash = false;
-      let escaped = "'";
-      if (str == null) {
-        return "''";
-      }
-      if (typeof str !== "string") {
-        return "''";
-      }
-      for (let i = 0; i < str.length; i++) {
-        const c = str[i];
-        if (c === "'") {
-          escaped += c + c;
-        } else if (c === "\\") {
-          escaped += c + c;
-          hasBackslash = true;
-        } else {
-          escaped += c;
-        }
-      }
-      escaped += "'";
-      if (hasBackslash === true) {
-        escaped = " E" + escaped;
-      }
-      return escaped;
-    }, "escapeLiteral");
-    module.exports = {
-      prepareValue: /* @__PURE__ */ __name(function prepareValueWrapper(value) {
-        return prepareValue(value);
-      }, "prepareValueWrapper"),
-      normalizeQueryConfig,
-      escapeIdentifier: escapeIdentifier2,
-      escapeLiteral: escapeLiteral2
-    };
-  }
-});
-
-// node-built-in-modules:util
-import libDefault3 from "util";
-var require_util = __commonJS({
-  "node-built-in-modules:util"(exports, module) {
-    init_modules_watch_stub();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_process();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_console();
-    init_performance2();
-    module.exports = libDefault3;
-  }
-});
-
-// node-built-in-modules:crypto
-import libDefault4 from "crypto";
-var require_crypto = __commonJS({
-  "node-built-in-modules:crypto"(exports, module) {
-    init_modules_watch_stub();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_process();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_console();
-    init_performance2();
-    module.exports = libDefault4;
-  }
-});
-
-// ../node_modules/pg/lib/crypto/utils.js
-var require_utils2 = __commonJS({
-  "../node_modules/pg/lib/crypto/utils.js"(exports, module) {
-    init_modules_watch_stub();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_process();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_console();
-    init_performance2();
-    var nodeCrypto = require_crypto();
-    module.exports = {
-      postgresMd5PasswordHash,
-      randomBytes,
-      deriveKey,
-      sha256: sha2563,
-      hashByName,
-      hmacSha256,
-      md5
-    };
-    var webCrypto = nodeCrypto.webcrypto || globalThis.crypto;
-    var subtleCrypto = webCrypto.subtle;
-    var textEncoder = new TextEncoder();
-    function randomBytes(length) {
-      return webCrypto.getRandomValues(Buffer.alloc(length));
-    }
-    __name(randomBytes, "randomBytes");
-    async function md5(string) {
-      try {
-        return nodeCrypto.createHash("md5").update(string, "utf-8").digest("hex");
-      } catch (e) {
-        const data = typeof string === "string" ? textEncoder.encode(string) : string;
-        const hash = await subtleCrypto.digest("MD5", data);
-        return Array.from(new Uint8Array(hash)).map((b) => b.toString(16).padStart(2, "0")).join("");
-      }
-    }
-    __name(md5, "md5");
-    async function postgresMd5PasswordHash(user, password, salt) {
-      const inner = await md5(password + user);
-      const outer = await md5(Buffer.concat([Buffer.from(inner), salt]));
-      return "md5" + outer;
-    }
-    __name(postgresMd5PasswordHash, "postgresMd5PasswordHash");
-    async function sha2563(text) {
-      return await subtleCrypto.digest("SHA-256", text);
-    }
-    __name(sha2563, "sha256");
-    async function hashByName(hashName, text) {
-      return await subtleCrypto.digest(hashName, text);
-    }
-    __name(hashByName, "hashByName");
-    async function hmacSha256(keyBuffer, msg) {
-      const key = await subtleCrypto.importKey("raw", keyBuffer, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
-      return await subtleCrypto.sign("HMAC", key, textEncoder.encode(msg));
-    }
-    __name(hmacSha256, "hmacSha256");
-    async function deriveKey(password, salt, iterations) {
-      const key = await subtleCrypto.importKey("raw", textEncoder.encode(password), "PBKDF2", false, ["deriveBits"]);
-      const params = { name: "PBKDF2", hash: "SHA-256", salt, iterations };
-      return await subtleCrypto.deriveBits(params, key, 32 * 8, ["deriveBits"]);
-    }
-    __name(deriveKey, "deriveKey");
-  }
-});
-
-// ../node_modules/pg/lib/crypto/cert-signatures.js
-var require_cert_signatures = __commonJS({
-  "../node_modules/pg/lib/crypto/cert-signatures.js"(exports, module) {
-    init_modules_watch_stub();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_process();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_console();
-    init_performance2();
-    function x509Error(msg, cert) {
-      return new Error("SASL channel binding: " + msg + " when parsing public certificate " + cert.toString("base64"));
-    }
-    __name(x509Error, "x509Error");
-    function readASN1Length(data, index) {
-      let length = data[index++];
-      if (length < 128) return { length, index };
-      const lengthBytes = length & 127;
-      if (lengthBytes > 4) throw x509Error("bad length", data);
-      length = 0;
-      for (let i = 0; i < lengthBytes; i++) {
-        length = length << 8 | data[index++];
-      }
-      return { length, index };
-    }
-    __name(readASN1Length, "readASN1Length");
-    function readASN1OID(data, index) {
-      if (data[index++] !== 6) throw x509Error("non-OID data", data);
-      const { length: OIDLength, index: indexAfterOIDLength } = readASN1Length(data, index);
-      index = indexAfterOIDLength;
-      const lastIndex = index + OIDLength;
-      const byte1 = data[index++];
-      let oid = (byte1 / 40 >> 0) + "." + byte1 % 40;
-      while (index < lastIndex) {
-        let value = 0;
-        while (index < lastIndex) {
-          const nextByte = data[index++];
-          value = value << 7 | nextByte & 127;
-          if (nextByte < 128) break;
-        }
-        oid += "." + value;
-      }
-      return { oid, index };
-    }
-    __name(readASN1OID, "readASN1OID");
-    function expectASN1Seq(data, index) {
-      if (data[index++] !== 48) throw x509Error("non-sequence data", data);
-      return readASN1Length(data, index);
-    }
-    __name(expectASN1Seq, "expectASN1Seq");
-    function signatureAlgorithmHashFromCertificate(data, index) {
-      if (index === void 0) index = 0;
-      index = expectASN1Seq(data, index).index;
-      const { length: certInfoLength, index: indexAfterCertInfoLength } = expectASN1Seq(data, index);
-      index = indexAfterCertInfoLength + certInfoLength;
-      index = expectASN1Seq(data, index).index;
-      const { oid, index: indexAfterOID } = readASN1OID(data, index);
-      switch (oid) {
-        // RSA
-        case "1.2.840.113549.1.1.4":
-          return "MD5";
-        case "1.2.840.113549.1.1.5":
-          return "SHA-1";
-        case "1.2.840.113549.1.1.11":
-          return "SHA-256";
-        case "1.2.840.113549.1.1.12":
-          return "SHA-384";
-        case "1.2.840.113549.1.1.13":
-          return "SHA-512";
-        case "1.2.840.113549.1.1.14":
-          return "SHA-224";
-        case "1.2.840.113549.1.1.15":
-          return "SHA512-224";
-        case "1.2.840.113549.1.1.16":
-          return "SHA512-256";
-        // ECDSA
-        case "1.2.840.10045.4.1":
-          return "SHA-1";
-        case "1.2.840.10045.4.3.1":
-          return "SHA-224";
-        case "1.2.840.10045.4.3.2":
-          return "SHA-256";
-        case "1.2.840.10045.4.3.3":
-          return "SHA-384";
-        case "1.2.840.10045.4.3.4":
-          return "SHA-512";
-        // RSASSA-PSS: hash is indicated separately
-        case "1.2.840.113549.1.1.10": {
-          index = indexAfterOID;
-          index = expectASN1Seq(data, index).index;
-          if (data[index++] !== 160) throw x509Error("non-tag data", data);
-          index = readASN1Length(data, index).index;
-          index = expectASN1Seq(data, index).index;
-          const { oid: hashOID } = readASN1OID(data, index);
-          switch (hashOID) {
-            // standalone hash OIDs
-            case "1.2.840.113549.2.5":
-              return "MD5";
-            case "1.3.14.3.2.26":
-              return "SHA-1";
-            case "2.16.840.1.101.3.4.2.1":
-              return "SHA-256";
-            case "2.16.840.1.101.3.4.2.2":
-              return "SHA-384";
-            case "2.16.840.1.101.3.4.2.3":
-              return "SHA-512";
-          }
-          throw x509Error("unknown hash OID " + hashOID, data);
-        }
-        // Ed25519 -- see https: return//github.com/openssl/openssl/issues/15477
-        case "1.3.101.110":
-        case "1.3.101.112":
-          return "SHA-512";
-        // Ed448 -- still not in pg 17.2 (if supported, digest would be SHAKE256 x 64 bytes)
-        case "1.3.101.111":
-        case "1.3.101.113":
-          throw x509Error("Ed448 certificate channel binding is not currently supported by Postgres");
-      }
-      throw x509Error("unknown OID " + oid, data);
-    }
-    __name(signatureAlgorithmHashFromCertificate, "signatureAlgorithmHashFromCertificate");
-    module.exports = { signatureAlgorithmHashFromCertificate };
-  }
-});
-
-// ../node_modules/pg/lib/crypto/sasl.js
-var require_sasl = __commonJS({
-  "../node_modules/pg/lib/crypto/sasl.js"(exports, module) {
-    "use strict";
-    init_modules_watch_stub();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_process();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_console();
-    init_performance2();
-    var crypto3 = require_utils2();
-    var { signatureAlgorithmHashFromCertificate } = require_cert_signatures();
-    function saslprep(password) {
-      const nonAsciiSpace = /[\u00A0\u1680\u2000-\u200B\u202F\u205F\u3000]/g;
-      const mappedToNothing = /[\u00AD\u034F\u1806\u180B\u180C\u180D\u200C\u200D\u2060\uFE00-\uFE0F\uFEFF]/g;
-      return password.replace(nonAsciiSpace, " ").replace(mappedToNothing, "").normalize("NFKC");
-    }
-    __name(saslprep, "saslprep");
-    var DEFAULT_MAX_SCRAM_ITERATIONS = 1e5;
-    function startSession(mechanisms, stream, scramMaxIterations = DEFAULT_MAX_SCRAM_ITERATIONS) {
-      const candidates = ["SCRAM-SHA-256"];
-      if (stream) candidates.unshift("SCRAM-SHA-256-PLUS");
-      const mechanism = candidates.find((candidate) => mechanisms.includes(candidate));
-      if (!mechanism) {
-        throw new Error("SASL: Only mechanism(s) " + candidates.join(" and ") + " are supported");
-      }
-      if (mechanism === "SCRAM-SHA-256-PLUS" && typeof stream.getPeerCertificate !== "function") {
-        throw new Error("SASL: Mechanism SCRAM-SHA-256-PLUS requires a certificate");
-      }
-      const clientNonce = crypto3.randomBytes(18).toString("base64");
-      const gs2Header = mechanism === "SCRAM-SHA-256-PLUS" ? "p=tls-server-end-point" : stream ? "y" : "n";
-      return {
-        mechanism,
-        clientNonce,
-        response: gs2Header + ",,n=*,r=" + clientNonce,
-        message: "SASLInitialResponse",
-        scramMaxIterations
-      };
-    }
-    __name(startSession, "startSession");
-    async function continueSession(session, password, serverData, stream) {
-      if (session.message !== "SASLInitialResponse") {
-        throw new Error("SASL: Last message was not SASLInitialResponse");
-      }
-      if (typeof password !== "string") {
-        throw new Error("SASL: SCRAM-SERVER-FIRST-MESSAGE: client password must be a string");
-      }
-      if (password === "") {
-        throw new Error("SASL: SCRAM-SERVER-FIRST-MESSAGE: client password must be a non-empty string");
-      }
-      if (typeof serverData !== "string") {
-        throw new Error("SASL: SCRAM-SERVER-FIRST-MESSAGE: serverData must be a string");
-      }
-      const sv = parseServerFirstMessage(serverData);
-      if (!sv.nonce.startsWith(session.clientNonce)) {
-        throw new Error("SASL: SCRAM-SERVER-FIRST-MESSAGE: server nonce does not start with client nonce");
-      } else if (sv.nonce.length === session.clientNonce.length) {
-        throw new Error("SASL: SCRAM-SERVER-FIRST-MESSAGE: server nonce is too short");
-      }
-      const scramMaxIterations = typeof session.scramMaxIterations === "number" ? session.scramMaxIterations : DEFAULT_MAX_SCRAM_ITERATIONS;
-      if (scramMaxIterations !== 0 && sv.iteration > scramMaxIterations) {
-        throw new Error(
-          "SASL: SCRAM-SERVER-FIRST-MESSAGE: iteration count " + sv.iteration + " exceeds scramMaxIterations of " + scramMaxIterations
-        );
-      }
-      const clientFirstMessageBare = "n=*,r=" + session.clientNonce;
-      const serverFirstMessage = "r=" + sv.nonce + ",s=" + sv.salt + ",i=" + sv.iteration;
-      let channelBinding = stream ? "eSws" : "biws";
-      if (session.mechanism === "SCRAM-SHA-256-PLUS") {
-        const peerCert = stream.getPeerCertificate().raw;
-        let hashName = signatureAlgorithmHashFromCertificate(peerCert);
-        if (hashName === "MD5" || hashName === "SHA-1") hashName = "SHA-256";
-        const certHash = await crypto3.hashByName(hashName, peerCert);
-        const bindingData = Buffer.concat([Buffer.from("p=tls-server-end-point,,"), Buffer.from(certHash)]);
-        channelBinding = bindingData.toString("base64");
-      }
-      const clientFinalMessageWithoutProof = "c=" + channelBinding + ",r=" + sv.nonce;
-      const authMessage = clientFirstMessageBare + "," + serverFirstMessage + "," + clientFinalMessageWithoutProof;
-      const saltBytes = Buffer.from(sv.salt, "base64");
-      const saltedPassword = await crypto3.deriveKey(saslprep(password), saltBytes, sv.iteration);
-      const clientKey = await crypto3.hmacSha256(saltedPassword, "Client Key");
-      const storedKey = await crypto3.sha256(clientKey);
-      const clientSignature = await crypto3.hmacSha256(storedKey, authMessage);
-      const clientProof = xorBuffers(Buffer.from(clientKey), Buffer.from(clientSignature)).toString("base64");
-      const serverKey = await crypto3.hmacSha256(saltedPassword, "Server Key");
-      const serverSignatureBytes = await crypto3.hmacSha256(serverKey, authMessage);
-      session.message = "SASLResponse";
-      session.serverSignature = Buffer.from(serverSignatureBytes).toString("base64");
-      session.response = clientFinalMessageWithoutProof + ",p=" + clientProof;
-    }
-    __name(continueSession, "continueSession");
-    function finalizeSession(session, serverData) {
-      if (session.message !== "SASLResponse") {
-        throw new Error("SASL: Last message was not SASLResponse");
-      }
-      if (typeof serverData !== "string") {
-        throw new Error("SASL: SCRAM-SERVER-FINAL-MESSAGE: serverData must be a string");
-      }
-      const { serverSignature } = parseServerFinalMessage(serverData);
-      if (serverSignature !== session.serverSignature) {
-        throw new Error("SASL: SCRAM-SERVER-FINAL-MESSAGE: server signature does not match");
-      }
-    }
-    __name(finalizeSession, "finalizeSession");
-    function isPrintableChars(text) {
-      if (typeof text !== "string") {
-        throw new TypeError("SASL: text must be a string");
-      }
-      return text.split("").map((_, i) => text.charCodeAt(i)).every((c) => c >= 33 && c <= 43 || c >= 45 && c <= 126);
-    }
-    __name(isPrintableChars, "isPrintableChars");
-    function isBase64(text) {
-      return /^(?:[a-zA-Z0-9+/]{4})*(?:[a-zA-Z0-9+/]{2}==|[a-zA-Z0-9+/]{3}=)?$/.test(text);
-    }
-    __name(isBase64, "isBase64");
-    function parseAttributePairs(text) {
-      if (typeof text !== "string") {
-        throw new TypeError("SASL: attribute pairs text must be a string");
-      }
-      return new Map(
-        text.split(",").map((attrValue) => {
-          if (!/^.=/.test(attrValue)) {
-            throw new Error("SASL: Invalid attribute pair entry");
-          }
-          const name = attrValue[0];
-          const value = attrValue.substring(2);
-          return [name, value];
-        })
-      );
-    }
-    __name(parseAttributePairs, "parseAttributePairs");
-    function parseServerFirstMessage(data) {
-      const attrPairs = parseAttributePairs(data);
-      const nonce = attrPairs.get("r");
-      if (!nonce) {
-        throw new Error("SASL: SCRAM-SERVER-FIRST-MESSAGE: nonce missing");
-      } else if (!isPrintableChars(nonce)) {
-        throw new Error("SASL: SCRAM-SERVER-FIRST-MESSAGE: nonce must only contain printable characters");
-      }
-      const salt = attrPairs.get("s");
-      if (!salt) {
-        throw new Error("SASL: SCRAM-SERVER-FIRST-MESSAGE: salt missing");
-      } else if (!isBase64(salt)) {
-        throw new Error("SASL: SCRAM-SERVER-FIRST-MESSAGE: salt must be base64");
-      }
-      const iterationText = attrPairs.get("i");
-      if (!iterationText) {
-        throw new Error("SASL: SCRAM-SERVER-FIRST-MESSAGE: iteration missing");
-      } else if (!/^[1-9][0-9]*$/.test(iterationText)) {
-        throw new Error("SASL: SCRAM-SERVER-FIRST-MESSAGE: invalid iteration count");
-      }
-      const iteration = parseInt(iterationText, 10);
-      return {
-        nonce,
-        salt,
-        iteration
-      };
-    }
-    __name(parseServerFirstMessage, "parseServerFirstMessage");
-    function parseServerFinalMessage(serverData) {
-      const attrPairs = parseAttributePairs(serverData);
-      const error3 = attrPairs.get("e");
-      const serverSignature = attrPairs.get("v");
-      if (error3) {
-        throw new Error(`SASL: SCRAM-SERVER-FINAL-MESSAGE: server returned error: "${error3}"`);
-      }
-      if (!serverSignature) {
-        throw new Error("SASL: SCRAM-SERVER-FINAL-MESSAGE: server signature is missing");
-      } else if (!isBase64(serverSignature)) {
-        throw new Error("SASL: SCRAM-SERVER-FINAL-MESSAGE: server signature must be base64");
-      }
-      return {
-        serverSignature
-      };
-    }
-    __name(parseServerFinalMessage, "parseServerFinalMessage");
-    function xorBuffers(a, b) {
-      if (!Buffer.isBuffer(a)) {
-        throw new TypeError("first argument must be a Buffer");
-      }
-      if (!Buffer.isBuffer(b)) {
-        throw new TypeError("second argument must be a Buffer");
-      }
-      if (a.length !== b.length) {
-        throw new Error("Buffer lengths must match");
-      }
-      if (a.length === 0) {
-        throw new Error("Buffers cannot be empty");
-      }
-      return Buffer.from(a.map((_, i) => a[i] ^ b[i]));
-    }
-    __name(xorBuffers, "xorBuffers");
-    module.exports = {
-      startSession,
-      continueSession,
-      finalizeSession,
-      DEFAULT_MAX_SCRAM_ITERATIONS
-    };
-  }
-});
-
-// ../node_modules/pg/lib/type-overrides.js
-var require_type_overrides = __commonJS({
-  "../node_modules/pg/lib/type-overrides.js"(exports, module) {
-    "use strict";
-    init_modules_watch_stub();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_process();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_console();
-    init_performance2();
-    var types2 = require_pg_types();
-    function TypeOverrides2(userTypes) {
-      this._types = userTypes || types2;
-      this.text = {};
-      this.binary = {};
-    }
-    __name(TypeOverrides2, "TypeOverrides");
-    TypeOverrides2.prototype.getOverrides = function(format) {
-      switch (format) {
-        case "text":
-          return this.text;
-        case "binary":
-          return this.binary;
-        default:
-          return {};
-      }
-    };
-    TypeOverrides2.prototype.setTypeParser = function(oid, format, parseFn) {
-      if (typeof format === "function") {
-        parseFn = format;
-        format = "text";
-      }
-      this.getOverrides(format)[oid] = parseFn;
-    };
-    TypeOverrides2.prototype.getTypeParser = function(oid, format) {
-      format = format || "text";
-      return this.getOverrides(format)[oid] || this._types.getTypeParser(oid, format);
-    };
-    module.exports = TypeOverrides2;
-  }
-});
-
-// node-built-in-modules:dns
-import libDefault5 from "dns";
-var require_dns = __commonJS({
-  "node-built-in-modules:dns"(exports, module) {
-    init_modules_watch_stub();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_process();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_console();
-    init_performance2();
-    module.exports = libDefault5;
-  }
-});
-
-// ../node_modules/unenv/dist/runtime/node/internal/fs/promises.mjs
-var access, copyFile, cp, open, opendir, rename, truncate, rm, rmdir, mkdir, readdir, readlink, symlink, lstat, stat, link, unlink, chmod, lchmod, lchown, chown, utimes, lutimes, realpath, mkdtemp, writeFile, appendFile, readFile, watch, statfs, glob;
-var init_promises = __esm({
-  "../node_modules/unenv/dist/runtime/node/internal/fs/promises.mjs"() {
-    init_modules_watch_stub();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_process();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_console();
-    init_performance2();
-    init_utils();
-    access = /* @__PURE__ */ notImplemented("fs.access");
-    copyFile = /* @__PURE__ */ notImplemented("fs.copyFile");
-    cp = /* @__PURE__ */ notImplemented("fs.cp");
-    open = /* @__PURE__ */ notImplemented("fs.open");
-    opendir = /* @__PURE__ */ notImplemented("fs.opendir");
-    rename = /* @__PURE__ */ notImplemented("fs.rename");
-    truncate = /* @__PURE__ */ notImplemented("fs.truncate");
-    rm = /* @__PURE__ */ notImplemented("fs.rm");
-    rmdir = /* @__PURE__ */ notImplemented("fs.rmdir");
-    mkdir = /* @__PURE__ */ notImplemented("fs.mkdir");
-    readdir = /* @__PURE__ */ notImplemented("fs.readdir");
-    readlink = /* @__PURE__ */ notImplemented("fs.readlink");
-    symlink = /* @__PURE__ */ notImplemented("fs.symlink");
-    lstat = /* @__PURE__ */ notImplemented("fs.lstat");
-    stat = /* @__PURE__ */ notImplemented("fs.stat");
-    link = /* @__PURE__ */ notImplemented("fs.link");
-    unlink = /* @__PURE__ */ notImplemented("fs.unlink");
-    chmod = /* @__PURE__ */ notImplemented("fs.chmod");
-    lchmod = /* @__PURE__ */ notImplemented("fs.lchmod");
-    lchown = /* @__PURE__ */ notImplemented("fs.lchown");
-    chown = /* @__PURE__ */ notImplemented("fs.chown");
-    utimes = /* @__PURE__ */ notImplemented("fs.utimes");
-    lutimes = /* @__PURE__ */ notImplemented("fs.lutimes");
-    realpath = /* @__PURE__ */ notImplemented("fs.realpath");
-    mkdtemp = /* @__PURE__ */ notImplemented("fs.mkdtemp");
-    writeFile = /* @__PURE__ */ notImplemented("fs.writeFile");
-    appendFile = /* @__PURE__ */ notImplemented("fs.appendFile");
-    readFile = /* @__PURE__ */ notImplemented("fs.readFile");
-    watch = /* @__PURE__ */ notImplemented("fs.watch");
-    statfs = /* @__PURE__ */ notImplemented("fs.statfs");
-    glob = /* @__PURE__ */ notImplemented("fs.glob");
-  }
-});
-
-// ../node_modules/unenv/dist/runtime/node/internal/fs/constants.mjs
-var constants_exports = {};
-__export(constants_exports, {
-  COPYFILE_EXCL: () => COPYFILE_EXCL,
-  COPYFILE_FICLONE: () => COPYFILE_FICLONE,
-  COPYFILE_FICLONE_FORCE: () => COPYFILE_FICLONE_FORCE,
-  EXTENSIONLESS_FORMAT_JAVASCRIPT: () => EXTENSIONLESS_FORMAT_JAVASCRIPT,
-  EXTENSIONLESS_FORMAT_WASM: () => EXTENSIONLESS_FORMAT_WASM,
-  F_OK: () => F_OK,
-  O_APPEND: () => O_APPEND,
-  O_CREAT: () => O_CREAT,
-  O_DIRECT: () => O_DIRECT,
-  O_DIRECTORY: () => O_DIRECTORY,
-  O_DSYNC: () => O_DSYNC,
-  O_EXCL: () => O_EXCL,
-  O_NOATIME: () => O_NOATIME,
-  O_NOCTTY: () => O_NOCTTY,
-  O_NOFOLLOW: () => O_NOFOLLOW,
-  O_NONBLOCK: () => O_NONBLOCK,
-  O_RDONLY: () => O_RDONLY,
-  O_RDWR: () => O_RDWR,
-  O_SYNC: () => O_SYNC,
-  O_TRUNC: () => O_TRUNC,
-  O_WRONLY: () => O_WRONLY,
-  R_OK: () => R_OK,
-  S_IFBLK: () => S_IFBLK,
-  S_IFCHR: () => S_IFCHR,
-  S_IFDIR: () => S_IFDIR,
-  S_IFIFO: () => S_IFIFO,
-  S_IFLNK: () => S_IFLNK,
-  S_IFMT: () => S_IFMT,
-  S_IFREG: () => S_IFREG,
-  S_IFSOCK: () => S_IFSOCK,
-  S_IRGRP: () => S_IRGRP,
-  S_IROTH: () => S_IROTH,
-  S_IRUSR: () => S_IRUSR,
-  S_IRWXG: () => S_IRWXG,
-  S_IRWXO: () => S_IRWXO,
-  S_IRWXU: () => S_IRWXU,
-  S_IWGRP: () => S_IWGRP,
-  S_IWOTH: () => S_IWOTH,
-  S_IWUSR: () => S_IWUSR,
-  S_IXGRP: () => S_IXGRP,
-  S_IXOTH: () => S_IXOTH,
-  S_IXUSR: () => S_IXUSR,
-  UV_DIRENT_BLOCK: () => UV_DIRENT_BLOCK,
-  UV_DIRENT_CHAR: () => UV_DIRENT_CHAR,
-  UV_DIRENT_DIR: () => UV_DIRENT_DIR,
-  UV_DIRENT_FIFO: () => UV_DIRENT_FIFO,
-  UV_DIRENT_FILE: () => UV_DIRENT_FILE,
-  UV_DIRENT_LINK: () => UV_DIRENT_LINK,
-  UV_DIRENT_SOCKET: () => UV_DIRENT_SOCKET,
-  UV_DIRENT_UNKNOWN: () => UV_DIRENT_UNKNOWN,
-  UV_FS_COPYFILE_EXCL: () => UV_FS_COPYFILE_EXCL,
-  UV_FS_COPYFILE_FICLONE: () => UV_FS_COPYFILE_FICLONE,
-  UV_FS_COPYFILE_FICLONE_FORCE: () => UV_FS_COPYFILE_FICLONE_FORCE,
-  UV_FS_O_FILEMAP: () => UV_FS_O_FILEMAP,
-  UV_FS_SYMLINK_DIR: () => UV_FS_SYMLINK_DIR,
-  UV_FS_SYMLINK_JUNCTION: () => UV_FS_SYMLINK_JUNCTION,
-  W_OK: () => W_OK,
-  X_OK: () => X_OK
-});
-var UV_FS_SYMLINK_DIR, UV_FS_SYMLINK_JUNCTION, O_RDONLY, O_WRONLY, O_RDWR, UV_DIRENT_UNKNOWN, UV_DIRENT_FILE, UV_DIRENT_DIR, UV_DIRENT_LINK, UV_DIRENT_FIFO, UV_DIRENT_SOCKET, UV_DIRENT_CHAR, UV_DIRENT_BLOCK, EXTENSIONLESS_FORMAT_JAVASCRIPT, EXTENSIONLESS_FORMAT_WASM, S_IFMT, S_IFREG, S_IFDIR, S_IFCHR, S_IFBLK, S_IFIFO, S_IFLNK, S_IFSOCK, O_CREAT, O_EXCL, UV_FS_O_FILEMAP, O_NOCTTY, O_TRUNC, O_APPEND, O_DIRECTORY, O_NOATIME, O_NOFOLLOW, O_SYNC, O_DSYNC, O_DIRECT, O_NONBLOCK, S_IRWXU, S_IRUSR, S_IWUSR, S_IXUSR, S_IRWXG, S_IRGRP, S_IWGRP, S_IXGRP, S_IRWXO, S_IROTH, S_IWOTH, S_IXOTH, F_OK, R_OK, W_OK, X_OK, UV_FS_COPYFILE_EXCL, COPYFILE_EXCL, UV_FS_COPYFILE_FICLONE, COPYFILE_FICLONE, UV_FS_COPYFILE_FICLONE_FORCE, COPYFILE_FICLONE_FORCE;
-var init_constants = __esm({
-  "../node_modules/unenv/dist/runtime/node/internal/fs/constants.mjs"() {
-    init_modules_watch_stub();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_process();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_console();
-    init_performance2();
-    UV_FS_SYMLINK_DIR = 1;
-    UV_FS_SYMLINK_JUNCTION = 2;
-    O_RDONLY = 0;
-    O_WRONLY = 1;
-    O_RDWR = 2;
-    UV_DIRENT_UNKNOWN = 0;
-    UV_DIRENT_FILE = 1;
-    UV_DIRENT_DIR = 2;
-    UV_DIRENT_LINK = 3;
-    UV_DIRENT_FIFO = 4;
-    UV_DIRENT_SOCKET = 5;
-    UV_DIRENT_CHAR = 6;
-    UV_DIRENT_BLOCK = 7;
-    EXTENSIONLESS_FORMAT_JAVASCRIPT = 0;
-    EXTENSIONLESS_FORMAT_WASM = 1;
-    S_IFMT = 61440;
-    S_IFREG = 32768;
-    S_IFDIR = 16384;
-    S_IFCHR = 8192;
-    S_IFBLK = 24576;
-    S_IFIFO = 4096;
-    S_IFLNK = 40960;
-    S_IFSOCK = 49152;
-    O_CREAT = 64;
-    O_EXCL = 128;
-    UV_FS_O_FILEMAP = 0;
-    O_NOCTTY = 256;
-    O_TRUNC = 512;
-    O_APPEND = 1024;
-    O_DIRECTORY = 65536;
-    O_NOATIME = 262144;
-    O_NOFOLLOW = 131072;
-    O_SYNC = 1052672;
-    O_DSYNC = 4096;
-    O_DIRECT = 16384;
-    O_NONBLOCK = 2048;
-    S_IRWXU = 448;
-    S_IRUSR = 256;
-    S_IWUSR = 128;
-    S_IXUSR = 64;
-    S_IRWXG = 56;
-    S_IRGRP = 32;
-    S_IWGRP = 16;
-    S_IXGRP = 8;
-    S_IRWXO = 7;
-    S_IROTH = 4;
-    S_IWOTH = 2;
-    S_IXOTH = 1;
-    F_OK = 0;
-    R_OK = 4;
-    W_OK = 2;
-    X_OK = 1;
-    UV_FS_COPYFILE_EXCL = 1;
-    COPYFILE_EXCL = 1;
-    UV_FS_COPYFILE_FICLONE = 2;
-    COPYFILE_FICLONE = 2;
-    UV_FS_COPYFILE_FICLONE_FORCE = 4;
-    COPYFILE_FICLONE_FORCE = 4;
-  }
-});
-
-// ../node_modules/unenv/dist/runtime/node/fs/promises.mjs
-var promises_default;
-var init_promises2 = __esm({
-  "../node_modules/unenv/dist/runtime/node/fs/promises.mjs"() {
-    init_modules_watch_stub();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_process();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_console();
-    init_performance2();
-    init_promises();
-    init_constants();
-    init_promises();
-    promises_default = {
-      constants: constants_exports,
-      access,
-      appendFile,
-      chmod,
-      chown,
-      copyFile,
-      cp,
-      glob,
-      lchmod,
-      lchown,
-      link,
-      lstat,
-      lutimes,
-      mkdir,
-      mkdtemp,
-      open,
-      opendir,
-      readFile,
-      readdir,
-      readlink,
-      realpath,
-      rename,
-      rm,
-      rmdir,
-      stat,
-      statfs,
-      symlink,
-      truncate,
-      unlink,
-      utimes,
-      watch,
-      writeFile
-    };
-  }
-});
-
-// ../node_modules/unenv/dist/runtime/node/internal/fs/classes.mjs
-var Dir, Dirent, Stats, ReadStream2, WriteStream2, FileReadStream, FileWriteStream;
-var init_classes = __esm({
-  "../node_modules/unenv/dist/runtime/node/internal/fs/classes.mjs"() {
-    init_modules_watch_stub();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_process();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_console();
-    init_performance2();
-    init_utils();
-    Dir = /* @__PURE__ */ notImplementedClass("fs.Dir");
-    Dirent = /* @__PURE__ */ notImplementedClass("fs.Dirent");
-    Stats = /* @__PURE__ */ notImplementedClass("fs.Stats");
-    ReadStream2 = /* @__PURE__ */ notImplementedClass("fs.ReadStream");
-    WriteStream2 = /* @__PURE__ */ notImplementedClass("fs.WriteStream");
-    FileReadStream = ReadStream2;
-    FileWriteStream = WriteStream2;
-  }
-});
-
-// ../node_modules/unenv/dist/runtime/node/internal/fs/fs.mjs
-function callbackify(fn) {
-  const fnc = /* @__PURE__ */ __name(function(...args) {
-    const cb = args.pop();
-    fn().catch((error3) => cb(error3)).then((val) => cb(void 0, val));
-  }, "fnc");
-  fnc.__promisify__ = fn;
-  fnc.native = fnc;
-  return fnc;
-}
-var access2, appendFile2, chown2, chmod2, copyFile2, cp2, lchown2, lchmod2, link2, lstat2, lutimes2, mkdir2, mkdtemp2, realpath2, open2, opendir2, readdir2, readFile2, readlink2, rename2, rm2, rmdir2, stat2, symlink2, truncate2, unlink2, utimes2, writeFile2, statfs2, close, createReadStream, createWriteStream, exists, fchown, fchmod, fdatasync, fstat, fsync, ftruncate, futimes, lstatSync, read, readv, realpathSync, statSync, unwatchFile, watch2, watchFile, write, writev, _toUnixTimestamp, openAsBlob, glob2, appendFileSync, accessSync, chownSync, chmodSync, closeSync, copyFileSync, cpSync, existsSync, fchownSync, fchmodSync, fdatasyncSync, fstatSync, fsyncSync, ftruncateSync, futimesSync, lchownSync, lchmodSync, linkSync, lutimesSync, mkdirSync, mkdtempSync, openSync, opendirSync, readdirSync, readSync, readvSync, readFileSync, readlinkSync, renameSync, rmSync, rmdirSync, symlinkSync, truncateSync, unlinkSync, utimesSync, writeFileSync, writeSync, writevSync, statfsSync, globSync;
-var init_fs = __esm({
-  "../node_modules/unenv/dist/runtime/node/internal/fs/fs.mjs"() {
-    init_modules_watch_stub();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_process();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_console();
-    init_performance2();
-    init_utils();
-    init_promises();
-    __name(callbackify, "callbackify");
-    access2 = callbackify(access);
-    appendFile2 = callbackify(appendFile);
-    chown2 = callbackify(chown);
-    chmod2 = callbackify(chmod);
-    copyFile2 = callbackify(copyFile);
-    cp2 = callbackify(cp);
-    lchown2 = callbackify(lchown);
-    lchmod2 = callbackify(lchmod);
-    link2 = callbackify(link);
-    lstat2 = callbackify(lstat);
-    lutimes2 = callbackify(lutimes);
-    mkdir2 = callbackify(mkdir);
-    mkdtemp2 = callbackify(mkdtemp);
-    realpath2 = callbackify(realpath);
-    open2 = callbackify(open);
-    opendir2 = callbackify(opendir);
-    readdir2 = callbackify(readdir);
-    readFile2 = callbackify(readFile);
-    readlink2 = callbackify(readlink);
-    rename2 = callbackify(rename);
-    rm2 = callbackify(rm);
-    rmdir2 = callbackify(rmdir);
-    stat2 = callbackify(stat);
-    symlink2 = callbackify(symlink);
-    truncate2 = callbackify(truncate);
-    unlink2 = callbackify(unlink);
-    utimes2 = callbackify(utimes);
-    writeFile2 = callbackify(writeFile);
-    statfs2 = callbackify(statfs);
-    close = /* @__PURE__ */ notImplementedAsync("fs.close");
-    createReadStream = /* @__PURE__ */ notImplementedAsync("fs.createReadStream");
-    createWriteStream = /* @__PURE__ */ notImplementedAsync("fs.createWriteStream");
-    exists = /* @__PURE__ */ notImplementedAsync("fs.exists");
-    fchown = /* @__PURE__ */ notImplementedAsync("fs.fchown");
-    fchmod = /* @__PURE__ */ notImplementedAsync("fs.fchmod");
-    fdatasync = /* @__PURE__ */ notImplementedAsync("fs.fdatasync");
-    fstat = /* @__PURE__ */ notImplementedAsync("fs.fstat");
-    fsync = /* @__PURE__ */ notImplementedAsync("fs.fsync");
-    ftruncate = /* @__PURE__ */ notImplementedAsync("fs.ftruncate");
-    futimes = /* @__PURE__ */ notImplementedAsync("fs.futimes");
-    lstatSync = /* @__PURE__ */ notImplementedAsync("fs.lstatSync");
-    read = /* @__PURE__ */ notImplementedAsync("fs.read");
-    readv = /* @__PURE__ */ notImplementedAsync("fs.readv");
-    realpathSync = /* @__PURE__ */ notImplementedAsync("fs.realpathSync");
-    statSync = /* @__PURE__ */ notImplementedAsync("fs.statSync");
-    unwatchFile = /* @__PURE__ */ notImplementedAsync("fs.unwatchFile");
-    watch2 = /* @__PURE__ */ notImplementedAsync("fs.watch");
-    watchFile = /* @__PURE__ */ notImplementedAsync("fs.watchFile");
-    write = /* @__PURE__ */ notImplementedAsync("fs.write");
-    writev = /* @__PURE__ */ notImplementedAsync("fs.writev");
-    _toUnixTimestamp = /* @__PURE__ */ notImplementedAsync("fs._toUnixTimestamp");
-    openAsBlob = /* @__PURE__ */ notImplementedAsync("fs.openAsBlob");
-    glob2 = /* @__PURE__ */ notImplementedAsync("fs.glob");
-    appendFileSync = /* @__PURE__ */ notImplemented("fs.appendFileSync");
-    accessSync = /* @__PURE__ */ notImplemented("fs.accessSync");
-    chownSync = /* @__PURE__ */ notImplemented("fs.chownSync");
-    chmodSync = /* @__PURE__ */ notImplemented("fs.chmodSync");
-    closeSync = /* @__PURE__ */ notImplemented("fs.closeSync");
-    copyFileSync = /* @__PURE__ */ notImplemented("fs.copyFileSync");
-    cpSync = /* @__PURE__ */ notImplemented("fs.cpSync");
-    existsSync = /* @__PURE__ */ __name(() => false, "existsSync");
-    fchownSync = /* @__PURE__ */ notImplemented("fs.fchownSync");
-    fchmodSync = /* @__PURE__ */ notImplemented("fs.fchmodSync");
-    fdatasyncSync = /* @__PURE__ */ notImplemented("fs.fdatasyncSync");
-    fstatSync = /* @__PURE__ */ notImplemented("fs.fstatSync");
-    fsyncSync = /* @__PURE__ */ notImplemented("fs.fsyncSync");
-    ftruncateSync = /* @__PURE__ */ notImplemented("fs.ftruncateSync");
-    futimesSync = /* @__PURE__ */ notImplemented("fs.futimesSync");
-    lchownSync = /* @__PURE__ */ notImplemented("fs.lchownSync");
-    lchmodSync = /* @__PURE__ */ notImplemented("fs.lchmodSync");
-    linkSync = /* @__PURE__ */ notImplemented("fs.linkSync");
-    lutimesSync = /* @__PURE__ */ notImplemented("fs.lutimesSync");
-    mkdirSync = /* @__PURE__ */ notImplemented("fs.mkdirSync");
-    mkdtempSync = /* @__PURE__ */ notImplemented("fs.mkdtempSync");
-    openSync = /* @__PURE__ */ notImplemented("fs.openSync");
-    opendirSync = /* @__PURE__ */ notImplemented("fs.opendirSync");
-    readdirSync = /* @__PURE__ */ notImplemented("fs.readdirSync");
-    readSync = /* @__PURE__ */ notImplemented("fs.readSync");
-    readvSync = /* @__PURE__ */ notImplemented("fs.readvSync");
-    readFileSync = /* @__PURE__ */ notImplemented("fs.readFileSync");
-    readlinkSync = /* @__PURE__ */ notImplemented("fs.readlinkSync");
-    renameSync = /* @__PURE__ */ notImplemented("fs.renameSync");
-    rmSync = /* @__PURE__ */ notImplemented("fs.rmSync");
-    rmdirSync = /* @__PURE__ */ notImplemented("fs.rmdirSync");
-    symlinkSync = /* @__PURE__ */ notImplemented("fs.symlinkSync");
-    truncateSync = /* @__PURE__ */ notImplemented("fs.truncateSync");
-    unlinkSync = /* @__PURE__ */ notImplemented("fs.unlinkSync");
-    utimesSync = /* @__PURE__ */ notImplemented("fs.utimesSync");
-    writeFileSync = /* @__PURE__ */ notImplemented("fs.writeFileSync");
-    writeSync = /* @__PURE__ */ notImplemented("fs.writeSync");
-    writevSync = /* @__PURE__ */ notImplemented("fs.writevSync");
-    statfsSync = /* @__PURE__ */ notImplemented("fs.statfsSync");
-    globSync = /* @__PURE__ */ notImplemented("fs.globSync");
-  }
-});
-
-// ../node_modules/unenv/dist/runtime/node/fs.mjs
-var fs_default;
-var init_fs2 = __esm({
-  "../node_modules/unenv/dist/runtime/node/fs.mjs"() {
-    init_modules_watch_stub();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_process();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_console();
-    init_performance2();
-    init_promises2();
-    init_classes();
-    init_fs();
-    init_constants();
-    init_constants();
-    init_fs();
-    init_classes();
-    fs_default = {
-      F_OK,
-      R_OK,
-      W_OK,
-      X_OK,
-      constants: constants_exports,
-      promises: promises_default,
-      Dir,
-      Dirent,
-      FileReadStream,
-      FileWriteStream,
-      ReadStream: ReadStream2,
-      Stats,
-      WriteStream: WriteStream2,
-      _toUnixTimestamp,
-      access: access2,
-      accessSync,
-      appendFile: appendFile2,
-      appendFileSync,
-      chmod: chmod2,
-      chmodSync,
-      chown: chown2,
-      chownSync,
-      close,
-      closeSync,
-      copyFile: copyFile2,
-      copyFileSync,
-      cp: cp2,
-      cpSync,
-      createReadStream,
-      createWriteStream,
-      exists,
-      existsSync,
-      fchmod,
-      fchmodSync,
-      fchown,
-      fchownSync,
-      fdatasync,
-      fdatasyncSync,
-      fstat,
-      fstatSync,
-      fsync,
-      fsyncSync,
-      ftruncate,
-      ftruncateSync,
-      futimes,
-      futimesSync,
-      glob: glob2,
-      lchmod: lchmod2,
-      globSync,
-      lchmodSync,
-      lchown: lchown2,
-      lchownSync,
-      link: link2,
-      linkSync,
-      lstat: lstat2,
-      lstatSync,
-      lutimes: lutimes2,
-      lutimesSync,
-      mkdir: mkdir2,
-      mkdirSync,
-      mkdtemp: mkdtemp2,
-      mkdtempSync,
-      open: open2,
-      openAsBlob,
-      openSync,
-      opendir: opendir2,
-      opendirSync,
-      read,
-      readFile: readFile2,
-      readFileSync,
-      readSync,
-      readdir: readdir2,
-      readdirSync,
-      readlink: readlink2,
-      readlinkSync,
-      readv,
-      readvSync,
-      realpath: realpath2,
-      realpathSync,
-      rename: rename2,
-      renameSync,
-      rm: rm2,
-      rmSync,
-      rmdir: rmdir2,
-      rmdirSync,
-      stat: stat2,
-      statSync,
-      statfs: statfs2,
-      statfsSync,
-      symlink: symlink2,
-      symlinkSync,
-      truncate: truncate2,
-      truncateSync,
-      unlink: unlink2,
-      unlinkSync,
-      unwatchFile,
-      utimes: utimes2,
-      utimesSync,
-      watch: watch2,
-      watchFile,
-      write,
-      writeFile: writeFile2,
-      writeFileSync,
-      writeSync,
-      writev,
-      writevSync
-    };
-  }
-});
-
-// node-built-in-modules:fs
-var require_fs = __commonJS({
-  "node-built-in-modules:fs"(exports, module) {
-    init_modules_watch_stub();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_process();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_console();
-    init_performance2();
-    init_fs2();
-    module.exports = fs_default;
-  }
-});
-
-// ../node_modules/pg-connection-string/index.js
-var require_pg_connection_string = __commonJS({
-  "../node_modules/pg-connection-string/index.js"(exports, module) {
-    "use strict";
-    init_modules_watch_stub();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_process();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_console();
-    init_performance2();
-    function parse(str, options = {}) {
-      if (str.charAt(0) === "/") {
-        const config4 = str.split(" ");
-        return { host: config4[0], database: config4[1] };
-      }
-      const config3 = /* @__PURE__ */ Object.create(null);
-      let result;
-      let dummyHost = false;
-      if (/ |%[^a-f0-9]|%[a-f0-9][^a-f0-9]/i.test(str)) {
-        str = encodeURI(str).replace(/%25(\d\d)/g, "%$1");
-      }
-      try {
-        try {
-          result = new URL(str, "postgres://base");
-        } catch (e) {
-          result = new URL(str.replace("@/", "@___DUMMY___/"), "postgres://base");
-          dummyHost = true;
-        }
-      } catch (err) {
-        err.input && (err.input = "*****REDACTED*****");
-        throw err;
-      }
-      for (const entry of result.searchParams.entries()) {
-        config3[entry[0]] = entry[1];
-      }
-      config3.user = config3.user || decodeURIComponent(result.username);
-      config3.password = config3.password || decodeURIComponent(result.password);
-      if (result.protocol == "socket:") {
-        config3.host = decodeURI(result.pathname);
-        config3.database = result.searchParams.get("db");
-        config3.client_encoding = result.searchParams.get("encoding");
-        return config3;
-      }
-      const hostname = dummyHost ? "" : result.hostname;
-      if (!config3.host) {
-        config3.host = decodeURIComponent(hostname);
-      } else if (hostname && /^%2f/i.test(hostname)) {
-        result.pathname = hostname + result.pathname;
-      }
-      if (!config3.port) {
-        config3.port = result.port;
-      }
-      const pathname = result.pathname.slice(1) || null;
-      config3.database = pathname ? decodeURI(pathname) : null;
-      if (config3.ssl === "true" || config3.ssl === "1") {
-        config3.ssl = true;
-      }
-      if (config3.ssl === "0") {
-        config3.ssl = false;
-      }
-      if (config3.sslcert || config3.sslkey || config3.sslrootcert || config3.sslmode) {
-        config3.ssl = {};
-      }
-      if (config3.sslnegotiation === "direct" && config3.ssl === void 0) {
-        config3.ssl = true;
-      }
-      const fs = config3.sslcert || config3.sslkey || config3.sslrootcert ? require_fs() : null;
-      if (config3.sslcert) {
-        config3.ssl.cert = fs.readFileSync(config3.sslcert).toString();
-      }
-      if (config3.sslkey) {
-        config3.ssl.key = fs.readFileSync(config3.sslkey).toString();
-      }
-      if (config3.sslrootcert) {
-        config3.ssl.ca = fs.readFileSync(config3.sslrootcert).toString();
-      }
-      if (options.useLibpqCompat && config3.uselibpqcompat) {
-        throw new Error("Both useLibpqCompat and uselibpqcompat are set. Please use only one of them.");
-      }
-      if (config3.uselibpqcompat === "true" || options.useLibpqCompat) {
-        switch (config3.sslmode) {
-          case "disable": {
-            config3.ssl = false;
-            break;
-          }
-          case "prefer": {
-            config3.ssl.rejectUnauthorized = false;
-            break;
-          }
-          case "require": {
-            if (config3.sslrootcert) {
-              config3.ssl.checkServerIdentity = function() {
-              };
-            } else {
-              config3.ssl.rejectUnauthorized = false;
-            }
-            break;
-          }
-          case "verify-ca": {
-            if (!config3.ssl.ca) {
-              throw new Error(
-                "SECURITY WARNING: Using sslmode=verify-ca requires specifying a CA with sslrootcert. If a public CA is used, verify-ca allows connections to a server that somebody else may have registered with the CA, making you vulnerable to Man-in-the-Middle attacks. Either specify a custom CA certificate with sslrootcert parameter or use sslmode=verify-full for proper security."
-              );
-            }
-            config3.ssl.checkServerIdentity = function() {
-            };
-            break;
-          }
-          case "verify-full": {
-            break;
-          }
-        }
-      } else {
-        switch (config3.sslmode) {
-          case "disable": {
-            config3.ssl = false;
-            break;
-          }
-          case "prefer":
-          case "require":
-          case "verify-ca":
-          case "verify-full": {
-            if (config3.sslmode !== "verify-full") {
-              deprecatedSslModeWarning(config3.sslmode);
-            }
-            break;
-          }
-          case "no-verify": {
-            config3.ssl.rejectUnauthorized = false;
-            break;
-          }
-        }
-      }
-      return config3;
-    }
-    __name(parse, "parse");
-    function toConnectionOptions(sslConfig) {
-      const connectionOptions = Object.entries(sslConfig).reduce((c, [key, value]) => {
-        if (value !== void 0 && value !== null) {
-          c[key] = value;
-        }
-        return c;
-      }, /* @__PURE__ */ Object.create(null));
-      return connectionOptions;
-    }
-    __name(toConnectionOptions, "toConnectionOptions");
-    function toClientConfig(config3) {
-      const poolConfig = Object.entries(config3).reduce((c, [key, value]) => {
-        if (key === "ssl") {
-          const sslConfig = value;
-          if (typeof sslConfig === "boolean") {
-            c[key] = sslConfig;
-          }
-          if (typeof sslConfig === "object") {
-            c[key] = toConnectionOptions(sslConfig);
-          }
-        } else if (value !== void 0 && value !== null) {
-          if (key === "port") {
-            if (value !== "") {
-              const v = parseInt(value, 10);
-              if (isNaN(v)) {
-                throw new Error(`Invalid ${key}: ${value}`);
-              }
-              c[key] = v;
-            }
-          } else {
-            c[key] = value;
-          }
-        }
-        return c;
-      }, /* @__PURE__ */ Object.create(null));
-      return poolConfig;
-    }
-    __name(toClientConfig, "toClientConfig");
-    function parseIntoClientConfig(str) {
-      return toClientConfig(parse(str));
-    }
-    __name(parseIntoClientConfig, "parseIntoClientConfig");
-    function deprecatedSslModeWarning(sslmode) {
-      if (!deprecatedSslModeWarning.warned && typeof process !== "undefined" && process.emitWarning) {
-        deprecatedSslModeWarning.warned = true;
-        process.emitWarning(`SECURITY WARNING: The SSL modes 'prefer', 'require', and 'verify-ca' are treated as aliases for 'verify-full'.
-In the next major version (pg-connection-string v3.0.0 and pg v9.0.0), these modes will adopt standard libpq semantics, which have weaker security guarantees.
-
-To prepare for this change:
-- If you want the current behavior, explicitly use 'sslmode=verify-full'
-- If you want libpq compatibility now, use 'uselibpqcompat=true&sslmode=${sslmode}'
-
-See https://www.postgresql.org/docs/current/libpq-ssl.html for libpq SSL mode definitions.`);
-      }
-    }
-    __name(deprecatedSslModeWarning, "deprecatedSslModeWarning");
-    module.exports = parse;
-    parse.parse = parse;
-    parse.toClientConfig = toClientConfig;
-    parse.parseIntoClientConfig = parseIntoClientConfig;
-  }
-});
-
-// ../node_modules/pg/lib/connection-parameters.js
-var require_connection_parameters = __commonJS({
-  "../node_modules/pg/lib/connection-parameters.js"(exports, module) {
-    "use strict";
-    init_modules_watch_stub();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_process();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_console();
-    init_performance2();
-    var dns = require_dns();
-    var defaults2 = require_defaults();
-    var parse = require_pg_connection_string().parse;
-    var val = /* @__PURE__ */ __name(function(key, config3, envVar) {
-      if (config3[key]) {
-        return config3[key];
-      }
-      if (envVar === void 0) {
-        envVar = process.env["PG" + key.toUpperCase()];
-      } else if (envVar === false) {
-      } else {
-        envVar = process.env[envVar];
-      }
-      return envVar || defaults2[key];
-    }, "val");
-    var readSSLConfigFromEnvironment = /* @__PURE__ */ __name(function() {
-      switch (process.env.PGSSLMODE) {
-        case "disable":
-          return false;
-        case "prefer":
-        case "require":
-        case "verify-ca":
-        case "verify-full":
-          return true;
-        case "no-verify":
-          return { rejectUnauthorized: false };
-      }
-      return defaults2.ssl;
-    }, "readSSLConfigFromEnvironment");
-    var quoteParamValue = /* @__PURE__ */ __name(function(value) {
-      return "'" + ("" + value).replace(/\\/g, "\\\\").replace(/'/g, "\\'") + "'";
-    }, "quoteParamValue");
-    var add = /* @__PURE__ */ __name(function(params, config3, paramName) {
-      const value = config3[paramName];
-      if (value !== void 0 && value !== null) {
-        params.push(paramName + "=" + quoteParamValue(value));
-      }
-    }, "add");
-    var ConnectionParameters = class {
-      static {
-        __name(this, "ConnectionParameters");
-      }
-      constructor(config3) {
-        config3 = typeof config3 === "string" ? parse(config3) : config3 || {};
-        if (config3.connectionString) {
-          config3 = Object.assign({}, config3, parse(config3.connectionString));
-        }
-        this.user = val("user", config3);
-        this.database = val("database", config3);
-        if (this.database === void 0) {
-          this.database = this.user;
-        }
-        this.port = parseInt(val("port", config3), 10);
-        this.host = val("host", config3);
-        Object.defineProperty(this, "password", {
-          configurable: true,
-          enumerable: false,
-          writable: true,
-          value: val("password", config3)
-        });
-        this.binary = val("binary", config3);
-        this.options = val("options", config3);
-        this.ssl = typeof config3.ssl === "undefined" ? readSSLConfigFromEnvironment() : config3.ssl;
-        if (typeof this.ssl === "string") {
-          if (this.ssl === "true") {
-            this.ssl = true;
-          }
-        }
-        if (this.ssl === "no-verify") {
-          this.ssl = { rejectUnauthorized: false };
-        }
-        if (this.ssl && this.ssl.key) {
-          Object.defineProperty(this.ssl, "key", {
-            enumerable: false
-          });
-        }
-        this.sslnegotiation = val("sslnegotiation", config3, "PGSSLNEGOTIATION");
-        if (this.sslnegotiation !== void 0 && this.sslnegotiation !== "postgres" && this.sslnegotiation !== "direct") {
-          throw new Error(
-            `Invalid sslnegotiation value: "${this.sslnegotiation}". Valid values are "postgres" and "direct".`
-          );
-        }
-        if (this.sslnegotiation === "direct" && !this.ssl) {
-          throw new Error("sslnegotiation=direct requires SSL to be enabled");
-        }
-        this.client_encoding = val("client_encoding", config3);
-        this.replication = val("replication", config3);
-        this.isDomainSocket = !(this.host || "").indexOf("/");
-        this.application_name = val("application_name", config3, "PGAPPNAME");
-        this.fallback_application_name = val("fallback_application_name", config3, false);
-        this.statement_timeout = val("statement_timeout", config3, false);
-        this.lock_timeout = val("lock_timeout", config3, false);
-        this.idle_in_transaction_session_timeout = val("idle_in_transaction_session_timeout", config3, false);
-        this.query_timeout = val("query_timeout", config3, false);
-        if (config3.connectionTimeoutMillis === void 0) {
-          this.connect_timeout = process.env.PGCONNECT_TIMEOUT || 0;
-        } else {
-          this.connect_timeout = Math.floor(config3.connectionTimeoutMillis / 1e3);
-        }
-        if (config3.keepAlive === false) {
-          this.keepalives = 0;
-        } else if (config3.keepAlive === true) {
-          this.keepalives = 1;
-        }
-        if (typeof config3.keepAliveInitialDelayMillis === "number") {
-          this.keepalives_idle = Math.floor(config3.keepAliveInitialDelayMillis / 1e3);
-        }
-      }
-      getLibpqConnectionString(cb) {
-        const params = [];
-        add(params, this, "user");
-        add(params, this, "password");
-        add(params, this, "port");
-        add(params, this, "application_name");
-        add(params, this, "fallback_application_name");
-        add(params, this, "connect_timeout");
-        add(params, this, "options");
-        const ssl = typeof this.ssl === "object" ? this.ssl : this.ssl ? { sslmode: this.ssl } : {};
-        add(params, ssl, "sslmode");
-        add(params, ssl, "sslca");
-        add(params, ssl, "sslkey");
-        add(params, ssl, "sslcert");
-        add(params, ssl, "sslrootcert");
-        add(params, this, "sslnegotiation");
-        if (this.database) {
-          params.push("dbname=" + quoteParamValue(this.database));
-        }
-        if (this.replication) {
-          params.push("replication=" + quoteParamValue(this.replication));
-        }
-        if (this.host) {
-          params.push("host=" + quoteParamValue(this.host));
-        }
-        if (this.isDomainSocket) {
-          return cb(null, params.join(" "));
-        }
-        if (this.client_encoding) {
-          params.push("client_encoding=" + quoteParamValue(this.client_encoding));
-        }
-        dns.lookup(this.host, function(err, address) {
-          if (err) return cb(err, null);
-          params.push("hostaddr=" + quoteParamValue(address));
-          return cb(null, params.join(" "));
-        });
-      }
-    };
-    module.exports = ConnectionParameters;
-  }
-});
-
-// ../node_modules/pg/lib/result.js
-var require_result = __commonJS({
-  "../node_modules/pg/lib/result.js"(exports, module) {
-    "use strict";
-    init_modules_watch_stub();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_process();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_console();
-    init_performance2();
-    var types2 = require_pg_types();
-    var matchRegexp = /^([A-Za-z]+)(?: (\d+))?(?: (\d+))?/;
-    var Result2 = class {
-      static {
-        __name(this, "Result");
-      }
-      constructor(rowMode, types3) {
-        this.command = null;
-        this.rowCount = null;
-        this.oid = null;
-        this.rows = [];
-        this.fields = [];
-        this._parsers = void 0;
-        this._types = types3;
-        this.RowCtor = null;
-        this.rowAsArray = rowMode === "array";
-        if (this.rowAsArray) {
-          this.parseRow = this._parseRowAsArray;
-        }
-        this._prebuiltEmptyResultObject = null;
-      }
-      // adds a command complete message
-      addCommandComplete(msg) {
-        let match2;
-        if (msg.text) {
-          match2 = matchRegexp.exec(msg.text);
-        } else {
-          match2 = matchRegexp.exec(msg.command);
-        }
-        if (match2) {
-          this.command = match2[1];
-          if (match2[3]) {
-            this.oid = parseInt(match2[2], 10);
-            this.rowCount = parseInt(match2[3], 10);
-          } else if (match2[2]) {
-            this.rowCount = parseInt(match2[2], 10);
-          }
-        }
-      }
-      _parseRowAsArray(rowData) {
-        const row = new Array(rowData.length);
-        for (let i = 0, len = rowData.length; i < len; i++) {
-          const rawValue = rowData[i];
-          if (rawValue !== null) {
-            row[i] = this._parsers[i](rawValue);
-          } else {
-            row[i] = null;
-          }
-        }
-        return row;
-      }
-      parseRow(rowData) {
-        const row = { ...this._prebuiltEmptyResultObject };
-        for (let i = 0, len = rowData.length; i < len; i++) {
-          const rawValue = rowData[i];
-          const field = this.fields[i].name;
-          if (rawValue !== null) {
-            const v = this.fields[i].format === "binary" ? Buffer.from(rawValue) : rawValue;
-            row[field] = this._parsers[i](v);
-          } else {
-            row[field] = null;
-          }
-        }
-        return row;
-      }
-      addRow(row) {
-        this.rows.push(row);
-      }
-      addFields(fieldDescriptions) {
-        this.fields = fieldDescriptions;
-        if (this.fields.length) {
-          this._parsers = new Array(fieldDescriptions.length);
-        }
-        const row = /* @__PURE__ */ Object.create(null);
-        for (let i = 0; i < fieldDescriptions.length; i++) {
-          const desc = fieldDescriptions[i];
-          row[desc.name] = null;
-          if (this._types) {
-            this._parsers[i] = this._types.getTypeParser(desc.dataTypeID, desc.format || "text");
-          } else {
-            this._parsers[i] = types2.getTypeParser(desc.dataTypeID, desc.format || "text");
-          }
-        }
-        this._prebuiltEmptyResultObject = { ...row };
-      }
-    };
-    module.exports = Result2;
-  }
-});
-
-// ../node_modules/pg/lib/query.js
-var require_query = __commonJS({
-  "../node_modules/pg/lib/query.js"(exports, module) {
-    "use strict";
-    init_modules_watch_stub();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_process();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_console();
-    init_performance2();
-    var { EventEmitter: EventEmitter3 } = require_events();
-    var Result2 = require_result();
-    var utils = require_utils();
-    var Query2 = class extends EventEmitter3 {
-      static {
-        __name(this, "Query");
-      }
-      constructor(config3, values, callback) {
-        super();
-        config3 = utils.normalizeQueryConfig(config3, values, callback);
-        this.text = config3.text;
-        this.values = config3.values;
-        this.rows = config3.rows;
-        this.types = config3.types;
-        this.name = config3.name;
-        this.queryMode = config3.queryMode;
-        this.binary = config3.binary;
-        this.portal = config3.portal || "";
-        this.callback = config3.callback;
-        this._rowMode = config3.rowMode;
-        if (process.domain && config3.callback) {
-          this.callback = process.domain.bind(config3.callback);
-        }
-        this._result = new Result2(this._rowMode, this.types);
-        this._results = this._result;
-        this._canceledDueToError = false;
-      }
-      requiresPreparation() {
-        if (this.queryMode === "extended") {
-          return true;
-        }
-        if (this.name) {
-          return true;
-        }
-        if (this.rows) {
-          return true;
-        }
-        if (!this.text) {
-          return false;
-        }
-        if (!this.values) {
-          return false;
-        }
-        return this.values.length > 0;
-      }
-      _checkForMultirow() {
-        if (this._result.command) {
-          if (!Array.isArray(this._results)) {
-            this._results = [this._result];
-          }
-          this._result = new Result2(this._rowMode, this._result._types);
-          this._results.push(this._result);
-        }
-      }
-      // associates row metadata from the supplied
-      // message with this query object
-      // metadata used when parsing row results
-      handleRowDescription(msg) {
-        this._checkForMultirow();
-        this._result.addFields(msg.fields);
-        this._accumulateRows = this.callback || !this.listeners("row").length;
-      }
-      handleDataRow(msg) {
-        let row;
-        if (this._canceledDueToError) {
-          return;
-        }
-        try {
-          row = this._result.parseRow(msg.fields);
-        } catch (err) {
-          this._canceledDueToError = err;
-          return;
-        }
-        this.emit("row", row, this._result);
-        if (this._accumulateRows) {
-          this._result.addRow(row);
-        }
-      }
-      handleCommandComplete(msg, connection) {
-        this._checkForMultirow();
-        this._result.addCommandComplete(msg);
-        if (this.rows) {
-          connection.sync();
-        }
-      }
-      // if a named prepared statement is created with empty query text
-      // the backend will send an emptyQuery message but *not* a command complete message
-      // since we pipeline sync immediately after execute we don't need to do anything here
-      // unless we have rows specified, in which case we did not pipeline the initial sync call
-      handleEmptyQuery(connection) {
-        if (this.rows) {
-          connection.sync();
-        }
-      }
-      handleError(err, connection) {
-        if (this._canceledDueToError) {
-          err = this._canceledDueToError;
-          this._canceledDueToError = false;
-        }
-        if (this.callback) {
-          return this.callback(err);
-        }
-        this.emit("error", err);
-      }
-      handleReadyForQuery(con) {
-        if (this._canceledDueToError) {
-          return this.handleError(this._canceledDueToError, con);
-        }
-        if (this.callback) {
-          try {
-            this.callback(null, this._results);
-          } catch (err) {
-            process.nextTick(() => {
-              throw err;
-            });
-          }
-        }
-        this.emit("end", this._results);
-      }
-      submit(connection) {
-        if (typeof this.text !== "string" && typeof this.name !== "string") {
-          return new Error("A query must have either text or a name. Supplying neither is unsupported.");
-        }
-        const previous = connection.parsedStatements[this.name];
-        if (this.text && previous && this.text !== previous) {
-          return new Error(`Prepared statements must be unique - '${this.name}' was used for a different statement`);
-        }
-        if (this.values && !Array.isArray(this.values)) {
-          return new Error("Query values must be an array");
-        }
-        if (this.requiresPreparation()) {
-          connection.stream.cork && connection.stream.cork();
-          try {
-            this.prepare(connection);
-          } finally {
-            connection.stream.uncork && connection.stream.uncork();
-          }
-        } else {
-          connection.query(this.text);
-        }
-        return null;
-      }
-      hasBeenParsed(connection) {
-        return this.name && connection.parsedStatements[this.name];
-      }
-      handlePortalSuspended(connection) {
-        this._getRows(connection, this.rows);
-      }
-      _getRows(connection, rows) {
-        connection.execute({
-          portal: this.portal,
-          rows
-        });
-        if (!rows) {
-          connection.sync();
-        } else {
-          connection.flush();
-        }
-      }
-      // http://developer.postgresql.org/pgdocs/postgres/protocol-flow.html#PROTOCOL-FLOW-EXT-QUERY
-      prepare(connection) {
-        if (!this.hasBeenParsed(connection)) {
-          connection.parse({
-            text: this.text,
-            name: this.name,
-            types: this.types
-          });
-        }
-        try {
-          connection.bind({
-            portal: this.portal,
-            statement: this.name,
-            values: this.values,
-            binary: this.binary,
-            valueMapper: utils.prepareValue
-          });
-        } catch (err) {
-          connection.close({ type: "S", name: this.name });
-          connection.sync();
-          this.handleError(err, connection);
-          return;
-        }
-        connection.describe({
-          type: "P",
-          name: this.portal || ""
-        });
-        this._getRows(connection, this.rows);
-      }
-      handleCopyInResponse(connection) {
-        connection.sendCopyFail("No source stream defined");
-      }
-      handleCopyData(msg, connection) {
-      }
-    };
-    module.exports = Query2;
-  }
-});
-
-// ../node_modules/pg-protocol/dist/messages.js
-var require_messages = __commonJS({
-  "../node_modules/pg-protocol/dist/messages.js"(exports) {
-    "use strict";
-    init_modules_watch_stub();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_process();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_console();
-    init_performance2();
-    Object.defineProperty(exports, "__esModule", { value: true });
-    exports.NoticeMessage = exports.DataRowMessage = exports.CommandCompleteMessage = exports.ReadyForQueryMessage = exports.NotificationResponseMessage = exports.BackendKeyDataMessage = exports.AuthenticationMD5Password = exports.ParameterStatusMessage = exports.ParameterDescriptionMessage = exports.RowDescriptionMessage = exports.Field = exports.CopyResponse = exports.CopyDataMessage = exports.DatabaseError = exports.copyDone = exports.emptyQuery = exports.replicationStart = exports.portalSuspended = exports.noData = exports.closeComplete = exports.bindComplete = exports.parseComplete = void 0;
-    exports.parseComplete = {
-      name: "parseComplete",
-      length: 5
-    };
-    exports.bindComplete = {
-      name: "bindComplete",
-      length: 5
-    };
-    exports.closeComplete = {
-      name: "closeComplete",
-      length: 5
-    };
-    exports.noData = {
-      name: "noData",
-      length: 5
-    };
-    exports.portalSuspended = {
-      name: "portalSuspended",
-      length: 5
-    };
-    exports.replicationStart = {
-      name: "replicationStart",
-      length: 4
-    };
-    exports.emptyQuery = {
-      name: "emptyQuery",
-      length: 4
-    };
-    exports.copyDone = {
-      name: "copyDone",
-      length: 4
-    };
-    var DatabaseError3 = class extends Error {
-      static {
-        __name(this, "DatabaseError");
-      }
-      constructor(message, length, name) {
-        super(message);
-        this.length = length;
-        this.name = name;
-      }
-    };
-    exports.DatabaseError = DatabaseError3;
-    var CopyDataMessage = class {
-      static {
-        __name(this, "CopyDataMessage");
-      }
-      constructor(length, chunk) {
-        this.length = length;
-        this.chunk = chunk;
-        this.name = "copyData";
-      }
-    };
-    exports.CopyDataMessage = CopyDataMessage;
-    var CopyResponse = class {
-      static {
-        __name(this, "CopyResponse");
-      }
-      constructor(length, name, binary, columnCount) {
-        this.length = length;
-        this.name = name;
-        this.binary = binary;
-        this.columnTypes = new Array(columnCount);
-      }
-    };
-    exports.CopyResponse = CopyResponse;
-    var Field = class {
-      static {
-        __name(this, "Field");
-      }
-      constructor(name, tableID, columnID, dataTypeID, dataTypeSize, dataTypeModifier, format) {
-        this.name = name;
-        this.tableID = tableID;
-        this.columnID = columnID;
-        this.dataTypeID = dataTypeID;
-        this.dataTypeSize = dataTypeSize;
-        this.dataTypeModifier = dataTypeModifier;
-        this.format = format;
-      }
-    };
-    exports.Field = Field;
-    var RowDescriptionMessage = class {
-      static {
-        __name(this, "RowDescriptionMessage");
-      }
-      constructor(length, fieldCount) {
-        this.length = length;
-        this.fieldCount = fieldCount;
-        this.name = "rowDescription";
-        this.fields = new Array(this.fieldCount);
-      }
-    };
-    exports.RowDescriptionMessage = RowDescriptionMessage;
-    var ParameterDescriptionMessage = class {
-      static {
-        __name(this, "ParameterDescriptionMessage");
-      }
-      constructor(length, parameterCount) {
-        this.length = length;
-        this.parameterCount = parameterCount;
-        this.name = "parameterDescription";
-        this.dataTypeIDs = new Array(this.parameterCount);
-      }
-    };
-    exports.ParameterDescriptionMessage = ParameterDescriptionMessage;
-    var ParameterStatusMessage = class {
-      static {
-        __name(this, "ParameterStatusMessage");
-      }
-      constructor(length, parameterName, parameterValue) {
-        this.length = length;
-        this.parameterName = parameterName;
-        this.parameterValue = parameterValue;
-        this.name = "parameterStatus";
-      }
-    };
-    exports.ParameterStatusMessage = ParameterStatusMessage;
-    var AuthenticationMD5Password = class {
-      static {
-        __name(this, "AuthenticationMD5Password");
-      }
-      constructor(length, salt) {
-        this.length = length;
-        this.salt = salt;
-        this.name = "authenticationMD5Password";
-      }
-    };
-    exports.AuthenticationMD5Password = AuthenticationMD5Password;
-    var BackendKeyDataMessage = class {
-      static {
-        __name(this, "BackendKeyDataMessage");
-      }
-      constructor(length, processID, secretKey) {
-        this.length = length;
-        this.processID = processID;
-        this.secretKey = secretKey;
-        this.name = "backendKeyData";
-      }
-    };
-    exports.BackendKeyDataMessage = BackendKeyDataMessage;
-    var NotificationResponseMessage = class {
-      static {
-        __name(this, "NotificationResponseMessage");
-      }
-      constructor(length, processId, channel2, payload) {
-        this.length = length;
-        this.processId = processId;
-        this.channel = channel2;
-        this.payload = payload;
-        this.name = "notification";
-      }
-    };
-    exports.NotificationResponseMessage = NotificationResponseMessage;
-    var ReadyForQueryMessage = class {
-      static {
-        __name(this, "ReadyForQueryMessage");
-      }
-      constructor(length, status) {
-        this.length = length;
-        this.status = status;
-        this.name = "readyForQuery";
-      }
-    };
-    exports.ReadyForQueryMessage = ReadyForQueryMessage;
-    var CommandCompleteMessage = class {
-      static {
-        __name(this, "CommandCompleteMessage");
-      }
-      constructor(length, text) {
-        this.length = length;
-        this.text = text;
-        this.name = "commandComplete";
-      }
-    };
-    exports.CommandCompleteMessage = CommandCompleteMessage;
-    var DataRowMessage = class {
-      static {
-        __name(this, "DataRowMessage");
-      }
-      constructor(length, fields) {
-        this.length = length;
-        this.fields = fields;
-        this.name = "dataRow";
-        this.fieldCount = fields.length;
-      }
-    };
-    exports.DataRowMessage = DataRowMessage;
-    var NoticeMessage = class {
-      static {
-        __name(this, "NoticeMessage");
-      }
-      constructor(length, message) {
-        this.length = length;
-        this.message = message;
-        this.name = "notice";
-      }
-    };
-    exports.NoticeMessage = NoticeMessage;
-  }
-});
-
-// ../node_modules/pg-protocol/dist/buffer-writer.js
-var require_buffer_writer = __commonJS({
-  "../node_modules/pg-protocol/dist/buffer-writer.js"(exports) {
-    "use strict";
-    init_modules_watch_stub();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_process();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_console();
-    init_performance2();
-    Object.defineProperty(exports, "__esModule", { value: true });
-    exports.Writer = void 0;
-    var Writer = class {
-      static {
-        __name(this, "Writer");
-      }
-      constructor(size = 256) {
-        this.size = size;
-        this.offset = 5;
-        this.headerPosition = 0;
-        this.buffer = Buffer.allocUnsafe(size);
-      }
-      ensure(size) {
-        const remaining = this.buffer.length - this.offset;
-        if (remaining < size) {
-          const oldBuffer = this.buffer;
-          const newSize = oldBuffer.length + (oldBuffer.length >> 1) + size;
-          this.buffer = Buffer.allocUnsafe(newSize);
-          oldBuffer.copy(this.buffer);
-        }
-      }
-      addInt32(num) {
-        this.ensure(4);
-        this.buffer[this.offset++] = num >>> 24 & 255;
-        this.buffer[this.offset++] = num >>> 16 & 255;
-        this.buffer[this.offset++] = num >>> 8 & 255;
-        this.buffer[this.offset++] = num >>> 0 & 255;
-        return this;
-      }
-      addInt16(num) {
-        this.ensure(2);
-        this.buffer[this.offset++] = num >>> 8 & 255;
-        this.buffer[this.offset++] = num >>> 0 & 255;
-        return this;
-      }
-      addCString(string) {
-        if (!string) {
-          this.ensure(1);
-        } else {
-          const len = Buffer.byteLength(string);
-          this.ensure(len + 1);
-          this.buffer.write(string, this.offset, "utf-8");
-          this.offset += len;
-        }
-        this.buffer[this.offset++] = 0;
-        return this;
-      }
-      addString(string = "") {
-        const len = Buffer.byteLength(string);
-        this.ensure(len);
-        this.buffer.write(string, this.offset);
-        this.offset += len;
-        return this;
-      }
-      // Write an Int32 byte-length prefix immediately followed by the string's UTF-8
-      // bytes. Postgres' Bind wire format prefixes every parameter with its length,
-      // and doing it in one method computes Buffer.byteLength ONCE — the previous
-      // `addInt32(Buffer.byteLength(s)).addString(s)` pairing scanned the string
-      // three times (byteLength for the prefix, byteLength again inside addString,
-      // then the encode), which is costly for large text parameters.
-      addInt32PrefixedString(string) {
-        const len = Buffer.byteLength(string);
-        this.ensure(4 + len);
-        const buffer = this.buffer;
-        let offset = this.offset;
-        buffer[offset++] = len >>> 24 & 255;
-        buffer[offset++] = len >>> 16 & 255;
-        buffer[offset++] = len >>> 8 & 255;
-        buffer[offset++] = len >>> 0 & 255;
-        buffer.write(string, offset, "utf-8");
-        this.offset = offset + len;
-        return this;
-      }
-      add(otherBuffer) {
-        this.ensure(otherBuffer.length);
-        otherBuffer.copy(this.buffer, this.offset);
-        this.offset += otherBuffer.length;
-        return this;
-      }
-      join(code) {
-        if (code) {
-          this.buffer[this.headerPosition] = code;
-          const length = this.offset - (this.headerPosition + 1);
-          this.buffer.writeInt32BE(length, this.headerPosition + 1);
-        }
-        return this.buffer.slice(code ? 0 : 5, this.offset);
-      }
-      flush(code) {
-        const result = this.join(code);
-        this.offset = 5;
-        this.headerPosition = 0;
-        this.buffer = Buffer.allocUnsafe(this.size);
-        return result;
-      }
-      clear() {
-        this.offset = 5;
-        this.headerPosition = 0;
-      }
-    };
-    exports.Writer = Writer;
-  }
-});
-
-// ../node_modules/pg-protocol/dist/serializer.js
-var require_serializer = __commonJS({
-  "../node_modules/pg-protocol/dist/serializer.js"(exports) {
-    "use strict";
-    init_modules_watch_stub();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_process();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_console();
-    init_performance2();
-    Object.defineProperty(exports, "__esModule", { value: true });
-    exports.serialize = void 0;
-    var buffer_writer_1 = require_buffer_writer();
-    var writer = new buffer_writer_1.Writer();
-    var startup = /* @__PURE__ */ __name((opts) => {
-      writer.addInt16(3).addInt16(0);
-      for (const key of Object.keys(opts)) {
-        writer.addCString(key).addCString(opts[key]);
-      }
-      writer.addCString("client_encoding").addCString("UTF8");
-      const bodyBuffer = writer.addCString("").flush();
-      const length = bodyBuffer.length + 4;
-      return new buffer_writer_1.Writer().addInt32(length).add(bodyBuffer).flush();
-    }, "startup");
-    var requestSsl = /* @__PURE__ */ __name(() => {
-      const response = Buffer.allocUnsafe(8);
-      response.writeInt32BE(8, 0);
-      response.writeInt32BE(80877103, 4);
-      return response;
-    }, "requestSsl");
-    var password = /* @__PURE__ */ __name((password2) => {
-      return writer.addCString(password2).flush(
-        112
-        /* code.startup */
-      );
-    }, "password");
-    var sendSASLInitialResponseMessage = /* @__PURE__ */ __name(function(mechanism, initialResponse) {
-      writer.addCString(mechanism).addInt32PrefixedString(initialResponse);
-      return writer.flush(
-        112
-        /* code.startup */
-      );
-    }, "sendSASLInitialResponseMessage");
-    var sendSCRAMClientFinalMessage = /* @__PURE__ */ __name(function(additionalData) {
-      return writer.addString(additionalData).flush(
-        112
-        /* code.startup */
-      );
-    }, "sendSCRAMClientFinalMessage");
-    var query = /* @__PURE__ */ __name((text) => {
-      return writer.addCString(text).flush(
-        81
-        /* code.query */
-      );
-    }, "query");
-    var emptyArray = [];
-    var parse = /* @__PURE__ */ __name((query2) => {
-      const name = query2.name || "";
-      if (name.length > 63) {
-        console.error("Warning! Postgres only supports 63 characters for query names.");
-        console.error("You supplied %s (%s)", name, name.length);
-        console.error("This can cause conflicts and silent errors executing queries");
-      }
-      const types2 = query2.types || emptyArray;
-      const len = types2.length;
-      const buffer = writer.addCString(name).addCString(query2.text).addInt16(len);
-      for (let i = 0; i < len; i++) {
-        buffer.addInt32(types2[i]);
-      }
-      return writer.flush(
-        80
-        /* code.parse */
-      );
-    }, "parse");
-    var paramWriter = new buffer_writer_1.Writer();
-    var writeValues = /* @__PURE__ */ __name(function(values, valueMapper) {
-      for (let i = 0; i < values.length; i++) {
-        const mappedVal = valueMapper ? valueMapper(values[i], i) : values[i];
-        if (mappedVal == null) {
-          writer.addInt16(
-            0
-            /* ParamType.STRING */
-          );
-          paramWriter.addInt32(-1);
-        } else if (mappedVal instanceof Buffer) {
-          writer.addInt16(
-            1
-            /* ParamType.BINARY */
-          );
-          paramWriter.addInt32(mappedVal.length);
-          paramWriter.add(mappedVal);
-        } else {
-          writer.addInt16(
-            0
-            /* ParamType.STRING */
-          );
-          paramWriter.addInt32PrefixedString(mappedVal);
-        }
-      }
-    }, "writeValues");
-    var bind = /* @__PURE__ */ __name((config3 = {}) => {
-      const portal = config3.portal || "";
-      const statement = config3.statement || "";
-      const binary = config3.binary || false;
-      const values = config3.values || emptyArray;
-      const len = values.length;
-      writer.addCString(portal).addCString(statement);
-      writer.addInt16(len);
-      try {
-        writeValues(values, config3.valueMapper);
-      } catch (err) {
-        writer.clear();
-        paramWriter.clear();
-        throw err;
-      }
-      writer.addInt16(len);
-      writer.add(paramWriter.flush());
-      writer.addInt16(1);
-      writer.addInt16(
-        binary ? 1 : 0
-        /* ParamType.STRING */
-      );
-      return writer.flush(
-        66
-        /* code.bind */
-      );
-    }, "bind");
-    var emptyExecute = Buffer.from([69, 0, 0, 0, 9, 0, 0, 0, 0, 0]);
-    var execute = /* @__PURE__ */ __name((config3) => {
-      if (!config3 || !config3.portal && !config3.rows) {
-        return emptyExecute;
-      }
-      const portal = config3.portal || "";
-      const rows = config3.rows || 0;
-      const portalLength = Buffer.byteLength(portal);
-      const len = 4 + portalLength + 1 + 4;
-      const buff = Buffer.allocUnsafe(1 + len);
-      buff[0] = 69;
-      buff.writeInt32BE(len, 1);
-      buff.write(portal, 5, "utf-8");
-      buff[portalLength + 5] = 0;
-      buff.writeUInt32BE(rows, buff.length - 4);
-      return buff;
-    }, "execute");
-    var cancel = /* @__PURE__ */ __name((processID, secretKey) => {
-      const buffer = Buffer.allocUnsafe(16);
-      buffer.writeInt32BE(16, 0);
-      buffer.writeInt16BE(1234, 4);
-      buffer.writeInt16BE(5678, 6);
-      buffer.writeInt32BE(processID, 8);
-      buffer.writeInt32BE(secretKey, 12);
-      return buffer;
-    }, "cancel");
-    var cstringMessage = /* @__PURE__ */ __name((code, string) => {
-      const stringLen = Buffer.byteLength(string);
-      const len = 4 + stringLen + 1;
-      const buffer = Buffer.allocUnsafe(1 + len);
-      buffer[0] = code;
-      buffer.writeInt32BE(len, 1);
-      buffer.write(string, 5, "utf-8");
-      buffer[len] = 0;
-      return buffer;
-    }, "cstringMessage");
-    var emptyDescribePortal = writer.addCString("P").flush(
-      68
-      /* code.describe */
-    );
-    var emptyDescribeStatement = writer.addCString("S").flush(
-      68
-      /* code.describe */
-    );
-    var describe = /* @__PURE__ */ __name((msg) => {
-      return msg.name ? cstringMessage(68, `${msg.type}${msg.name || ""}`) : msg.type === "P" ? emptyDescribePortal : emptyDescribeStatement;
-    }, "describe");
-    var close2 = /* @__PURE__ */ __name((msg) => {
-      const text = `${msg.type}${msg.name || ""}`;
-      return cstringMessage(67, text);
-    }, "close");
-    var copyData = /* @__PURE__ */ __name((chunk) => {
-      return writer.add(chunk).flush(
-        100
-        /* code.copyFromChunk */
-      );
-    }, "copyData");
-    var copyFail = /* @__PURE__ */ __name((message) => {
-      return cstringMessage(102, message);
-    }, "copyFail");
-    var codeOnlyBuffer = /* @__PURE__ */ __name((code) => Buffer.from([code, 0, 0, 0, 4]), "codeOnlyBuffer");
-    var flushBuffer = codeOnlyBuffer(
-      72
-      /* code.flush */
-    );
-    var syncBuffer = codeOnlyBuffer(
-      83
-      /* code.sync */
-    );
-    var endBuffer = codeOnlyBuffer(
-      88
-      /* code.end */
-    );
-    var copyDoneBuffer = codeOnlyBuffer(
-      99
-      /* code.copyDone */
-    );
-    var serialize2 = {
-      startup,
-      password,
-      requestSsl,
-      sendSASLInitialResponseMessage,
-      sendSCRAMClientFinalMessage,
-      query,
-      parse,
-      bind,
-      execute,
-      describe,
-      close: close2,
-      flush: /* @__PURE__ */ __name(() => flushBuffer, "flush"),
-      sync: /* @__PURE__ */ __name(() => syncBuffer, "sync"),
-      end: /* @__PURE__ */ __name(() => endBuffer, "end"),
-      copyData,
-      copyDone: /* @__PURE__ */ __name(() => copyDoneBuffer, "copyDone"),
-      copyFail,
-      cancel
-    };
-    exports.serialize = serialize2;
-  }
-});
-
-// ../node_modules/pg-protocol/dist/buffer-reader.js
-var require_buffer_reader = __commonJS({
-  "../node_modules/pg-protocol/dist/buffer-reader.js"(exports) {
-    "use strict";
-    init_modules_watch_stub();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_process();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_console();
-    init_performance2();
-    Object.defineProperty(exports, "__esModule", { value: true });
-    exports.BufferReader = void 0;
-    var BufferReader = class {
-      static {
-        __name(this, "BufferReader");
-      }
-      constructor(offset = 0) {
-        this.offset = offset;
-        this.buffer = Buffer.allocUnsafe(0);
-        this.encoding = "utf-8";
-      }
-      setBuffer(offset, buffer) {
-        this.offset = offset;
-        this.buffer = buffer;
-      }
-      int16() {
-        const result = this.buffer.readInt16BE(this.offset);
-        this.offset += 2;
-        return result;
-      }
-      byte() {
-        const result = this.buffer[this.offset];
-        this.offset++;
-        return result;
-      }
-      int32() {
-        const result = this.buffer.readInt32BE(this.offset);
-        this.offset += 4;
-        return result;
-      }
-      uint32() {
-        const result = this.buffer.readUInt32BE(this.offset);
-        this.offset += 4;
-        return result;
-      }
-      string(length) {
-        const result = this.buffer.toString(this.encoding, this.offset, this.offset + length);
-        this.offset += length;
-        return result;
-      }
-      cstring() {
-        const start = this.offset;
-        let end = start;
-        while (this.buffer[end++]) {
-        }
-        this.offset = end;
-        return this.buffer.toString(this.encoding, start, end - 1);
-      }
-      bytes(length) {
-        const result = this.buffer.slice(this.offset, this.offset + length);
-        this.offset += length;
-        return result;
-      }
-    };
-    exports.BufferReader = BufferReader;
-  }
-});
-
-// ../node_modules/pg-protocol/dist/parser.js
-var require_parser = __commonJS({
-  "../node_modules/pg-protocol/dist/parser.js"(exports) {
-    "use strict";
-    init_modules_watch_stub();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_process();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_console();
-    init_performance2();
-    Object.defineProperty(exports, "__esModule", { value: true });
-    exports.Parser = void 0;
-    var messages_1 = require_messages();
-    var buffer_reader_1 = require_buffer_reader();
-    var CODE_LENGTH = 1;
-    var LEN_LENGTH = 4;
-    var HEADER_LENGTH = CODE_LENGTH + LEN_LENGTH;
-    var LATEINIT_LENGTH = -1;
-    var emptyBuffer = Buffer.allocUnsafe(0);
-    var Parser = class {
-      static {
-        __name(this, "Parser");
-      }
-      constructor(opts) {
-        this.buffer = emptyBuffer;
-        this.bufferLength = 0;
-        this.bufferOffset = 0;
-        this.reader = new buffer_reader_1.BufferReader();
-        if ((opts === null || opts === void 0 ? void 0 : opts.mode) === "binary") {
-          throw new Error("Binary mode not supported yet");
-        }
-        this.mode = (opts === null || opts === void 0 ? void 0 : opts.mode) || "text";
-      }
-      parse(buffer, callback) {
-        this.mergeBuffer(buffer);
-        const bufferFullLength = this.bufferOffset + this.bufferLength;
-        let offset = this.bufferOffset;
-        while (offset + HEADER_LENGTH <= bufferFullLength) {
-          const code = this.buffer[offset];
-          const length = this.buffer.readUInt32BE(offset + CODE_LENGTH);
-          const fullMessageLength = CODE_LENGTH + length;
-          if (fullMessageLength + offset <= bufferFullLength) {
-            const message = this.handlePacket(offset + HEADER_LENGTH, code, length, this.buffer);
-            callback(message);
-            offset += fullMessageLength;
-          } else {
-            break;
-          }
-        }
-        if (offset === bufferFullLength) {
-          this.buffer = emptyBuffer;
-          this.bufferLength = 0;
-          this.bufferOffset = 0;
-        } else {
-          this.bufferLength = bufferFullLength - offset;
-          this.bufferOffset = offset;
-        }
-      }
-      mergeBuffer(buffer) {
-        if (this.bufferLength > 0) {
-          const newLength = this.bufferLength + buffer.byteLength;
-          const newFullLength = newLength + this.bufferOffset;
-          if (newFullLength > this.buffer.byteLength) {
-            let newBuffer;
-            if (newLength <= this.buffer.byteLength && this.bufferOffset >= this.bufferLength) {
-              newBuffer = this.buffer;
-            } else {
-              let newBufferLength = this.buffer.byteLength * 2;
-              while (newLength >= newBufferLength) {
-                newBufferLength *= 2;
-              }
-              newBuffer = Buffer.allocUnsafe(newBufferLength);
-            }
-            this.buffer.copy(newBuffer, 0, this.bufferOffset, this.bufferOffset + this.bufferLength);
-            this.buffer = newBuffer;
-            this.bufferOffset = 0;
-          }
-          buffer.copy(this.buffer, this.bufferOffset + this.bufferLength);
-          this.bufferLength = newLength;
-        } else {
-          this.buffer = buffer;
-          this.bufferOffset = 0;
-          this.bufferLength = buffer.byteLength;
-        }
-      }
-      handlePacket(offset, code, length, bytes) {
-        const { reader } = this;
-        reader.setBuffer(offset, bytes);
-        let message;
-        switch (code) {
-          case 50:
-            message = messages_1.bindComplete;
-            break;
-          case 49:
-            message = messages_1.parseComplete;
-            break;
-          case 51:
-            message = messages_1.closeComplete;
-            break;
-          case 110:
-            message = messages_1.noData;
-            break;
-          case 115:
-            message = messages_1.portalSuspended;
-            break;
-          case 99:
-            message = messages_1.copyDone;
-            break;
-          case 87:
-            message = messages_1.replicationStart;
-            break;
-          case 73:
-            message = messages_1.emptyQuery;
-            break;
-          case 68:
-            message = parseDataRowMessage(reader);
-            break;
-          case 67:
-            message = parseCommandCompleteMessage(reader);
-            break;
-          case 90:
-            message = parseReadyForQueryMessage(reader);
-            break;
-          case 65:
-            message = parseNotificationMessage(reader);
-            break;
-          case 82:
-            message = parseAuthenticationResponse(reader, length);
-            break;
-          case 83:
-            message = parseParameterStatusMessage(reader);
-            break;
-          case 75:
-            message = parseBackendKeyData(reader);
-            break;
-          case 69:
-            message = parseErrorMessage(reader, "error");
-            break;
-          case 78:
-            message = parseErrorMessage(reader, "notice");
-            break;
-          case 84:
-            message = parseRowDescriptionMessage(reader);
-            break;
-          case 116:
-            message = parseParameterDescriptionMessage(reader);
-            break;
-          case 71:
-            message = parseCopyInMessage(reader);
-            break;
-          case 72:
-            message = parseCopyOutMessage(reader);
-            break;
-          case 100:
-            message = parseCopyData(reader, length);
-            break;
-          default:
-            return new messages_1.DatabaseError("received invalid response: " + code.toString(16), length, "error");
-        }
-        reader.setBuffer(0, emptyBuffer);
-        message.length = length;
-        return message;
-      }
-    };
-    exports.Parser = Parser;
-    var parseReadyForQueryMessage = /* @__PURE__ */ __name((reader) => {
-      const status = reader.string(1);
-      return new messages_1.ReadyForQueryMessage(LATEINIT_LENGTH, status);
-    }, "parseReadyForQueryMessage");
-    var parseCommandCompleteMessage = /* @__PURE__ */ __name((reader) => {
-      const text = reader.cstring();
-      return new messages_1.CommandCompleteMessage(LATEINIT_LENGTH, text);
-    }, "parseCommandCompleteMessage");
-    var parseCopyData = /* @__PURE__ */ __name((reader, length) => {
-      const chunk = reader.bytes(length - 4);
-      return new messages_1.CopyDataMessage(LATEINIT_LENGTH, chunk);
-    }, "parseCopyData");
-    var parseCopyInMessage = /* @__PURE__ */ __name((reader) => parseCopyMessage(reader, "copyInResponse"), "parseCopyInMessage");
-    var parseCopyOutMessage = /* @__PURE__ */ __name((reader) => parseCopyMessage(reader, "copyOutResponse"), "parseCopyOutMessage");
-    var parseCopyMessage = /* @__PURE__ */ __name((reader, messageName) => {
-      const isBinary = reader.byte() !== 0;
-      const columnCount = reader.int16();
-      const message = new messages_1.CopyResponse(LATEINIT_LENGTH, messageName, isBinary, columnCount);
-      for (let i = 0; i < columnCount; i++) {
-        message.columnTypes[i] = reader.int16();
-      }
-      return message;
-    }, "parseCopyMessage");
-    var parseNotificationMessage = /* @__PURE__ */ __name((reader) => {
-      const processId = reader.int32();
-      const channel2 = reader.cstring();
-      const payload = reader.cstring();
-      return new messages_1.NotificationResponseMessage(LATEINIT_LENGTH, processId, channel2, payload);
-    }, "parseNotificationMessage");
-    var parseRowDescriptionMessage = /* @__PURE__ */ __name((reader) => {
-      const fieldCount = reader.int16();
-      const message = new messages_1.RowDescriptionMessage(LATEINIT_LENGTH, fieldCount);
-      for (let i = 0; i < fieldCount; i++) {
-        message.fields[i] = parseField(reader);
-      }
-      return message;
-    }, "parseRowDescriptionMessage");
-    var parseField = /* @__PURE__ */ __name((reader) => {
-      const name = reader.cstring();
-      const tableID = reader.uint32();
-      const columnID = reader.int16();
-      const dataTypeID = reader.uint32();
-      const dataTypeSize = reader.int16();
-      const dataTypeModifier = reader.int32();
-      const mode = reader.int16() === 0 ? "text" : "binary";
-      return new messages_1.Field(name, tableID, columnID, dataTypeID, dataTypeSize, dataTypeModifier, mode);
-    }, "parseField");
-    var parseParameterDescriptionMessage = /* @__PURE__ */ __name((reader) => {
-      const parameterCount = reader.int16();
-      const message = new messages_1.ParameterDescriptionMessage(LATEINIT_LENGTH, parameterCount);
-      for (let i = 0; i < parameterCount; i++) {
-        message.dataTypeIDs[i] = reader.int32();
-      }
-      return message;
-    }, "parseParameterDescriptionMessage");
-    var parseDataRowMessage = /* @__PURE__ */ __name((reader) => {
-      const fieldCount = reader.int16();
-      const fields = new Array(fieldCount);
-      for (let i = 0; i < fieldCount; i++) {
-        const len = reader.int32();
-        fields[i] = len === -1 ? null : reader.string(len);
-      }
-      return new messages_1.DataRowMessage(LATEINIT_LENGTH, fields);
-    }, "parseDataRowMessage");
-    var parseParameterStatusMessage = /* @__PURE__ */ __name((reader) => {
-      const name = reader.cstring();
-      const value = reader.cstring();
-      return new messages_1.ParameterStatusMessage(LATEINIT_LENGTH, name, value);
-    }, "parseParameterStatusMessage");
-    var parseBackendKeyData = /* @__PURE__ */ __name((reader) => {
-      const processID = reader.int32();
-      const secretKey = reader.int32();
-      return new messages_1.BackendKeyDataMessage(LATEINIT_LENGTH, processID, secretKey);
-    }, "parseBackendKeyData");
-    var parseAuthenticationResponse = /* @__PURE__ */ __name((reader, length) => {
-      const code = reader.int32();
-      const message = {
-        name: "authenticationOk",
-        length
-      };
-      switch (code) {
-        case 0:
-          break;
-        case 3:
-          if (message.length === 8) {
-            message.name = "authenticationCleartextPassword";
-          }
-          break;
-        case 5:
-          if (message.length === 12) {
-            message.name = "authenticationMD5Password";
-            const salt = reader.bytes(4);
-            return new messages_1.AuthenticationMD5Password(LATEINIT_LENGTH, salt);
-          }
-          break;
-        case 10:
-          {
-            message.name = "authenticationSASL";
-            message.mechanisms = [];
-            let mechanism;
-            do {
-              mechanism = reader.cstring();
-              if (mechanism) {
-                message.mechanisms.push(mechanism);
-              }
-            } while (mechanism);
-          }
-          break;
-        case 11:
-          message.name = "authenticationSASLContinue";
-          message.data = reader.string(length - 8);
-          break;
-        case 12:
-          message.name = "authenticationSASLFinal";
-          message.data = reader.string(length - 8);
-          break;
-        default:
-          throw new Error("Unknown authenticationOk message type " + code);
-      }
-      return message;
-    }, "parseAuthenticationResponse");
-    var parseErrorMessage = /* @__PURE__ */ __name((reader, name) => {
-      const fields = {};
-      let fieldType = reader.string(1);
-      while (fieldType !== "\0") {
-        fields[fieldType] = reader.cstring();
-        fieldType = reader.string(1);
-      }
-      const messageValue = fields.M;
-      const message = name === "notice" ? new messages_1.NoticeMessage(LATEINIT_LENGTH, messageValue) : new messages_1.DatabaseError(messageValue, LATEINIT_LENGTH, name);
-      message.severity = fields.S;
-      message.code = fields.C;
-      message.detail = fields.D;
-      message.hint = fields.H;
-      message.position = fields.P;
-      message.internalPosition = fields.p;
-      message.internalQuery = fields.q;
-      message.where = fields.W;
-      message.schema = fields.s;
-      message.table = fields.t;
-      message.column = fields.c;
-      message.dataType = fields.d;
-      message.constraint = fields.n;
-      message.file = fields.F;
-      message.line = fields.L;
-      message.routine = fields.R;
-      return message;
-    }, "parseErrorMessage");
-  }
-});
-
-// ../node_modules/pg-protocol/dist/index.js
-var require_dist = __commonJS({
-  "../node_modules/pg-protocol/dist/index.js"(exports) {
-    "use strict";
-    init_modules_watch_stub();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_process();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_console();
-    init_performance2();
-    Object.defineProperty(exports, "__esModule", { value: true });
-    exports.DatabaseError = exports.serialize = void 0;
-    exports.parse = parse;
-    var messages_1 = require_messages();
-    Object.defineProperty(exports, "DatabaseError", { enumerable: true, get: /* @__PURE__ */ __name(function() {
-      return messages_1.DatabaseError;
-    }, "get") });
-    var serializer_1 = require_serializer();
-    Object.defineProperty(exports, "serialize", { enumerable: true, get: /* @__PURE__ */ __name(function() {
-      return serializer_1.serialize;
-    }, "get") });
-    var parser_1 = require_parser();
-    function parse(stream, callback) {
-      const parser = new parser_1.Parser();
-      stream.on("data", (buffer) => parser.parse(buffer, callback));
-      return new Promise((resolve) => stream.on("end", () => resolve()));
-    }
-    __name(parse, "parse");
-  }
-});
-
-// node-built-in-modules:net
-import libDefault6 from "net";
-var require_net = __commonJS({
-  "node-built-in-modules:net"(exports, module) {
-    init_modules_watch_stub();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_process();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_console();
-    init_performance2();
-    module.exports = libDefault6;
-  }
-});
-
-// node-built-in-modules:tls
-import libDefault7 from "tls";
-var require_tls = __commonJS({
-  "node-built-in-modules:tls"(exports, module) {
-    init_modules_watch_stub();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_process();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_console();
-    init_performance2();
-    module.exports = libDefault7;
-  }
-});
-
-// ../node_modules/pg-cloudflare/dist/index.js
-var require_dist2 = __commonJS({
-  "../node_modules/pg-cloudflare/dist/index.js"(exports) {
-    "use strict";
-    init_modules_watch_stub();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_process();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_console();
-    init_performance2();
-    Object.defineProperty(exports, "__esModule", { value: true });
-    exports.CloudflareSocket = void 0;
-    var events_1 = require_events();
-    var CloudflareSocket = class extends events_1.EventEmitter {
-      static {
-        __name(this, "CloudflareSocket");
-      }
-      constructor(ssl) {
-        super();
-        this.ssl = ssl;
-        this.writable = false;
-        this.destroyed = false;
-        this._upgrading = false;
-        this._upgraded = false;
-        this._cfSocket = null;
-        this._cfWriter = null;
-        this._cfReader = null;
-      }
-      setNoDelay() {
-        return this;
-      }
-      setKeepAlive() {
-        return this;
-      }
-      ref() {
-        return this;
-      }
-      unref() {
-        return this;
-      }
-      async connect(port, host, connectListener) {
-        try {
-          log3("connecting");
-          if (connectListener)
-            this.once("connect", connectListener);
-          const options = this.ssl ? { secureTransport: "starttls" } : {};
-          const mod = await import("cloudflare:sockets");
-          const connect = mod.connect;
-          this._cfSocket = connect(`${host}:${port}`, options);
-          this._cfWriter = this._cfSocket.writable.getWriter();
-          this._addClosedHandler();
-          this._cfReader = this._cfSocket.readable.getReader();
-          if (this.ssl) {
-            this._listenOnce().catch((e) => this.emit("error", e));
-          } else {
-            this._listen().catch((e) => this.emit("error", e));
-          }
-          await this._cfWriter.ready;
-          log3("socket ready");
-          this.writable = true;
-          this.emit("connect");
-          return this;
-        } catch (e) {
-          this.emit("error", e);
-        }
-      }
-      async _listen() {
-        while (true) {
-          log3("awaiting receive from CF socket");
-          const { done, value } = await this._cfReader.read();
-          log3("CF socket received:", done, value);
-          if (done) {
-            log3("done");
-            break;
-          }
-          this.emit("data", Buffer.from(value));
-        }
-      }
-      async _listenOnce() {
-        log3("awaiting first receive from CF socket");
-        const { done, value } = await this._cfReader.read();
-        log3("First CF socket received:", done, value);
-        this.emit("data", Buffer.from(value));
-      }
-      write(data, encoding = "utf8", callback = () => {
-      }) {
-        if (data.length === 0)
-          return callback();
-        if (typeof data === "string")
-          data = Buffer.from(data, encoding);
-        log3("sending data direct:", data);
-        this._cfWriter.write(data).then(() => {
-          log3("data sent");
-          callback();
-        }, (err) => {
-          log3("send error", err);
-          callback(err);
-        });
-        return true;
-      }
-      end(data = Buffer.alloc(0), encoding = "utf8", callback = () => {
-      }) {
-        log3("ending CF socket");
-        this.write(data, encoding, (err) => {
-          this._cfSocket.close();
-          if (callback)
-            callback(err);
-        });
-        return this;
-      }
-      destroy(reason) {
-        log3("destroying CF socket", reason);
-        this.destroyed = true;
-        return this.end();
-      }
-      startTls(options) {
-        if (this._upgraded) {
-          this.emit("error", "Cannot call `startTls()` more than once on a socket");
-          return;
-        }
-        this._cfWriter.releaseLock();
-        this._cfReader.releaseLock();
-        this._upgrading = true;
-        this._cfSocket = this._cfSocket.startTls(options);
-        this._cfWriter = this._cfSocket.writable.getWriter();
-        this._cfReader = this._cfSocket.readable.getReader();
-        this._addClosedHandler();
-        this._listen().catch((e) => this.emit("error", e));
-      }
-      _addClosedHandler() {
-        this._cfSocket.closed.then(() => {
-          if (!this._upgrading) {
-            log3("CF socket closed");
-            this._cfSocket = null;
-            this.emit("close");
-          } else {
-            this._upgrading = false;
-            this._upgraded = true;
-          }
-        }).catch((e) => this.emit("error", e));
-      }
-    };
-    exports.CloudflareSocket = CloudflareSocket;
-    var debug3 = false;
-    function dump(data) {
-      if (data instanceof Uint8Array || data instanceof ArrayBuffer) {
-        const buf = data instanceof Uint8Array ? Buffer.from(data) : Buffer.from(data);
-        const hex = buf.toString("hex");
-        const str = new TextDecoder().decode(data);
-        return `
->>> STR: "${str.replace(/\n/g, "\\n")}"
->>> HEX: ${hex}
-`;
-      } else {
-        return data;
-      }
-    }
-    __name(dump, "dump");
-    function log3(...args) {
-      debug3 && console.log(...args.map(dump));
-    }
-    __name(log3, "log");
-  }
-});
-
-// ../node_modules/pg/lib/stream.js
-var require_stream = __commonJS({
-  "../node_modules/pg/lib/stream.js"(exports, module) {
-    init_modules_watch_stub();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_process();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_console();
-    init_performance2();
-    var { getStream, getSecureStream } = getStreamFuncs();
-    module.exports = {
-      /**
-       * Get a socket stream compatible with the current runtime environment.
-       * @returns {Duplex}
-       */
-      getStream,
-      /**
-       * Get a TLS secured socket, compatible with the current environment,
-       * using the socket and other settings given in `options`.
-       * @returns {Duplex}
-       */
-      getSecureStream
-    };
-    function getNodejsStreamFuncs() {
-      function getStream2(ssl) {
-        const net = require_net();
-        return new net.Socket();
-      }
-      __name(getStream2, "getStream");
-      function getSecureStream2(options) {
-        const tls = require_tls();
-        return tls.connect(options);
-      }
-      __name(getSecureStream2, "getSecureStream");
-      return {
-        getStream: getStream2,
-        getSecureStream: getSecureStream2
-      };
-    }
-    __name(getNodejsStreamFuncs, "getNodejsStreamFuncs");
-    function getCloudflareStreamFuncs() {
-      function getStream2(ssl) {
-        const { CloudflareSocket } = require_dist2();
-        return new CloudflareSocket(ssl);
-      }
-      __name(getStream2, "getStream");
-      function getSecureStream2(options) {
-        options.socket.startTls(options);
-        return options.socket;
-      }
-      __name(getSecureStream2, "getSecureStream");
-      return {
-        getStream: getStream2,
-        getSecureStream: getSecureStream2
-      };
-    }
-    __name(getCloudflareStreamFuncs, "getCloudflareStreamFuncs");
-    function isCloudflareRuntime() {
-      if (typeof navigator === "object" && navigator !== null && true) {
-        return true;
-      }
-      if (typeof Response === "function") {
-        const resp = new Response(null, { cf: { thing: true } });
-        if (typeof resp.cf === "object" && resp.cf !== null && resp.cf.thing) {
-          return true;
-        }
-      }
-      return false;
-    }
-    __name(isCloudflareRuntime, "isCloudflareRuntime");
-    function getStreamFuncs() {
-      if (isCloudflareRuntime()) {
-        return getCloudflareStreamFuncs();
-      }
-      return getNodejsStreamFuncs();
-    }
-    __name(getStreamFuncs, "getStreamFuncs");
-  }
-});
-
-// ../node_modules/pg/lib/connection.js
-var require_connection = __commonJS({
-  "../node_modules/pg/lib/connection.js"(exports, module) {
-    "use strict";
-    init_modules_watch_stub();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_process();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_console();
-    init_performance2();
-    var EventEmitter3 = require_events().EventEmitter;
-    var { parse, serialize: serialize2 } = require_dist();
-    var stream = require_stream();
-    var { getStream } = stream;
-    var flushBuffer = serialize2.flush();
-    var syncBuffer = serialize2.sync();
-    var endBuffer = serialize2.end();
-    var Connection2 = class extends EventEmitter3 {
-      static {
-        __name(this, "Connection");
-      }
-      constructor(config3) {
-        super();
-        config3 = config3 || {};
-        this.stream = config3.stream || getStream(config3.ssl);
-        if (typeof this.stream === "function") {
-          this.stream = this.stream(config3);
-        }
-        this._keepAlive = config3.keepAlive;
-        this._keepAliveInitialDelayMillis = config3.keepAliveInitialDelayMillis;
-        this.parsedStatements = {};
-        this.ssl = config3.ssl || false;
-        this.sslNegotiation = config3.sslNegotiation || "postgres";
-        this._ending = false;
-        this._emitMessage = false;
-        const self2 = this;
-        this.on("newListener", function(eventName) {
-          if (eventName === "message") {
-            self2._emitMessage = true;
-          }
-        });
-      }
-      connect(port, host) {
-        const self2 = this;
-        this._connecting = true;
-        this.stream.setNoDelay(true);
-        this.stream.connect(port, host);
-        this.stream.once("connect", function() {
-          if (self2._keepAlive) {
-            self2.stream.setKeepAlive(true, self2._keepAliveInitialDelayMillis);
-          }
-          self2.emit("connect");
-        });
-        const reportStreamError = /* @__PURE__ */ __name(function(error3) {
-          if (self2._ending && (error3.code === "ECONNRESET" || error3.code === "EPIPE")) {
-            return;
-          }
-          self2.emit("error", error3);
-        }, "reportStreamError");
-        this.stream.on("error", reportStreamError);
-        this.stream.on("close", function() {
-          self2.emit("end");
-        });
-        if (!this.ssl) {
-          return this.attachListeners(this.stream);
-        }
-        if (this.sslNegotiation === "direct") {
-          return this.stream.once("connect", function() {
-            self2.upgradeToSSL(host, reportStreamError);
-          });
-        }
-        this.stream.once("data", function(buffer) {
-          const responseCode = buffer.toString("utf8");
-          switch (responseCode) {
-            case "S":
-              break;
-            case "N":
-              self2.stream.end();
-              return self2.emit("error", new Error("The server does not support SSL connections"));
-            default:
-              self2.stream.end();
-              return self2.emit("error", new Error("There was an error establishing an SSL connection"));
-          }
-          self2.upgradeToSSL(host, reportStreamError);
-        });
-      }
-      upgradeToSSL(host, reportStreamError) {
-        const self2 = this;
-        const options = {
-          socket: self2.stream
-        };
-        if (self2.ssl !== true) {
-          Object.assign(options, self2.ssl);
-          if ("key" in self2.ssl) {
-            options.key = self2.ssl.key;
-          }
-        }
-        if (self2.sslNegotiation === "direct") {
-          options.ALPNProtocols = ["postgresql"];
-        }
-        const net = require_net();
-        if (net.isIP && net.isIP(host) === 0) {
-          options.servername = host;
-        }
-        try {
-          self2.stream = stream.getSecureStream(options);
-        } catch (err) {
-          return self2.emit("error", err);
-        }
-        self2.attachListeners(self2.stream);
-        self2.stream.on("error", reportStreamError);
-        self2.emit("sslconnect");
-      }
-      attachListeners(stream2) {
-        parse(stream2, (msg) => {
-          const eventName = msg.name === "error" ? "errorMessage" : msg.name;
-          if (this._emitMessage) {
-            this.emit("message", msg);
-          }
-          this.emit(eventName, msg);
-        });
-      }
-      requestSsl() {
-        this.stream.write(serialize2.requestSsl());
-      }
-      startup(config3) {
-        this.stream.write(serialize2.startup(config3));
-      }
-      cancel(processID, secretKey) {
-        this._send(serialize2.cancel(processID, secretKey));
-      }
-      password(password) {
-        this._send(serialize2.password(password));
-      }
-      sendSASLInitialResponseMessage(mechanism, initialResponse) {
-        this._send(serialize2.sendSASLInitialResponseMessage(mechanism, initialResponse));
-      }
-      sendSCRAMClientFinalMessage(additionalData) {
-        this._send(serialize2.sendSCRAMClientFinalMessage(additionalData));
-      }
-      _send(buffer) {
-        if (!this.stream.writable) {
-          return false;
-        }
-        return this.stream.write(buffer);
-      }
-      query(text) {
-        this._send(serialize2.query(text));
-      }
-      // send parse message
-      parse(query) {
-        this._send(serialize2.parse(query));
-      }
-      // send bind message
-      bind(config3) {
-        this._send(serialize2.bind(config3));
-      }
-      // send execute message
-      execute(config3) {
-        this._send(serialize2.execute(config3));
-      }
-      flush() {
-        if (this.stream.writable) {
-          this.stream.write(flushBuffer);
-        }
-      }
-      sync() {
-        this._ending = true;
-        this._send(syncBuffer);
-      }
-      ref() {
-        this.stream.ref();
-      }
-      unref() {
-        this.stream.unref();
-      }
-      end() {
-        this._ending = true;
-        if (!this._connecting || !this.stream.writable) {
-          this.stream.end();
-          return;
-        }
-        return this.stream.write(endBuffer, () => {
-          this.stream.end();
-        });
-      }
-      close(msg) {
-        this._send(serialize2.close(msg));
-      }
-      describe(msg) {
-        this._send(serialize2.describe(msg));
-      }
-      sendCopyFromChunk(chunk) {
-        this._send(serialize2.copyData(chunk));
-      }
-      endCopyFrom() {
-        this._send(serialize2.copyDone());
-      }
-      sendCopyFail(msg) {
-        this._send(serialize2.copyFail(msg));
-      }
-    };
-    module.exports = Connection2;
-  }
-});
-
-// node-built-in-modules:path
-import libDefault8 from "path";
-var require_path = __commonJS({
-  "node-built-in-modules:path"(exports, module) {
-    init_modules_watch_stub();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_process();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_console();
-    init_performance2();
-    module.exports = libDefault8;
-  }
-});
-
-// node-built-in-modules:stream
-import libDefault9 from "stream";
-var require_stream2 = __commonJS({
-  "node-built-in-modules:stream"(exports, module) {
-    init_modules_watch_stub();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_process();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_console();
-    init_performance2();
-    module.exports = libDefault9;
-  }
-});
-
-// node-built-in-modules:string_decoder
-import libDefault10 from "string_decoder";
-var require_string_decoder = __commonJS({
-  "node-built-in-modules:string_decoder"(exports, module) {
-    init_modules_watch_stub();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_process();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_console();
-    init_performance2();
-    module.exports = libDefault10;
-  }
-});
-
-// ../node_modules/split2/index.js
-var require_split2 = __commonJS({
-  "../node_modules/split2/index.js"(exports, module) {
-    "use strict";
-    init_modules_watch_stub();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_process();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_console();
-    init_performance2();
-    var { Transform } = require_stream2();
-    var { StringDecoder } = require_string_decoder();
-    var kLast = /* @__PURE__ */ Symbol("last");
-    var kDecoder = /* @__PURE__ */ Symbol("decoder");
-    function transform(chunk, enc, cb) {
-      let list;
-      if (this.overflow) {
-        const buf = this[kDecoder].write(chunk);
-        list = buf.split(this.matcher);
-        if (list.length === 1) return cb();
-        list.shift();
-        this.overflow = false;
-      } else {
-        this[kLast] += this[kDecoder].write(chunk);
-        list = this[kLast].split(this.matcher);
-      }
-      this[kLast] = list.pop();
-      for (let i = 0; i < list.length; i++) {
-        try {
-          push(this, this.mapper(list[i]));
-        } catch (error3) {
-          return cb(error3);
-        }
-      }
-      this.overflow = this[kLast].length > this.maxLength;
-      if (this.overflow && !this.skipOverflow) {
-        cb(new Error("maximum buffer reached"));
-        return;
-      }
-      cb();
-    }
-    __name(transform, "transform");
-    function flush(cb) {
-      this[kLast] += this[kDecoder].end();
-      if (this[kLast]) {
-        try {
-          push(this, this.mapper(this[kLast]));
-        } catch (error3) {
-          return cb(error3);
-        }
-      }
-      cb();
-    }
-    __name(flush, "flush");
-    function push(self2, val) {
-      if (val !== void 0) {
-        self2.push(val);
-      }
-    }
-    __name(push, "push");
-    function noop2(incoming) {
-      return incoming;
-    }
-    __name(noop2, "noop");
-    function split(matcher, mapper, options) {
-      matcher = matcher || /\r?\n/;
-      mapper = mapper || noop2;
-      options = options || {};
-      switch (arguments.length) {
-        case 1:
-          if (typeof matcher === "function") {
-            mapper = matcher;
-            matcher = /\r?\n/;
-          } else if (typeof matcher === "object" && !(matcher instanceof RegExp) && !matcher[Symbol.split]) {
-            options = matcher;
-            matcher = /\r?\n/;
-          }
-          break;
-        case 2:
-          if (typeof matcher === "function") {
-            options = mapper;
-            mapper = matcher;
-            matcher = /\r?\n/;
-          } else if (typeof mapper === "object") {
-            options = mapper;
-            mapper = noop2;
-          }
-      }
-      options = Object.assign({}, options);
-      options.autoDestroy = true;
-      options.transform = transform;
-      options.flush = flush;
-      options.readableObjectMode = true;
-      const stream = new Transform(options);
-      stream[kLast] = "";
-      stream[kDecoder] = new StringDecoder("utf8");
-      stream.matcher = matcher;
-      stream.mapper = mapper;
-      stream.maxLength = options.maxLength;
-      stream.skipOverflow = options.skipOverflow || false;
-      stream.overflow = false;
-      stream._destroy = function(err, cb) {
-        this._writableState.errorEmitted = false;
-        cb(err);
-      };
-      return stream;
-    }
-    __name(split, "split");
-    module.exports = split;
-  }
-});
-
-// ../node_modules/pgpass/lib/helper.js
-var require_helper = __commonJS({
-  "../node_modules/pgpass/lib/helper.js"(exports, module) {
-    "use strict";
-    init_modules_watch_stub();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_process();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_console();
-    init_performance2();
-    var path = require_path();
-    var Stream = require_stream2().Stream;
-    var split = require_split2();
-    var util = require_util();
-    var defaultPort = 5432;
-    var isWin = process.platform === "win32";
-    var warnStream = process.stderr;
-    var S_IRWXG2 = 56;
-    var S_IRWXO2 = 7;
-    var S_IFMT2 = 61440;
-    var S_IFREG2 = 32768;
-    function isRegFile(mode) {
-      return (mode & S_IFMT2) == S_IFREG2;
-    }
-    __name(isRegFile, "isRegFile");
-    var fieldNames = ["host", "port", "database", "user", "password"];
-    var nrOfFields = fieldNames.length;
-    var passKey = fieldNames[nrOfFields - 1];
-    function warn3() {
-      var isWritable = warnStream instanceof Stream && true === warnStream.writable;
-      if (isWritable) {
-        var args = Array.prototype.slice.call(arguments).concat("\n");
-        warnStream.write(util.format.apply(util, args));
-      }
-    }
-    __name(warn3, "warn");
-    Object.defineProperty(module.exports, "isWin", {
-      get: /* @__PURE__ */ __name(function() {
-        return isWin;
-      }, "get"),
-      set: /* @__PURE__ */ __name(function(val) {
-        isWin = val;
-      }, "set")
-    });
-    module.exports.warnTo = function(stream) {
-      var old = warnStream;
-      warnStream = stream;
-      return old;
-    };
-    module.exports.getFileName = function(rawEnv) {
-      var env2 = rawEnv || process.env;
-      var file = env2.PGPASSFILE || (isWin ? path.join(env2.APPDATA || "./", "postgresql", "pgpass.conf") : path.join(env2.HOME || "./", ".pgpass"));
-      return file;
-    };
-    module.exports.usePgPass = function(stats, fname) {
-      if (Object.prototype.hasOwnProperty.call(process.env, "PGPASSWORD")) {
-        return false;
-      }
-      if (isWin) {
-        return true;
-      }
-      fname = fname || "<unkn>";
-      if (!isRegFile(stats.mode)) {
-        warn3('WARNING: password file "%s" is not a plain file', fname);
-        return false;
-      }
-      if (stats.mode & (S_IRWXG2 | S_IRWXO2)) {
-        warn3('WARNING: password file "%s" has group or world access; permissions should be u=rw (0600) or less', fname);
-        return false;
-      }
-      return true;
-    };
-    var matcher = module.exports.match = function(connInfo, entry) {
-      return fieldNames.slice(0, -1).reduce(function(prev, field, idx) {
-        if (idx == 1) {
-          if (Number(connInfo[field] || defaultPort) === Number(entry[field])) {
-            return prev && true;
-          }
-        }
-        return prev && (entry[field] === "*" || entry[field] === connInfo[field]);
-      }, true);
-    };
-    module.exports.getPassword = function(connInfo, stream, cb) {
-      var pass;
-      var lineStream = stream.pipe(split());
-      function onLine(line) {
-        var entry = parseLine(line);
-        if (entry && isValidEntry(entry) && matcher(connInfo, entry)) {
-          pass = entry[passKey];
-          lineStream.end();
-        }
-      }
-      __name(onLine, "onLine");
-      var onEnd = /* @__PURE__ */ __name(function() {
-        stream.destroy();
-        cb(pass);
-      }, "onEnd");
-      var onErr = /* @__PURE__ */ __name(function(err) {
-        stream.destroy();
-        warn3("WARNING: error on reading file: %s", err);
-        cb(void 0);
-      }, "onErr");
-      stream.on("error", onErr);
-      lineStream.on("data", onLine).on("end", onEnd).on("error", onErr);
-    };
-    var parseLine = module.exports.parseLine = function(line) {
-      if (line.length < 11 || line.match(/^\s+#/)) {
-        return null;
-      }
-      var curChar = "";
-      var prevChar = "";
-      var fieldIdx = 0;
-      var startIdx = 0;
-      var endIdx = 0;
-      var obj = {};
-      var isLastField = false;
-      var addToObj = /* @__PURE__ */ __name(function(idx, i0, i1) {
-        var field = line.substring(i0, i1);
-        if (!Object.hasOwnProperty.call(process.env, "PGPASS_NO_DEESCAPE")) {
-          field = field.replace(/\\([:\\])/g, "$1");
-        }
-        obj[fieldNames[idx]] = field;
-      }, "addToObj");
-      for (var i = 0; i < line.length - 1; i += 1) {
-        curChar = line.charAt(i + 1);
-        prevChar = line.charAt(i);
-        isLastField = fieldIdx == nrOfFields - 1;
-        if (isLastField) {
-          addToObj(fieldIdx, startIdx);
-          break;
-        }
-        if (i >= 0 && curChar == ":" && prevChar !== "\\") {
-          addToObj(fieldIdx, startIdx, i + 1);
-          startIdx = i + 2;
-          fieldIdx += 1;
-        }
-      }
-      obj = Object.keys(obj).length === nrOfFields ? obj : null;
-      return obj;
-    };
-    var isValidEntry = module.exports.isValidEntry = function(entry) {
-      var rules = {
-        // host
-        0: function(x) {
-          return x.length > 0;
-        },
-        // port
-        1: function(x) {
-          if (x === "*") {
-            return true;
-          }
-          x = Number(x);
-          return isFinite(x) && x > 0 && x < 9007199254740992 && Math.floor(x) === x;
-        },
-        // database
-        2: function(x) {
-          return x.length > 0;
-        },
-        // username
-        3: function(x) {
-          return x.length > 0;
-        },
-        // password
-        4: function(x) {
-          return x.length > 0;
-        }
-      };
-      for (var idx = 0; idx < fieldNames.length; idx += 1) {
-        var rule = rules[idx];
-        var value = entry[fieldNames[idx]] || "";
-        var res2 = rule(value);
-        if (!res2) {
-          return false;
-        }
-      }
-      return true;
-    };
-  }
-});
-
-// ../node_modules/pgpass/lib/index.js
-var require_lib = __commonJS({
-  "../node_modules/pgpass/lib/index.js"(exports, module) {
-    "use strict";
-    init_modules_watch_stub();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_process();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_console();
-    init_performance2();
-    var path = require_path();
-    var fs = require_fs();
-    var helper = require_helper();
-    module.exports = function(connInfo, cb) {
-      var file = helper.getFileName();
-      fs.stat(file, function(err, stat3) {
-        if (err || !helper.usePgPass(stat3, file)) {
-          return cb(void 0);
-        }
-        var st = fs.createReadStream(file);
-        helper.getPassword(connInfo, st, cb);
-      });
-    };
-    module.exports.warnTo = helper.warnTo;
-  }
-});
-
-// ../node_modules/pg/lib/client.js
-var require_client = __commonJS({
-  "../node_modules/pg/lib/client.js"(exports, module) {
-    init_modules_watch_stub();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_process();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_console();
-    init_performance2();
-    var EventEmitter3 = require_events().EventEmitter;
-    var utils = require_utils();
-    var nodeUtils = require_util();
-    var sasl = require_sasl();
-    var TypeOverrides2 = require_type_overrides();
-    var ConnectionParameters = require_connection_parameters();
-    var Query2 = require_query();
-    var defaults2 = require_defaults();
-    var Connection2 = require_connection();
-    var crypto3 = require_utils2();
-    var activeQueryDeprecationNotice = nodeUtils.deprecate(
-      () => {
-      },
-      "Client.activeQuery is deprecated and will be removed in pg@9.0"
-    );
-    var queryQueueDeprecationNotice = nodeUtils.deprecate(
-      () => {
-      },
-      "Client.queryQueue is deprecated and will be removed in pg@9.0."
-    );
-    var pgPassDeprecationNotice = nodeUtils.deprecate(
-      () => {
-      },
-      "pgpass support is deprecated and will be removed in pg@9.0. You can provide an async function as the password property to the Client/Pool constructor that returns a password instead. Within this function you can call the pgpass module in your own code."
-    );
-    var byoPromiseDeprecationNotice = nodeUtils.deprecate(
-      () => {
-      },
-      "Passing a custom Promise implementation to the Client/Pool constructor is deprecated and will be removed in pg@9.0."
-    );
-    var queryQueueLengthDeprecationNotice = nodeUtils.deprecate(
-      () => {
-      },
-      "Calling client.query() when the client is already executing a query is deprecated and will be removed in pg@9.0. Use async/await or an external async flow control mechanism instead."
-    );
-    function coerceNumberOrDefault(value, defaultValue) {
-      if (typeof value === "number") {
-        return Number.isFinite(value) ? value : defaultValue;
-      }
-      if (typeof value === "string" && value.trim() !== "") {
-        const n = Number(value);
-        return Number.isFinite(n) ? n : defaultValue;
-      }
-      return defaultValue;
-    }
-    __name(coerceNumberOrDefault, "coerceNumberOrDefault");
-    var Client2 = class extends EventEmitter3 {
-      static {
-        __name(this, "Client");
-      }
-      constructor(config3) {
-        super();
-        this.connectionParameters = new ConnectionParameters(config3);
-        this.user = this.connectionParameters.user;
-        this.database = this.connectionParameters.database;
-        this.port = this.connectionParameters.port;
-        this.host = this.connectionParameters.host;
-        Object.defineProperty(this, "password", {
-          configurable: true,
-          enumerable: false,
-          writable: true,
-          value: this.connectionParameters.password
-        });
-        this.replication = this.connectionParameters.replication;
-        const c = config3 || {};
-        if (c.Promise) {
-          byoPromiseDeprecationNotice();
-        }
-        this._Promise = c.Promise || global.Promise;
-        this._types = new TypeOverrides2(c.types);
-        this._ending = false;
-        this._ended = false;
-        this._connecting = false;
-        this._connected = false;
-        this._connectionError = false;
-        this._queryable = true;
-        this._activeQuery = null;
-        this._txStatus = null;
-        this.enableChannelBinding = Boolean(c.enableChannelBinding);
-        this.scramMaxIterations = coerceNumberOrDefault(c.scramMaxIterations, sasl.DEFAULT_MAX_SCRAM_ITERATIONS);
-        this.connection = c.connection || new Connection2({
-          stream: c.stream,
-          ssl: this.connectionParameters.ssl,
-          sslNegotiation: this.connectionParameters.sslnegotiation,
-          keepAlive: c.keepAlive || false,
-          keepAliveInitialDelayMillis: c.keepAliveInitialDelayMillis || 0,
-          encoding: this.connectionParameters.client_encoding || "utf8"
-        });
-        this._queryQueue = [];
-        this.binary = c.binary || defaults2.binary;
-        this.processID = null;
-        this.secretKey = null;
-        this.ssl = this.connectionParameters.ssl || false;
-        this.sslNegotiation = this.connectionParameters.sslnegotiation || "postgres";
-        if (this.ssl && this.ssl.key) {
-          Object.defineProperty(this.ssl, "key", {
-            enumerable: false
-          });
-        }
-        this._connectionTimeoutMillis = c.connectionTimeoutMillis || 0;
-      }
-      get activeQuery() {
-        activeQueryDeprecationNotice();
-        return this._activeQuery;
-      }
-      set activeQuery(val) {
-        activeQueryDeprecationNotice();
-        this._activeQuery = val;
-      }
-      _getActiveQuery() {
-        return this._activeQuery;
-      }
-      _errorAllQueries(err) {
-        const enqueueError = /* @__PURE__ */ __name((query) => {
-          process.nextTick(() => {
-            query.handleError(err, this.connection);
-          });
-        }, "enqueueError");
-        const activeQuery = this._getActiveQuery();
-        if (activeQuery) {
-          enqueueError(activeQuery);
-          this._activeQuery = null;
-        }
-        this._queryQueue.forEach(enqueueError);
-        this._queryQueue.length = 0;
-      }
-      _connect(callback) {
-        const self2 = this;
-        const con = this.connection;
-        this._connectionCallback = callback;
-        if (this._connecting || this._connected) {
-          const err = new Error("Client has already been connected. You cannot reuse a client.");
-          process.nextTick(() => {
-            callback(err);
-          });
-          return;
-        }
-        this._connecting = true;
-        if (this._connectionTimeoutMillis > 0) {
-          this.connectionTimeoutHandle = setTimeout(() => {
-            con._ending = true;
-            con.stream.destroy(new Error("timeout expired"));
-          }, this._connectionTimeoutMillis);
-          if (this.connectionTimeoutHandle.unref) {
-            this.connectionTimeoutHandle.unref();
-          }
-        }
-        if (this.host && this.host.indexOf("/") === 0) {
-          con.connect(this.host + "/.s.PGSQL." + this.port);
-        } else {
-          con.connect(this.port, this.host);
-        }
-        con.on("connect", function() {
-          if (self2.ssl) {
-            if (self2.sslNegotiation !== "direct") {
-              con.requestSsl();
-            }
-          } else {
-            con.startup(self2.getStartupConf());
-          }
-        });
-        con.on("sslconnect", function() {
-          con.startup(self2.getStartupConf());
-        });
-        this._attachListeners(con);
-        con.once("end", () => {
-          const error3 = this._ending ? new Error("Connection terminated") : new Error("Connection terminated unexpectedly");
-          clearTimeout(this.connectionTimeoutHandle);
-          this._errorAllQueries(error3);
-          this._ended = true;
-          if (!this._ending) {
-            if (this._connecting && !this._connectionError) {
-              if (this._connectionCallback) {
-                this._connectionCallback(error3);
-              } else {
-                this._handleErrorEvent(error3);
-              }
-            } else if (!this._connectionError) {
-              this._handleErrorEvent(error3);
-            }
-          }
-          process.nextTick(() => {
-            this.emit("end");
-          });
-        });
-      }
-      connect(callback) {
-        if (callback) {
-          this._connect(callback);
-          return;
-        }
-        return new this._Promise((resolve, reject) => {
-          this._connect((error3) => {
-            if (error3) {
-              reject(error3);
-            } else {
-              resolve(this);
-            }
-          });
-        });
-      }
-      _attachListeners(con) {
-        con.on("authenticationCleartextPassword", this._handleAuthCleartextPassword.bind(this));
-        con.on("authenticationMD5Password", this._handleAuthMD5Password.bind(this));
-        con.on("authenticationSASL", this._handleAuthSASL.bind(this));
-        con.on("authenticationSASLContinue", this._handleAuthSASLContinue.bind(this));
-        con.on("authenticationSASLFinal", this._handleAuthSASLFinal.bind(this));
-        con.on("backendKeyData", this._handleBackendKeyData.bind(this));
-        con.on("error", this._handleErrorEvent.bind(this));
-        con.on("errorMessage", this._handleErrorMessage.bind(this));
-        con.on("readyForQuery", this._handleReadyForQuery.bind(this));
-        con.on("notice", this._handleNotice.bind(this));
-        con.on("rowDescription", this._handleRowDescription.bind(this));
-        con.on("dataRow", this._handleDataRow.bind(this));
-        con.on("portalSuspended", this._handlePortalSuspended.bind(this));
-        con.on("emptyQuery", this._handleEmptyQuery.bind(this));
-        con.on("commandComplete", this._handleCommandComplete.bind(this));
-        con.on("parseComplete", this._handleParseComplete.bind(this));
-        con.on("copyInResponse", this._handleCopyInResponse.bind(this));
-        con.on("copyData", this._handleCopyData.bind(this));
-        con.on("notification", this._handleNotification.bind(this));
-      }
-      _getPassword(cb) {
-        const con = this.connection;
-        if (typeof this.password === "function") {
-          this._Promise.resolve().then(() => this.password(this.connectionParameters)).then((pass) => {
-            if (pass !== void 0) {
-              if (typeof pass !== "string") {
-                con.emit("error", new TypeError("Password must be a string"));
-                return;
-              }
-              this.connectionParameters.password = this.password = pass;
-            } else {
-              this.connectionParameters.password = this.password = null;
-            }
-            cb();
-          }).catch((err) => {
-            con.emit("error", err);
-          });
-        } else if (this.password !== null) {
-          cb();
-        } else {
-          try {
-            const pgPass = require_lib();
-            pgPass(this.connectionParameters, (pass) => {
-              if (void 0 !== pass) {
-                pgPassDeprecationNotice();
-                this.connectionParameters.password = this.password = pass;
-              }
-              cb();
-            });
-          } catch (e) {
-            this.emit("error", e);
-          }
-        }
-      }
-      _handleAuthCleartextPassword(msg) {
-        this._getPassword(() => {
-          this.connection.password(this.password);
-        });
-      }
-      _handleAuthMD5Password(msg) {
-        this._getPassword(async () => {
-          try {
-            const hashedPassword = await crypto3.postgresMd5PasswordHash(this.user, this.password, msg.salt);
-            this.connection.password(hashedPassword);
-          } catch (e) {
-            this.emit("error", e);
-          }
-        });
-      }
-      _handleAuthSASL(msg) {
-        this._getPassword(() => {
-          try {
-            this.saslSession = sasl.startSession(
-              msg.mechanisms,
-              this.enableChannelBinding && this.connection.stream,
-              this.scramMaxIterations
-            );
-            this.connection.sendSASLInitialResponseMessage(this.saslSession.mechanism, this.saslSession.response);
-          } catch (err) {
-            this.connection.emit("error", err);
-          }
-        });
-      }
-      async _handleAuthSASLContinue(msg) {
-        try {
-          await sasl.continueSession(
-            this.saslSession,
-            this.password,
-            msg.data,
-            this.enableChannelBinding && this.connection.stream
-          );
-          this.connection.sendSCRAMClientFinalMessage(this.saslSession.response);
-        } catch (err) {
-          this.connection.emit("error", err);
-        }
-      }
-      _handleAuthSASLFinal(msg) {
-        try {
-          sasl.finalizeSession(this.saslSession, msg.data);
-          this.saslSession = null;
-        } catch (err) {
-          this.connection.emit("error", err);
-        }
-      }
-      _handleBackendKeyData(msg) {
-        this.processID = msg.processID;
-        this.secretKey = msg.secretKey;
-      }
-      _handleReadyForQuery(msg) {
-        if (this._connecting) {
-          this._connecting = false;
-          this._connected = true;
-          clearTimeout(this.connectionTimeoutHandle);
-          if (this._connectionCallback) {
-            this._connectionCallback(null, this);
-            this._connectionCallback = null;
-          }
-          this.emit("connect");
-        }
-        const activeQuery = this._getActiveQuery();
-        this._activeQuery = null;
-        this._txStatus = msg?.status ?? null;
-        this.readyForQuery = true;
-        if (activeQuery) {
-          activeQuery.handleReadyForQuery(this.connection);
-        }
-        this._pulseQueryQueue();
-      }
-      // if we receive an error event or error message
-      // during the connection process we handle it here
-      _handleErrorWhileConnecting(err) {
-        if (this._connectionError) {
-          return;
-        }
-        this._connectionError = true;
-        clearTimeout(this.connectionTimeoutHandle);
-        if (this._connectionCallback) {
-          return this._connectionCallback(err);
-        }
-        this.emit("error", err);
-      }
-      // if we're connected and we receive an error event from the connection
-      // this means the socket is dead - do a hard abort of all queries and emit
-      // the socket error on the client as well
-      _handleErrorEvent(err) {
-        if (this._connecting) {
-          return this._handleErrorWhileConnecting(err);
-        }
-        this._queryable = false;
-        this._errorAllQueries(err);
-        this.emit("error", err);
-      }
-      // handle error messages from the postgres backend
-      _handleErrorMessage(msg) {
-        if (this._connecting) {
-          return this._handleErrorWhileConnecting(msg);
-        }
-        const activeQuery = this._getActiveQuery();
-        if (!activeQuery) {
-          this._handleErrorEvent(msg);
-          return;
-        }
-        this._activeQuery = null;
-        activeQuery.handleError(msg, this.connection);
-      }
-      _handleRowDescription(msg) {
-        const activeQuery = this._getActiveQuery();
-        if (activeQuery == null) {
-          const error3 = new Error("Received unexpected rowDescription message from backend.");
-          this._handleErrorEvent(error3);
-          return;
-        }
-        activeQuery.handleRowDescription(msg);
-      }
-      _handleDataRow(msg) {
-        const activeQuery = this._getActiveQuery();
-        if (activeQuery == null) {
-          const error3 = new Error("Received unexpected dataRow message from backend.");
-          this._handleErrorEvent(error3);
-          return;
-        }
-        activeQuery.handleDataRow(msg);
-      }
-      _handlePortalSuspended(msg) {
-        const activeQuery = this._getActiveQuery();
-        if (activeQuery == null) {
-          const error3 = new Error("Received unexpected portalSuspended message from backend.");
-          this._handleErrorEvent(error3);
-          return;
-        }
-        activeQuery.handlePortalSuspended(this.connection);
-      }
-      _handleEmptyQuery(msg) {
-        const activeQuery = this._getActiveQuery();
-        if (activeQuery == null) {
-          const error3 = new Error("Received unexpected emptyQuery message from backend.");
-          this._handleErrorEvent(error3);
-          return;
-        }
-        activeQuery.handleEmptyQuery(this.connection);
-      }
-      _handleCommandComplete(msg) {
-        const activeQuery = this._getActiveQuery();
-        if (activeQuery == null) {
-          const error3 = new Error("Received unexpected commandComplete message from backend.");
-          this._handleErrorEvent(error3);
-          return;
-        }
-        activeQuery.handleCommandComplete(msg, this.connection);
-      }
-      _handleParseComplete() {
-        const activeQuery = this._getActiveQuery();
-        if (activeQuery == null) {
-          const error3 = new Error("Received unexpected parseComplete message from backend.");
-          this._handleErrorEvent(error3);
-          return;
-        }
-        if (activeQuery.name) {
-          this.connection.parsedStatements[activeQuery.name] = activeQuery.text;
-        }
-      }
-      _handleCopyInResponse(msg) {
-        const activeQuery = this._getActiveQuery();
-        if (activeQuery == null) {
-          const error3 = new Error("Received unexpected copyInResponse message from backend.");
-          this._handleErrorEvent(error3);
-          return;
-        }
-        activeQuery.handleCopyInResponse(this.connection);
-      }
-      _handleCopyData(msg) {
-        const activeQuery = this._getActiveQuery();
-        if (activeQuery == null) {
-          const error3 = new Error("Received unexpected copyData message from backend.");
-          this._handleErrorEvent(error3);
-          return;
-        }
-        activeQuery.handleCopyData(msg, this.connection);
-      }
-      _handleNotification(msg) {
-        this.emit("notification", msg);
-      }
-      _handleNotice(msg) {
-        this.emit("notice", msg);
-      }
-      getStartupConf() {
-        const params = this.connectionParameters;
-        const data = {
-          user: params.user,
-          database: params.database
-        };
-        const appName = params.application_name || params.fallback_application_name;
-        if (appName) {
-          data.application_name = appName;
-        }
-        if (params.replication) {
-          data.replication = "" + params.replication;
-        }
-        if (params.statement_timeout) {
-          data.statement_timeout = String(parseInt(params.statement_timeout, 10));
-        }
-        if (params.lock_timeout) {
-          data.lock_timeout = String(parseInt(params.lock_timeout, 10));
-        }
-        if (params.idle_in_transaction_session_timeout) {
-          data.idle_in_transaction_session_timeout = String(parseInt(params.idle_in_transaction_session_timeout, 10));
-        }
-        if (params.options) {
-          data.options = params.options;
-        }
-        return data;
-      }
-      cancel(client, query) {
-        if (client.activeQuery === query) {
-          const con = this.connection;
-          if (this.host && this.host.indexOf("/") === 0) {
-            con.connect(this.host + "/.s.PGSQL." + this.port);
-          } else {
-            con.connect(this.port, this.host);
-          }
-          con.on("connect", function() {
-            con.cancel(client.processID, client.secretKey);
-          });
-        } else if (client._queryQueue.indexOf(query) !== -1) {
-          client._queryQueue.splice(client._queryQueue.indexOf(query), 1);
-        }
-      }
-      setTypeParser(oid, format, parseFn) {
-        return this._types.setTypeParser(oid, format, parseFn);
-      }
-      getTypeParser(oid, format) {
-        return this._types.getTypeParser(oid, format);
-      }
-      // escapeIdentifier and escapeLiteral moved to utility functions & exported
-      // on PG
-      // re-exported here for backwards compatibility
-      escapeIdentifier(str) {
-        return utils.escapeIdentifier(str);
-      }
-      escapeLiteral(str) {
-        return utils.escapeLiteral(str);
-      }
-      _pulseQueryQueue() {
-        if (this.readyForQuery === true) {
-          this._activeQuery = this._queryQueue.shift();
-          const activeQuery = this._getActiveQuery();
-          if (activeQuery) {
-            this.readyForQuery = false;
-            this.hasExecuted = true;
-            const queryError = activeQuery.submit(this.connection);
-            if (queryError) {
-              process.nextTick(() => {
-                activeQuery.handleError(queryError, this.connection);
-                this.readyForQuery = true;
-                this._pulseQueryQueue();
-              });
-            }
-          } else if (this.hasExecuted) {
-            this._activeQuery = null;
-            this.emit("drain");
-          }
-        }
-      }
-      query(config3, values, callback) {
-        let query;
-        let result;
-        if (config3 == null) {
-          throw new TypeError("Client was passed a null or undefined query");
-        }
-        if (typeof config3.submit === "function") {
-          result = query = config3;
-          if (!query.callback) {
-            if (typeof values === "function") {
-              query.callback = values;
-            } else if (callback) {
-              query.callback = callback;
-            }
-          }
-        } else {
-          query = new Query2(config3, values, callback);
-          if (!query.callback) {
-            result = new this._Promise((resolve, reject) => {
-              query.callback = (err, res2) => err ? reject(err) : resolve(res2);
-            }).catch((err) => {
-              Error.captureStackTrace(err);
-              throw err;
-            });
-          } else if (typeof query.callback !== "function") {
-            throw new TypeError("callback is not a function");
-          }
-        }
-        const readTimeout = config3.query_timeout || this.connectionParameters.query_timeout;
-        if (readTimeout) {
-          const queryCallback = query.callback || (() => {
-          });
-          const readTimeoutTimer = setTimeout(() => {
-            const error3 = new Error("Query read timeout");
-            process.nextTick(() => {
-              query.handleError(error3, this.connection);
-            });
-            queryCallback(error3);
-            query.callback = () => {
-            };
-            const index = this._queryQueue.indexOf(query);
-            if (index > -1) {
-              this._queryQueue.splice(index, 1);
-            }
-            this._pulseQueryQueue();
-          }, readTimeout);
-          query.callback = (err, res2) => {
-            clearTimeout(readTimeoutTimer);
-            queryCallback(err, res2);
-          };
-        }
-        if (this.binary && !query.binary) {
-          query.binary = true;
-        }
-        if (query._result && !query._result._types) {
-          query._result._types = this._types;
-        }
-        if (!this._queryable) {
-          process.nextTick(() => {
-            query.handleError(new Error("Client has encountered a connection error and is not queryable"), this.connection);
-          });
-          return result;
-        }
-        if (this._ending) {
-          process.nextTick(() => {
-            query.handleError(new Error("Client was closed and is not queryable"), this.connection);
-          });
-          return result;
-        }
-        if (this._queryQueue.length > 0) {
-          queryQueueLengthDeprecationNotice();
-        }
-        this._queryQueue.push(query);
-        this._pulseQueryQueue();
-        return result;
-      }
-      ref() {
-        this.connection.ref();
-      }
-      unref() {
-        this.connection.unref();
-      }
-      getTransactionStatus() {
-        return this._txStatus;
-      }
-      end(cb) {
-        this._ending = true;
-        if (!this.connection._connecting || this._ended) {
-          if (cb) {
-            cb();
-            return;
-          } else {
-            return this._Promise.resolve();
-          }
-        }
-        if (this._getActiveQuery() || !this._queryable) {
-          this.connection.stream.destroy();
-        } else {
-          this.connection.end();
-        }
-        if (cb) {
-          this.connection.once("end", cb);
-        } else {
-          return new this._Promise((resolve) => {
-            this.connection.once("end", resolve);
-          });
-        }
-      }
-      get queryQueue() {
-        queryQueueDeprecationNotice();
-        return this._queryQueue;
-      }
-    };
-    Client2.Query = Query2;
-    module.exports = Client2;
-  }
-});
-
-// ../node_modules/pg-pool/index.js
-var require_pg_pool = __commonJS({
-  "../node_modules/pg-pool/index.js"(exports, module) {
-    "use strict";
-    init_modules_watch_stub();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_process();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_console();
-    init_performance2();
-    var EventEmitter3 = require_events().EventEmitter;
-    var NOOP = /* @__PURE__ */ __name(function() {
-    }, "NOOP");
-    var removeWhere = /* @__PURE__ */ __name((list, predicate) => {
-      const i = list.findIndex(predicate);
-      return i === -1 ? void 0 : list.splice(i, 1)[0];
-    }, "removeWhere");
-    var IdleItem = class {
-      static {
-        __name(this, "IdleItem");
-      }
-      constructor(client, idleListener, timeoutId) {
-        this.client = client;
-        this.idleListener = idleListener;
-        this.timeoutId = timeoutId;
-      }
-    };
-    var PendingItem = class {
-      static {
-        __name(this, "PendingItem");
-      }
-      constructor(callback) {
-        this.callback = callback;
-      }
-    };
-    function throwOnDoubleRelease() {
-      throw new Error("Release called on client which has already been released to the pool.");
-    }
-    __name(throwOnDoubleRelease, "throwOnDoubleRelease");
-    function promisify(Promise2, callback) {
-      if (callback) {
-        return { callback, result: void 0 };
-      }
-      let rej;
-      let res2;
-      const cb = /* @__PURE__ */ __name(function(err, client) {
-        err ? rej(err) : res2(client);
-      }, "cb");
-      const result = new Promise2(function(resolve, reject) {
-        res2 = resolve;
-        rej = reject;
-      }).catch((err) => {
-        Error.captureStackTrace(err);
-        throw err;
-      });
-      return { callback: cb, result };
-    }
-    __name(promisify, "promisify");
-    function makeIdleListener(pool, client) {
-      return /* @__PURE__ */ __name(function idleListener(err) {
-        err.client = client;
-        client.removeListener("error", idleListener);
-        client.on("error", () => {
-          pool.log("additional client error after disconnection due to error", err);
-        });
-        pool._remove(client);
-        pool.emit("error", err, client);
-      }, "idleListener");
-    }
-    __name(makeIdleListener, "makeIdleListener");
-    var Pool2 = class extends EventEmitter3 {
-      static {
-        __name(this, "Pool");
-      }
-      constructor(options, Client2) {
-        super();
-        this.options = Object.assign({}, options);
-        if (options != null && "password" in options) {
-          Object.defineProperty(this.options, "password", {
-            configurable: true,
-            enumerable: false,
-            writable: true,
-            value: options.password
-          });
-        }
-        if (options != null && options.ssl && options.ssl.key) {
-          Object.defineProperty(this.options.ssl, "key", {
-            enumerable: false
-          });
-        }
-        this.options.max = this.options.max || this.options.poolSize || 10;
-        this.options.min = this.options.min || 0;
-        this.options.maxUses = this.options.maxUses || Infinity;
-        this.options.allowExitOnIdle = this.options.allowExitOnIdle || false;
-        this.options.maxLifetimeSeconds = this.options.maxLifetimeSeconds || 0;
-        this.log = this.options.log || function() {
-        };
-        this.Client = this.options.Client || Client2 || require_lib2().Client;
-        this.Promise = this.options.Promise || global.Promise;
-        if (typeof this.options.idleTimeoutMillis === "undefined") {
-          this.options.idleTimeoutMillis = 1e4;
-        }
-        this._clients = [];
-        this._idle = [];
-        this._expired = /* @__PURE__ */ new WeakSet();
-        this._pendingQueue = [];
-        this._endCallback = void 0;
-        this.ending = false;
-        this.ended = false;
-      }
-      _promiseTry(f) {
-        const Promise2 = this.Promise;
-        if (typeof Promise2.try === "function") {
-          return Promise2.try(f);
-        }
-        return new Promise2((resolve) => resolve(f()));
-      }
-      _isFull() {
-        return this._clients.length >= this.options.max;
-      }
-      _isAboveMin() {
-        return this._clients.length > this.options.min;
-      }
-      _pulseQueue() {
-        this.log("pulse queue");
-        if (this.ended) {
-          this.log("pulse queue ended");
-          return;
-        }
-        if (this.ending) {
-          this.log("pulse queue on ending");
-          if (this._idle.length) {
-            this._idle.slice().map((item) => {
-              this._remove(item.client);
-            });
-          }
-          if (!this._clients.length) {
-            this.ended = true;
-            this._endCallback();
-          }
-          return;
-        }
-        if (!this._pendingQueue.length) {
-          this.log("no queued requests");
-          return;
-        }
-        if (!this._idle.length && this._isFull()) {
-          return;
-        }
-        const pendingItem = this._pendingQueue.shift();
-        if (this._idle.length) {
-          const idleItem = this._idle.pop();
-          clearTimeout(idleItem.timeoutId);
-          const client = idleItem.client;
-          client.ref && client.ref();
-          const idleListener = idleItem.idleListener;
-          return this._acquireClient(client, pendingItem, idleListener, false);
-        }
-        if (!this._isFull()) {
-          return this.newClient(pendingItem);
-        }
-        throw new Error("unexpected condition");
-      }
-      _remove(client, callback) {
-        const removed = removeWhere(this._idle, (item) => item.client === client);
-        if (removed !== void 0) {
-          clearTimeout(removed.timeoutId);
-        }
-        this._clients = this._clients.filter((c) => c !== client);
-        const context2 = this;
-        client.end(() => {
-          context2.emit("remove", client);
-          if (typeof callback === "function") {
-            callback();
-          }
-        });
-      }
-      connect(cb) {
-        if (this.ending) {
-          const err = new Error("Cannot use a pool after calling end on the pool");
-          return cb ? cb(err) : this.Promise.reject(err);
-        }
-        const response = promisify(this.Promise, cb);
-        const result = response.result;
-        if (this._isFull() || this._idle.length) {
-          if (this._idle.length) {
-            process.nextTick(() => this._pulseQueue());
-          }
-          if (!this.options.connectionTimeoutMillis) {
-            this._pendingQueue.push(new PendingItem(response.callback));
-            return result;
-          }
-          const queueCallback = /* @__PURE__ */ __name((err, res2, done) => {
-            clearTimeout(tid);
-            response.callback(err, res2, done);
-          }, "queueCallback");
-          const pendingItem = new PendingItem(queueCallback);
-          const tid = setTimeout(() => {
-            removeWhere(this._pendingQueue, (i) => i.callback === queueCallback);
-            pendingItem.timedOut = true;
-            response.callback(new Error("timeout exceeded when trying to connect"));
-          }, this.options.connectionTimeoutMillis);
-          if (tid.unref) {
-            tid.unref();
-          }
-          this._pendingQueue.push(pendingItem);
-          return result;
-        }
-        this.newClient(new PendingItem(response.callback));
-        return result;
-      }
-      newClient(pendingItem) {
-        const client = new this.Client(this.options);
-        this._clients.push(client);
-        const idleListener = makeIdleListener(this, client);
-        this.log("checking client timeout");
-        let tid;
-        let timeoutHit = false;
-        if (this.options.connectionTimeoutMillis) {
-          tid = setTimeout(() => {
-            if (client.connection) {
-              this.log("ending client due to timeout");
-              timeoutHit = true;
-              client.connection.stream.destroy();
-            } else if (!client.isConnected()) {
-              this.log("ending client due to timeout");
-              timeoutHit = true;
-              client.end();
-            }
-          }, this.options.connectionTimeoutMillis);
-        }
-        this.log("connecting new client");
-        client.connect((err) => {
-          if (tid) {
-            clearTimeout(tid);
-          }
-          client.on("error", idleListener);
-          if (err) {
-            this.log("client failed to connect", err);
-            this._clients = this._clients.filter((c) => c !== client);
-            if (timeoutHit) {
-              err = new Error("Connection terminated due to connection timeout", { cause: err });
-            }
-            this._pulseQueue();
-            if (!pendingItem.timedOut) {
-              pendingItem.callback(err, void 0, NOOP);
-            }
-          } else {
-            this.log("new client connected");
-            if (this.options.onConnect) {
-              this._promiseTry(() => this.options.onConnect(client)).then(
-                () => {
-                  this._afterConnect(client, pendingItem, idleListener);
-                },
-                (hookErr) => {
-                  this._clients = this._clients.filter((c) => c !== client);
-                  client.end(() => {
-                    this._pulseQueue();
-                    if (!pendingItem.timedOut) {
-                      pendingItem.callback(hookErr, void 0, NOOP);
-                    }
-                  });
-                }
-              );
-              return;
-            }
-            return this._afterConnect(client, pendingItem, idleListener);
-          }
-        });
-      }
-      _afterConnect(client, pendingItem, idleListener) {
-        if (this.options.maxLifetimeSeconds !== 0) {
-          const maxLifetimeTimeout = setTimeout(() => {
-            this.log("ending client due to expired lifetime");
-            this._expired.add(client);
-            const idleIndex = this._idle.findIndex((idleItem) => idleItem.client === client);
-            if (idleIndex !== -1) {
-              this._acquireClient(
-                client,
-                new PendingItem((err, client2, clientRelease) => clientRelease()),
-                idleListener,
-                false
-              );
-            }
-          }, this.options.maxLifetimeSeconds * 1e3);
-          maxLifetimeTimeout.unref();
-          client.once("end", () => clearTimeout(maxLifetimeTimeout));
-        }
-        return this._acquireClient(client, pendingItem, idleListener, true);
-      }
-      // acquire a client for a pending work item
-      _acquireClient(client, pendingItem, idleListener, isNew) {
-        if (isNew) {
-          this.emit("connect", client);
-        }
-        this.emit("acquire", client);
-        client.release = this._releaseOnce(client, idleListener);
-        client.removeListener("error", idleListener);
-        if (!pendingItem.timedOut) {
-          if (isNew && this.options.verify) {
-            this.options.verify(client, (err) => {
-              if (err) {
-                client.release(err);
-                return pendingItem.callback(err, void 0, NOOP);
-              }
-              pendingItem.callback(void 0, client, client.release);
-            });
-          } else {
-            pendingItem.callback(void 0, client, client.release);
-          }
-        } else {
-          if (isNew && this.options.verify) {
-            this.options.verify(client, client.release);
-          } else {
-            client.release();
-          }
-        }
-      }
-      // returns a function that wraps _release and throws if called more than once
-      _releaseOnce(client, idleListener) {
-        let released = false;
-        return (err) => {
-          if (released) {
-            throwOnDoubleRelease();
-          }
-          released = true;
-          this._release(client, idleListener, err);
-        };
-      }
-      // release a client back to the poll, include an error
-      // to remove it from the pool
-      _release(client, idleListener, err) {
-        client.on("error", idleListener);
-        client._poolUseCount = (client._poolUseCount || 0) + 1;
-        this.emit("release", err, client);
-        if (err || this.ending || !client._queryable || client._ending || client._poolUseCount >= this.options.maxUses) {
-          if (client._poolUseCount >= this.options.maxUses) {
-            this.log("remove expended client");
-          }
-          return this._remove(client, this._pulseQueue.bind(this));
-        }
-        const isExpired = this._expired.has(client);
-        if (isExpired) {
-          this.log("remove expired client");
-          this._expired.delete(client);
-          return this._remove(client, this._pulseQueue.bind(this));
-        }
-        let tid;
-        if (this.options.idleTimeoutMillis && this._isAboveMin()) {
-          tid = setTimeout(() => {
-            if (this._isAboveMin()) {
-              this.log("remove idle client");
-              this._remove(client, this._pulseQueue.bind(this));
-            }
-          }, this.options.idleTimeoutMillis);
-          if (this.options.allowExitOnIdle) {
-            tid.unref();
-          }
-        }
-        if (this.options.allowExitOnIdle) {
-          client.unref();
-        }
-        this._idle.push(new IdleItem(client, idleListener, tid));
-        this._pulseQueue();
-      }
-      query(text, values, cb) {
-        if (typeof text === "function") {
-          const response2 = promisify(this.Promise, text);
-          setImmediate(function() {
-            return response2.callback(new Error("Passing a function as the first parameter to pool.query is not supported"));
-          });
-          return response2.result;
-        }
-        if (typeof values === "function") {
-          cb = values;
-          values = void 0;
-        }
-        const response = promisify(this.Promise, cb);
-        cb = response.callback;
-        this.connect((err, client) => {
-          if (err) {
-            return cb(err);
-          }
-          let clientReleased = false;
-          const onError = /* @__PURE__ */ __name((err2) => {
-            if (clientReleased) {
-              return;
-            }
-            clientReleased = true;
-            client.release(err2);
-            cb(err2);
-          }, "onError");
-          client.once("error", onError);
-          this.log("dispatching query");
-          try {
-            client.query(text, values, (err2, res2) => {
-              this.log("query dispatched");
-              client.removeListener("error", onError);
-              if (clientReleased) {
-                return;
-              }
-              clientReleased = true;
-              client.release(err2);
-              if (err2) {
-                return cb(err2);
-              }
-              return cb(void 0, res2);
-            });
-          } catch (err2) {
-            client.release(err2);
-            return cb(err2);
-          }
-        });
-        return response.result;
-      }
-      end(cb) {
-        this.log("ending");
-        if (this.ending) {
-          const err = new Error("Called end on pool more than once");
-          return cb ? cb(err) : this.Promise.reject(err);
-        }
-        this.ending = true;
-        const promised = promisify(this.Promise, cb);
-        this._endCallback = promised.callback;
-        this._pulseQueue();
-        return promised.result;
-      }
-      get waitingCount() {
-        return this._pendingQueue.length;
-      }
-      get idleCount() {
-        return this._idle.length;
-      }
-      get expiredCount() {
-        return this._clients.reduce((acc, client) => acc + (this._expired.has(client) ? 1 : 0), 0);
-      }
-      get totalCount() {
-        return this._clients.length;
-      }
-    };
-    module.exports = Pool2;
-  }
-});
-
-// ../node_modules/pg/lib/native/query.js
-var require_query2 = __commonJS({
-  "../node_modules/pg/lib/native/query.js"(exports, module) {
-    "use strict";
-    init_modules_watch_stub();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_process();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_console();
-    init_performance2();
-    var EventEmitter3 = require_events().EventEmitter;
-    var util = require_util();
-    var utils = require_utils();
-    var NativeQuery = module.exports = function(config3, values, callback) {
-      EventEmitter3.call(this);
-      config3 = utils.normalizeQueryConfig(config3, values, callback);
-      this.text = config3.text;
-      this.values = config3.values;
-      this.name = config3.name;
-      this.queryMode = config3.queryMode;
-      this.callback = config3.callback;
-      this.state = "new";
-      this._arrayMode = config3.rowMode === "array";
-      this._emitRowEvents = false;
-      this.on(
-        "newListener",
-        function(event) {
-          if (event === "row") this._emitRowEvents = true;
-        }.bind(this)
-      );
-    };
-    util.inherits(NativeQuery, EventEmitter3);
-    var errorFieldMap = {
-      sqlState: "code",
-      statementPosition: "position",
-      messagePrimary: "message",
-      context: "where",
-      schemaName: "schema",
-      tableName: "table",
-      columnName: "column",
-      dataTypeName: "dataType",
-      constraintName: "constraint",
-      sourceFile: "file",
-      sourceLine: "line",
-      sourceFunction: "routine"
-    };
-    NativeQuery.prototype.handleError = function(err) {
-      const fields = this.native.pq.resultErrorFields();
-      if (fields) {
-        for (const key in fields) {
-          const normalizedFieldName = errorFieldMap[key] || key;
-          err[normalizedFieldName] = fields[key];
-        }
-      }
-      if (this.callback) {
-        this.callback(err);
-      } else {
-        this.emit("error", err);
-      }
-      this.state = "error";
-    };
-    NativeQuery.prototype.then = function(onSuccess, onFailure) {
-      return this._getPromise().then(onSuccess, onFailure);
-    };
-    NativeQuery.prototype.catch = function(callback) {
-      return this._getPromise().catch(callback);
-    };
-    NativeQuery.prototype._getPromise = function() {
-      if (this._promise) return this._promise;
-      this._promise = new Promise(
-        function(resolve, reject) {
-          this._once("end", resolve);
-          this._once("error", reject);
-        }.bind(this)
-      );
-      return this._promise;
-    };
-    NativeQuery.prototype.submit = function(client) {
-      this.state = "running";
-      const self2 = this;
-      this.native = client.native;
-      client.native.arrayMode = this._arrayMode;
-      let after = /* @__PURE__ */ __name(function(err, rows, results) {
-        client.native.arrayMode = false;
-        setImmediate(function() {
-          self2.emit("_done");
-        });
-        if (err) {
-          return self2.handleError(err);
-        }
-        if (self2._emitRowEvents) {
-          if (results.length > 1) {
-            rows.forEach((rowOfRows, i) => {
-              rowOfRows.forEach((row) => {
-                self2.emit("row", row, results[i]);
-              });
-            });
-          } else {
-            rows.forEach(function(row) {
-              self2.emit("row", row, results);
-            });
-          }
-        }
-        self2.state = "end";
-        self2.emit("end", results);
-        if (self2.callback) {
-          self2.callback(null, results);
-        }
-      }, "after");
-      if (process.domain) {
-        after = process.domain.bind(after);
-      }
-      if (this.name) {
-        if (this.name.length > 63) {
-          console.error("Warning! Postgres only supports 63 characters for query names.");
-          console.error("You supplied %s (%s)", this.name, this.name.length);
-          console.error("This can cause conflicts and silent errors executing queries");
-        }
-        const values = (this.values || []).map(utils.prepareValue);
-        if (client.namedQueries[this.name]) {
-          if (this.text && client.namedQueries[this.name] !== this.text) {
-            const err = new Error(`Prepared statements must be unique - '${this.name}' was used for a different statement`);
-            return after(err);
-          }
-          return client.native.execute(this.name, values, after);
-        }
-        return client.native.prepare(this.name, this.text, values.length, function(err) {
-          if (err) return after(err);
-          client.namedQueries[self2.name] = self2.text;
-          return self2.native.execute(self2.name, values, after);
-        });
-      } else if (this.values) {
-        if (!Array.isArray(this.values)) {
-          const err = new Error("Query values must be an array");
-          return after(err);
-        }
-        const vals = this.values.map(utils.prepareValue);
-        client.native.query(this.text, vals, after);
-      } else if (this.queryMode === "extended") {
-        client.native.query(this.text, [], after);
-      } else {
-        client.native.query(this.text, after);
-      }
-    };
-  }
-});
-
-// ../node_modules/pg/lib/native/client.js
-var require_client2 = __commonJS({
-  "../node_modules/pg/lib/native/client.js"(exports, module) {
-    init_modules_watch_stub();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_process();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_console();
-    init_performance2();
-    var nodeUtils = require_util();
-    var Native;
-    try {
-      Native = __require("pg-native");
-    } catch (e) {
-      throw e;
-    }
-    var TypeOverrides2 = require_type_overrides();
-    var EventEmitter3 = require_events().EventEmitter;
-    var util = require_util();
-    var ConnectionParameters = require_connection_parameters();
-    var NativeQuery = require_query2();
-    var queryQueueLengthDeprecationNotice = nodeUtils.deprecate(
-      () => {
-      },
-      "Calling client.query() when the client is already executing a query is deprecated and will be removed in pg@9.0. Use async/await or an external async flow control mechanism instead."
-    );
-    var Client2 = module.exports = function(config3) {
-      EventEmitter3.call(this);
-      config3 = config3 || {};
-      this._Promise = config3.Promise || global.Promise;
-      this._types = new TypeOverrides2(config3.types);
-      this.native = new Native({
-        types: this._types
-      });
-      this._queryQueue = [];
-      this._ending = false;
-      this._connecting = false;
-      this._connected = false;
-      this._queryable = true;
-      const cp3 = this.connectionParameters = new ConnectionParameters(config3);
-      if (config3.nativeConnectionString) cp3.nativeConnectionString = config3.nativeConnectionString;
-      this.user = cp3.user;
-      Object.defineProperty(this, "password", {
-        configurable: true,
-        enumerable: false,
-        writable: true,
-        value: cp3.password
-      });
-      this.database = cp3.database;
-      this.host = cp3.host;
-      this.port = cp3.port;
-      this.namedQueries = {};
-    };
-    Client2.Query = NativeQuery;
-    util.inherits(Client2, EventEmitter3);
-    Client2.prototype._errorAllQueries = function(err) {
-      const enqueueError = /* @__PURE__ */ __name((query) => {
-        process.nextTick(() => {
-          query.native = this.native;
-          query.handleError(err);
-        });
-      }, "enqueueError");
-      if (this._hasActiveQuery()) {
-        enqueueError(this._activeQuery);
-        this._activeQuery = null;
-      }
-      this._queryQueue.forEach(enqueueError);
-      this._queryQueue.length = 0;
-    };
-    Client2.prototype._connect = function(cb) {
-      const self2 = this;
-      if (this._connecting) {
-        process.nextTick(() => cb(new Error("Client has already been connected. You cannot reuse a client.")));
-        return;
-      }
-      this._connecting = true;
-      this.connectionParameters.getLibpqConnectionString(function(err, conString) {
-        if (self2.connectionParameters.nativeConnectionString) conString = self2.connectionParameters.nativeConnectionString;
-        if (err) return cb(err);
-        self2.native.connect(conString, function(err2) {
-          if (err2) {
-            self2.native.end();
-            return cb(err2);
-          }
-          self2._connected = true;
-          self2.native.on("error", function(err3) {
-            self2._queryable = false;
-            self2._errorAllQueries(err3);
-            self2.emit("error", err3);
-          });
-          self2.native.on("notification", function(msg) {
-            self2.emit("notification", {
-              channel: msg.relname,
-              payload: msg.extra
-            });
-          });
-          self2.emit("connect");
-          self2._pulseQueryQueue(true);
-          cb(null, this);
-        });
-      });
-    };
-    Client2.prototype.connect = function(callback) {
-      if (callback) {
-        this._connect(callback);
-        return;
-      }
-      return new this._Promise((resolve, reject) => {
-        this._connect((error3) => {
-          if (error3) {
-            reject(error3);
-          } else {
-            resolve(this);
-          }
-        });
-      });
-    };
-    Client2.prototype.query = function(config3, values, callback) {
-      let query;
-      let result;
-      let readTimeout;
-      let readTimeoutTimer;
-      let queryCallback;
-      if (config3 === null || config3 === void 0) {
-        throw new TypeError("Client was passed a null or undefined query");
-      } else if (typeof config3.submit === "function") {
-        readTimeout = config3.query_timeout || this.connectionParameters.query_timeout;
-        result = query = config3;
-        if (typeof values === "function") {
-          config3.callback = values;
-        }
-      } else {
-        readTimeout = config3.query_timeout || this.connectionParameters.query_timeout;
-        query = new NativeQuery(config3, values, callback);
-        if (!query.callback) {
-          let resolveOut, rejectOut;
-          result = new this._Promise((resolve, reject) => {
-            resolveOut = resolve;
-            rejectOut = reject;
-          }).catch((err) => {
-            Error.captureStackTrace(err);
-            throw err;
-          });
-          query.callback = (err, res2) => err ? rejectOut(err) : resolveOut(res2);
-        }
-      }
-      if (readTimeout) {
-        queryCallback = query.callback || (() => {
-        });
-        readTimeoutTimer = setTimeout(() => {
-          const error3 = new Error("Query read timeout");
-          process.nextTick(() => {
-            query.handleError(error3, this.connection);
-          });
-          queryCallback(error3);
-          query.callback = () => {
-          };
-          const index = this._queryQueue.indexOf(query);
-          if (index > -1) {
-            this._queryQueue.splice(index, 1);
-          }
-          this._pulseQueryQueue();
-        }, readTimeout);
-        query.callback = (err, res2) => {
-          clearTimeout(readTimeoutTimer);
-          queryCallback(err, res2);
-        };
-      }
-      if (!this._queryable) {
-        query.native = this.native;
-        process.nextTick(() => {
-          query.handleError(new Error("Client has encountered a connection error and is not queryable"));
-        });
-        return result;
-      }
-      if (this._ending) {
-        query.native = this.native;
-        process.nextTick(() => {
-          query.handleError(new Error("Client was closed and is not queryable"));
-        });
-        return result;
-      }
-      if (this._queryQueue.length > 0) {
-        queryQueueLengthDeprecationNotice();
-      }
-      this._queryQueue.push(query);
-      this._pulseQueryQueue();
-      return result;
-    };
-    Client2.prototype.end = function(cb) {
-      const self2 = this;
-      this._ending = true;
-      if (this._connecting && !this._connected) {
-        this.once("connect", () => {
-          this.end(() => {
-          });
-        });
-      }
-      let result;
-      if (!cb) {
-        result = new this._Promise(function(resolve, reject) {
-          cb = /* @__PURE__ */ __name((err) => err ? reject(err) : resolve(), "cb");
-        });
-      }
-      this.native.end(function() {
-        self2._connected = false;
-        self2._errorAllQueries(new Error("Connection terminated"));
-        process.nextTick(() => {
-          self2.emit("end");
-          if (cb) cb();
-        });
-      });
-      return result;
-    };
-    Client2.prototype._hasActiveQuery = function() {
-      return this._activeQuery && this._activeQuery.state !== "error" && this._activeQuery.state !== "end";
-    };
-    Client2.prototype._pulseQueryQueue = function(initialConnection) {
-      if (!this._connected) {
-        return;
-      }
-      if (this._hasActiveQuery()) {
-        return;
-      }
-      const query = this._queryQueue.shift();
-      if (!query) {
-        if (!initialConnection) {
-          this.emit("drain");
-        }
-        return;
-      }
-      this._activeQuery = query;
-      query.submit(this);
-      const self2 = this;
-      query.once("_done", function() {
-        self2._pulseQueryQueue();
-      });
-    };
-    Client2.prototype.cancel = function(query) {
-      if (this._activeQuery === query) {
-        this.native.cancel(function() {
-        });
-      } else if (this._queryQueue.indexOf(query) !== -1) {
-        this._queryQueue.splice(this._queryQueue.indexOf(query), 1);
-      }
-    };
-    Client2.prototype.ref = function() {
-    };
-    Client2.prototype.unref = function() {
-    };
-    Client2.prototype.setTypeParser = function(oid, format, parseFn) {
-      return this._types.setTypeParser(oid, format, parseFn);
-    };
-    Client2.prototype.getTypeParser = function(oid, format) {
-      return this._types.getTypeParser(oid, format);
-    };
-    Client2.prototype.isConnected = function() {
-      return this._connected;
-    };
-    Client2.prototype.getTransactionStatus = function() {
-      return this.native.getTransactionStatus();
-    };
-  }
-});
-
-// ../node_modules/pg/lib/native/index.js
-var require_native = __commonJS({
-  "../node_modules/pg/lib/native/index.js"(exports, module) {
-    "use strict";
-    init_modules_watch_stub();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_process();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_console();
-    init_performance2();
-    module.exports = require_client2();
-  }
-});
-
-// ../node_modules/pg/lib/index.js
-var require_lib2 = __commonJS({
-  "../node_modules/pg/lib/index.js"(exports, module) {
-    "use strict";
-    init_modules_watch_stub();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_process();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_console();
-    init_performance2();
-    var Client2 = require_client();
-    var defaults2 = require_defaults();
-    var Connection2 = require_connection();
-    var Result2 = require_result();
-    var utils = require_utils();
-    var Pool2 = require_pg_pool();
-    var TypeOverrides2 = require_type_overrides();
-    var { DatabaseError: DatabaseError3 } = require_dist();
-    var { escapeIdentifier: escapeIdentifier2, escapeLiteral: escapeLiteral2 } = require_utils();
-    var poolFactory = /* @__PURE__ */ __name((Client3) => {
-      return class BoundPool extends Pool2 {
-        static {
-          __name(this, "BoundPool");
-        }
-        constructor(options) {
-          super(options, Client3);
-        }
-      };
-    }, "poolFactory");
-    var PG = /* @__PURE__ */ __name(function(clientConstructor2) {
-      this.defaults = defaults2;
-      this.Client = clientConstructor2;
-      this.Query = this.Client.Query;
-      this.Pool = poolFactory(this.Client);
-      this._pools = [];
-      this.Connection = Connection2;
-      this.types = require_pg_types();
-      this.DatabaseError = DatabaseError3;
-      this.TypeOverrides = TypeOverrides2;
-      this.escapeIdentifier = escapeIdentifier2;
-      this.escapeLiteral = escapeLiteral2;
-      this.Result = Result2;
-      this.utils = utils;
-    }, "PG");
-    var clientConstructor = Client2;
-    var forceNative = false;
-    try {
-      forceNative = !!process.env.NODE_PG_FORCE_NATIVE;
-    } catch {
-    }
-    if (forceNative) {
-      clientConstructor = require_native();
-    }
-    module.exports = new PG(clientConstructor);
-    Object.defineProperty(module.exports, "native", {
-      configurable: true,
-      enumerable: false,
-      get() {
-        let native = null;
-        try {
-          native = new PG(require_native());
-        } catch (err) {
-          if (err.code !== "MODULE_NOT_FOUND") {
-            throw err;
-          }
-        }
-        Object.defineProperty(module.exports, "native", {
-          value: native
-        });
-        return native;
-      }
-    });
-  }
-});
-
-// ../node_modules/pg/esm/index.mjs
-var import_lib, Client, Pool, Connection, types, Query, DatabaseError, escapeIdentifier, escapeLiteral, Result, TypeOverrides, defaults, esm_default;
-var init_esm = __esm({
-  "../node_modules/pg/esm/index.mjs"() {
-    init_modules_watch_stub();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_process();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_console();
-    init_performance2();
-    import_lib = __toESM(require_lib2(), 1);
-    Client = import_lib.default.Client;
-    Pool = import_lib.default.Pool;
-    Connection = import_lib.default.Connection;
-    types = import_lib.default.types;
-    Query = import_lib.default.Query;
-    DatabaseError = import_lib.default.DatabaseError;
-    escapeIdentifier = import_lib.default.escapeIdentifier;
-    escapeLiteral = import_lib.default.escapeLiteral;
-    Result = import_lib.default.Result;
-    TypeOverrides = import_lib.default.TypeOverrides;
-    defaults = import_lib.default.defaults;
-    esm_default = import_lib.default;
-  }
-});
-
-// ../config/dist/environment.js
-var isBackend, getViteEnv, environment;
-var init_environment = __esm({
-  "../config/dist/environment.js"() {
-    "use strict";
-    init_modules_watch_stub();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_process();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_console();
-    init_performance2();
-    isBackend = typeof process !== "undefined" && process.env;
-    getViteEnv = /* @__PURE__ */ __name((key) => {
-      if (typeof import.meta !== "undefined" && import.meta.env) {
-        return import.meta.env[key];
-      }
-      return void 0;
-    }, "getViteEnv");
-    environment = {
-      appName: isBackend ? process.env.APP_NAME || "Kaboom TV" : getViteEnv("VITE_APP_NAME") || "Kaboom TV",
-      appUrl: isBackend ? process.env.APP_URL || "https://kaboom-tv.com" : getViteEnv("VITE_APP_URL") || "https://kaboom-tv.com",
-      apiUrl: isBackend ? process.env.API_URL || "https://seven-4-2026-kaboom-1a.onrender.com" : getViteEnv("VITE_API_URL") || (typeof window !== "undefined" ? window.location.origin : "https://seven-4-2026-kaboom-1a.onrender.com"),
-      wsUrl: isBackend ? process.env.WS_URL || "https://seven-4-2026-kaboom-1a.onrender.com" : getViteEnv("VITE_WS_URL") || (typeof window !== "undefined" ? window.location.origin : "https://seven-4-2026-kaboom-1a.onrender.com"),
-      signalingProvider: isBackend ? process.env.SIGNALING_PROVIDER || "supabase" : getViteEnv("VITE_SIGNALING_PROVIDER") || "supabase",
-      nodeEnv: isBackend ? "development" : getViteEnv("VITE_NODE_ENV") || "production",
-      supabase: {
-        url: (isBackend ? process.env.SUPABASE_URL : getViteEnv("VITE_SUPABASE_URL")) || "https://dirocenpssdilkztizps.supabase.co",
-        anonKey: (isBackend ? process.env.SUPABASE_ANON_KEY : getViteEnv("VITE_SUPABASE_ANON_KEY")) || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRpcm9jZW5wc3NkaWxrenRpenBzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI3NTY1MzUsImV4cCI6MjA5ODMzMjUzNX0.P1NX8cfS4rTafIINUONBrWH3wI4DaUYrQJJUCJXvU9Y",
-        serviceRoleKey: isBackend ? process.env.SUPABASE_SERVICE_ROLE_KEY || "" : ""
-      },
-      backend: {
-        port: isBackend ? parseInt(process.env.PORT || "5000", 10) : 5e3,
-        frontendUrl: isBackend ? process.env.FRONTEND_URL || "https://kaboom-tv.com" : "https://kaboom-tv.com",
-        apiBase: isBackend ? process.env.API_BASE || "/api" : "/api",
-        sessionTimeout: isBackend ? parseInt(process.env.SESSION_TIMEOUT || "1800", 10) : 1800,
-        queueTimeout: isBackend ? parseInt(process.env.QUEUE_TIMEOUT || "300", 10) : 300,
-        matchTimeout: isBackend ? parseInt(process.env.MATCH_TIMEOUT || "1800", 10) : 1800,
-        allowedOrigins: (isBackend ? process.env.ALLOWED_ORIGINS || "http://localhost:5173,http://127.0.0.1:5173,http://localhost:4173,http://localhost:5000,http://localhost:10000,https://kaboom-tv.com,https://www.kaboom-tv.com,https://api.kaboom-tv.com,https://seven-4-2026-kaboom-1a.onrender.com" : "").split(",").map((o) => o.trim()).filter(Boolean)
-      },
-      webrtc: {
-        stunServers: (isBackend ? process.env.STUN_SERVERS || "stun:stun.l.google.com:19302,stun:stun1.l.google.com:19302,stun:stun2.l.google.com:19302" : getViteEnv("VITE_STUN_SERVERS") || "stun:stun.l.google.com:19302,stun:stun1.l.google.com:19302,stun:stun2.l.google.com:19302").split(",").map((s) => s.trim()).filter(Boolean),
-        turnServer: isBackend ? process.env.TURN_SERVER || "" : getViteEnv("VITE_TURN_SERVER") || "",
-        turnUsername: isBackend ? process.env.TURN_USERNAME || "" : getViteEnv("VITE_TURN_USERNAME") || "",
-        turnPassword: isBackend ? process.env.TURN_PASSWORD || "" : getViteEnv("VITE_TURN_PASSWORD") || ""
-      },
-      admin: {
-        adminToken: isBackend ? process.env.ADMIN_TOKEN || "" : "",
-        jwtSecret: isBackend ? process.env.JWT_SECRET || "" : ""
-      },
-      domain: {
-        rootDomain: "kaboom-tv.com",
-        apiSubdomain: "api.kaboom-tv.com",
-        adminSubdomain: "admin.kaboom-tv.com"
-      },
-      email: {
-        contactEmail: "contact@kaboom-tv.com",
-        collaborateEmail: "collaborate@kaboom-tv.com"
-      },
-      matchmaking: {
-        weights: {
-          mutualPreference: isBackend ? Number(process.env.WEIGHT_MUTUAL_PREFERENCE || 50) : 50,
-          languagePerMatch: isBackend ? Number(process.env.WEIGHT_LANGUAGE_PER_MATCH || 20) : 20,
-          languageMax: isBackend ? Number(process.env.WEIGHT_LANGUAGE_MAX || 40) : 40,
-          city: isBackend ? Number(process.env.WEIGHT_CITY || 40) : 40,
-          district: isBackend ? Number(process.env.WEIGHT_DISTRICT || 35) : 35,
-          state: isBackend ? Number(process.env.WEIGHT_STATE || 30) : 30,
-          country: isBackend ? Number(process.env.WEIGHT_COUNTRY || 20) : 20,
-          interestPerMatch: isBackend ? Number(process.env.WEIGHT_INTEREST_PER_MATCH || 5) : 5,
-          interestMax: isBackend ? Number(process.env.WEIGHT_INTEREST_MAX || 40) : 40,
-          waitingPerSecond: isBackend ? Number(process.env.WEIGHT_WAITING_PER_SECOND || 1) : 1,
-          waitingMax: isBackend ? Number(process.env.WEIGHT_WAITING_MAX || 60) : 60,
-          recentPartnerPenalty: isBackend ? Number(process.env.WEIGHT_RECENT_PARTNER_PENALTY || 100) : 100
-        }
-      }
-    };
-  }
-});
-
-// src/matchmaking/config.ts
-function getRelaxationPhase(waitingSeconds, queueDepth = 0) {
-  let effectiveSeconds = waitingSeconds;
-  if (queueDepth >= 10) {
-    effectiveSeconds = waitingSeconds * 0.5;
-  } else if (queueDepth <= 2) {
-    effectiveSeconds = waitingSeconds * 1.5;
-  }
-  if (effectiveSeconds <= RELAXATION_THRESHOLDS.strict) return "strict";
-  if (effectiveSeconds <= RELAXATION_THRESHOLDS.relaxInterests) return "relax_interests";
-  if (effectiveSeconds <= RELAXATION_THRESHOLDS.relaxLanguage) return "relax_language";
-  if (effectiveSeconds <= RELAXATION_THRESHOLDS.relaxLocation) return "relax_location";
-  if (effectiveSeconds <= RELAXATION_THRESHOLDS.allowPrevious) return "allow_previous";
-  return "random";
-}
-function getMinScoreThreshold(phase, queueDepth = 0) {
-  switch (phase) {
-    case "strict":
-      return 60;
-    case "relax_interests":
-      return 40;
-    case "relax_language":
-      return 20;
-    case "relax_location":
-      return 10;
-    case "allow_previous":
-      return 5;
-    case "random":
-      return Number.NEGATIVE_INFINITY;
-  }
-}
-var HEARTBEAT_STALE_MS, RESERVATION_TIMEOUT_MS, REMATE_COOLDOWN_MS, MATCH_WEIGHTS, RELAXATION_THRESHOLDS;
-var init_config = __esm({
-  "src/matchmaking/config.ts"() {
-    "use strict";
-    init_modules_watch_stub();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_process();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_console();
-    init_performance2();
-    init_environment();
-    HEARTBEAT_STALE_MS = 1e4;
-    RESERVATION_TIMEOUT_MS = 2e4;
-    REMATE_COOLDOWN_MS = 15e3;
-    MATCH_WEIGHTS = {
-      mutualPreference: environment.matchmaking.weights.mutualPreference,
-      languagePerMatch: environment.matchmaking.weights.languagePerMatch,
-      languageMax: environment.matchmaking.weights.languageMax,
-      city: environment.matchmaking.weights.city,
-      district: environment.matchmaking.weights.district,
-      state: environment.matchmaking.weights.state,
-      country: environment.matchmaking.weights.country,
-      interestPerMatch: environment.matchmaking.weights.interestPerMatch,
-      interestMax: environment.matchmaking.weights.interestMax,
-      waitingPerSecond: environment.matchmaking.weights.waitingPerSecond,
-      waitingMax: environment.matchmaking.weights.waitingMax,
-      recentPartnerPenalty: environment.matchmaking.weights.recentPartnerPenalty
-    };
-    RELAXATION_THRESHOLDS = {
-      strict: 3,
-      relaxInterests: 6,
-      relaxLanguage: 10,
-      relaxLocation: 15,
-      allowPrevious: 20,
-      random: 20
-    };
-    __name(getRelaxationPhase, "getRelaxationPhase");
-    __name(getMinScoreThreshold, "getMinScoreThreshold");
-  }
-});
-
 // node_modules/tslib/tslib.es6.mjs
 function __rest(s, e) {
   var t = {};
@@ -8337,8 +1927,8 @@ var init_dist = __esm({
             return await _this.processResponse(res$1);
           }
         }, "executeWithRetry");
-        let res2 = executeWithRetry();
-        if (!this.shouldThrowOnError) res2 = res2.catch((fetchError) => {
+        let res = executeWithRetry();
+        if (!this.shouldThrowOnError) res = res.catch((fetchError) => {
           var _fetchError$name2;
           let errorDetails = "";
           let hint = "";
@@ -8383,23 +1973,23 @@ ${cause.stack}`;
             statusText: ""
           };
         });
-        return res2.then(onfulfilled, onrejected);
+        return res.then(onfulfilled, onrejected);
       }
       /**
       * Process a fetch response and return the standardized postgrest response.
       */
-      async processResponse(res2) {
+      async processResponse(res) {
         var _this2 = this;
         let error3 = null;
         let data = null;
         let count3 = null;
-        let status = res2.status;
-        let statusText = res2.statusText;
-        if (res2.ok) {
+        let status = res.status;
+        let statusText = res.statusText;
+        if (res.ok) {
           var _this$headers$get2, _res$headers$get2;
           if (_this2.method !== "HEAD") {
             var _this$headers$get;
-            const body = await res2.text();
+            const body = await res.text();
             if (body === "") {
             } else if (_this2.headers.get("Accept") === "text/csv") data = body;
             else if (_this2.headers.get("Accept") && ((_this$headers$get = _this2.headers.get("Accept")) === null || _this$headers$get === void 0 ? void 0 : _this$headers$get.includes("application/vnd.pgrst.plan+text"))) data = body;
@@ -8417,7 +2007,7 @@ ${cause.stack}`;
             }
           }
           const countHeader = (_this$headers$get2 = _this2.headers.get("Prefer")) === null || _this$headers$get2 === void 0 ? void 0 : _this$headers$get2.match(/count=(exact|planned|estimated)/);
-          const contentRange = (_res$headers$get2 = res2.headers.get("content-range")) === null || _res$headers$get2 === void 0 ? void 0 : _res$headers$get2.split("/");
+          const contentRange = (_res$headers$get2 = res.headers.get("content-range")) === null || _res$headers$get2 === void 0 ? void 0 : _res$headers$get2.split("/");
           if (countHeader && contentRange && contentRange.length > 1) count3 = parseInt(contentRange[1]);
           if (_this2.isMaybeSingle && Array.isArray(data)) if (data.length > 1) {
             error3 = {
@@ -8433,17 +2023,17 @@ ${cause.stack}`;
           } else if (data.length === 1) data = data[0];
           else data = null;
         } else {
-          const body = await res2.text();
+          const body = await res.text();
           try {
             error3 = JSON.parse(body);
-            if (Array.isArray(error3) && res2.status === 404) {
+            if (Array.isArray(error3) && res.status === 404) {
               data = [];
               error3 = null;
               status = 200;
               statusText = "OK";
             }
           } catch (_unused2) {
-            if (res2.status === 404 && body === "") {
+            if (res.status === 404 && body === "") {
               status = 204;
               statusText = "No Content";
             } else error3 = { message: body };
@@ -9692,12 +3282,12 @@ ${cause.stack}`;
         else this.url.searchParams.append(column, `ov.{${value.join(",")}}`);
         return this;
       }
-      textSearch(column, query, { config: config3, type } = {}) {
+      textSearch(column, query, { config: config2, type } = {}) {
         let typePart = "";
         if (type === "plain") typePart = "pl";
         else if (type === "phrase") typePart = "ph";
         else if (type === "websearch") typePart = "w";
-        const configPart = config3 === void 0 ? "" : `(${config3})`;
+        const configPart = config2 === void 0 ? "" : `(${config2})`;
         this.url.searchParams.append(column, `${typePart}fts${configPart}.${query}`);
         return this;
       }
@@ -11943,7 +5533,7 @@ var init_version = __esm({
 
 // node_modules/@supabase/realtime-js/dist/module/lib/constants.js
 var DEFAULT_VERSION, VSN_1_0_0, VSN_2_0_0, DEFAULT_VSN, DEFAULT_TIMEOUT, MAX_PUSH_BUFFER_SIZE, CHANNEL_STATES, CHANNEL_EVENTS, CONNECTION_STATE;
-var init_constants2 = __esm({
+var init_constants = __esm({
   "node_modules/@supabase/realtime-js/dist/module/lib/constants.js"() {
     init_modules_watch_stub();
     init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_process();
@@ -12833,11 +6423,11 @@ var init_phoenix = __esm({
       }
       static request(method, endPoint, headers, body, timeout, ontimeout, callback) {
         if (global2.XDomainRequest) {
-          let req2 = new global2.XDomainRequest();
-          return this.xdomainRequest(req2, method, endPoint, body, timeout, ontimeout, callback);
+          let req = new global2.XDomainRequest();
+          return this.xdomainRequest(req, method, endPoint, body, timeout, ontimeout, callback);
         } else if (global2.XMLHttpRequest) {
-          let req2 = new global2.XMLHttpRequest();
-          return this.xhrRequest(req2, method, endPoint, headers, body, timeout, ontimeout, callback);
+          let req = new global2.XMLHttpRequest();
+          return this.xhrRequest(req, method, endPoint, headers, body, timeout, ontimeout, callback);
         } else if (global2.fetch && global2.AbortController) {
           return this.fetchRequest(method, endPoint, headers, body, timeout, ontimeout, callback);
         } else {
@@ -12865,39 +6455,39 @@ var init_phoenix = __esm({
         });
         return controller;
       }
-      static xdomainRequest(req2, method, endPoint, body, timeout, ontimeout, callback) {
-        req2.timeout = timeout;
-        req2.open(method, endPoint);
-        req2.onload = () => {
-          let response = this.parseJSON(req2.responseText);
+      static xdomainRequest(req, method, endPoint, body, timeout, ontimeout, callback) {
+        req.timeout = timeout;
+        req.open(method, endPoint);
+        req.onload = () => {
+          let response = this.parseJSON(req.responseText);
           callback && callback(response);
         };
         if (ontimeout) {
-          req2.ontimeout = ontimeout;
+          req.ontimeout = ontimeout;
         }
-        req2.onprogress = () => {
+        req.onprogress = () => {
         };
-        req2.send(body);
-        return req2;
+        req.send(body);
+        return req;
       }
-      static xhrRequest(req2, method, endPoint, headers, body, timeout, ontimeout, callback) {
-        req2.open(method, endPoint, true);
-        req2.timeout = timeout;
+      static xhrRequest(req, method, endPoint, headers, body, timeout, ontimeout, callback) {
+        req.open(method, endPoint, true);
+        req.timeout = timeout;
         for (let [key, value] of Object.entries(headers)) {
-          req2.setRequestHeader(key, value);
+          req.setRequestHeader(key, value);
         }
-        req2.onerror = () => callback && callback(null);
-        req2.onreadystatechange = () => {
-          if (req2.readyState === XHR_STATES.complete && callback) {
-            let response = this.parseJSON(req2.responseText);
+        req.onerror = () => callback && callback(null);
+        req.onreadystatechange = () => {
+          if (req.readyState === XHR_STATES.complete && callback) {
+            let response = this.parseJSON(req.responseText);
             callback(response);
           }
         };
         if (ontimeout) {
-          req2.ontimeout = ontimeout;
+          req.ontimeout = ontimeout;
         }
-        req2.send(body);
-        return req2;
+        req.send(body);
+        return req;
       }
       static parseJSON(resp) {
         if (!resp || resp === "") {
@@ -13067,8 +6657,8 @@ var init_phoenix = __esm({
         });
       }
       close(code, reason, wasClean) {
-        for (let req2 of this.reqs) {
-          req2.abort();
+        for (let req of this.reqs) {
+          req.abort();
         }
         this.readyState = SOCKET_STATES.closed;
         let opts = Object.assign({ code: 1e3, reason: void 0, wasClean: true }, { code, reason, wasClean });
@@ -13082,18 +6672,18 @@ var init_phoenix = __esm({
         }
       }
       ajax(method, headers, body, onCallerTimeout, callback) {
-        let req2;
+        let req;
         let ontimeout = /* @__PURE__ */ __name(() => {
-          this.reqs.delete(req2);
+          this.reqs.delete(req);
           onCallerTimeout();
         }, "ontimeout");
-        req2 = Ajax.request(method, this.endpointURL(), headers, body, this.timeout, ontimeout, (resp) => {
-          this.reqs.delete(req2);
+        req = Ajax.request(method, this.endpointURL(), headers, body, this.timeout, ontimeout, (resp) => {
+          this.reqs.delete(req);
           if (this.isActive()) {
             callback(resp);
           }
         });
-        this.reqs.add(req2);
+        this.reqs.add(req);
       }
     };
     Presence = class _Presence {
@@ -14296,7 +7886,7 @@ var init_channelAdapter = __esm({
     init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_process();
     init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_console();
     init_performance2();
-    init_constants2();
+    init_constants();
     ChannelAdapter = class {
       static {
         __name(this, "ChannelAdapter");
@@ -14526,7 +8116,7 @@ var init_RealtimeChannel = __esm({
     init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_process();
     init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_console();
     init_performance2();
-    init_constants2();
+    init_constants();
     init_RealtimePresence();
     init_transformers();
     init_transformers();
@@ -14656,7 +8246,7 @@ var init_RealtimeChannel = __esm({
           const postgres_changes = (_b = (_a = this.bindings.postgres_changes) === null || _a === void 0 ? void 0 : _a.map((r) => r.filter)) !== null && _b !== void 0 ? _b : [];
           const presence_enabled = !!this.bindings[REALTIME_LISTEN_TYPES.PRESENCE] && this.bindings[REALTIME_LISTEN_TYPES.PRESENCE].length > 0 || ((_c = this.params.config.presence) === null || _c === void 0 ? void 0 : _c.enabled) === true;
           const accessTokenPayload = {};
-          const config3 = {
+          const config2 = {
             broadcast,
             presence: Object.assign(Object.assign({}, presence), { enabled: presence_enabled }),
             postgres_changes,
@@ -14669,7 +8259,7 @@ var init_RealtimeChannel = __esm({
             callback === null || callback === void 0 ? void 0 : callback(REALTIME_SUBSCRIBE_STATES.CHANNEL_ERROR, normalizeChannelError(reason));
           });
           this._onClose(() => callback === null || callback === void 0 ? void 0 : callback(REALTIME_SUBSCRIBE_STATES.CLOSED));
-          this.updateJoinPayload(Object.assign({ config: config3 }, accessTokenPayload));
+          this.updateJoinPayload(Object.assign({ config: config2 }, accessTokenPayload));
           this._updateFilterMessage();
           this.channelAdapter.subscribe(timeout).receive("ok", async ({ postgres_changes: postgres_changes2 }) => {
             if (!this.socket._isManualToken()) {
@@ -15175,8 +8765,8 @@ var init_RealtimeChannel = __esm({
       }
       /** @internal */
       _notThisChannelEvent(event, ref2) {
-        const { close: close2, error: error3, leave, join } = CHANNEL_EVENTS;
-        const events = [close2, error3, leave, join];
+        const { close, error: error3, leave, join } = CHANNEL_EVENTS;
+        const events = [close, error3, leave, join];
         return ref2 && events.includes(event) && ref2 !== this.joinPush.ref;
       }
       /** @internal */
@@ -15246,7 +8836,7 @@ var init_socketAdapter = __esm({
     init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_console();
     init_performance2();
     init_phoenix();
-    init_constants2();
+    init_constants();
     SocketAdapter = class {
       static {
         __name(this, "SocketAdapter");
@@ -15402,7 +8992,7 @@ var init_RealtimeClient = __esm({
     init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_console();
     init_performance2();
     init_websocket_factory();
-    init_constants2();
+    init_constants();
     init_serializer();
     init_transformers();
     init_RealtimeChannel();
@@ -15686,14 +9276,14 @@ var init_RealtimeClient = __esm({
        */
       channel(topic, params = { config: {} }) {
         const realtimeTopic = `realtime:${topic}`;
-        const exists2 = this.getChannels().find((c) => c.topic === realtimeTopic);
-        if (!exists2) {
+        const exists = this.getChannels().find((c) => c.topic === realtimeTopic);
+        if (!exists) {
           const chan = new RealtimeChannel(`realtime:${topic}`, params, this);
           this._cancelPendingDisconnect();
           this.channels.push(chan);
           return chan;
         } else {
-          return exists2;
+          return exists;
         }
       }
       /**
@@ -16072,7 +9662,7 @@ function createFetchClient(options) {
     }) {
       const url = buildUrl(options.baseUrl, path, query);
       const authHeaders = await buildAuthHeaders(options.auth);
-      const res2 = await fetchFn(url, {
+      const res = await fetchFn(url, {
         method,
         headers: {
           ...body ? { "Content-Type": "application/json" } : {},
@@ -16081,23 +9671,23 @@ function createFetchClient(options) {
         },
         body: body ? JSON.stringify(body) : void 0
       });
-      const text = await res2.text();
-      const isJson = (res2.headers.get("content-type") || "").includes("application/json");
+      const text = await res.text();
+      const isJson = (res.headers.get("content-type") || "").includes("application/json");
       const data = isJson && text ? JSON.parse(text) : text;
-      if (!res2.ok) {
+      if (!res.ok) {
         const errBody = isJson ? data : void 0;
         const errorDetail = errBody?.error;
         throw new IcebergError(
-          errorDetail?.message ?? `Request failed with status ${res2.status}`,
+          errorDetail?.message ?? `Request failed with status ${res.status}`,
           {
-            status: res2.status,
+            status: res.status,
             icebergType: errorDetail?.type,
             icebergCode: errorDetail?.code,
             details: errBody
           }
         );
       }
-      return { status: res2.status, headers: res2.headers, data };
+      return { status: res.status, headers: res.headers, data };
     }
   };
 }
@@ -19465,7 +13055,7 @@ var init_version2 = __esm({
 
 // node_modules/@supabase/auth-js/dist/module/lib/constants.js
 var AUTO_REFRESH_TICK_DURATION_MS, AUTO_REFRESH_TICK_THRESHOLD, EXPIRY_MARGIN_MS, REFRESH_FAILURE_COOLDOWN_MS, GOTRUE_URL, STORAGE_KEY, DEFAULT_HEADERS2, API_VERSION_HEADER_NAME, API_VERSIONS, BASE64URL_REGEX, JWKS_TTL;
-var init_constants3 = __esm({
+var init_constants2 = __esm({
   "node_modules/@supabase/auth-js/dist/module/lib/constants.js"() {
     init_modules_watch_stub();
     init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_process();
@@ -20074,7 +13664,7 @@ var init_helpers = __esm({
     init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_process();
     init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_console();
     init_performance2();
-    init_constants3();
+    init_constants2();
     init_errors();
     init_base64url();
     __name(expiresAt, "expiresAt");
@@ -20143,9 +13733,9 @@ var init_helpers = __esm({
       }
       constructor() {
         ;
-        this.promise = new _Deferred.promiseConstructor((res2, rej) => {
+        this.promise = new _Deferred.promiseConstructor((res, rej) => {
           ;
-          this.resolve = res2;
+          this.resolve = res;
           this.reject = rej;
         });
       }
@@ -20305,7 +13895,7 @@ var init_fetch = __esm({
     init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_console();
     init_performance2();
     init_tslib_es6();
-    init_constants3();
+    init_constants2();
     init_helpers();
     init_errors();
     _getErrorMessage2 = /* @__PURE__ */ __name((err) => {
@@ -20829,9 +14419,9 @@ var init_GoTrueAdminApi = __esm({
           const total = (_e = response.headers.get("x-total-count")) !== null && _e !== void 0 ? _e : 0;
           const links = (_g = (_f = response.headers.get("link")) === null || _f === void 0 ? void 0 : _f.split(",")) !== null && _g !== void 0 ? _g : [];
           if (links.length > 0) {
-            links.forEach((link3) => {
-              const page = parseInt(link3.split(";")[0].split("=")[1].substring(0, 1));
-              const rel = JSON.parse(link3.split(";")[1].split("=")[1]);
+            links.forEach((link) => {
+              const page = parseInt(link.split(";")[0].split("=")[1].substring(0, 1));
+              const rel = JSON.parse(link.split(";")[1].split("=")[1]);
               pagination[`${rel}Page`] = page;
             });
             pagination.total = parseInt(total);
@@ -21185,9 +14775,9 @@ var init_GoTrueAdminApi = __esm({
           const total = (_e = response.headers.get("x-total-count")) !== null && _e !== void 0 ? _e : 0;
           const links = (_g = (_f = response.headers.get("link")) === null || _f === void 0 ? void 0 : _f.split(",")) !== null && _g !== void 0 ? _g : [];
           if (links.length > 0) {
-            links.forEach((link3) => {
-              const page = parseInt(link3.split(";")[0].split("=")[1].substring(0, 1));
-              const rel = JSON.parse(link3.split(";")[1].split("=")[1]);
+            links.forEach((link) => {
+              const page = parseInt(link.split(";")[0].split("=")[1].substring(0, 1));
+              const rel = JSON.parse(link.split(";")[1].split("=")[1]);
               pagination[`${rel}Page`] = page;
             });
             pagination.total = parseInt(total);
@@ -22384,7 +15974,7 @@ var init_GoTrueClient = __esm({
     init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_console();
     init_performance2();
     init_GoTrueAdminApi();
-    init_constants3();
+    init_constants2();
     init_errors();
     init_fetch();
     init_helpers();
@@ -22774,7 +16364,7 @@ var init_GoTrueClient = __esm({
       async signInAnonymously(credentials) {
         var _a, _b, _c;
         try {
-          const res2 = await _request(this.fetch, "POST", `${this.url}/signup`, {
+          const res = await _request(this.fetch, "POST", `${this.url}/signup`, {
             headers: this.headers,
             body: {
               data: (_b = (_a = credentials === null || credentials === void 0 ? void 0 : credentials.options) === null || _a === void 0 ? void 0 : _a.data) !== null && _b !== void 0 ? _b : {},
@@ -22782,7 +16372,7 @@ var init_GoTrueClient = __esm({
             },
             xform: _sessionResponse
           });
-          const { data, error: error3 } = res2;
+          const { data, error: error3 } = res;
           if (error3 || !data) {
             return this._returnResult({ data: { user: null, session: null }, error: error3 });
           }
@@ -22980,7 +16570,7 @@ var init_GoTrueClient = __esm({
       async signUp(credentials) {
         var _a, _b, _c;
         try {
-          let res2;
+          let res;
           if ("email" in credentials) {
             const { email, password, options } = credentials;
             let codeChallenge = null;
@@ -22989,7 +16579,7 @@ var init_GoTrueClient = __esm({
               ;
               [codeChallenge, codeChallengeMethod] = await getCodeChallengeAndMethod(this.storage, this.storageKey);
             }
-            res2 = await _request(this.fetch, "POST", `${this.url}/signup`, {
+            res = await _request(this.fetch, "POST", `${this.url}/signup`, {
               headers: this.headers,
               redirectTo: options === null || options === void 0 ? void 0 : options.emailRedirectTo,
               body: {
@@ -23004,7 +16594,7 @@ var init_GoTrueClient = __esm({
             });
           } else if ("phone" in credentials) {
             const { phone, password, options } = credentials;
-            res2 = await _request(this.fetch, "POST", `${this.url}/signup`, {
+            res = await _request(this.fetch, "POST", `${this.url}/signup`, {
               headers: this.headers,
               body: {
                 phone,
@@ -23018,7 +16608,7 @@ var init_GoTrueClient = __esm({
           } else {
             throw new AuthInvalidCredentialsError("You must provide either an email or phone number and a password");
           }
-          const { data, error: error3 } = res2;
+          const { data, error: error3 } = res;
           if (error3 || !data) {
             await removeItemAsync(this.storage, `${this.storageKey}-code-verifier`);
             return this._returnResult({ data: { user: null, session: null }, error: error3 });
@@ -23172,10 +16762,10 @@ var init_GoTrueClient = __esm({
        */
       async signInWithPassword(credentials) {
         try {
-          let res2;
+          let res;
           if ("email" in credentials) {
             const { email, password, options } = credentials;
-            res2 = await _request(this.fetch, "POST", `${this.url}/token?grant_type=password`, {
+            res = await _request(this.fetch, "POST", `${this.url}/token?grant_type=password`, {
               headers: this.headers,
               body: {
                 email,
@@ -23186,7 +16776,7 @@ var init_GoTrueClient = __esm({
             });
           } else if ("phone" in credentials) {
             const { phone, password, options } = credentials;
-            res2 = await _request(this.fetch, "POST", `${this.url}/token?grant_type=password`, {
+            res = await _request(this.fetch, "POST", `${this.url}/token?grant_type=password`, {
               headers: this.headers,
               body: {
                 phone,
@@ -23198,7 +16788,7 @@ var init_GoTrueClient = __esm({
           } else {
             throw new AuthInvalidCredentialsError("You must provide either an email or phone number and a password");
           }
-          const { data, error: error3 } = res2;
+          const { data, error: error3 } = res;
           if (error3) {
             return this._returnResult({ data: { user: null, session: null }, error: error3 });
           } else if (!data || !data.session || !data.user) {
@@ -23897,7 +17487,7 @@ var init_GoTrueClient = __esm({
       async signInWithIdToken(credentials) {
         try {
           const { options, provider, token, access_token, nonce } = credentials;
-          const res2 = await _request(this.fetch, "POST", `${this.url}/token?grant_type=id_token`, {
+          const res = await _request(this.fetch, "POST", `${this.url}/token?grant_type=id_token`, {
             headers: this.headers,
             body: {
               provider,
@@ -23908,7 +17498,7 @@ var init_GoTrueClient = __esm({
             },
             xform: _sessionResponse
           });
-          const { data, error: error3 } = res2;
+          const { data, error: error3 } = res;
           if (error3) {
             return this._returnResult({ data: { user: null, session: null }, error: error3 });
           } else if (!data || !data.session || !data.user) {
@@ -25954,7 +19544,7 @@ var init_GoTrueClient = __esm({
             if (sessionError)
               throw sessionError;
             const { options, provider, token, access_token, nonce } = credentials;
-            const res2 = await _request(this.fetch, "POST", `${this.url}/token?grant_type=id_token`, {
+            const res = await _request(this.fetch, "POST", `${this.url}/token?grant_type=id_token`, {
               headers: this.headers,
               jwt: (_a = session === null || session === void 0 ? void 0 : session.access_token) !== null && _a !== void 0 ? _a : void 0,
               body: {
@@ -25967,7 +19557,7 @@ var init_GoTrueClient = __esm({
               },
               xform: _sessionResponse
             });
-            const { data, error: error3 } = res2;
+            const { data, error: error3 } = res;
             if (error3) {
               return this._returnResult({ data: { user: null, session: null }, error: error3 });
             } else if (!data || !data.session || !data.user) {
@@ -27727,12 +21317,12 @@ function normalizeTracePropagation(value) {
 function ensureTrailingSlash(url) {
   return url.endsWith("/") ? url : url + "/";
 }
-function applySettingDefaults(options, defaults2) {
+function applySettingDefaults(options, defaults) {
   var _DEFAULT_GLOBAL_OPTIO, _globalOptions$header, _ref, _tracePropagationOpti, _ref2, _tracePropagationOpti2;
   const { db: dbOptions, auth: authOptions, realtime: realtimeOptions, global: globalOptions } = options;
-  const { db: DEFAULT_DB_OPTIONS$1, auth: DEFAULT_AUTH_OPTIONS$1, realtime: DEFAULT_REALTIME_OPTIONS$1, global: DEFAULT_GLOBAL_OPTIONS$1 } = defaults2;
+  const { db: DEFAULT_DB_OPTIONS$1, auth: DEFAULT_AUTH_OPTIONS$1, realtime: DEFAULT_REALTIME_OPTIONS$1, global: DEFAULT_GLOBAL_OPTIONS$1 } = defaults;
   const tracePropagationOptions = normalizeTracePropagation(options.tracePropagation);
-  const DEFAULT_TRACE_PROPAGATION_OPTIONS$1 = normalizeTracePropagation(defaults2.tracePropagation);
+  const DEFAULT_TRACE_PROPAGATION_OPTIONS$1 = normalizeTracePropagation(defaults.tracePropagation);
   const result = {
     db: _objectSpread23(_objectSpread23({}, DEFAULT_DB_OPTIONS$1), dbOptions),
     auth: _objectSpread23(_objectSpread23({}, DEFAULT_AUTH_OPTIONS$1), authOptions),
@@ -28307,62 +21897,43 @@ var init_dist4 = __esm({
   }
 });
 
-// src/config/index.ts
-function getIceServers() {
-  return [
-    {
-      urls: "stun:stun.relay.metered.ca:80"
-    },
-    {
-      urls: "turns:global.relay.metered.ca:443?transport=tcp",
-      username: "75ce0488e2b6dd463873fe19",
-      credential: "86h9uzIutQ27P3Mq"
-    }
-  ];
+// src/context.ts
+import { AsyncLocalStorage } from "node:async_hooks";
+function getEnv() {
+  return envStorage.getStore() || globalThis.__env || {};
 }
-var config2;
-var init_config2 = __esm({
-  "src/config/index.ts"() {
+var envStorage;
+var init_context = __esm({
+  "src/context.ts"() {
     "use strict";
     init_modules_watch_stub();
     init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_process();
     init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_console();
     init_performance2();
-    init_environment();
-    config2 = {
-      port: environment.backend.port,
-      frontendUrl: environment.backend.frontendUrl,
-      allowedOrigins: environment.backend.allowedOrigins,
-      supabaseUrl: environment.supabase.url,
-      supabaseServiceRoleKey: environment.supabase.serviceRoleKey,
-      nodeEnv: environment.nodeEnv,
-      isProduction: environment.nodeEnv === "production",
-      stunServers: environment.webrtc.stunServers,
-      turnServer: environment.webrtc.turnServer,
-      turnUsername: environment.webrtc.turnUsername,
-      turnPassword: environment.webrtc.turnPassword,
-      queueStaleMs: environment.backend.queueTimeout * 1e3,
-      matchStaleMs: environment.backend.matchTimeout * 1e3,
-      metricsIntervalMs: 60 * 1e3,
-      cleanupIntervalMs: 5 * 1e3
-      // 5s for fast 10s heartbeat cleanup
-    };
-    __name(getIceServers, "getIceServers");
+    envStorage = new AsyncLocalStorage();
+    __name(getEnv, "getEnv");
   }
 });
 
 // src/database/client.ts
 var client_exports = {};
 __export(client_exports, {
-  DatabaseError: () => DatabaseError2,
+  DatabaseError: () => DatabaseError,
   checkDatabaseConnection: () => checkDatabaseConnection,
   getSupabase: () => getSupabase,
   handleSupabaseError: () => handleSupabaseError
 });
 function getSupabase() {
-  if (!supabase) {
-    console.log("[DEBUG] getSupabase config:", { url: config2.supabaseUrl, keyLength: config2.supabaseServiceRoleKey?.length });
-    supabase = createClient(config2.supabaseUrl, config2.supabaseServiceRoleKey, {
+  const env2 = getEnv();
+  const url = env2.SUPABASE_URL || "";
+  const key = env2.SUPABASE_SERVICE_ROLE_KEY || "";
+  if (!supabase || url !== cachedUrl || key !== cachedKey) {
+    if (!url || !key) {
+      throw new Error("[Supabase] Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY in environment");
+    }
+    cachedUrl = url;
+    cachedKey = key;
+    supabase = createClient(url, key, {
       auth: {
         autoRefreshToken: false,
         persistSession: false
@@ -28374,7 +21945,7 @@ function getSupabase() {
 async function checkDatabaseConnection() {
   try {
     const client = getSupabase();
-    const { error: error3 } = await client.from("server_metrics").select("id").limit(1);
+    const { error: error3 } = await client.from("visitor_sessions").select("id").limit(1);
     return !error3;
   } catch {
     return false;
@@ -28382,9 +21953,9 @@ async function checkDatabaseConnection() {
 }
 function handleSupabaseError(error3, context2) {
   const message = error3 && typeof error3 === "object" && "message" in error3 ? String(error3.message) : "Unknown database error";
-  throw new DatabaseError2(`${context2}: ${message}`, error3);
+  throw new DatabaseError(`${context2}: ${message}`, error3);
 }
-var supabase, DatabaseError2;
+var supabase, cachedUrl, cachedKey, DatabaseError;
 var init_client = __esm({
   "src/database/client.ts"() {
     "use strict";
@@ -28393,11 +21964,13 @@ var init_client = __esm({
     init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_console();
     init_performance2();
     init_dist4();
-    init_config2();
+    init_context();
     supabase = null;
+    cachedUrl = "";
+    cachedKey = "";
     __name(getSupabase, "getSupabase");
     __name(checkDatabaseConnection, "checkDatabaseConnection");
-    DatabaseError2 = class extends Error {
+    DatabaseError = class extends Error {
       constructor(message, cause) {
         super(message);
         this.cause = cause;
@@ -28412,643 +21985,17 @@ var init_client = __esm({
   }
 });
 
-// src/services/broadcast.ts
-var broadcast_exports = {};
-__export(broadcast_exports, {
-  broadcastToSession: () => broadcastToSession
-});
-async function broadcastToSession(sessionId, event, payload) {
-  const start = Date.now();
-  const supabase2 = getSupabase();
-  const channelName = `session:${sessionId}`;
-  const channel2 = supabase2.channel(channelName);
-  try {
-    const resp = await channel2.send({
-      type: "broadcast",
-      event,
-      payload
-    });
-    const latencyMs = Date.now() - start;
-    if (resp !== "ok") {
-      console.error(`[Broadcast] Failed to send '${event}' to ${channelName}: ${resp}`);
-    } else {
-      console.log(`[Broadcast] event=${event} sessionId=${sessionId.slice(0, 8)} latencyMs=${latencyMs}`);
-    }
-  } catch (err) {
-    const latencyMs = Date.now() - start;
-    console.error(`[Broadcast] Error sending event=${event} sessionId=${sessionId.slice(0, 8)} latencyMs=${latencyMs} error=${err instanceof Error ? err.message : err}`);
-  } finally {
-    try {
-      supabase2.removeChannel(channel2);
-    } catch {
-    }
-  }
-}
-var init_broadcast = __esm({
-  "src/services/broadcast.ts"() {
-    "use strict";
-    init_modules_watch_stub();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_process();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_console();
-    init_performance2();
-    init_client();
-    __name(broadcastToSession, "broadcastToSession");
-  }
-});
-
-// src/matchmaking/logger.ts
-function logEngine(ctx) {
-  const payload = {
-    ts: (/* @__PURE__ */ new Date()).toISOString(),
-    ...ctx
-  };
-  if (ctx.success) {
-    console.log(`[${ctx.engine}] OK`, JSON.stringify(payload));
-  } else {
-    console.error(`[${ctx.engine}] FAIL`, JSON.stringify(payload));
-  }
-}
-async function logToDb(supabase2, sessionId, event, details) {
-  try {
-    await supabase2.from("connection_logs").insert({
-      session_id: sessionId,
-      event,
-      details
-    });
-  } catch (err) {
-    console.error("[Logger] Failed to write connection_log:", err);
-  }
-}
-var init_logger = __esm({
-  "src/matchmaking/logger.ts"() {
-    "use strict";
-    init_modules_watch_stub();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_process();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_console();
-    init_performance2();
-    __name(logEngine, "logEngine");
-    __name(logToDb, "logToDb");
-  }
-});
-
-// src/analytics/logger.ts
-var AnalyticsLoggerService, AnalyticsLogger;
-var init_logger2 = __esm({
-  "src/analytics/logger.ts"() {
-    "use strict";
-    init_modules_watch_stub();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_process();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_console();
-    init_performance2();
-    init_client();
-    AnalyticsLoggerService = class {
-      static {
-        __name(this, "AnalyticsLoggerService");
-      }
-      /**
-       * Fire-and-forget log method.
-       * @param eventType The type of event to log.
-       * @param sessionId Optional visitor session ID.
-       * @param matchId Optional match ID.
-       * @param payload Any JSON-serializable context.
-       */
-      logEvent(eventType, sessionId, matchId, payload = {}, idempotencyKey) {
-        setTimeout(() => {
-          this.asyncLog(eventType, sessionId, matchId, payload, idempotencyKey).catch((err) => {
-            console.error(`[AnalyticsLogger] Failed to log ${eventType}:`, err.message);
-          });
-        }, 0);
-      }
-      async asyncLog(eventType, sessionId, matchId, payload = {}, idempotencyKey) {
-        const supabase2 = getSupabase();
-        const cleanPayload = JSON.parse(JSON.stringify(payload));
-        const { error: error3 } = await supabase2.from("analytics_events").insert({
-          event_type: eventType,
-          session_id: sessionId || null,
-          match_id: matchId || null,
-          payload: cleanPayload,
-          idempotency_key: idempotencyKey || null
-        });
-        if (error3) {
-          if (error3.code === "23505") {
-            return;
-          }
-          throw new Error(error3.message);
-        }
-      }
-    };
-    AnalyticsLogger = new AnalyticsLoggerService();
-  }
-});
-
-// src/matchmaking/queueEngine.ts
-var queueEngine_exports = {};
-__export(queueEngine_exports, {
-  expireStaleReservations: () => expireStaleReservations,
-  getReservedSessionIds: () => getReservedSessionIds,
-  joinQueueEntry: () => joinQueueEntry,
-  leaveQueueEntry: () => leaveQueueEntry,
-  loadWaitingCandidates: () => loadWaitingCandidates,
-  negotiationFailures: () => negotiationFailures
-});
-async function joinQueueEntry(supabase2, sessionId) {
-  const start = Date.now();
-  const now = (/* @__PURE__ */ new Date()).toISOString();
-  const { data: session, error: sessionErr } = await supabase2.from("visitor_sessions").select("id, queue_entered_at, status").eq("id", sessionId).maybeSingle();
-  if (sessionErr || !session) {
-    logEngine({
-      engine: "QueueEngine",
-      sessionId,
-      success: false,
-      reason: "Session not found",
-      durationMs: Date.now() - start
-    });
-    throw new Error("Session not found");
-  }
-  const { data: existing, error: existingErr } = await supabase2.from("waiting_queue").select("id, joined_at").eq("session_id", sessionId).in("status", ["waiting", "matched"]).maybeSingle();
-  if (existingErr) throw existingErr;
-  let queueEnteredAt = now;
-  if (existing) {
-    queueEnteredAt = existing.joined_at;
-  }
-  const fsmSuccess = await transitionSessionStatus(supabase2, sessionId, "SEARCHING", "join_queue", session.status);
-  if (!fsmSuccess && session.status !== "SEARCHING") {
-    throw new Error("Illegal state transition to SEARCHING");
-  }
-  await supabase2.from("visitor_sessions").update({ queue_entered_at: queueEnteredAt, last_activity: now }).eq("id", sessionId);
-  if (existing) {
-    const waitingSeconds2 = Math.floor(
-      (Date.now() - new Date(queueEnteredAt).getTime()) / 1e3
-    );
-    await supabase2.from("waiting_queue").update({ status: "waiting", last_seen: now }).eq("id", existing.id);
-    logEngine({
-      engine: "QueueEngine",
-      sessionId,
-      queueId: existing.id,
-      success: true,
-      reason: "Heartbeat updated (joined_at preserved)",
-      durationMs: Date.now() - start,
-      details: { joinedAt: existing.joined_at, lastSeen: now, waitingSeconds: waitingSeconds2 }
-    });
-    return {
-      queueId: existing.id,
-      joinedAt: existing.joined_at,
-      lastSeen: now,
-      isNewEntry: false,
-      waitingSeconds: waitingSeconds2
-    };
-  }
-  const { count: count3 } = await supabase2.from("waiting_queue").select("*", { count: "exact", head: true }).eq("status", "waiting");
-  const queuePosition = (count3 ?? 0) + 1;
-  const { data: inserted, error: insertErr } = await supabase2.from("waiting_queue").insert({
-    session_id: sessionId,
-    status: "waiting",
-    joined_at: queueEnteredAt,
-    last_seen: now
-  }).select("id, joined_at").single();
-  if (insertErr || !inserted) throw insertErr ?? new Error("Failed to insert queue entry");
-  await logToDb(supabase2, sessionId, "queue_join", { queueId: inserted.id, queuePosition });
-  AnalyticsLogger.logEvent("QUEUE_JOINED", sessionId, void 0, {
-    queuePosition,
-    campus: "Unknown"
-    // In a full implementation, we would look up their campus here from visitor_sessions
-  }, `${inserted.id}_joined`);
-  const waitingSeconds = Math.floor(
-    (Date.now() - new Date(queueEnteredAt).getTime()) / 1e3
-  );
-  logEngine({
-    engine: "QueueEngine",
-    sessionId,
-    queueId: inserted.id,
-    success: true,
-    reason: "New queue entry created",
-    durationMs: Date.now() - start,
-    details: { joinedAt: inserted.joined_at, queuePosition, waitingSeconds }
-  });
-  return {
-    queueId: inserted.id,
-    joinedAt: inserted.joined_at,
-    lastSeen: now,
-    isNewEntry: true,
-    waitingSeconds
-  };
-}
-async function leaveQueueEntry(supabase2, sessionId) {
-  matchmakerMetrics.abandonedSearches++;
-  await supabase2.from("waiting_queue").update({ status: "left" }).eq("session_id", sessionId).in("status", ["waiting", "matched"]);
-  const success = await transitionSessionStatus(supabase2, sessionId, "READY", "leave_queue", "SEARCHING");
-  if (!success) {
-    throw new Error("Illegal state transition: User must be SEARCHING to leave queue");
-  }
-  await supabase2.from("visitor_sessions").update({ queue_entered_at: null }).eq("id", sessionId);
-  await logToDb(supabase2, sessionId, "queue_leave", {});
-}
-async function loadWaitingCandidates(supabase2, sessionId) {
-  const heartbeatThreshold = new Date(Date.now() - HEARTBEAT_STALE_MS).toISOString();
-  const { data, error: error3 } = await supabase2.from("waiting_queue").select(`
-      session_id,
-      joined_at,
-      visitor_sessions:session_id (
-        id,
-        gender,
-        looking_for,
-        languages,
-        country,
-        state,
-        district,
-        city,
-        interest_tags,
-        last_partner,
-        queue_entered_at,
-        last_activity,
-        status,
-        display_name,
-        bio,
-        match_mode,
-        match_constraints,
-        match_attributes
-      )
-    `).eq("status", "waiting").neq("session_id", sessionId);
-  if (error3) throw error3;
-  const rows = data ?? [];
-  return rows.filter((row) => {
-    const profile3 = row.visitor_sessions;
-    const lastActivity = profile3?.last_activity;
-    return lastActivity ? lastActivity >= heartbeatThreshold : row.joined_at >= heartbeatThreshold;
-  });
-}
-async function getReservedSessionIds(supabase2) {
-  try {
-    const now = (/* @__PURE__ */ new Date()).toISOString();
-    const { data, error: error3 } = await supabase2.from("reservations").select("initiator_session_id, partner_session_id").eq("status", "pending").gt("expires_at", now);
-    if (error3) return /* @__PURE__ */ new Set();
-    const ids = /* @__PURE__ */ new Set();
-    data?.forEach((r) => {
-      if (r.initiator_session_id) ids.add(r.initiator_session_id);
-      if (r.partner_session_id) ids.add(r.partner_session_id);
-    });
-    return ids;
-  } catch {
-    return /* @__PURE__ */ new Set();
-  }
-}
-async function expireStaleReservations(supabase2) {
-  try {
-    const now = (/* @__PURE__ */ new Date()).toISOString();
-    const { data: expired } = await supabase2.from("reservations").select("id, initiator_session_id, partner_session_id").eq("status", "pending").lt("expires_at", now);
-    if (!expired?.length) return 0;
-    for (const r of expired) {
-      await supabase2.from("reservations").update({ status: "expired" }).eq("id", r.id);
-      const sessionIds = Array.from(new Set([
-        r.initiator_session_id,
-        r.partner_session_id
-      ].filter(Boolean)));
-      if (sessionIds.length) {
-        const toRequeue = [];
-        const toBan = [];
-        for (const sid of sessionIds) {
-          const fails = (negotiationFailures.get(sid) || 0) + 1;
-          negotiationFailures.set(sid, fails);
-          if (fails >= 3) {
-            console.warn(`[QueueEngine] Session ${sid} failed negotiation 3 times. Dropping to HOME.`);
-            toBan.push(sid);
-          } else {
-            toRequeue.push(sid);
-          }
-        }
-        if (toRequeue.length > 0) {
-          await supabase2.from("waiting_queue").update({ status: "waiting" }).in("session_id", toRequeue).eq("status", "matched");
-          await supabase2.from("visitor_sessions").update({ status: "SEARCHING" }).in("id", toRequeue);
-        }
-        if (toBan.length > 0) {
-          await supabase2.from("waiting_queue").update({ status: "left" }).in("session_id", toBan);
-          await supabase2.from("visitor_sessions").update({ status: "ended", ended_at: now }).in("id", toBan);
-        }
-      }
-      console.log(`[QueueEngine] Expired stale reservation ${r.id} \u2014 returned ${sessionIds.length} sessions`);
-    }
-    return expired.length;
-  } catch {
-    return 0;
-  }
-}
-var negotiationFailures;
-var init_queueEngine = __esm({
-  "src/matchmaking/queueEngine.ts"() {
-    "use strict";
-    init_modules_watch_stub();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_process();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_console();
-    init_performance2();
-    init_config();
-    init_logger();
-    init_logger2();
-    init_matchingEngine();
-    __name(joinQueueEntry, "joinQueueEntry");
-    __name(leaveQueueEntry, "leaveQueueEntry");
-    __name(loadWaitingCandidates, "loadWaitingCandidates");
-    __name(getReservedSessionIds, "getReservedSessionIds");
-    negotiationFailures = /* @__PURE__ */ new Map();
-    __name(expireStaleReservations, "expireStaleReservations");
-  }
-});
-
-// src/matchmaking/scoringEngine.ts
-function scoreMutualPreference(self2, partner) {
-  const selfWants = !self2.looking_for || self2.looking_for.length === 0 || self2.looking_for.includes("anyone") || partner.gender && self2.looking_for.includes(partner.gender);
-  const partnerWants = !partner.looking_for || partner.looking_for.length === 0 || partner.looking_for.includes("anyone") || self2.gender && partner.looking_for.includes(self2.gender);
-  console.log(`[Scoring] Mutual Pref - selfWants=${selfWants} partnerWants=${partnerWants} self.looking_for=${JSON.stringify(self2.looking_for)} partner.looking_for=${JSON.stringify(partner.looking_for)}`);
-  if (selfWants && partnerWants) {
-    const pts = Math.floor(MATCH_WEIGHTS.mutualPreference * 1.5);
-    return { points: pts, note: `Mutual Preference (+${pts})` };
-  }
-  if (selfWants || partnerWants) {
-    return { points: MATCH_WEIGHTS.mutualPreference, note: `Preference Match (+${MATCH_WEIGHTS.mutualPreference})` };
-  }
-  return null;
-}
-function scoreLanguages(self2, partner, phase) {
-  if (phase === "relax_language" || phase === "relax_location" || phase === "random") {
-    return { points: 0, note: "" };
-  }
-  if (!self2.languages || !partner.languages) return { points: 0, note: "" };
-  const shared = self2.languages.filter((l) => partner.languages.includes(l));
-  if (shared.length === 0) return { points: 0, note: "" };
-  const multiplier = Math.pow(2, shared.length) - 1;
-  const pts = multiplier * MATCH_WEIGHTS.languagePerMatch;
-  return { points: pts, note: `Shared Languages (${shared.join(", ")}) (+${pts})` };
-}
-function scoreLocation(self2, partner, phase) {
-  if (phase === "relax_location" || phase === "random") return { points: 0, note: "" };
-  if (self2.city && partner.city && self2.city === partner.city) {
-    return { points: MATCH_WEIGHTS.city, note: `Same City: ${self2.city} (+${MATCH_WEIGHTS.city})` };
-  }
-  if (self2.district && partner.district && self2.district === partner.district) {
-    return { points: MATCH_WEIGHTS.district, note: `Same District: ${self2.district} (+${MATCH_WEIGHTS.district})` };
-  }
-  if (self2.state && partner.state && self2.state === partner.state) {
-    return { points: MATCH_WEIGHTS.state, note: `Same State: ${self2.state} (+${MATCH_WEIGHTS.state})` };
-  }
-  if (self2.country && partner.country && self2.country === partner.country) {
-    return { points: MATCH_WEIGHTS.country, note: `Same Country: ${self2.country} (+${MATCH_WEIGHTS.country})` };
-  }
-  return { points: 0, note: "" };
-}
-function scoreInterests(self2, partner, phase) {
-  if (phase === "relax_interests" || phase === "relax_language" || phase === "relax_location" || phase === "random") {
-    return { points: 0, note: "" };
-  }
-  if (!self2.interest_tags || !partner.interest_tags) return { points: 0, note: "" };
-  const shared = self2.interest_tags.filter((i) => partner.interest_tags.includes(i));
-  if (shared.length === 0) return { points: 0, note: "" };
-  const multiplier = Math.pow(2, shared.length) - 1;
-  const pts = multiplier * MATCH_WEIGHTS.interestPerMatch;
-  return { points: pts, note: `Common Interests: ${shared.join(", ")} (+${pts})` };
-}
-function scoreWaiting(partner) {
-  if (!partner.queue_entered_at) return { points: 0, note: "" };
-  const waitSec = Math.floor((Date.now() - new Date(partner.queue_entered_at).getTime()) / 1e3);
-  const pts = Math.min(Math.max(waitSec, 0), MATCH_WEIGHTS.waitingMax);
-  if (pts <= 0) return { points: 0, note: "" };
-  return { points: pts, note: `Waiting Bonus (+${pts})` };
-}
-function calculateCompatibility(self2, partner, waitingSeconds, recentPartners, reportedIds, endedMatchesMap, queueDepth = 0) {
-  console.log(`[Scoring] Evaluating ${self2.id} vs ${partner.id}`);
-  if (partner.status === "ended") {
-    console.log(`[Scoring] partner status ended`);
-    return null;
-  }
-  if (reportedIds.has(partner.id)) {
-    console.log(`[Scoring] partner reported`);
-    return null;
-  }
-  const isPreviousPartner = partner.id === self2.last_partner;
-  if (isPreviousPartner) {
-    const phase = getRelaxationPhase(waitingSeconds, queueDepth);
-    if (phase !== "allow_previous" && phase !== "random") {
-      return null;
-    }
-    const lastEndedAt = endedMatchesMap?.get(partner.id);
-    if (lastEndedAt) {
-      const elapsedMs = Date.now() - new Date(lastEndedAt).getTime();
-      if (elapsedMs < REMATE_COOLDOWN_MS) {
-        console.log(`[Scoring] Rematch blocked by cooldown: ${self2.id} and ${partner.id}`);
-        return null;
-      }
-    }
-  }
-  const effectiveMode = self2.match_mode === "STRICT" || partner.match_mode === "STRICT" ? "STRICT" : self2.match_mode === "PREFER" || partner.match_mode === "PREFER" ? "PREFER" : "RANDOM";
-  if (effectiveMode === "RANDOM") {
-    return calculateRandomCompatibility(self2, partner, recentPartners);
-  } else if (effectiveMode === "STRICT") {
-    return calculateStrictCompatibility(self2, partner, waitingSeconds, recentPartners, queueDepth);
-  } else {
-    return calculatePreferCompatibility(self2, partner, waitingSeconds, recentPartners, endedMatchesMap, queueDepth);
-  }
-}
-function calculateRandomCompatibility(self2, partner, recentPartners) {
-  const mutualPref = scoreMutualPreference(self2, partner);
-  if (!mutualPref) return null;
-  let score = mutualPref.points;
-  if (recentPartners.has(partner.id)) score -= MATCH_WEIGHTS.recentPartnerPenalty;
-  return {
-    rawScore: score,
-    weightedScore: score,
-    reason: mutualPref.note,
-    threshold: 0,
-    phase: "random",
-    rank: 0,
-    passesThreshold: true,
-    reasonMetadata: {
-      reason: "random",
-      confidence: 50,
-      matchedBy: ["\u{1F3B2} Random Match"],
-      matchedByDetails: {}
-    }
-  };
-}
-function calculateStrictCompatibility(self2, partner, waitingSeconds, recentPartners, queueDepth) {
-  const mutualPref = scoreMutualPreference(self2, partner);
-  if (!mutualPref) return null;
-  const evaluateStrictConstraints = /* @__PURE__ */ __name((user1, user2) => {
-    if (user1.match_mode !== "STRICT") return true;
-    const constraints = user1.match_constraints || {};
-    for (const [key, isStrict] of Object.entries(constraints)) {
-      if (!isStrict) continue;
-      const val1 = user1.match_attributes?.[key] || [];
-      const val2 = user2.match_attributes?.[key] || [];
-      if (!val1 || val1.length === 0) continue;
-      if (val1.length !== val2.length) return false;
-      const exactMatch = val1.every((v) => val2.includes(v));
-      if (!exactMatch) return false;
-    }
-    return true;
-  }, "evaluateStrictConstraints");
-  if (!evaluateStrictConstraints(self2, partner) || !evaluateStrictConstraints(partner, self2)) {
-    return null;
-  }
-  if (self2.interest_tags && self2.interest_tags.length > 0) {
-    if (!partner.interest_tags || partner.interest_tags.length === 0) return null;
-    const allMatch = self2.interest_tags.every((tag) => partner.interest_tags.includes(tag));
-    if (!allMatch) return null;
-  }
-  if (partner.interest_tags && partner.interest_tags.length > 0) {
-    if (!self2.interest_tags || self2.interest_tags.length === 0) return null;
-    const allMatch = partner.interest_tags.every((tag) => self2.interest_tags.includes(tag));
-    if (!allMatch) return null;
-  }
-  let score = mutualPref.points + 100;
-  if (recentPartners.has(partner.id)) score -= MATCH_WEIGHTS.recentPartnerPenalty;
-  return {
-    rawScore: score,
-    weightedScore: score,
-    reason: mutualPref.note + ", Strict Match (+100)",
-    threshold: 0,
-    phase: getRelaxationPhase(waitingSeconds, queueDepth),
-    rank: 0,
-    passesThreshold: true,
-    reasonMetadata: {
-      reason: "strict_filters",
-      confidence: 100,
-      matchedBy: ["\u{1F3AF} Exact Match"],
-      matchedByDetails: {}
-    }
-  };
-}
-function calculatePreferCompatibility(self2, partner, waitingSeconds, recentPartners, endedMatchesMap, queueDepth) {
-  const phase = getRelaxationPhase(waitingSeconds, queueDepth);
-  const threshold = getMinScoreThreshold(phase, queueDepth);
-  const isPreviousPartner = partner.id === self2.last_partner;
-  if (isPreviousPartner) {
-    if (phase !== "allow_previous" && phase !== "random") {
-      return null;
-    }
-    const lastEndedAt = endedMatchesMap?.get(partner.id);
-    if (lastEndedAt) {
-      const elapsedMs = Date.now() - new Date(lastEndedAt).getTime();
-      if (elapsedMs < REMATE_COOLDOWN_MS) {
-        console.log(`[Scoring] Rematch blocked by cooldown: ${self2.id} and ${partner.id} (${Math.round(elapsedMs / 1e3)}s elapsed, min=${REMATE_COOLDOWN_MS / 1e3}s)`);
-        return null;
-      }
-    }
-  }
-  const mutualPref = scoreMutualPreference(self2, partner);
-  if (!mutualPref) {
-    console.log(`[Scoring] mutual pref failed`);
-    return null;
-  }
-  const parts = [
-    mutualPref,
-    scoreLanguages(self2, partner, phase),
-    scoreLocation(self2, partner, phase),
-    scoreInterests(self2, partner, phase),
-    scoreWaiting(partner)
-  ];
-  let rawScore = parts.reduce((sum, p) => sum + p.points, 0);
-  const reasons = parts.map((p) => p.note).filter(Boolean);
-  const matchedBy = [];
-  const selfUni = self2.match_attributes?.["university"] || [];
-  const partUni = partner.match_attributes?.["university"] || [];
-  const hasSharedUni = selfUni.length > 0 && partUni.length > 0 && selfUni.some((u) => partUni.includes(u));
-  if (hasSharedUni) {
-    rawScore += 100;
-    reasons.push(`Same University: ${selfUni.join(", ")} (+100)`);
-    matchedBy.push("\u{1F393} Same University");
-  }
-  const selfTags = self2.match_attributes?.["education_tags"] || [];
-  const partTags = partner.match_attributes?.["education_tags"] || [];
-  const sharedTags = selfTags.filter((t) => partTags.includes(t));
-  if (sharedTags.length > 0) {
-    const pts = Math.min(sharedTags.length * 30, 90);
-    rawScore += pts;
-    reasons.push(`Shared Campus Tags: ${sharedTags.join(", ")} (+${pts})`);
-    matchedBy.push("\u{1F3EB} Shared Campus Tags");
-  }
-  const matchedByDetails = {};
-  if (hasSharedUni) {
-    const sharedUni = selfUni.filter((u) => partUni.includes(u));
-    if (sharedUni.length > 0) {
-      matchedByDetails.university = sharedUni[0];
-    }
-  }
-  if (self2.city && partner.city && self2.city === partner.city) {
-    matchedBy.push("\u{1F4CD} Same City");
-    matchedByDetails.city = self2.city;
-  } else if (self2.state && partner.state && self2.state === partner.state) {
-    matchedBy.push("\u{1F4CD} Same State");
-    matchedByDetails.state = self2.state;
-  } else if (self2.country && partner.country && self2.country === partner.country) {
-    matchedBy.push("\u{1F30E} Same Country");
-    matchedByDetails.country = self2.country;
-  }
-  if (self2.interest_tags && partner.interest_tags) {
-    const sharedInts = self2.interest_tags.filter((t) => partner.interest_tags.includes(t));
-    if (sharedInts.length > 0) {
-      matchedBy.push("\u{1F4BB} Shared Interests");
-      matchedByDetails.interests = sharedInts;
-    }
-  }
-  if (self2.languages && partner.languages) {
-    const sharedLangs = self2.languages.filter((t) => partner.languages.includes(t));
-    if (sharedLangs.length > 0) {
-      matchedBy.push("\u{1F5E3} Same Language");
-      matchedByDetails.languages = sharedLangs;
-    }
-  }
-  if (recentPartners.has(partner.id)) {
-    rawScore -= MATCH_WEIGHTS.recentPartnerPenalty;
-    reasons.push(`Matched Recently (-${MATCH_WEIGHTS.recentPartnerPenalty})`);
-  }
-  const weightedScore = rawScore;
-  const passesThreshold = phase === "random" ? true : weightedScore >= threshold;
-  console.log(`[Scoring] Final score=${weightedScore} threshold=${threshold} phase=${phase} passes=${passesThreshold}`);
-  const isStrictMatch = self2.match_mode === "STRICT" || partner.match_mode === "STRICT";
-  const confidence = rawScore > 0 ? Math.min(Math.round(rawScore / 200 * 100), 100) : 41;
-  const reasonMetadata = {
-    reason: isStrictMatch ? "strict_filters" : matchedBy.length > 0 ? "prefer_filters" : "random",
-    confidence,
-    matchedBy: matchedBy.length > 0 ? matchedBy : ["\u{1F3B2} Random Match"],
-    matchedByDetails
-  };
-  return {
-    rawScore,
-    weightedScore,
-    reason: reasons.join(", ") || "No preference overlap",
-    threshold,
-    phase,
-    rank: 0,
-    passesThreshold,
-    reasonMetadata
-  };
-}
-function rankCandidates(scores, waitingSeconds, queueDepth = 0) {
-  const phase = getRelaxationPhase(waitingSeconds, queueDepth);
-  const filtered = phase === "random" ? scores : scores.filter((s) => s.passesThreshold);
-  filtered.sort((a, b) => b.weightedScore - a.weightedScore);
-  return filtered.map((s, i) => ({ ...s, rank: i + 1 }));
-}
-var init_scoringEngine = __esm({
-  "src/matchmaking/scoringEngine.ts"() {
-    "use strict";
-    init_modules_watch_stub();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_process();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_console();
-    init_performance2();
-    init_config();
-    __name(scoreMutualPreference, "scoreMutualPreference");
-    __name(scoreLanguages, "scoreLanguages");
-    __name(scoreLocation, "scoreLocation");
-    __name(scoreInterests, "scoreInterests");
-    __name(scoreWaiting, "scoreWaiting");
-    __name(calculateCompatibility, "calculateCompatibility");
-    __name(calculateRandomCompatibility, "calculateRandomCompatibility");
-    __name(calculateStrictCompatibility, "calculateStrictCompatibility");
-    __name(calculatePreferCompatibility, "calculatePreferCompatibility");
-    __name(rankCandidates, "rankCandidates");
-  }
-});
-
 // src/database/repositories/index.ts
+var repositories_exports = {};
+__export(repositories_exports, {
+  connectionLogRepository: () => connectionLogRepository,
+  feedbackRepository: () => feedbackRepository,
+  matchRepository: () => matchRepository,
+  metricsRepository: () => metricsRepository,
+  queueRepository: () => queueRepository,
+  reportRepository: () => reportRepository,
+  sessionRepository: () => sessionRepository
+});
 var sessionRepository, queueRepository, matchRepository, reportRepository, feedbackRepository, metricsRepository, connectionLogRepository;
 var init_repositories = __esm({
   "src/database/repositories/index.ts"() {
@@ -29060,14 +22007,18 @@ var init_repositories = __esm({
     init_client();
     sessionRepository = {
       async create(data) {
-        const { data: session, error: error3 } = await getSupabase().from("visitor_sessions").insert({
+        const insertData = {
           session_token: data.sessionToken,
           country: data.country ?? null,
           browser: data.browser ?? null,
           device: data.device ?? null,
           platform: data.platform ?? null,
           status: "READY"
-        }).select().single();
+        };
+        if (data.authUserId) {
+          insertData.id = data.authUserId;
+        }
+        const { data: session, error: error3 } = await getSupabase().from("visitor_sessions").insert(insertData).select().single();
         if (error3 || !session) handleSupabaseError(error3, "Failed to create session");
         return session;
       },
@@ -29261,99 +22212,14 @@ var init_repositories = __esm({
   }
 });
 
-// src/matchmaking/reservationEngine.ts
-async function createReservation(supabase2, initiatorSessionId, partnerSessionId) {
-  const start = Date.now();
-  const expiresAt2 = new Date(Date.now() + RESERVATION_TIMEOUT_MS).toISOString();
-  try {
-    const { data, error: error3 } = await supabase2.rpc("matchmaker_create_reservation", {
-      p_initiator_id: initiatorSessionId,
-      p_partner_id: partnerSessionId,
-      p_expires_at: expiresAt2
-    });
-    if (error3) {
-      if (error3.code === "PGRST202" || error3.message.includes('column "user_a"') || error3.message.includes('relation "reservations"')) {
-        const fallbackRes = await supabase2.from("reservations").insert({
-          initiator_session_id: initiatorSessionId,
-          partner_session_id: partnerSessionId,
-          status: "pending",
-          expires_at: expiresAt2
-        }).select("id").single();
-        if (fallbackRes.error) {
-          await supabase2.from("visitor_sessions").update({ status: "SEARCHING" }).in("id", [initiatorSessionId, partnerSessionId]);
-          return { reservationId: "", success: false, reason: fallbackRes.error.message };
-        }
-        await supabase2.from("visitor_sessions").update({ status: "RESERVED" }).in("id", [initiatorSessionId, partnerSessionId]);
-        return { reservationId: fallbackRes.data.id, success: true, reason: "Reserved" };
-      }
-      logEngine({
-        engine: "ReservationEngine",
-        sessionId: initiatorSessionId,
-        success: false,
-        reason: error3.message,
-        durationMs: Date.now() - start
-      });
-      await supabase2.from("visitor_sessions").update({ status: "SEARCHING" }).in("id", [initiatorSessionId, partnerSessionId]);
-      return { reservationId: "", success: false, reason: error3.message };
-    }
-    if (!data.success) {
-      console.warn(`[ReservationEngine] Reservation failed: ${data.reason}`);
-      await supabase2.from("visitor_sessions").update({ status: "SEARCHING" }).in("id", [initiatorSessionId, partnerSessionId]);
-      return { reservationId: "", success: false, reason: data.reason };
-    }
-    await logToDb(supabase2, initiatorSessionId, "reservation_created", {
-      reservationId: data.reservationId,
-      partnerSessionId,
-      expiresAt: expiresAt2
-    });
-    console.log(`[ReservationEngine] Reserved pair ${initiatorSessionId} <-> ${partnerSessionId} (expires ${expiresAt2})`);
-    return { reservationId: data.reservationId, success: true, reason: "Reserved" };
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Reservation unavailable";
-    console.warn(`[ReservationEngine] Non-fatal reservation error: ${message}`);
-    return { reservationId: "", success: false, reason: `Skipped reservation: ${message}` };
-  }
-}
-async function confirmReservation(supabase2, reservationId, matchId) {
-  if (!reservationId) return;
-  try {
-    await supabase2.from("reservations").update({ status: "confirmed", match_id: matchId }).eq("id", reservationId);
-    await logToDb(supabase2, null, "reservation_confirmed", { reservationId, matchId });
-  } catch {
-  }
-}
-async function rollbackReservation(supabase2, reservationId, reason) {
-  if (!reservationId) return;
-  try {
-    await supabase2.from("reservations").update({ status: "rolled_back" }).eq("id", reservationId);
-  } catch {
-  }
-  logEngine({
-    engine: "ReservationEngine",
-    reservationId,
-    success: false,
-    reason: `Rollback: ${reason}`
-  });
-}
-var init_reservationEngine = __esm({
-  "src/matchmaking/reservationEngine.ts"() {
-    "use strict";
-    init_modules_watch_stub();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_process();
-    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_console();
-    init_performance2();
-    init_config();
-    init_logger();
-    __name(createReservation, "createReservation");
-    __name(confirmReservation, "confirmReservation");
-    __name(rollbackReservation, "rollbackReservation");
-  }
-});
-
 // src/middleware/errorHandler.ts
 function asyncHandler(fn) {
-  return (c, next) => {
-    fn(req, res, next).catch(next);
+  return async (c, next) => {
+    try {
+      return await fn(c, next);
+    } catch (err) {
+      throw err;
+    }
   };
 }
 var AppError;
@@ -29382,871 +22248,128 @@ var init_errorHandler = __esm({
   }
 });
 
-// src/matchmaking/matchingEngine.ts
-var matchingEngine_exports = {};
-__export(matchingEngine_exports, {
-  invalidateMatchmakerCache: () => invalidateMatchmakerCache,
-  joinQueueEntry: () => joinQueueEntry,
-  leaveQueueEntry: () => leaveQueueEntry,
-  markMediaConnected: () => markMediaConnected,
-  markUserReady: () => markUserReady,
-  matchmakerMetrics: () => matchmakerMetrics,
-  runGlobalHealCycle: () => runGlobalHealCycle,
-  runGlobalMatchCycle: () => runGlobalMatchCycle,
-  runMatchCycle: () => runMatchCycle,
-  transitionSessionStatus: () => transitionSessionStatus
-});
-import crypto2 from "crypto";
-import { isDeepStrictEqual } from "util";
-function invalidateMatchmakerCache() {
+// src/config/index.ts
+function getIceServers() {
+  return [
+    {
+      urls: "stun:stun.relay.metered.ca:80"
+    },
+    {
+      urls: "turns:global.relay.metered.ca:443?transport=tcp",
+      username: "75ce0488e2b6dd463873fe19",
+      credential: "86h9uzIutQ27P3Mq"
+    }
+  ];
 }
-async function transitionSessionStatus(supabase2, sessionId, targetStatus, reason, expectedCurrentStatus) {
-  const allowedFromStates = expectedCurrentStatus ? [expectedCurrentStatus] : VALID_FROM_STATES[targetStatus] || [];
-  if (allowedFromStates.length === 0) {
-    console.warn(`[FSM Warning] No valid origin states for target ${targetStatus} (${reason})`);
-    return false;
-  }
-  const { data, error: error3 } = await supabase2.from("visitor_sessions").update({ status: targetStatus, last_activity: (/* @__PURE__ */ new Date()).toISOString() }).eq("id", sessionId).in("status", [...allowedFromStates, targetStatus]).select("id").maybeSingle();
-  if (error3 || !data) {
-    console.warn(`[FSM Warning] Illegal transition or concurrent modification blocked for session ${sessionId} to ${targetStatus} (${reason}). Error: ${error3?.message || "Row not found or status constraint failed"}`);
-    return false;
-  }
-  console.log(`[FSM Transition] Session=${sessionId} | -> ${targetStatus} | Reason=${reason}`);
-  return true;
-}
-async function findActiveMatch(supabase2, sessionId) {
-  const { data, error: error3 } = await supabase2.from("matches").select("*").is("ended_at", null).or(`user_a.eq.${sessionId},user_b.eq.${sessionId}`).order("started_at", { ascending: false }).limit(1).maybeSingle();
-  if (error3) throw error3;
-  return data;
-}
-async function loadBatchedExclusions(supabase2, sessionIds) {
-  if (sessionIds.length === 0) {
-    return { recentPartnersMap: /* @__PURE__ */ new Map(), reportedIdsMap: /* @__PURE__ */ new Map(), endedMatchesMap: /* @__PURE__ */ new Map() };
-  }
-  const recentPartnersMap = /* @__PURE__ */ new Map();
-  const reportedIdsMap = /* @__PURE__ */ new Map();
-  const endedMatchesMap = /* @__PURE__ */ new Map();
-  sessionIds.forEach((id) => {
-    recentPartnersMap.set(id, /* @__PURE__ */ new Set());
-    reportedIdsMap.set(id, /* @__PURE__ */ new Set());
-    endedMatchesMap.set(id, /* @__PURE__ */ new Map());
-  });
-  const chunkSize = 20;
-  for (let i = 0; i < sessionIds.length; i += chunkSize) {
-    const chunk = sessionIds.slice(i, i + chunkSize);
-    const idList = `(${chunk.join(",")})`;
-    const [recentMatches, reports, endedMatches] = await Promise.all([
-      supabase2.from("matches").select("user_a, user_b").or(`user_a.in.${idList},user_b.in.${idList}`).order("started_at", { ascending: false }).limit(1e3),
-      // higher limit since it's for multiple users
-      supabase2.from("reports").select("reporter_session, reported_session").or(`reporter_session.in.${idList},reported_session.in.${idList}`),
-      supabase2.from("matches").select("user_a, user_b, ended_at").not("ended_at", "is", null).or(`user_a.in.${idList},user_b.in.${idList}`).order("ended_at", { ascending: false }).limit(1e3)
-    ]);
-    recentMatches.data?.forEach((m) => {
-      if (chunk.includes(m.user_a)) recentPartnersMap.get(m.user_a).add(m.user_b);
-      if (chunk.includes(m.user_b)) recentPartnersMap.get(m.user_b).add(m.user_a);
-    });
-    reports.data?.forEach((r) => {
-      if (chunk.includes(r.reporter_session)) reportedIdsMap.get(r.reporter_session).add(r.reported_session);
-      if (chunk.includes(r.reported_session)) reportedIdsMap.get(r.reported_session).add(r.reporter_session);
-    });
-    endedMatches.data?.forEach((m) => {
-      if (chunk.includes(m.user_a)) endedMatchesMap.get(m.user_a).set(m.user_b, m.ended_at);
-      if (chunk.includes(m.user_b)) endedMatchesMap.get(m.user_b).set(m.user_a, m.ended_at);
-    });
-  }
-  return { recentPartnersMap, reportedIdsMap, endedMatchesMap };
-}
-async function runGlobalHealCycle(supabase2) {
-  const nowMs = Date.now();
-  if (nowMs - lastHealTime < HEAL_INTERVAL_MS) {
-    return;
-  }
-  const client = new esm_default.Client({ connectionString: process.env.DATABASE_URL });
-  try {
-    await client.connect();
-    await client.query("BEGIN");
-    const { rows } = await client.query("SELECT pg_try_advisory_xact_lock(9999) as acquired");
-    if (!rows[0].acquired) {
-      return;
-    }
-    lastHealTime = Date.now();
-    const now = (/* @__PURE__ */ new Date()).toISOString();
-    const heartbeatThreshold = new Date(Date.now() - HEARTBEAT_STALE_MS).toISOString();
-    const { data: waitingSessions } = await supabase2.from("visitor_sessions").select("id, queue_entered_at").in("status", ["SEARCHING", "waiting"]).gt("last_activity", heartbeatThreshold);
-    if (waitingSessions && waitingSessions.length > 0) {
-      for (const sess of waitingSessions) {
-        const { data: qEntry } = await supabase2.from("waiting_queue").select("id").eq("session_id", sess.id).eq("status", "waiting").maybeSingle();
-        if (!qEntry) {
-          console.log(`[Self-Healing] Session ${sess.id} status is wait/search, but queue entry is missing. Creating queue entry...`);
-          await supabase2.from("waiting_queue").insert({
-            session_id: sess.id,
-            status: "waiting",
-            joined_at: sess.queue_entered_at || now,
-            last_seen: now
-          });
-          await transitionSessionStatus(supabase2, sess.id, "SEARCHING", "Self-healing queue repair");
-        }
-      }
-    }
-    const { data: waitingQueueEntries } = await supabase2.from("waiting_queue").select(`
-        id,
-        session_id,
-        visitor_sessions:session_id (
-          status,
-          last_activity
-        )
-      `).eq("status", "waiting");
-    if (waitingQueueEntries && waitingQueueEntries.length > 0) {
-      for (const entry of waitingQueueEntries) {
-        const profile3 = entry.visitor_sessions;
-        if (!profile3) {
-          console.log(`[Self-Healing] Queue entry ${entry.id} references non-existent session. Expiring queue entry...`);
-          await supabase2.from("waiting_queue").update({ status: "expired" }).eq("id", entry.id);
-          continue;
-        }
-        if (profile3.status === "TERMINATED" || profile3.status === "ended") {
-          console.log(`[Self-Healing] Session ${entry.session_id} is TERMINATED. Expiring queue entry...`);
-          await supabase2.from("waiting_queue").update({ status: "expired" }).eq("id", entry.id);
-        } else if (profile3.status === "CONNECTED" || profile3.status === "MATCHED" || profile3.status === "matched") {
-          console.log(`[Self-Healing] Session ${entry.session_id} is active in match (${profile3.status}). Marking queue matched...`);
-          await supabase2.from("waiting_queue").update({ status: "matched" }).eq("id", entry.id);
-        } else if (profile3.status !== "SEARCHING" && profile3.status !== "RESERVED") {
-          if (profile3.last_activity >= heartbeatThreshold) {
-            console.log(`[Self-Healing] Session ${entry.session_id} has waiting queue but status is ${profile3.status}. Syncing to SEARCHING...`);
-            await transitionSessionStatus(supabase2, entry.session_id, "SEARCHING", "Self-healing FSM state sync");
-          } else {
-            console.log(`[Self-Healing] Stale heartbeat for queue entry ${entry.id}. Expiring queue entry...`);
-            await supabase2.from("waiting_queue").update({ status: "expired" }).eq("id", entry.id);
-            if (profile3.status !== "TERMINATED" && profile3.status !== "ended") {
-              await transitionSessionStatus(supabase2, entry.session_id, "READY", "Self-healing heartbeat expired");
-            }
-          }
-        }
-      }
-    }
-    const { error: healErr } = await supabase2.rpc("matchmaker_heal_cycle");
-    if (healErr) {
-      console.error("[Self-Healing] matchmaker_heal_cycle RPC failed:", healErr.message);
-    }
-    const { data: activeMatches } = await supabase2.from("matches").select("id, user_a, user_b, started_at, negotiation_started, user_a_media_ready, user_b_media_ready").is("ended_at", null);
-    if (activeMatches && activeMatches.length > 0) {
-      for (const m of activeMatches) {
-        const [resA, resB] = await Promise.all([
-          supabase2.from("visitor_sessions").select("status, last_activity").eq("id", m.user_a).maybeSingle(),
-          supabase2.from("visitor_sessions").select("status, last_activity").eq("id", m.user_b).maybeSingle()
-        ]);
-        const profileA = resA.data;
-        const profileB = resB.data;
-        const staleA = !profileA || !profileA.last_activity || profileA.last_activity < heartbeatThreshold;
-        const staleB = !profileB || !profileB.last_activity || profileB.last_activity < heartbeatThreshold;
-        const matchAgeMs = Date.now() - new Date(m.started_at).getTime();
-        const MEDIA_TIMEOUT_MS = 15e3;
-        const hasMediaFlow = m.user_a_media_ready && m.user_b_media_ready;
-        const isMediaTimeout = matchAgeMs > MEDIA_TIMEOUT_MS && !hasMediaFlow;
-        if (staleA || staleB || isMediaTimeout) {
-          const abortReason = isMediaTimeout ? "Media verification timeout (15s limit)" : "stale heartbeat";
-          console.log(`[Self-Healing] Ending active match ${m.id} due to ${abortReason} (A_stale=${staleA}, B_stale=${staleB}, MediaTimeout=${isMediaTimeout})`);
-          const duration = Math.floor(matchAgeMs / 1e3);
-          await supabase2.from("matches").update({
-            ended_at: now,
-            duration_seconds: duration,
-            ended_reason: "disconnect"
-          }).eq("id", m.id);
-          await supabase2.from("temporary_messages").delete().eq("match_id", m.id);
-          await supabase2.from("reservations").delete().eq("match_id", m.id);
-          if (m.user_a) broadcastToSession(m.user_a, "partner_left", { reason: "healing_cycle_teardown" }).catch(() => {
-          });
-          if (m.user_b) broadcastToSession(m.user_b, "partner_left", { reason: "healing_cycle_teardown" }).catch(() => {
-          });
-          if (!staleA && m.user_a) {
-            console.log(`[Self-Healing] Requeuing active partner A: ${m.user_a}`);
-            await transitionSessionStatus(supabase2, m.user_a, "SEARCHING", "Peer disconnected match cleanup");
-            const { data: existingA } = await supabase2.from("waiting_queue").select("id").eq("session_id", m.user_a).in("status", ["matched", "left", "expired"]).limit(1).maybeSingle();
-            if (existingA) {
-              await supabase2.from("waiting_queue").update({ status: "waiting", last_seen: now }).eq("id", existingA.id);
-            } else {
-              await supabase2.from("waiting_queue").insert({
-                session_id: m.user_a,
-                status: "waiting",
-                joined_at: now,
-                last_seen: now
-              });
-            }
-          } else if (staleA && m.user_a) {
-            console.log(`[Self-Healing] Marking stale partner A as TERMINATED: ${m.user_a}`);
-            await transitionSessionStatus(supabase2, m.user_a, "TERMINATED", "Stale peer match cleanup");
-          }
-          if (!staleB && m.user_b) {
-            console.log(`[Self-Healing] Requeuing active partner B: ${m.user_b}`);
-            await transitionSessionStatus(supabase2, m.user_b, "SEARCHING", "Peer disconnected match cleanup");
-            const { data: existingB } = await supabase2.from("waiting_queue").select("id").eq("session_id", m.user_b).in("status", ["matched", "left", "expired"]).limit(1).maybeSingle();
-            if (existingB) {
-              await supabase2.from("waiting_queue").update({ status: "waiting", last_seen: now }).eq("id", existingB.id);
-            } else {
-              await supabase2.from("waiting_queue").insert({
-                session_id: m.user_b,
-                status: "waiting",
-                joined_at: now,
-                last_seen: now
-              });
-            }
-          } else if (staleB && m.user_b) {
-            console.log(`[Self-Healing] Marking stale partner B as TERMINATED: ${m.user_b}`);
-            await transitionSessionStatus(supabase2, m.user_b, "TERMINATED", "Stale peer match cleanup");
-          }
-        }
-      }
-    }
-  } catch (err) {
-    console.error("[Self-Healing] Error during queue healing:", err instanceof Error ? err.message : err);
-  } finally {
-    try {
-      await client.query("COMMIT");
-    } catch (e) {
-    }
-    await client.end();
-  }
-}
-async function runGlobalMatchCycle(supabase2) {
-  const start = Date.now();
-  const client = new esm_default.Client({ connectionString: process.env.DATABASE_URL });
-  try {
-    await client.connect();
-    await client.query("BEGIN");
-    const { rows } = await client.query("SELECT pg_try_advisory_xact_lock(8888) as acquired");
-    if (!rows[0].acquired) {
-      const delay = Math.min(Math.random() * 150 + 50, 200);
-      await new Promise((r) => setTimeout(r, delay));
-      return;
-    }
-    try {
-      await metricsRepository.flushMatchmakerMetrics(
-        matchmakerMetrics.totalSearchingUsers,
-        matchmakerMetrics.averageWaitTime,
-        matchmakerMetrics.maximumWaitTime,
-        matchmakerMetrics.successfulMatches,
-        matchmakerMetrics.failedMatches,
-        matchmakerMetrics.rematches,
-        matchmakerMetrics.abandonedSearches
-      );
-      matchmakerMetrics.successfulMatches = 0;
-      matchmakerMetrics.failedMatches = 0;
-      matchmakerMetrics.rematches = 0;
-      matchmakerMetrics.abandonedSearches = 0;
-      matchmakerMetrics.maximumWaitTime = 0;
-    } catch (e) {
-      console.error("[Matchmaker] Error flushing metrics:", e);
-    }
-    const expiredCount = await expireStaleReservations(supabase2);
-    if (expiredCount > 0) {
-      console.log(`[Matchmaker] Expired ${expiredCount} stale reservations.`);
-    }
-    const heartbeatThreshold = new Date(Date.now() - HEARTBEAT_STALE_MS).toISOString();
-    let waitingQueue = [];
-    const { data, error: queueErr } = await supabase2.from("waiting_queue").select(`
-        session_id,
-        joined_at,
-        visitor_sessions:session_id (
-          id,
-          session_token,
-          gender,
-          looking_for,
-          languages,
-          country,
-          state,
-          district,
-          city,
-          interest_tags,
-          last_partner,
-          queue_entered_at,
-          last_activity,
-          status,
-          display_name,
-          bio,
-          match_mode,
-          match_constraints,
-          match_attributes
-        )
-      `).eq("status", "waiting").order("joined_at", { ascending: true }).limit(200);
-    if (queueErr) {
-      console.error("[Matchmaker] Failed to load waiting queue:", queueErr.message);
-      return;
-    }
-    waitingQueue = data || [];
-    let activeWaiting = waitingQueue.filter((entry) => {
-      const profile3 = entry.visitor_sessions;
-      if (!profile3) return false;
-      const lastActivity = profile3.last_activity;
-      return lastActivity && lastActivity >= heartbeatThreshold;
-    });
-    console.log(`[Matchmaker] Found ${activeWaiting.length} active waiting users.`);
-    matchmakerMetrics.totalSearchingUsers = activeWaiting.length;
-    if (activeWaiting.length < 2) return;
-    const matchedOrReservedInCycle = /* @__PURE__ */ new Set();
-    const reservedIds = await getReservedSessionIds(supabase2);
-    const activeWaitingIds = activeWaiting.map((e) => e.session_id);
-    const { recentPartnersMap, reportedIdsMap, endedMatchesMap: allEndedMatchesMap } = await loadBatchedExclusions(supabase2, activeWaitingIds);
-    for (let i = 0; i < activeWaiting.length; i++) {
-      const entryA = activeWaiting[i];
-      const sessionIdA = entryA.session_id;
-      if (matchedOrReservedInCycle.has(sessionIdA) || reservedIds.has(sessionIdA)) continue;
-      const profileA = entryA.visitor_sessions;
-      if (!profileA || profileA.status !== "SEARCHING") continue;
-      const recentPartners = recentPartnersMap.get(sessionIdA) || /* @__PURE__ */ new Set();
-      const reportedIds = reportedIdsMap.get(sessionIdA) || /* @__PURE__ */ new Set();
-      const endedMatchesMap = allEndedMatchesMap.get(sessionIdA) || /* @__PURE__ */ new Map();
-      const waitingSecondsA = Math.floor((Date.now() - new Date(entryA.joined_at).getTime()) / 1e3);
-      matchmakerMetrics.maximumWaitTime = Math.max(matchmakerMetrics.maximumWaitTime, waitingSecondsA);
-      const scoredCandidates = [];
-      for (let j = 0; j < activeWaiting.length; j++) {
-        const entryB2 = activeWaiting[j];
-        const sessionIdB2 = entryB2.session_id;
-        if (sessionIdA === sessionIdB2) continue;
-        if (matchedOrReservedInCycle.has(sessionIdB2) || reservedIds.has(sessionIdB2)) continue;
-        const profileB = entryB2.visitor_sessions;
-        if (!profileB || profileB.status !== "SEARCHING") continue;
-        const score = calculateCompatibility(
-          profileA,
-          profileB,
-          waitingSecondsA,
-          recentPartners,
-          reportedIds,
-          endedMatchesMap,
-          activeWaiting.length
-          // Phase 4: Pass Queue Depth for Dynamic Thresholds
-        );
-        if (score) {
-          scoredCandidates.push({ ...score, sessionId: sessionIdB2, entry: entryB2 });
-        }
-      }
-      let ranked = rankCandidates(scoredCandidates, waitingSecondsA, activeWaiting.length);
-      if (ranked.length === 0) {
-        continue;
-      }
-      let reservationSuccess = false;
-      let bestMatch = null;
-      let reservation = null;
-      let retryCount = 0;
-      const MAX_RETRIES = 3;
-      for (const candidate of ranked) {
-        if (retryCount >= MAX_RETRIES) {
-          console.warn(`[Matchmaker] MATCH-002: Exceeded max reservation retries (${MAX_RETRIES}) for ${sessionIdA}`);
-          break;
-        }
-        const candidateId = candidate.sessionId;
-        const { data: freshProfiles } = await supabase2.from("visitor_sessions").select("id, match_mode, match_attributes, match_constraints").in("id", [sessionIdA, candidateId]);
-        const freshA = freshProfiles?.find((p) => p.id === sessionIdA);
-        const freshB = freshProfiles?.find((p) => p.id === candidateId);
-        const candidateEntry = activeWaiting.find((w) => w.session_id === candidateId);
-        const aDrift = !isDeepStrictEqual(freshA?.match_attributes, entryA.visitor_sessions.match_attributes) || !isDeepStrictEqual(freshA?.match_constraints, entryA.visitor_sessions.match_constraints) || freshA?.match_mode !== entryA.visitor_sessions.match_mode;
-        const bDrift = candidateEntry && (!isDeepStrictEqual(freshB?.match_attributes, candidateEntry.visitor_sessions.match_attributes) || !isDeepStrictEqual(freshB?.match_constraints, candidateEntry.visitor_sessions.match_constraints) || freshB?.match_mode !== candidateEntry.visitor_sessions.match_mode);
-        if (aDrift || bDrift) {
-          console.warn(`[Matchmaker] MATCH-001: Preference drift detected mid-cycle. Aborting reservation attempt.`);
-          break;
-        }
-        reservation = await createReservation(supabase2, sessionIdA, candidateId);
-        if (reservation.success) {
-          reservationSuccess = true;
-          bestMatch = candidate;
-          break;
-        } else {
-          console.error(`[Matchmaker] Failed to reserve ${candidateId} for ${sessionIdA}: ${reservation.reason}`);
-          matchmakerMetrics.failedMatches += 1;
-          retryCount++;
-          AnalyticsLogger.logEvent("RESERVATION_RACE_RETRY", sessionIdA, candidateId);
-          const delay = Math.min(50 * Math.pow(2, retryCount) + Math.random() * 50, 400);
-          await new Promise((r) => setTimeout(r, delay));
-        }
-      }
-      if (!reservationSuccess) {
-        continue;
-      }
-      const sessionIdB = bestMatch.sessionId;
-      console.log(`[Matchmaker] Found match: ${sessionIdA} and ${sessionIdB} (score=${bestMatch.weightedScore}, reason=${bestMatch.reason})`);
-      const userA = sessionIdA < sessionIdB ? sessionIdA : sessionIdB;
-      const userB = sessionIdA < sessionIdB ? sessionIdB : sessionIdA;
-      const { data: match2, error: matchError } = await supabase2.from("matches").insert({
-        user_a: userA,
-        user_b: userB,
-        match_score: bestMatch.weightedScore,
-        matched_reason: bestMatch.reason,
-        match_reason_metadata: bestMatch.reasonMetadata,
-        user_a_ready: false,
-        user_b_ready: false,
-        negotiation_started: false
-      }).select().single();
-      if (matchError || !match2) {
-        console.error(`[Matchmaker] Match creation failed between ${userA} and ${userB}:`, matchError?.message);
-        await rollbackReservation(supabase2, reservation.reservationId, matchError?.message ?? "Match insert failed");
-        await Promise.all([
-          transitionSessionStatus(supabase2, sessionIdA, "SEARCHING", "Reservation rollback"),
-          transitionSessionStatus(supabase2, sessionIdB, "SEARCHING", "Reservation rollback")
-        ]);
-        matchmakerMetrics.failedMatches += 1;
-        continue;
-      }
-      await confirmReservation(supabase2, reservation.reservationId, match2.id);
-      const [matchedA, matchedB] = await Promise.all([
-        transitionSessionStatus(supabase2, userA, "MATCHED", "Match established"),
-        transitionSessionStatus(supabase2, userB, "MATCHED", "Match established"),
-        supabase2.from("waiting_queue").update({ status: "matched" }).in("session_id", [userA, userB]).eq("status", "waiting")
-      ]);
-      if (!matchedA || !matchedB) {
-        console.error(`[Matchmaker] FSM Transition to MATCHED failed. State may be corrupt but proceeding.`);
-      }
-      matchmakerMetrics.successfulMatches += 1;
-      const isRematch = recentPartners.has(sessionIdB);
-      if (isRematch) {
-        matchmakerMetrics.rematches += 1;
-      }
-      const totalSuccessful = matchmakerMetrics.successfulMatches;
-      const totalWaitTime = matchmakerMetrics.averageWaitTime * (totalSuccessful - 1) + waitingSecondsA;
-      matchmakerMetrics.averageWaitTime = Math.round(totalWaitTime / totalSuccessful);
-      await Promise.all([
-        logToDb(supabase2, userA, "match_start", {
-          matchId: match2.id,
-          partnerId: userB,
-          score: bestMatch.weightedScore,
-          rawScore: bestMatch.rawScore,
-          threshold: bestMatch.threshold,
-          phase: bestMatch.phase,
-          rank: bestMatch.rank,
-          reason: bestMatch.reason,
-          isRematch
-        }),
-        logToDb(supabase2, userB, "match_start", {
-          matchId: match2.id,
-          partnerId: userA
-        })
-      ]);
-      const iceServers = getIceServers();
-      const pA = profileA;
-      const entryB = activeWaiting.find((w) => w.session_id === sessionIdB);
-      const pB = entryB?.visitor_sessions;
-      await Promise.all([
-        broadcastToSession(userA, "matched", {
-          matchId: match2.id,
-          partnerSessionId: userB,
-          isInitiator: userA === sessionIdA,
-          iceServers,
-          matchReasonMetadata: bestMatch.reasonMetadata,
-          partnerProfile: {
-            displayName: pB?.display_name || "Guest",
-            bio: pB?.bio || "",
-            matchMode: pB?.match_mode || "RANDOM",
-            matchConstraints: pB?.match_constraints || {},
-            matchAttributes: pB?.match_attributes || {},
-            city: pB?.city || null,
-            state: pB?.state || null,
-            country: pB?.country || null,
-            gender: pB?.gender || null,
-            lookingFor: pB?.looking_for || [],
-            languages: pB?.languages || [],
-            interestTags: pB?.interest_tags || []
-          }
-        }),
-        broadcastToSession(userB, "matched", {
-          matchId: match2.id,
-          partnerSessionId: userA,
-          isInitiator: userB === sessionIdA,
-          iceServers,
-          matchReasonMetadata: bestMatch.reasonMetadata,
-          partnerProfile: {
-            displayName: pA?.display_name || "Guest",
-            bio: pA?.bio || "",
-            matchMode: pA?.match_mode || "RANDOM",
-            matchConstraints: pA?.match_constraints || {},
-            matchAttributes: pA?.match_attributes || {},
-            city: pA?.city || null,
-            state: pA?.state || null,
-            country: pA?.country || null,
-            gender: pA?.gender || null,
-            lookingFor: pA?.looking_for || [],
-            languages: pA?.languages || [],
-            interestTags: pA?.interest_tags || []
-          }
-        })
-      ]);
-      matchedOrReservedInCycle.add(sessionIdA);
-      matchedOrReservedInCycle.add(sessionIdB);
-      console.log(`[Matchmaker] Successfully created match ${match2.id} for ${sessionIdA} and ${sessionIdB}`);
-      AnalyticsLogger.logEvent("MATCH_FOUND", sessionIdA, match2.id, {
-        matchMode: pA?.match_mode || "QUICK",
-        campus: pA?.campus
-      }, `${match2.id}_found_${sessionIdA}`);
-      AnalyticsLogger.logEvent("MATCH_FOUND", sessionIdB, match2.id, {
-        matchMode: pB?.match_mode || "QUICK",
-        campus: pB?.campus
-      }, `${match2.id}_found_${sessionIdB}`);
-    }
-  } catch (err) {
-    console.error("[Matchmaker] Error during cycle:", err);
-  } finally {
-    try {
-      await client.query("COMMIT");
-    } catch (e) {
-    }
-    await client.end();
-  }
-}
-async function runMatchCycle(supabase2, sessionId, sessionToken) {
-  const cycleStart = Date.now();
-  const { data: session, error: sessionErr } = await supabase2.from("visitor_sessions").select("*").eq("id", sessionId).maybeSingle();
-  if (sessionErr || !session || session.session_token !== sessionToken || session.status === "ended") {
-    logEngine({
-      engine: "MatchingEngine",
-      sessionId,
-      success: false,
-      reason: "Invalid session",
-      durationMs: Date.now() - cycleStart
-    });
-    throw new AppError(401, "Invalid session");
-  }
-  const getMatchedReturnPayload = /* @__PURE__ */ __name(async (matchObj, waitingSeconds2) => {
-    const partnerId = matchObj.user_a === sessionId ? matchObj.user_b : matchObj.user_a;
-    const { data: partnerSession } = await supabase2.from("visitor_sessions").select("display_name, bio, match_mode, match_constraints, match_attributes, city, state, country, gender, looking_for, languages, interest_tags").eq("id", partnerId).maybeSingle();
-    return {
-      status: "matched",
-      matchId: matchObj.id,
-      partnerSessionId: partnerId,
-      isInitiator: matchObj.user_a === sessionId,
-      iceServers: getIceServers(),
-      queuePosition: 0,
-      waitingSeconds: waitingSeconds2,
-      matchReasonMetadata: matchObj.match_reason_metadata,
-      partnerProfile: partnerSession ? {
-        displayName: partnerSession.display_name || "Guest",
-        bio: partnerSession.bio || "",
-        matchMode: partnerSession.match_mode || "RANDOM",
-        matchConstraints: partnerSession.match_constraints || {},
-        matchAttributes: partnerSession.match_attributes || {},
-        city: partnerSession.city || null,
-        state: partnerSession.state || null,
-        country: partnerSession.country || null,
-        gender: partnerSession.gender || null,
-        lookingFor: partnerSession.looking_for || [],
-        languages: partnerSession.languages || [],
-        interestTags: partnerSession.interest_tags || []
-      } : null
-    };
-  }, "getMatchedReturnPayload");
-  const existingMatch = await findActiveMatch(supabase2, sessionId);
-  if (existingMatch) {
-    return await getMatchedReturnPayload(existingMatch, 0);
-  }
-  const queueResult = await joinQueueEntry(supabase2, sessionId);
-  const waitingSeconds = queueResult.waitingSeconds;
-  await runGlobalMatchCycle(supabase2);
-  const newMatch = await findActiveMatch(supabase2, sessionId);
-  if (newMatch) {
-    return await getMatchedReturnPayload(newMatch, waitingSeconds);
-  }
-  const { count: count3 } = await supabase2.from("waiting_queue").select("*", { count: "exact", head: true }).eq("status", "waiting");
-  return {
-    status: "waiting",
-    queuePosition: count3 ?? 1,
-    message: "Waiting for a partner...",
-    waitingSeconds
-  };
-}
-async function markUserReady(supabase2, sessionId, sessionToken, matchId) {
-  const requestId = `${sessionId.slice(0, 8)}-${Date.now()}`;
-  console.log(`
-[/ready] [${requestId}] sessionId=${sessionId} matchId=${matchId}`);
-  const { data: session, error: sessErr } = await supabase2.from("visitor_sessions").select("id, session_token, status").eq("id", sessionId).maybeSingle();
-  if (sessErr || !session || session.session_token !== sessionToken) {
-    console.error(`[/ready] [${requestId}] Session validation failed`);
-    throw new Error("Invalid session or session token mismatch");
-  }
-  const { data: match2, error: matchErr } = await supabase2.from("matches").select("id, user_a, user_b, user_a_ready, user_b_ready, negotiation_started, match_reason_metadata").eq("id", matchId).is("ended_at", null).maybeSingle();
-  if (matchErr || !match2) {
-    console.error(`[/ready] [${requestId}] Match not found: ${matchId}`);
-    throw new Error(`Match not found or already ended. ID: ${matchId}`);
-  }
-  const isUserA = match2.user_a === sessionId;
-  const isUserB = match2.user_b === sessionId;
-  if (!isUserA && !isUserB) {
-    throw new Error("Not a participant in this match");
-  }
-  if (match2.negotiation_started) {
-    console.log(`[/ready] [${requestId}] Negotiation already started \u2014 re-broadcasting start_negotiation to restore session`);
-    const partnerId = isUserA ? match2.user_b : match2.user_a;
-    const iceServers = getIceServers();
-    const [sessSelfQuery, sessPartnerQuery] = await Promise.all([
-      supabase2.from("visitor_sessions").select("display_name, bio, match_mode, match_constraints, match_attributes, city, state, country, gender, looking_for, languages, interest_tags").eq("id", sessionId).maybeSingle(),
-      supabase2.from("visitor_sessions").select("display_name, bio, match_mode, match_constraints, match_attributes, city, state, country, gender, looking_for, languages, interest_tags").eq("id", partnerId).maybeSingle()
-    ]);
-    const pSelf = sessSelfQuery.data;
-    const pPartner = sessPartnerQuery.data;
-    const eventId = crypto2.randomUUID();
-    await Promise.all([
-      broadcastToSession(sessionId, "start_negotiation", {
-        eventId,
-        matchId,
-        partnerSessionId: partnerId,
-        isInitiator: isUserA,
-        iceServers,
-        matchReasonMetadata: match2.match_reason_metadata,
-        partnerProfile: pPartner ? {
-          displayName: pPartner.display_name || "Guest",
-          bio: pPartner.bio || "",
-          matchMode: pPartner.match_mode || "RANDOM",
-          matchConstraints: pPartner.match_constraints || {},
-          matchAttributes: pPartner.match_attributes || {},
-          city: pPartner.city || null,
-          state: pPartner.state || null,
-          country: pPartner.country || null,
-          gender: pPartner.gender || null,
-          lookingFor: pPartner.looking_for || [],
-          languages: pPartner.languages || [],
-          interestTags: pPartner.interest_tags || []
-        } : null
-      }).catch((e) => console.warn(`[/ready] Re-broadcast to ${sessionId} failed:`, e?.message)),
-      broadcastToSession(partnerId, "start_negotiation", {
-        eventId,
-        matchId,
-        partnerSessionId: sessionId,
-        isInitiator: !isUserA,
-        iceServers,
-        matchReasonMetadata: match2.match_reason_metadata,
-        partnerProfile: pSelf ? {
-          displayName: pSelf.display_name || "Guest",
-          bio: pSelf.bio || "",
-          matchMode: pSelf.match_mode || "RANDOM",
-          matchConstraints: pSelf.match_constraints || {},
-          matchAttributes: pSelf.match_attributes || {},
-          city: pSelf.city || null,
-          state: pSelf.state || null,
-          country: pSelf.country || null,
-          gender: pSelf.gender || null,
-          lookingFor: pSelf.looking_for || [],
-          languages: pSelf.languages || [],
-          interestTags: pSelf.interest_tags || []
-        } : null
-      }).catch((e) => console.warn(`[/ready] Re-broadcast to ${partnerId} failed:`, e?.message))
-    ]);
-    return { bothReady: true, isInitiator: isUserA };
-  }
-  await logToDb(supabase2, sessionId, "ready", { matchId, requestId });
-  const readyUpdate = isUserA ? { user_a_ready: true } : { user_b_ready: true };
-  const { data: updated, error: updateErr } = await supabase2.from("matches").update(readyUpdate).eq("id", matchId).select("user_a_ready, user_b_ready").single();
-  if (updateErr || !updated) {
-    console.error(`[/ready] [${requestId}] Failed to write ready flag:`, updateErr?.message);
-    throw new Error("Failed to record ready state");
-  }
-  const bothReady = Boolean(updated.user_a_ready && updated.user_b_ready);
-  console.log(`[/ready] [${requestId}] user_a_ready=${updated.user_a_ready} user_b_ready=${updated.user_b_ready} bothReady=${bothReady}`);
-  if (bothReady) {
-    const { error: flagErr } = await supabase2.from("matches").update({ negotiation_started: true }).eq("id", matchId).eq("negotiation_started", false);
-    if (flagErr) {
-      console.warn(`[/ready] [${requestId}] negotiation_started flag conflict \u2014 another instance may have handled this`);
-      return { bothReady: true, isInitiator: isUserA };
-    }
-    const partnerId = isUserA ? match2.user_b : match2.user_a;
-    const iceServers = getIceServers();
-    console.log(`[/ready] [${requestId}] Both ready \u2014 broadcasting start_negotiation to ${sessionId} and ${partnerId}`);
-    const [sessSelfQuery, sessPartnerQuery] = await Promise.all([
-      supabase2.from("visitor_sessions").select("display_name, bio, match_mode, match_constraints, match_attributes, city, state, country, gender, looking_for, languages, interest_tags").eq("id", sessionId).maybeSingle(),
-      supabase2.from("visitor_sessions").select("display_name, bio, match_mode, match_constraints, match_attributes, city, state, country, gender, looking_for, languages, interest_tags").eq("id", partnerId).maybeSingle()
-    ]);
-    const pSelf = sessSelfQuery.data;
-    const pPartner = sessPartnerQuery.data;
-    const eventId = crypto2.randomUUID();
-    await Promise.all([
-      broadcastToSession(sessionId, "start_negotiation", {
-        eventId,
-        matchId,
-        partnerSessionId: partnerId,
-        isInitiator: isUserA,
-        iceServers,
-        matchReasonMetadata: match2.match_reason_metadata,
-        partnerProfile: pPartner ? {
-          displayName: pPartner.display_name || "Guest",
-          bio: pPartner.bio || "",
-          matchMode: pPartner.match_mode || "RANDOM",
-          matchConstraints: pPartner.match_constraints || {},
-          matchAttributes: pPartner.match_attributes || {},
-          city: pPartner.city || null,
-          state: pPartner.state || null,
-          country: pPartner.country || null,
-          gender: pPartner.gender || null,
-          lookingFor: pPartner.looking_for || [],
-          languages: pPartner.languages || [],
-          interestTags: pPartner.interest_tags || []
-        } : null
-      }).catch((e) => console.warn(`[/ready] Broadcast to ${sessionId} failed:`, e?.message)),
-      broadcastToSession(partnerId, "start_negotiation", {
-        eventId,
-        matchId,
-        partnerSessionId: sessionId,
-        isInitiator: !isUserA,
-        iceServers,
-        matchReasonMetadata: match2.match_reason_metadata,
-        partnerProfile: pSelf ? {
-          displayName: pSelf.display_name || "Guest",
-          bio: pSelf.bio || "",
-          matchMode: pSelf.match_mode || "RANDOM",
-          matchConstraints: pSelf.match_constraints || {},
-          matchAttributes: pSelf.match_attributes || {},
-          city: pSelf.city || null,
-          state: pSelf.state || null,
-          country: pSelf.country || null,
-          gender: pSelf.gender || null,
-          lookingFor: pSelf.looking_for || [],
-          languages: pSelf.languages || [],
-          interestTags: pSelf.interest_tags || []
-        } : null
-      }).catch((e) => console.warn(`[/ready] Broadcast to ${partnerId} failed:`, e?.message))
-    ]);
-    await logToDb(supabase2, sessionId, "negotiation_start", { matchId, requestId });
-  }
-  return { bothReady, isInitiator: isUserA };
-}
-async function markMediaConnected(supabase2, sessionId, sessionToken, matchId) {
-  const requestId = crypto2.randomUUID();
-  console.log(`[/media_ready] [${requestId}] ${sessionId} marking media ready for match ${matchId}`);
-  const { data: sessionData } = await supabase2.from("visitor_sessions").select("*").eq("id", sessionId).maybeSingle();
-  if (!sessionData || sessionData.session_token !== sessionToken) {
-    throw new Error("Invalid session");
-  }
-  const { data: match2, error: error3 } = await supabase2.from("matches").select("*").eq("id", matchId).maybeSingle();
-  if (error3 || !match2) {
-    throw new Error("Match not found");
-  }
-  const isUserA = match2.user_a === sessionId;
-  if (!isUserA && match2.user_b !== sessionId) {
-    throw new Error("User not in match");
-  }
-  const readyUpdate = isUserA ? { user_a_media_ready: true } : { user_b_media_ready: true };
-  const { data: updatedMatch, error: updateErr } = await supabase2.from("matches").update(readyUpdate).eq("id", matchId).select("user_a_media_ready, user_b_media_ready").single();
-  if (updateErr || !updatedMatch) {
-    throw new Error("Failed to update media ready status");
-  }
-  const bothReady = Boolean(updatedMatch.user_a_media_ready && updatedMatch.user_b_media_ready);
-  console.log(`[/media_ready] [${requestId}] user_a_media_ready=${updatedMatch.user_a_media_ready} user_b_media_ready=${updatedMatch.user_b_media_ready} bothReady=${bothReady}`);
-  if (bothReady) {
-    Promise.resolve().then(() => (init_queueEngine(), queueEngine_exports)).then((module) => {
-      module.negotiationFailures.delete(match2.user_a);
-      module.negotiationFailures.delete(match2.user_b);
-    }).catch(console.error);
-    await Promise.all([
-      transitionSessionStatus(supabase2, match2.user_a, "CONNECTED", "Media flow established for both users"),
-      transitionSessionStatus(supabase2, match2.user_b, "CONNECTED", "Media flow established for both users")
-    ]);
-    console.log(`[/media_ready] [${requestId}] Both users have media. Broadcasting session_connected.`);
-    AnalyticsLogger.logEvent("CALL_CONNECTED", sessionId, matchId, {}, `${matchId}_call_connected`);
-    await Promise.all([
-      broadcastToSession(match2.user_a, "session_connected", { matchId }).catch(() => {
-      }),
-      broadcastToSession(match2.user_b, "session_connected", { matchId }).catch(() => {
-      })
-    ]);
-  }
-  return { bothReady };
-}
-var matchmakerMetrics, VALID_FROM_STATES, lastHealTime, HEAL_INTERVAL_MS;
-var init_matchingEngine = __esm({
-  "src/matchmaking/matchingEngine.ts"() {
+var init_config = __esm({
+  "src/config/index.ts"() {
     "use strict";
     init_modules_watch_stub();
     init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_process();
     init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_console();
     init_performance2();
-    init_esm();
-    init_config();
-    init_broadcast();
-    init_config2();
-    init_queueEngine();
-    init_scoringEngine();
-    init_repositories();
-    init_reservationEngine();
-    init_logger();
-    init_logger2();
-    init_errorHandler();
-    __name(invalidateMatchmakerCache, "invalidateMatchmakerCache");
-    matchmakerMetrics = {
-      totalSearchingUsers: 0,
-      averageWaitTime: 0,
-      maximumWaitTime: 0,
-      successfulMatches: 0,
-      failedMatches: 0,
-      rematches: 0,
-      abandonedSearches: 0
-    };
-    VALID_FROM_STATES = {
-      "READY": ["CREATED", "SEARCHING", "MATCHED", "SIGNALING", "CONNECTED", "PARTNER_LEFT", "REQUEUEING"],
-      "SEARCHING": ["CREATED", "READY", "RESERVED", "REQUEUEING", "MATCHED", "SIGNALING", "CONNECTED", "PARTNER_LEFT"],
-      "RESERVED": ["SEARCHING"],
-      "MATCHED": ["RESERVED"],
-      "SIGNALING": ["MATCHED"],
-      "CONNECTED": ["SIGNALING"],
-      "PARTNER_LEFT": ["MATCHED", "SIGNALING", "CONNECTED"],
-      "REQUEUEING": ["MATCHED", "SIGNALING", "CONNECTED", "PARTNER_LEFT", "SEARCHING"],
-      "TERMINATED": ["CREATED", "READY", "SEARCHING", "RESERVED", "MATCHED", "SIGNALING", "CONNECTED", "PARTNER_LEFT", "REQUEUEING"]
-    };
-    __name(transitionSessionStatus, "transitionSessionStatus");
-    __name(findActiveMatch, "findActiveMatch");
-    __name(loadBatchedExclusions, "loadBatchedExclusions");
-    lastHealTime = 0;
-    HEAL_INTERVAL_MS = 15e3;
-    __name(runGlobalHealCycle, "runGlobalHealCycle");
-    __name(runGlobalMatchCycle, "runGlobalMatchCycle");
-    __name(runMatchCycle, "runMatchCycle");
-    __name(markUserReady, "markUserReady");
-    __name(markMediaConnected, "markMediaConnected");
+    __name(getIceServers, "getIceServers");
   }
 });
 
-// src/services/lockService.ts
-async function acquireGlobalLock() {
-  const supabase2 = getSupabase();
-  const now = /* @__PURE__ */ new Date();
-  await supabase2.from("visitor_sessions").upsert(
-    {
-      id: GLOBAL_LOCK_ID,
-      session_token: GLOBAL_LOCK_ID,
-      // satisfies NOT NULL constraint
-      status: "unlocked",
-      last_activity: now.toISOString(),
-      user_state: "active",
-      display_name: "SYSTEM_LOCK"
-    },
-    { onConflict: "id", ignoreDuplicates: true }
-  );
-  const timeoutThreshold = new Date(Date.now() - LOCK_TIMEOUT_MS).toISOString();
-  const { data, error: error3 } = await supabase2.from("visitor_sessions").update({
-    status: "locked",
-    last_activity: (/* @__PURE__ */ new Date()).toISOString()
-  }).eq("id", GLOBAL_LOCK_ID).or(`status.eq.unlocked,last_activity.lt.${timeoutThreshold}`).select();
-  if (error3) {
-    console.error("[LockService] Failed to acquire lock:", error3);
-    return false;
+// src/services/broadcast.ts
+var broadcast_exports = {};
+__export(broadcast_exports, {
+  broadcastToSession: () => broadcastToSession
+});
+async function broadcastToSession(sessionId, event, payload) {
+  const start = Date.now();
+  const env2 = getEnv();
+  const url = env2.SUPABASE_URL || "";
+  const key = env2.SUPABASE_SERVICE_ROLE_KEY || "";
+  const channelName = `session:${sessionId}`;
+  try {
+    const response = await fetch(`${url}/realtime/v1/api/broadcast`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "apikey": key,
+        "Authorization": `Bearer ${key}`
+      },
+      body: JSON.stringify({
+        messages: [{
+          topic: channelName,
+          event,
+          payload
+        }]
+      })
+    });
+    const latencyMs = Date.now() - start;
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`[Broadcast] Failed to send '${event}' to ${channelName}: ${response.status} ${errorText}`);
+    } else {
+      console.log(`[Broadcast] event=${event} sessionId=${sessionId.slice(0, 8)} latencyMs=${latencyMs}`);
+    }
+  } catch (err) {
+    const latencyMs = Date.now() - start;
+    console.error(`[Broadcast] Error sending event=${event} sessionId=${sessionId.slice(0, 8)} latencyMs=${latencyMs} error=${err instanceof Error ? err.message : err}`);
   }
-  return data && data.length > 0;
 }
-async function releaseGlobalLock() {
-  const supabase2 = getSupabase();
-  const { error: error3 } = await supabase2.from("visitor_sessions").update({
-    status: "unlocked",
-    last_activity: (/* @__PURE__ */ new Date()).toISOString()
-  }).eq("id", GLOBAL_LOCK_ID);
-  if (error3) {
-    console.error("[LockService] Failed to release lock:", error3);
+var init_broadcast = __esm({
+  "src/services/broadcast.ts"() {
+    "use strict";
+    init_modules_watch_stub();
+    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_process();
+    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_console();
+    init_performance2();
+    init_context();
+    __name(broadcastToSession, "broadcastToSession");
   }
-}
-var GLOBAL_LOCK_ID, LOCK_TIMEOUT_MS;
-var init_lockService = __esm({
-  "src/services/lockService.ts"() {
+});
+
+// src/analytics/logger.ts
+var AnalyticsLoggerService, AnalyticsLogger;
+var init_logger = __esm({
+  "src/analytics/logger.ts"() {
     "use strict";
     init_modules_watch_stub();
     init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_process();
     init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_console();
     init_performance2();
     init_client();
-    GLOBAL_LOCK_ID = "ffffffff-ffff-ffff-ffff-ffffffffffff";
-    LOCK_TIMEOUT_MS = 3e4;
-    __name(acquireGlobalLock, "acquireGlobalLock");
-    __name(releaseGlobalLock, "releaseGlobalLock");
+    AnalyticsLoggerService = class {
+      static {
+        __name(this, "AnalyticsLoggerService");
+      }
+      /**
+       * Fire-and-forget log method.
+       * @param eventType The type of event to log.
+       * @param sessionId Optional visitor session ID.
+       * @param matchId Optional match ID.
+       * @param payload Any JSON-serializable context.
+       */
+      logEvent(eventType, sessionId, matchId, payload = {}, idempotencyKey) {
+        setTimeout(() => {
+          this.asyncLog(eventType, sessionId, matchId, payload, idempotencyKey).catch((err) => {
+            console.error(`[AnalyticsLogger] Failed to log ${eventType}:`, err.message);
+          });
+        }, 0);
+      }
+      async asyncLog(eventType, sessionId, matchId, payload = {}, idempotencyKey) {
+        const supabase2 = getSupabase();
+        const cleanPayload = JSON.parse(JSON.stringify(payload));
+        const { error: error3 } = await supabase2.from("analytics_events").insert({
+          event_type: eventType,
+          session_id: sessionId || null,
+          match_id: matchId || null,
+          payload: cleanPayload,
+          idempotency_key: idempotencyKey || null
+        });
+        if (error3) {
+          if (error3.code === "23505") {
+            return;
+          }
+          throw new Error(error3.message);
+        }
+      }
+    };
+    AnalyticsLogger = new AnalyticsLoggerService();
   }
 });
 
@@ -30258,24 +22381,11 @@ __export(matchService_exports, {
   joinQueue: () => joinQueue,
   leaveQueue: () => leaveQueue,
   markMatchReady: () => markMatchReady,
-  markMediaConnected: () => markMediaConnected2,
+  markMediaConnected: () => markMediaConnected,
   nextPartner: () => nextPartner,
   notifyPartnerLeft: () => notifyPartnerLeft,
-  safeRunGlobalMatchCycle: () => safeRunGlobalMatchCycle,
   validateSession: () => validateSession
 });
-async function safeRunGlobalMatchCycle() {
-  const locked = await acquireGlobalLock();
-  if (!locked) {
-    console.log("[MatchService] Global cycle already running \u2014 skipping concurrent trigger");
-    return;
-  }
-  try {
-    await runGlobalMatchCycle(getSupabase());
-  } finally {
-    await releaseGlobalLock();
-  }
-}
 async function validateSession(sessionId, sessionToken) {
   if (!sessionId || !sessionToken) return null;
   const { data, error: error3 } = await getSupabase().from("visitor_sessions").select("*").eq("id", sessionId).maybeSingle();
@@ -30285,13 +22395,13 @@ async function validateSession(sessionId, sessionToken) {
   if (data.status === "ended") return null;
   return data;
 }
-async function findActiveMatch2(sessionId) {
+async function findActiveMatch(sessionId) {
   const { data, error: error3 } = await getSupabase().from("matches").select("*").is("ended_at", null).or(`user_a.eq.${sessionId},user_b.eq.${sessionId}`).order("started_at", { ascending: false }).limit(1).maybeSingle();
   if (error3) handleSupabaseError(error3, "Failed to find active match");
   return data;
 }
 async function endActiveMatch(sessionId, reason, targetMatchId) {
-  const match2 = await findActiveMatch2(sessionId);
+  const match2 = await findActiveMatch(sessionId);
   if (!match2) return null;
   if (targetMatchId && match2.id !== targetMatchId) {
     console.warn(`[MatchService] endActiveMatch blocked friendly fire: target ${targetMatchId} != active ${match2.id}`);
@@ -30318,15 +22428,74 @@ async function endActiveMatch(sessionId, reason, targetMatchId) {
   return { match: match2, partnerId };
 }
 async function joinQueue(sessionId, sessionToken) {
-  invalidateMatchmakerCache();
-  const result = await runMatchCycle(getSupabase(), sessionId, sessionToken);
-  void safeRunGlobalMatchCycle();
-  return result;
+  const supabase2 = getSupabase();
+  const now = (/* @__PURE__ */ new Date()).toISOString();
+  await supabase2.from("visitor_sessions").update({
+    status: "SEARCHING",
+    queue_entered_at: now,
+    last_activity: now
+  }).eq("id", sessionId);
+  await supabase2.from("waiting_queue").upsert({
+    session_id: sessionId,
+    status: "waiting",
+    joined_at: now,
+    last_seen: now
+  });
+  const { data: matchId, error: rpcErr } = await supabase2.rpc("execute_matchmaking", { p_session_id: sessionId });
+  if (matchId) {
+    const { data: match2 } = await supabase2.from("matches").select("*").eq("id", matchId).single();
+    if (match2) {
+      const partnerId = match2.user_a === sessionId ? match2.user_b : match2.user_a;
+      const iceServers = getIceServers();
+      const { data: profiles } = await supabase2.from("visitor_sessions").select("*").in("id", [sessionId, partnerId]);
+      const pSelf = profiles?.find((p) => p.id === sessionId);
+      const pPartner = profiles?.find((p) => p.id === partnerId);
+      const formatProfile = /* @__PURE__ */ __name((p) => ({
+        displayName: p?.display_name || "Guest",
+        bio: p?.bio || "",
+        matchMode: p?.match_mode || "RANDOM",
+        city: p?.city || null,
+        state: p?.state || null,
+        country: p?.country || null,
+        gender: p?.gender || null,
+        lookingFor: p?.looking_for || [],
+        languages: p?.languages || [],
+        interestTags: p?.interest_tags || []
+      }), "formatProfile");
+      await Promise.all([
+        broadcastToSession(sessionId, "matched", {
+          matchId,
+          partnerSessionId: partnerId,
+          isInitiator: true,
+          iceServers,
+          partnerProfile: formatProfile(pPartner)
+        }).catch(() => {
+        }),
+        broadcastToSession(partnerId, "matched", {
+          matchId,
+          partnerSessionId: sessionId,
+          isInitiator: false,
+          iceServers,
+          partnerProfile: formatProfile(pSelf)
+        }).catch(() => {
+        })
+      ]);
+      return {
+        status: "matched",
+        matchId,
+        partnerSessionId: partnerId,
+        isInitiator: true,
+        iceServers,
+        partnerProfile: formatProfile(pPartner)
+      };
+    }
+  }
+  return { status: "waiting" };
 }
 async function getMatchStatus(sessionId, sessionToken) {
   const session = await validateSession(sessionId, sessionToken);
   if (!session) throw new AppError(401, "Invalid session");
-  const match2 = await findActiveMatch2(sessionId);
+  const match2 = await findActiveMatch(sessionId);
   if (match2) {
     const partnerId = match2.user_a === sessionId ? match2.user_b : match2.user_a;
     const { data: partnerSession } = await getSupabase().from("visitor_sessions").select("display_name, bio, match_mode, match_constraints, match_attributes, city, state, country, gender, looking_for, languages, interest_tags").eq("id", partnerId).maybeSingle();
@@ -30338,13 +22507,10 @@ async function getMatchStatus(sessionId, sessionToken) {
       iceServers: getIceServers(),
       queuePosition: 0,
       waitingSeconds: 0,
-      matchReasonMetadata: match2.match_reason_metadata,
       partnerProfile: partnerSession ? {
         displayName: partnerSession.display_name || "Guest",
         bio: partnerSession.bio || "",
         matchMode: partnerSession.match_mode || "RANDOM",
-        matchConstraints: partnerSession.match_constraints || {},
-        matchAttributes: partnerSession.match_attributes || {},
         city: partnerSession.city || null,
         state: partnerSession.state || null,
         country: partnerSession.country || null,
@@ -30362,65 +22528,58 @@ async function getMatchStatus(sessionId, sessionToken) {
   return { status: "idle" };
 }
 async function markMatchReady(sessionId, sessionToken, matchId) {
-  return markUserReady(getSupabase(), sessionId, sessionToken, matchId);
+  const supabase2 = getSupabase();
+  const { data: match2, error: fetchErr } = await supabase2.from("matches").select("*").eq("id", matchId).single();
+  if (fetchErr || !match2) throw new AppError(404, "Match not found");
+  const isUserA = match2.user_a === sessionId;
+  if (!isUserA && match2.user_b !== sessionId) {
+    throw new AppError(403, "Unauthorized match participant");
+  }
+  const updatePayload = isUserA ? { user_a_ready: true } : { user_b_ready: true };
+  const { data: updatedMatch, error: updateErr } = await supabase2.from("matches").update(updatePayload).eq("id", matchId).select().single();
+  if (updateErr) throw new AppError(500, updateErr.message);
+  if (updatedMatch.user_a_ready && updatedMatch.user_b_ready && !updatedMatch.negotiation_started) {
+    await supabase2.from("matches").update({ negotiation_started: true }).eq("id", matchId);
+    broadcastToSession(match2.user_a, "start_negotiation", { matchId, isInitiator: true });
+    broadcastToSession(match2.user_b, "start_negotiation", { matchId, isInitiator: false });
+  }
+  return { ready: true };
 }
 async function leaveQueue(sessionId, sessionToken, targetMatchId) {
   const session = await validateSession(sessionId, sessionToken);
   if (!session) return;
-  await leaveQueueEntry(getSupabase(), sessionId);
-  invalidateMatchmakerCache();
-  const success = await transitionSessionStatus(getSupabase(), sessionId, "READY", "User manually left queue");
-  if (!success) {
-    console.warn(`[MatchService] leaveQueue transition to READY failed for ${sessionId}. They may have been caught by the matchmaker.`);
-    await endActiveMatch(sessionId, "leave", targetMatchId);
-    await transitionSessionStatus(getSupabase(), sessionId, "READY", "Aborted ghost match");
-  }
+  const supabase2 = getSupabase();
+  await supabase2.from("waiting_queue").delete().eq("session_id", sessionId);
+  await supabase2.from("visitor_sessions").update({ status: "READY" }).eq("id", sessionId);
 }
 async function requeuePartner(partnerId) {
-  const { data: partner } = await getSupabase().from("visitor_sessions").select("*").eq("id", partnerId).maybeSingle();
-  if (!partner || partner.status === "ended") {
-    console.log(`[MatchService] requeuePartner: session ${partnerId} not found or ended`);
+  const supabase2 = getSupabase();
+  const { data: partner } = await supabase2.from("visitor_sessions").select("*").eq("id", partnerId).maybeSingle();
+  if (!partner || partner.status === "ended" || partner.status === "SEARCHING" || partner.status === "READY") {
     return;
   }
-  if (partner.status === "SEARCHING" || partner.status === "READY") {
-    console.log(`[MatchService] requeuePartner: ${partnerId} is already ${partner.status}, skipping redundant requeue.`);
-    return;
-  }
-  await broadcastToSession(partnerId, "searching", {
-    message: "Finding someone new..."
-  }).catch(() => {
+  await broadcastToSession(partnerId, "searching", { message: "Finding someone new..." }).catch(() => {
   });
-  try {
-    invalidateMatchmakerCache();
-    await transitionSessionStatus(getSupabase(), partnerId, "REQUEUEING", "Requeueing partner");
-    await joinQueueEntry(getSupabase(), partnerId);
-    console.log(`[MatchService] requeuePartner: ${partnerId} re-entered queue`);
-    void safeRunGlobalMatchCycle();
-  } catch (err) {
-    console.warn(`[MatchService] requeuePartner: failed to re-queue ${partnerId}:`, err instanceof Error ? err.message : err);
+  const now = (/* @__PURE__ */ new Date()).toISOString();
+  await supabase2.from("visitor_sessions").update({ status: "SEARCHING", queue_entered_at: now }).eq("id", partnerId);
+  await supabase2.from("waiting_queue").upsert({ session_id: partnerId, status: "waiting", joined_at: now, last_seen: now });
+  const { data: matchId } = await supabase2.rpc("execute_matchmaking", { p_session_id: partnerId });
+  if (matchId) {
+    const { data: match2 } = await supabase2.from("matches").select("*").eq("id", matchId).single();
+    if (match2) {
+      const pId = match2.user_a === partnerId ? match2.user_b : match2.user_a;
+      await Promise.all([
+        broadcastToSession(partnerId, "matched", { matchId, partnerSessionId: pId, isInitiator: true, iceServers: getIceServers() }),
+        broadcastToSession(pId, "matched", { matchId, partnerSessionId: partnerId, isInitiator: false, iceServers: getIceServers() })
+      ]);
+    }
   }
 }
 async function nextPartner(sessionId, sessionToken, targetMatchId, reason = "next") {
   const session = await validateSession(sessionId, sessionToken);
   if (!session) throw new Error("Invalid session");
-  console.log(`[Next] Next clicked for session ${sessionId} (target match: ${targetMatchId})`);
-  invalidateMatchmakerCache();
-  if (session.status === "REQUEUEING" || session.status === "SEARCHING") {
-    console.warn(`[MatchService] nextPartner redundant skip blocked for ${sessionId} (status=${session.status})`);
-    throw new Error("Illegal state transition: User is already searching or requeuing");
-  }
-  const success = await transitionSessionStatus(getSupabase(), sessionId, "REQUEUEING", "User clicked Next");
-  if (!success) {
-    console.warn(`[MatchService] nextPartner failed transition to REQUEUEING for ${sessionId}`);
-    return { status: "waiting" };
-  }
   const ended = await endActiveMatch(sessionId, reason, targetMatchId);
-  if (ended?.match?.id) {
-    await getSupabase().from("temporary_messages").delete().eq("match_id", ended.match.id);
-    await getSupabase().from("reservations").delete().eq("match_id", ended.match.id);
-  }
   if (ended?.partnerId) {
-    await transitionSessionStatus(getSupabase(), ended.partnerId, "REQUEUEING", "Partner skipped");
     await broadcastToSession(ended.partnerId, "partner_left", { reason });
     await requeuePartner(ended.partnerId);
   }
@@ -30430,24 +22589,23 @@ async function nextPartner(sessionId, sessionToken, targetMatchId, reason = "nex
 async function notifyPartnerLeft(sessionId, sessionToken, reason, targetMatchId) {
   const session = await validateSession(sessionId, sessionToken);
   if (!session) throw new Error("Invalid session");
-  console.log(`[Disconnect/Leave] Session ${sessionId} left, reason=${reason}, match=${targetMatchId}`);
-  invalidateMatchmakerCache();
+  const supabase2 = getSupabase();
   const nextStatus = reason === "leave" || reason === "client_aborted_match" ? "READY" : "ENDED";
-  await transitionSessionStatus(getSupabase(), sessionId, nextStatus, "User disconnected/left call");
+  await supabase2.from("visitor_sessions").update({ status: nextStatus }).eq("id", sessionId);
   const ended = await endActiveMatch(sessionId, reason, targetMatchId);
-  if (ended?.match?.id) {
-    await getSupabase().from("temporary_messages").delete().eq("match_id", ended.match.id);
-    await getSupabase().from("reservations").delete().eq("match_id", ended.match.id);
-  }
   if (ended?.partnerId) {
-    await transitionSessionStatus(getSupabase(), ended.partnerId, "REQUEUEING", "Partner left call");
     await broadcastToSession(ended.partnerId, "partner_left", { reason });
     await requeuePartner(ended.partnerId);
   }
 }
-async function markMediaConnected2(sessionId, sessionToken, matchId) {
-  const { markMediaConnected: markMediaConnectedEngine } = await Promise.resolve().then(() => (init_matchingEngine(), matchingEngine_exports));
-  return markMediaConnectedEngine(getSupabase(), sessionId, sessionToken, matchId);
+async function markMediaConnected(sessionId, sessionToken, matchId) {
+  const supabase2 = getSupabase();
+  const { data: match2 } = await supabase2.from("matches").select("*").eq("id", matchId).single();
+  if (!match2) throw new AppError(404, "Match not found");
+  const isUserA = match2.user_a === sessionId;
+  const updatePayload = isUserA ? { user_a_media_ready: true } : { user_b_media_ready: true };
+  await supabase2.from("matches").update(updatePayload).eq("id", matchId);
+  return { success: true };
 }
 var init_matchService = __esm({
   "src/services/matchService.ts"() {
@@ -30457,15 +22615,12 @@ var init_matchService = __esm({
     init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_console();
     init_performance2();
     init_client();
-    init_config2();
+    init_config();
     init_broadcast();
-    init_matchingEngine();
-    init_logger2();
+    init_logger();
     init_errorHandler();
-    init_lockService();
-    __name(safeRunGlobalMatchCycle, "safeRunGlobalMatchCycle");
     __name(validateSession, "validateSession");
-    __name(findActiveMatch2, "findActiveMatch");
+    __name(findActiveMatch, "findActiveMatch");
     __name(endActiveMatch, "endActiveMatch");
     __name(joinQueue, "joinQueue");
     __name(getMatchStatus, "getMatchStatus");
@@ -30474,19 +22629,31 @@ var init_matchService = __esm({
     __name(requeuePartner, "requeuePartner");
     __name(nextPartner, "nextPartner");
     __name(notifyPartnerLeft, "notifyPartnerLeft");
-    __name(markMediaConnected2, "markMediaConnected");
+    __name(markMediaConnected, "markMediaConnected");
+  }
+});
+
+// node-built-in-modules:crypto
+import libDefault from "crypto";
+var require_crypto = __commonJS({
+  "node-built-in-modules:crypto"(exports, module) {
+    init_modules_watch_stub();
+    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_process();
+    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_console();
+    init_performance2();
+    module.exports = libDefault;
   }
 });
 
 // node-built-in-modules:buffer
-import libDefault11 from "buffer";
+import libDefault2 from "buffer";
 var require_buffer = __commonJS({
   "node-built-in-modules:buffer"(exports, module) {
     init_modules_watch_stub();
     init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_process();
     init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_console();
     init_performance2();
-    module.exports = libDefault11;
+    module.exports = libDefault2;
   }
 });
 
@@ -30992,29 +23159,29 @@ var require_bn = __commonJS({
         assert3(reqLength > 0, "Requested array length <= 0");
         this.strip();
         var littleEndian = endian === "le";
-        var res2 = new ArrayType(reqLength);
+        var res = new ArrayType(reqLength);
         var b, i;
         var q = this.clone();
         if (!littleEndian) {
           for (i = 0; i < reqLength - byteLength; i++) {
-            res2[i] = 0;
+            res[i] = 0;
           }
           for (i = 0; !q.isZero(); i++) {
             b = q.andln(255);
             q.iushrn(8);
-            res2[reqLength - i - 1] = b;
+            res[reqLength - i - 1] = b;
           }
         } else {
           for (i = 0; !q.isZero(); i++) {
             b = q.andln(255);
             q.iushrn(8);
-            res2[i] = b;
+            res[i] = b;
           }
           for (; i < reqLength; i++) {
-            res2[i] = 0;
+            res[i] = 0;
           }
         }
-        return res2;
+        return res;
       }, "toArrayLike");
       if (Math.clz32) {
         BN.prototype._countBits = /* @__PURE__ */ __name(function _countBits(w) {
@@ -31278,17 +23445,17 @@ var require_bn = __commonJS({
         return this;
       }, "iadd");
       BN.prototype.add = /* @__PURE__ */ __name(function add(num) {
-        var res2;
+        var res;
         if (num.negative !== 0 && this.negative === 0) {
           num.negative = 0;
-          res2 = this.sub(num);
+          res = this.sub(num);
           num.negative ^= 1;
-          return res2;
+          return res;
         } else if (num.negative === 0 && this.negative !== 0) {
           this.negative = 0;
-          res2 = num.sub(this);
+          res = num.sub(this);
           this.negative = 1;
-          return res2;
+          return res;
         }
         if (this.length > num.length) return this.clone().iadd(num);
         return num.clone().iadd(this);
@@ -31975,18 +24142,18 @@ var require_bn = __commonJS({
       }
       __name(jumboMulTo, "jumboMulTo");
       BN.prototype.mulTo = /* @__PURE__ */ __name(function mulTo(num, out) {
-        var res2;
+        var res;
         var len = this.length + num.length;
         if (this.length === 10 && num.length === 10) {
-          res2 = comb10MulTo(this, num, out);
+          res = comb10MulTo(this, num, out);
         } else if (len < 63) {
-          res2 = smallMulTo(this, num, out);
+          res = smallMulTo(this, num, out);
         } else if (len < 1024) {
-          res2 = bigMulTo(this, num, out);
+          res = bigMulTo(this, num, out);
         } else {
-          res2 = jumboMulTo(this, num, out);
+          res = jumboMulTo(this, num, out);
         }
-        return res2;
+        return res;
       }, "mulTo");
       function FFTM(x, y) {
         this.x = x;
@@ -32177,17 +24344,17 @@ var require_bn = __commonJS({
       BN.prototype.pow = /* @__PURE__ */ __name(function pow(num) {
         var w = toBitArray(num);
         if (w.length === 0) return new BN(1);
-        var res2 = this;
-        for (var i = 0; i < w.length; i++, res2 = res2.sqr()) {
+        var res = this;
+        for (var i = 0; i < w.length; i++, res = res.sqr()) {
           if (w[i] !== 0) break;
         }
         if (++i < w.length) {
-          for (var q = res2.sqr(); i < w.length; i++, q = q.sqr()) {
+          for (var q = res.sqr(); i < w.length; i++, q = q.sqr()) {
             if (w[i] === 0) continue;
-            res2 = res2.mul(q);
+            res = res.mul(q);
           }
         }
-        return res2;
+        return res;
       }, "pow");
       BN.prototype.iushln = /* @__PURE__ */ __name(function iushln(bits) {
         assert3(typeof bits === "number" && bits >= 0);
@@ -32477,14 +24644,14 @@ var require_bn = __commonJS({
             mod: new BN(0)
           };
         }
-        var div, mod, res2;
+        var div, mod, res;
         if (this.negative !== 0 && num.negative === 0) {
-          res2 = this.neg().divmod(num, mode);
+          res = this.neg().divmod(num, mode);
           if (mode !== "mod") {
-            div = res2.div.neg();
+            div = res.div.neg();
           }
           if (mode !== "div") {
-            mod = res2.mod.neg();
+            mod = res.mod.neg();
             if (positive && mod.negative !== 0) {
               mod.iadd(num);
             }
@@ -32495,25 +24662,25 @@ var require_bn = __commonJS({
           };
         }
         if (this.negative === 0 && num.negative !== 0) {
-          res2 = this.divmod(num.neg(), mode);
+          res = this.divmod(num.neg(), mode);
           if (mode !== "mod") {
-            div = res2.div.neg();
+            div = res.div.neg();
           }
           return {
             div,
-            mod: res2.mod
+            mod: res.mod
           };
         }
         if ((this.negative & num.negative) !== 0) {
-          res2 = this.neg().divmod(num.neg(), mode);
+          res = this.neg().divmod(num.neg(), mode);
           if (mode !== "div") {
-            mod = res2.mod.neg();
+            mod = res.mod.neg();
             if (positive && mod.negative !== 0) {
               mod.isub(num);
             }
           }
           return {
-            div: res2.div,
+            div: res.div,
             mod
           };
         }
@@ -32691,16 +24858,16 @@ var require_bn = __commonJS({
             x2.isub(x1);
           }
         }
-        var res2;
+        var res;
         if (a.cmpn(1) === 0) {
-          res2 = x1;
+          res = x1;
         } else {
-          res2 = x2;
+          res = x2;
         }
-        if (res2.cmpn(0) < 0) {
-          res2.iadd(p);
+        if (res.cmpn(0) < 0) {
+          res.iadd(p);
         }
-        return res2;
+        return res;
       }, "_invmp");
       BN.prototype.gcd = /* @__PURE__ */ __name(function gcd(num) {
         if (this.isZero()) return num.abs();
@@ -32776,43 +24943,43 @@ var require_bn = __commonJS({
         if (this.negative !== 0 && !negative) return -1;
         if (this.negative === 0 && negative) return 1;
         this.strip();
-        var res2;
+        var res;
         if (this.length > 1) {
-          res2 = 1;
+          res = 1;
         } else {
           if (negative) {
             num = -num;
           }
           assert3(num <= 67108863, "Number is too big");
           var w = this.words[0] | 0;
-          res2 = w === num ? 0 : w < num ? -1 : 1;
+          res = w === num ? 0 : w < num ? -1 : 1;
         }
-        if (this.negative !== 0) return -res2 | 0;
-        return res2;
+        if (this.negative !== 0) return -res | 0;
+        return res;
       }, "cmpn");
       BN.prototype.cmp = /* @__PURE__ */ __name(function cmp(num) {
         if (this.negative !== 0 && num.negative === 0) return -1;
         if (this.negative === 0 && num.negative !== 0) return 1;
-        var res2 = this.ucmp(num);
-        if (this.negative !== 0) return -res2 | 0;
-        return res2;
+        var res = this.ucmp(num);
+        if (this.negative !== 0) return -res | 0;
+        return res;
       }, "cmp");
       BN.prototype.ucmp = /* @__PURE__ */ __name(function ucmp(num) {
         if (this.length > num.length) return 1;
         if (this.length < num.length) return -1;
-        var res2 = 0;
+        var res = 0;
         for (var i = this.length - 1; i >= 0; i--) {
           var a = this.words[i] | 0;
           var b = num.words[i] | 0;
           if (a === b) continue;
           if (a < b) {
-            res2 = -1;
+            res = -1;
           } else if (a > b) {
-            res2 = 1;
+            res = 1;
           }
           break;
         }
-        return res2;
+        return res;
       }, "ucmp");
       BN.prototype.gtn = /* @__PURE__ */ __name(function gtn(num) {
         return this.cmpn(num) === 1;
@@ -33121,35 +25288,35 @@ var require_bn = __commonJS({
       }, "neg");
       Red.prototype.add = /* @__PURE__ */ __name(function add(a, b) {
         this._verify2(a, b);
-        var res2 = a.add(b);
-        if (res2.cmp(this.m) >= 0) {
-          res2.isub(this.m);
+        var res = a.add(b);
+        if (res.cmp(this.m) >= 0) {
+          res.isub(this.m);
         }
-        return res2._forceRed(this);
+        return res._forceRed(this);
       }, "add");
       Red.prototype.iadd = /* @__PURE__ */ __name(function iadd(a, b) {
         this._verify2(a, b);
-        var res2 = a.iadd(b);
-        if (res2.cmp(this.m) >= 0) {
-          res2.isub(this.m);
+        var res = a.iadd(b);
+        if (res.cmp(this.m) >= 0) {
+          res.isub(this.m);
         }
-        return res2;
+        return res;
       }, "iadd");
       Red.prototype.sub = /* @__PURE__ */ __name(function sub(a, b) {
         this._verify2(a, b);
-        var res2 = a.sub(b);
-        if (res2.cmpn(0) < 0) {
-          res2.iadd(this.m);
+        var res = a.sub(b);
+        if (res.cmpn(0) < 0) {
+          res.iadd(this.m);
         }
-        return res2._forceRed(this);
+        return res._forceRed(this);
       }, "sub");
       Red.prototype.isub = /* @__PURE__ */ __name(function isub(a, b) {
         this._verify2(a, b);
-        var res2 = a.isub(b);
-        if (res2.cmpn(0) < 0) {
-          res2.iadd(this.m);
+        var res = a.isub(b);
+        if (res.cmpn(0) < 0) {
+          res.iadd(this.m);
         }
-        return res2;
+        return res;
       }, "isub");
       Red.prototype.shl = /* @__PURE__ */ __name(function shl(a, num) {
         this._verify1(a);
@@ -33229,7 +25396,7 @@ var require_bn = __commonJS({
         for (var i = 2; i < wnd.length; i++) {
           wnd[i] = this.mul(wnd[i - 1], a);
         }
-        var res2 = wnd[0];
+        var res = wnd[0];
         var current = 0;
         var currentLen = 0;
         var start = num.bitLength() % 26;
@@ -33240,8 +25407,8 @@ var require_bn = __commonJS({
           var word = num.words[i];
           for (var j = start - 1; j >= 0; j--) {
             var bit = word >> j & 1;
-            if (res2 !== wnd[0]) {
-              res2 = this.sqr(res2);
+            if (res !== wnd[0]) {
+              res = this.sqr(res);
             }
             if (bit === 0 && current === 0) {
               currentLen = 0;
@@ -33251,22 +25418,22 @@ var require_bn = __commonJS({
             current |= bit;
             currentLen++;
             if (currentLen !== windowSize && (i !== 0 || j !== 0)) continue;
-            res2 = this.mul(res2, wnd[current]);
+            res = this.mul(res, wnd[current]);
             currentLen = 0;
             current = 0;
           }
           start = 26;
         }
-        return res2;
+        return res;
       }, "pow");
       Red.prototype.convertTo = /* @__PURE__ */ __name(function convertTo(num) {
         var r = num.umod(this.m);
         return r === num ? r.clone() : r;
       }, "convertTo");
       Red.prototype.convertFrom = /* @__PURE__ */ __name(function convertFrom(num) {
-        var res2 = num.clone();
-        res2.red = null;
-        return res2;
+        var res = num.clone();
+        res.red = null;
+        return res;
       }, "convertFrom");
       BN.mont = /* @__PURE__ */ __name(function mont(num) {
         return new Mont(num);
@@ -33303,30 +25470,30 @@ var require_bn = __commonJS({
         var t = a.imul(b);
         var c = t.maskn(this.shift).mul(this.minv).imaskn(this.shift).mul(this.m);
         var u = t.isub(c).iushrn(this.shift);
-        var res2 = u;
+        var res = u;
         if (u.cmp(this.m) >= 0) {
-          res2 = u.isub(this.m);
+          res = u.isub(this.m);
         } else if (u.cmpn(0) < 0) {
-          res2 = u.iadd(this.m);
+          res = u.iadd(this.m);
         }
-        return res2._forceRed(this);
+        return res._forceRed(this);
       }, "imul");
       Mont.prototype.mul = /* @__PURE__ */ __name(function mul(a, b) {
         if (a.isZero() || b.isZero()) return new BN(0)._forceRed(this);
         var t = a.mul(b);
         var c = t.maskn(this.shift).mul(this.minv).imaskn(this.shift).mul(this.m);
         var u = t.isub(c).iushrn(this.shift);
-        var res2 = u;
+        var res = u;
         if (u.cmp(this.m) >= 0) {
-          res2 = u.isub(this.m);
+          res = u.isub(this.m);
         } else if (u.cmpn(0) < 0) {
-          res2 = u.iadd(this.m);
+          res = u.iadd(this.m);
         }
-        return res2._forceRed(this);
+        return res._forceRed(this);
       }, "mul");
       Mont.prototype.invm = /* @__PURE__ */ __name(function invm(a) {
-        var res2 = this.imod(a._invmp(this.m).mul(this.r2));
-        return res2._forceRed(this);
+        var res = this.imod(a._invmp(this.m).mul(this.r2));
+        return res._forceRed(this);
       }, "invm");
     })(typeof module === "undefined" || module, exports);
   }
@@ -33578,12 +25745,12 @@ var require_buffer2 = __commonJS({
       return { offset: this.offset, reporter: Reporter.prototype.save.call(this) };
     }, "save");
     DecoderBuffer.prototype.restore = /* @__PURE__ */ __name(function restore(save) {
-      const res2 = new DecoderBuffer(this.base);
-      res2.offset = save.offset;
-      res2.length = this.offset;
+      const res = new DecoderBuffer(this.base);
+      res.offset = save.offset;
+      res.length = this.offset;
       this.offset = save.offset;
       Reporter.prototype.restore.call(this, save.reporter);
-      return res2;
+      return res;
     }, "restore");
     DecoderBuffer.prototype.isEmpty = /* @__PURE__ */ __name(function isEmpty() {
       return this.offset === this.length;
@@ -33597,12 +25764,12 @@ var require_buffer2 = __commonJS({
     DecoderBuffer.prototype.skip = /* @__PURE__ */ __name(function skip(bytes, fail) {
       if (!(this.offset + bytes <= this.length))
         return this.error(fail || "DecoderBuffer overrun");
-      const res2 = new DecoderBuffer(this.base);
-      res2._reporterState = this._reporterState;
-      res2.offset = this.offset;
-      res2.length = this.offset + bytes;
+      const res = new DecoderBuffer(this.base);
+      res._reporterState = this._reporterState;
+      res.offset = this.offset;
+      res.length = this.offset + bytes;
       this.offset += bytes;
-      return res2;
+      return res;
     }, "skip");
     DecoderBuffer.prototype.raw = /* @__PURE__ */ __name(function raw2(save) {
       return this.base.slice(save ? save.offset : this.offset, this.length);
@@ -33810,9 +25977,9 @@ var require_node = __commonJS({
       stateProps.forEach(function(prop) {
         cstate[prop] = state[prop];
       });
-      const res2 = new this.constructor(cstate.parent);
-      res2._baseState = cstate;
-      return res2;
+      const res = new this.constructor(cstate.parent);
+      res._baseState = cstate;
+      return res;
     }, "clone");
     Node3.prototype._wrap = /* @__PURE__ */ __name(function wrap() {
       const state = this._baseState;
@@ -33854,14 +26021,14 @@ var require_node = __commonJS({
         state.reverseArgs = args.map(function(arg) {
           if (typeof arg !== "object" || arg.constructor !== Object)
             return arg;
-          const res2 = {};
+          const res = {};
           Object.keys(arg).forEach(function(key) {
             if (key == (key | 0))
               key |= 0;
             const value = arg[key];
-            res2[value] = key;
+            res[value] = key;
           });
-          return res2;
+          return res;
         });
       }
     }, "useArgs");
@@ -34144,9 +26311,9 @@ var require_node = __commonJS({
           const prevKey = reporter.enterKey(child._baseState.key);
           if (typeof data !== "object")
             return reporter.error("Child expected, but input is not object");
-          const res2 = child._encode(data[child._baseState.key], reporter, data);
+          const res = child._encode(data[child._baseState.key], reporter, data);
           reporter.leaveKey(prevKey);
-          return res2;
+          return res;
         }, this).filter(function(child) {
           return child;
         });
@@ -34235,14 +26402,14 @@ var require_der = __commonJS({
     init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_console();
     init_performance2();
     function reverse(map) {
-      const res2 = {};
+      const res = {};
       Object.keys(map).forEach(function(key) {
         if ((key | 0) == key)
           key = key | 0;
         const value = map[key];
-        res2[value] = key;
+        res[value] = key;
       });
-      return res2;
+      return res;
     }
     __name(reverse, "reverse");
     exports.tagClass = {
@@ -34504,23 +26671,23 @@ var require_der2 = __commonJS({
       return true;
     }, "skipDefault");
     function encodeTag(tag, primitive, cls, reporter) {
-      let res2;
+      let res;
       if (tag === "seqof")
         tag = "seq";
       else if (tag === "setof")
         tag = "set";
       if (der.tagByName.hasOwnProperty(tag))
-        res2 = der.tagByName[tag];
+        res = der.tagByName[tag];
       else if (typeof tag === "number" && (tag | 0) === tag)
-        res2 = tag;
+        res = tag;
       else
         return reporter.error("Unknown tag: " + tag);
-      if (res2 >= 31)
+      if (res >= 31)
         return reporter.error("Multi-octet tag encoding unsupported");
       if (!primitive)
-        res2 |= 32;
-      res2 |= der.tagClassByName[cls || "universal"] << 6;
-      return res2;
+        res |= 32;
+      res |= der.tagClassByName[cls || "universal"] << 6;
+      return res;
     }
     __name(encodeTag, "encodeTag");
   }
@@ -34632,12 +26799,12 @@ var require_der3 = __commonJS({
       if (decodedTag.primitive || len !== null)
         return buffer.skip(len, 'Failed to match body of: "' + tag + '"');
       const state = buffer.save();
-      const res2 = this._skipUntilEnd(
+      const res = this._skipUntilEnd(
         buffer,
         'Failed to skip indefinite length body: "' + this.tag + '"'
       );
-      if (buffer.isError(res2))
-        return res2;
+      if (buffer.isError(res))
+        return res;
       len = buffer.offset - state.offset;
       buffer.restore(state);
       return buffer.skip(len, 'Failed to match body of: "' + tag + '"');
@@ -34650,13 +26817,13 @@ var require_der3 = __commonJS({
         const len = derDecodeLen(buffer, tag.primitive, fail);
         if (buffer.isError(len))
           return len;
-        let res2;
+        let res;
         if (tag.primitive || len !== null)
-          res2 = buffer.skip(len);
+          res = buffer.skip(len);
         else
-          res2 = this._skipUntilEnd(buffer, fail);
-        if (buffer.isError(res2))
-          return res2;
+          res = this._skipUntilEnd(buffer, fail);
+        if (buffer.isError(res))
+          return res;
         if (tag.tagStr === "end")
           break;
       }
@@ -34667,10 +26834,10 @@ var require_der3 = __commonJS({
         const possibleEnd = this._peekTag(buffer, "end");
         if (buffer.isError(possibleEnd))
           return possibleEnd;
-        const res2 = decoder.decode(buffer, "der", options);
-        if (buffer.isError(res2) && possibleEnd)
+        const res = decoder.decode(buffer, "der", options);
+        if (buffer.isError(res) && possibleEnd)
           break;
-        result.push(res2);
+        result.push(res);
       }
       return result;
     }, "decodeList");
@@ -34777,18 +26944,18 @@ var require_der3 = __commonJS({
       return null;
     }, "decodeNull");
     DERNode.prototype._decodeBool = /* @__PURE__ */ __name(function decodeBool(buffer) {
-      const res2 = buffer.readUInt8();
-      if (buffer.isError(res2))
-        return res2;
+      const res = buffer.readUInt8();
+      if (buffer.isError(res))
+        return res;
       else
-        return res2 !== 0;
+        return res !== 0;
     }, "decodeBool");
     DERNode.prototype._decodeInt = /* @__PURE__ */ __name(function decodeInt(buffer, values) {
       const raw2 = buffer.raw();
-      let res2 = new bignum(raw2);
+      let res = new bignum(raw2);
       if (values)
-        res2 = values[res2.toString(10)] || res2;
-      return res2;
+        res = values[res.toString(10)] || res;
+      return res;
     }, "decodeInt");
     DERNode.prototype._use = /* @__PURE__ */ __name(function use(entity, obj) {
       if (typeof entity === "function")
@@ -34995,14 +27162,14 @@ var require_constants = __commonJS({
     init_performance2();
     var constants = exports;
     constants._reverse = /* @__PURE__ */ __name(function reverse(map) {
-      const res2 = {};
+      const res = {};
       Object.keys(map).forEach(function(key) {
         if ((key | 0) == key)
           key = key | 0;
         const value = map[key];
-        res2[value] = key;
+        res[value] = key;
       });
-      return res2;
+      return res;
     }, "reverse");
     constants.der = require_der();
   }
@@ -35090,6 +27257,30 @@ var require_safe_buffer = __commonJS({
   }
 });
 
+// node-built-in-modules:stream
+import libDefault3 from "stream";
+var require_stream = __commonJS({
+  "node-built-in-modules:stream"(exports, module) {
+    init_modules_watch_stub();
+    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_process();
+    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_console();
+    init_performance2();
+    module.exports = libDefault3;
+  }
+});
+
+// node-built-in-modules:util
+import libDefault4 from "util";
+var require_util = __commonJS({
+  "node-built-in-modules:util"(exports, module) {
+    init_modules_watch_stub();
+    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_process();
+    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_console();
+    init_performance2();
+    module.exports = libDefault4;
+  }
+});
+
 // ../node_modules/jws/lib/data-stream.js
 var require_data_stream = __commonJS({
   "../node_modules/jws/lib/data-stream.js"(exports, module) {
@@ -35098,7 +27289,7 @@ var require_data_stream = __commonJS({
     init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_console();
     init_performance2();
     var Buffer2 = require_safe_buffer().Buffer;
-    var Stream = require_stream2();
+    var Stream = require_stream();
     var util = require_util();
     function DataStream(data) {
       this.buffer = null;
@@ -35127,7 +27318,7 @@ var require_data_stream = __commonJS({
     }
     __name(DataStream, "DataStream");
     util.inherits(DataStream, Stream);
-    DataStream.prototype.write = /* @__PURE__ */ __name(function write2(data) {
+    DataStream.prototype.write = /* @__PURE__ */ __name(function write(data) {
       this.buffer = Buffer2.concat([this.buffer, Buffer2.from(data)]);
       this.emit("data", data);
     }, "write");
@@ -35369,14 +27560,14 @@ var require_jwa = __commonJS({
     init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_console();
     init_performance2();
     var Buffer2 = require_safe_buffer().Buffer;
-    var crypto3 = require_crypto();
+    var crypto2 = require_crypto();
     var formatEcdsa = require_ecdsa_sig_formatter();
     var util = require_util();
     var MSG_INVALID_ALGORITHM = '"%s" is not a valid algorithm.\n  Supported algorithms are:\n  "HS256", "HS384", "HS512", "RS256", "RS384", "RS512", "PS256", "PS384", "PS512", "ES256", "ES384", "ES512" and "none".';
     var MSG_INVALID_SECRET = "secret must be a string or buffer";
     var MSG_INVALID_VERIFIER_KEY = "key must be a string or a buffer";
     var MSG_INVALID_SIGNER_KEY = "key must be a string, a buffer or an object";
-    var supportsKeyObjects = typeof crypto3.createPublicKey === "function";
+    var supportsKeyObjects = typeof crypto2.createPublicKey === "function";
     if (supportsKeyObjects) {
       MSG_INVALID_VERIFIER_KEY += " or a KeyObject";
       MSG_INVALID_SECRET += "or a KeyObject";
@@ -35474,18 +27665,18 @@ var require_jwa = __commonJS({
       return /* @__PURE__ */ __name(function sign(thing, secret) {
         checkIsSecretKey(secret);
         thing = normalizeInput(thing);
-        var hmac = crypto3.createHmac("sha" + bits, secret);
+        var hmac = crypto2.createHmac("sha" + bits, secret);
         var sig = (hmac.update(thing), hmac.digest("base64"));
         return fromBase64(sig);
       }, "sign");
     }
     __name(createHmacSigner, "createHmacSigner");
     var bufferEqual;
-    var timingSafeEqual = "timingSafeEqual" in crypto3 ? /* @__PURE__ */ __name(function timingSafeEqual2(a, b) {
+    var timingSafeEqual = "timingSafeEqual" in crypto2 ? /* @__PURE__ */ __name(function timingSafeEqual2(a, b) {
       if (a.byteLength !== b.byteLength) {
         return false;
       }
-      return crypto3.timingSafeEqual(a, b);
+      return crypto2.timingSafeEqual(a, b);
     }, "timingSafeEqual") : /* @__PURE__ */ __name(function timingSafeEqual2(a, b) {
       if (!bufferEqual) {
         bufferEqual = require_buffer_equal_constant_time();
@@ -35503,7 +27694,7 @@ var require_jwa = __commonJS({
       return /* @__PURE__ */ __name(function sign(thing, privateKey) {
         checkIsPrivateKey(privateKey);
         thing = normalizeInput(thing);
-        var signer = crypto3.createSign("RSA-SHA" + bits);
+        var signer = crypto2.createSign("RSA-SHA" + bits);
         var sig = (signer.update(thing), signer.sign(privateKey, "base64"));
         return fromBase64(sig);
       }, "sign");
@@ -35514,7 +27705,7 @@ var require_jwa = __commonJS({
         checkIsPublicKey(publicKey);
         thing = normalizeInput(thing);
         signature = toBase64(signature);
-        var verifier = crypto3.createVerify("RSA-SHA" + bits);
+        var verifier = crypto2.createVerify("RSA-SHA" + bits);
         verifier.update(thing);
         return verifier.verify(publicKey, signature, "base64");
       }, "verify");
@@ -35524,11 +27715,11 @@ var require_jwa = __commonJS({
       return /* @__PURE__ */ __name(function sign(thing, privateKey) {
         checkIsPrivateKey(privateKey);
         thing = normalizeInput(thing);
-        var signer = crypto3.createSign("RSA-SHA" + bits);
+        var signer = crypto2.createSign("RSA-SHA" + bits);
         var sig = (signer.update(thing), signer.sign({
           key: privateKey,
-          padding: crypto3.constants.RSA_PKCS1_PSS_PADDING,
-          saltLength: crypto3.constants.RSA_PSS_SALTLEN_DIGEST
+          padding: crypto2.constants.RSA_PKCS1_PSS_PADDING,
+          saltLength: crypto2.constants.RSA_PSS_SALTLEN_DIGEST
         }, "base64"));
         return fromBase64(sig);
       }, "sign");
@@ -35539,12 +27730,12 @@ var require_jwa = __commonJS({
         checkIsPublicKey(publicKey);
         thing = normalizeInput(thing);
         signature = toBase64(signature);
-        var verifier = crypto3.createVerify("RSA-SHA" + bits);
+        var verifier = crypto2.createVerify("RSA-SHA" + bits);
         verifier.update(thing);
         return verifier.verify({
           key: publicKey,
-          padding: crypto3.constants.RSA_PKCS1_PSS_PADDING,
-          saltLength: crypto3.constants.RSA_PSS_SALTLEN_DIGEST
+          padding: crypto2.constants.RSA_PKCS1_PSS_PADDING,
+          saltLength: crypto2.constants.RSA_PSS_SALTLEN_DIGEST
         }, signature, "base64");
       }, "verify");
     }
@@ -35635,7 +27826,7 @@ var require_sign_stream = __commonJS({
     var Buffer2 = require_safe_buffer().Buffer;
     var DataStream = require_data_stream();
     var jwa = require_jwa();
-    var Stream = require_stream2();
+    var Stream = require_stream();
     var toString = require_tostring();
     var util = require_util();
     function base64url(string, encoding) {
@@ -35718,7 +27909,7 @@ var require_verify_stream = __commonJS({
     var Buffer2 = require_safe_buffer().Buffer;
     var DataStream = require_data_stream();
     var jwa = require_jwa();
-    var Stream = require_stream2();
+    var Stream = require_stream();
     var toString = require_tostring();
     var util = require_util();
     var JWS_REGEX = /^[a-zA-Z0-9\-_]+?\.[a-zA-Z0-9\-_]+?\.([a-zA-Z0-9\-_]+)?$/;
@@ -35875,14 +28066,14 @@ var require_jws = __commonJS({
 });
 
 // node-built-in-modules:url
-import libDefault12 from "url";
+import libDefault5 from "url";
 var require_url = __commonJS({
   "node-built-in-modules:url"(exports, module) {
     init_modules_watch_stub();
     init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_process();
     init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_console();
     init_performance2();
-    module.exports = libDefault12;
+    module.exports = libDefault5;
   }
 });
 
@@ -35935,7 +28126,7 @@ var require_vapid_helper = __commonJS({
     init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_process();
     init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_console();
     init_performance2();
-    var crypto3 = require_crypto();
+    var crypto2 = require_crypto();
     var asn1 = require_asn1();
     var jws = require_jws();
     var { URL: URL2 } = require_url();
@@ -35963,7 +28154,7 @@ var require_vapid_helper = __commonJS({
     }
     __name(toPEM, "toPEM");
     function generateVAPIDKeys() {
-      const curve = crypto3.createECDH("prime256v1");
+      const curve = crypto2.createECDH("prime256v1");
       curve.generateKeys();
       let publicKeyBuffer = curve.getPublicKey();
       let privateKeyBuffer = curve.getPrivateKey();
@@ -36124,7 +28315,7 @@ var require_ece = __commonJS({
     init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_process();
     init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_console();
     init_performance2();
-    var crypto3 = require_crypto();
+    var crypto2 = require_crypto();
     var AES_GCM = "aes-128-gcm";
     var PAD_SIZE = { "aes128gcm": 1, "aesgcm": 2 };
     var TAG_LENGTH = 16;
@@ -36152,7 +28343,7 @@ var require_ece = __commonJS({
     }
     __name(decode, "decode");
     function HMAC_hash(key, input) {
-      var hmac = crypto3.createHmac("sha256", key);
+      var hmac = crypto2.createHmac("sha256", key);
       hmac.update(input);
       return hmac.digest();
     }
@@ -36436,7 +28627,7 @@ var require_ece = __commonJS({
     function decryptRecord(key, counter, buffer, header, last) {
       keylog("decrypt", buffer);
       var nonce = generateNonce(key.nonce, counter);
-      var gcm = crypto3.createDecipheriv(AES_GCM, key.key, nonce);
+      var gcm = crypto2.createDecipheriv(AES_GCM, key.key, nonce);
       gcm.setAuthTag(buffer.slice(buffer.length - TAG_LENGTH));
       var data = gcm.update(buffer.slice(0, buffer.length - TAG_LENGTH));
       data = Buffer.concat([data, gcm.final()]);
@@ -36486,7 +28677,7 @@ var require_ece = __commonJS({
       keylog("encrypt", buffer);
       pad = pad || 0;
       var nonce = generateNonce(key.nonce, counter);
-      var gcm = crypto3.createCipheriv(AES_GCM, key.key, nonce);
+      var gcm = crypto2.createCipheriv(AES_GCM, key.key, nonce);
       var ciphertext = [];
       var padSize = PAD_SIZE[header.version];
       var padding = Buffer.alloc(pad + padSize);
@@ -36531,7 +28722,7 @@ var require_ece = __commonJS({
       }
       var header = parseParams(params);
       if (!header.salt) {
-        header.salt = crypto3.randomBytes(KEY_LENGTH);
+        header.salt = crypto2.randomBytes(KEY_LENGTH);
       }
       var result;
       if (header.version === "aes128gcm") {
@@ -36602,7 +28793,7 @@ var require_encryption_helper = __commonJS({
     init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_process();
     init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_console();
     init_performance2();
-    var crypto3 = require_crypto();
+    var crypto2 = require_crypto();
     var ece = require_ece();
     var encrypt = /* @__PURE__ */ __name(function(userPublicKey, userAuth, payload, contentEncoding) {
       if (!userPublicKey) {
@@ -36629,9 +28820,9 @@ var require_encryption_helper = __commonJS({
       if (typeof payload === "string" || payload instanceof String) {
         payload = Buffer.from(payload);
       }
-      const localCurve = crypto3.createECDH("prime256v1");
+      const localCurve = crypto2.createECDH("prime256v1");
       const localPublicKey = localCurve.generateKeys();
-      const salt = crypto3.randomBytes(16).toString("base64url");
+      const salt = crypto2.randomBytes(16).toString("base64url");
       const cipherText = ece.encrypt(payload, {
         version: contentEncoding,
         dh: userPublicKey,
@@ -36744,15 +28935,39 @@ var require_web_push_error = __commonJS({
   }
 });
 
+// node-built-in-modules:net
+import libDefault6 from "net";
+var require_net = __commonJS({
+  "node-built-in-modules:net"(exports, module) {
+    init_modules_watch_stub();
+    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_process();
+    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_console();
+    init_performance2();
+    module.exports = libDefault6;
+  }
+});
+
+// node-built-in-modules:tls
+import libDefault7 from "tls";
+var require_tls = __commonJS({
+  "node-built-in-modules:tls"(exports, module) {
+    init_modules_watch_stub();
+    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_process();
+    init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_console();
+    init_performance2();
+    module.exports = libDefault7;
+  }
+});
+
 // node-built-in-modules:assert
-import libDefault13 from "assert";
+import libDefault8 from "assert";
 var require_assert = __commonJS({
   "node-built-in-modules:assert"(exports, module) {
     init_modules_watch_stub();
     init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_process();
     init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_console();
     init_performance2();
-    module.exports = libDefault13;
+    module.exports = libDefault8;
   }
 });
 
@@ -37587,9 +29802,9 @@ var init_response = __esm({
       socket = null;
       req;
       _headers = {};
-      constructor(req2) {
+      constructor(req) {
         super();
-        this.req = req2;
+        this.req = req;
       }
       assignSocket(socket) {
         socket._httpMessage = this;
@@ -37677,7 +29892,7 @@ var init_response = __esm({
 
 // ../node_modules/unenv/dist/runtime/node/internal/http/constants.mjs
 var METHODS2, STATUS_CODES, maxHeaderSize;
-var init_constants4 = __esm({
+var init_constants3 = __esm({
   "../node_modules/unenv/dist/runtime/node/internal/http/constants.mjs"() {
     init_modules_watch_stub();
     init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_process();
@@ -37801,7 +30016,7 @@ var init_http = __esm({
     init_request();
     init_response();
     init_agent();
-    init_constants4();
+    init_constants3();
     init_request();
     init_response();
     createServer2 = /* @__PURE__ */ notImplemented("http.createServer");
@@ -37918,22 +30133,22 @@ var require_helpers = __commonJS({
     }
     __name(json, "json");
     exports.json = json;
-    function req2(url, opts = {}) {
+    function req(url, opts = {}) {
       const href = typeof url === "string" ? url : url.href;
-      const req3 = (href.startsWith("https:") ? https : http).request(url, opts);
+      const req2 = (href.startsWith("https:") ? https : http).request(url, opts);
       const promise = new Promise((resolve, reject) => {
-        req3.once("response", resolve).once("error", reject).end();
+        req2.once("response", resolve).once("error", reject).end();
       });
-      req3.then = promise.then.bind(promise);
-      return req3;
+      req2.then = promise.then.bind(promise);
+      return req2;
     }
-    __name(req2, "req");
-    exports.req = req2;
+    __name(req, "req");
+    exports.req = req;
   }
 });
 
 // ../node_modules/web-push/node_modules/agent-base/dist/index.js
-var require_dist3 = __commonJS({
+var require_dist = __commonJS({
   "../node_modules/web-push/node_modules/agent-base/dist/index.js"(exports) {
     "use strict";
     init_modules_watch_stub();
@@ -38043,24 +30258,24 @@ var require_dist3 = __commonJS({
         }
         return super.getName(options);
       }
-      createSocket(req2, options, cb) {
+      createSocket(req, options, cb) {
         const connectOpts = {
           ...options,
           secureEndpoint: this.isSecureEndpoint(options)
         };
         const name = this.getName(connectOpts);
         const fakeSocket = this.incrementSockets(name);
-        Promise.resolve().then(() => this.connect(req2, connectOpts)).then((socket) => {
+        Promise.resolve().then(() => this.connect(req, connectOpts)).then((socket) => {
           this.decrementSockets(name, fakeSocket);
           if (socket instanceof http.Agent) {
             try {
-              return socket.addRequest(req2, connectOpts);
+              return socket.addRequest(req, connectOpts);
             } catch (err) {
               return cb(err);
             }
           }
           this[INTERNAL].currentSocket = socket;
-          super.createSocket(req2, options, cb);
+          super.createSocket(req, options, cb);
         }, (err) => {
           this.decrementSockets(name, fakeSocket);
           cb(err);
@@ -38114,18 +30329,18 @@ var require_parse_proxy_response = __commonJS({
       return new Promise((resolve, reject) => {
         let buffersLength = 0;
         const buffers = [];
-        function read2() {
+        function read() {
           const b = socket.read();
           if (b)
             ondata(b);
           else
-            socket.once("readable", read2);
+            socket.once("readable", read);
         }
-        __name(read2, "read");
+        __name(read, "read");
         function cleanup() {
           socket.removeListener("end", onend);
           socket.removeListener("error", onerror);
-          socket.removeListener("readable", read2);
+          socket.removeListener("readable", read);
         }
         __name(cleanup, "cleanup");
         function onend() {
@@ -38147,7 +30362,7 @@ var require_parse_proxy_response = __commonJS({
           const endOfHeaders = buffered.indexOf("\r\n\r\n");
           if (endOfHeaders === -1) {
             debug3("have not received end of HTTP headers yet...");
-            read2();
+            read();
             return;
           }
           const headerParts = buffered.slice(0, endOfHeaders).toString("ascii").split("\r\n");
@@ -38193,7 +30408,7 @@ var require_parse_proxy_response = __commonJS({
         __name(ondata, "ondata");
         socket.on("error", onerror);
         socket.on("end", onend);
-        read2();
+        read();
       });
     }
     __name(parseProxyResponse, "parseProxyResponse");
@@ -38202,7 +30417,7 @@ var require_parse_proxy_response = __commonJS({
 });
 
 // ../node_modules/web-push/node_modules/https-proxy-agent/dist/index.js
-var require_dist4 = __commonJS({
+var require_dist2 = __commonJS({
   "../node_modules/web-push/node_modules/https-proxy-agent/dist/index.js"(exports) {
     "use strict";
     init_modules_watch_stub();
@@ -38245,7 +30460,7 @@ var require_dist4 = __commonJS({
     var tls = __importStar(require_tls());
     var assert_1 = __importDefault(require_assert());
     var debug_1 = __importDefault(require_src());
-    var agent_base_1 = require_dist3();
+    var agent_base_1 = require_dist();
     var url_1 = require_url();
     var parse_proxy_response_1 = require_parse_proxy_response();
     var debug3 = (0, debug_1.default)("https-proxy-agent");
@@ -38282,7 +30497,7 @@ var require_dist4 = __commonJS({
        * Called when the node-core HTTP client library is creating a
        * new HTTP request.
        */
-      async connect(req2, opts) {
+      async connect(req, opts) {
         const { proxy } = this;
         if (!opts.host) {
           throw new TypeError('No "host" provided');
@@ -38315,10 +30530,10 @@ var require_dist4 = __commonJS({
         socket.write(`${payload}\r
 `);
         const { connect, buffered } = await proxyResponsePromise;
-        req2.emit("proxyConnect", connect);
-        this.emit("proxyConnect", connect, req2);
+        req.emit("proxyConnect", connect);
+        this.emit("proxyConnect", connect, req);
         if (connect.statusCode === 200) {
-          req2.once("socket", resume);
+          req.once("socket", resume);
           if (opts.secureEndpoint) {
             debug3("Upgrading socket connection to TLS");
             return tls.connect({
@@ -38331,7 +30546,7 @@ var require_dist4 = __commonJS({
         socket.destroy();
         const fakeSocket = new net.Socket({ writable: false });
         fakeSocket.readable = true;
-        req2.once("socket", (s) => {
+        req.once("socket", (s) => {
           debug3("Replaying proxy buffer for failed request");
           (0, assert_1.default)(s.listenerCount("data") > 0);
           s.push(buffered);
@@ -38608,7 +30823,7 @@ var require_web_push_lib = __commonJS({
           httpsOptions.agent = requestDetails.agent;
         }
         if (requestDetails.proxy) {
-          const { HttpsProxyAgent } = require_dist4();
+          const { HttpsProxyAgent } = require_dist2();
           httpsOptions.agent = new HttpsProxyAgent(requestDetails.proxy);
         }
         const pushRequest = https.request(httpsOptions, function(pushResponse) {
@@ -38680,13 +30895,13 @@ var require_src2 = __commonJS({
   }
 });
 
-// .wrangler/tmp/bundle-bLJVju/middleware-loader.entry.ts
+// .wrangler/tmp/bundle-pG0vZw/middleware-loader.entry.ts
 init_modules_watch_stub();
 init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_process();
 init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_console();
 init_performance2();
 
-// .wrangler/tmp/bundle-bLJVju/middleware-insertion-facade.js
+// .wrangler/tmp/bundle-pG0vZw/middleware-insertion-facade.js
 init_modules_watch_stub();
 init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_process();
 init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_console();
@@ -38730,7 +30945,7 @@ var compose = /* @__PURE__ */ __name((middleware, onError, onNotFound) => {
         throw new Error("next() called multiple times");
       }
       index = i;
-      let res2;
+      let res;
       let isError = false;
       let handler;
       if (middleware[i]) {
@@ -38741,11 +30956,11 @@ var compose = /* @__PURE__ */ __name((middleware, onError, onNotFound) => {
       }
       if (handler) {
         try {
-          res2 = await handler(context2, () => dispatch(i + 1));
+          res = await handler(context2, () => dispatch(i + 1));
         } catch (err) {
           if (err instanceof Error && onError) {
             context2.error = err;
-            res2 = await onError(err, context2);
+            res = await onError(err, context2);
             isError = true;
           } else {
             throw err;
@@ -38753,11 +30968,11 @@ var compose = /* @__PURE__ */ __name((middleware, onError, onNotFound) => {
         }
       } else {
         if (context2.finalized === false && onNotFound) {
-          res2 = await onNotFound(context2);
+          res = await onNotFound(context2);
         }
       }
-      if (res2 && (context2.finalized === false || isError)) {
-        context2.res = res2;
+      if (res && (context2.finalized === false || isError)) {
+        context2.res = res;
       }
       return context2;
     }
@@ -39436,8 +31651,8 @@ var resolveCallback = /* @__PURE__ */ __name(async (str, phase, preserveCallback
     buffer = [str];
   }
   const resStr = Promise.all(callbacks.map((c) => c({ phase, buffer, context: context2 }))).then(
-    (res2) => Promise.all(
-      res2.filter(Boolean).map((str2) => resolveCallback(str2, phase, false, context2, buffer))
+    (res) => Promise.all(
+      res.filter(Boolean).map((str2) => resolveCallback(str2, phase, false, context2, buffer))
     ).then(() => buffer[0])
   );
   if (preserveCallbacks) {
@@ -39509,8 +31724,8 @@ var Context = class {
    * @param req - The Request object.
    * @param options - Optional configuration options for the context.
    */
-  constructor(req2, options) {
-    this.#rawRequest = req2;
+  constructor(req, options) {
+    this.#rawRequest = req;
     if (options) {
       this.#executionCtx = options.executionCtx;
       this.env = options.env;
@@ -39811,8 +32026,8 @@ var Context = class {
     );
   }, "json");
   html = /* @__PURE__ */ __name((html, arg, headers) => {
-    const res2 = /* @__PURE__ */ __name((html2) => this.#newResponse(html2, arg, setDefaultContentType("text/html; charset=UTF-8", headers)), "res");
-    return typeof html === "object" ? resolveCallback(html, HtmlEscapedCallbackPhase.Stringify, false, {}).then(res2) : res2(html);
+    const res = /* @__PURE__ */ __name((html2) => this.#newResponse(html2, arg, setDefaultContentType("text/html; charset=UTF-8", headers)), "res");
+    return typeof html === "object" ? resolveCallback(html, HtmlEscapedCallbackPhase.Stringify, false, {}).then(res) : res(html);
   }, "html");
   /**
    * `.redirect()` can Redirect, default status code is 302.
@@ -39885,8 +32100,8 @@ var notFoundHandler = /* @__PURE__ */ __name((c) => {
 }, "notFoundHandler");
 var errorHandler = /* @__PURE__ */ __name((err, c) => {
   if ("getResponse" in err) {
-    const res2 = err.getResponse();
-    return c.newResponse(res2.body, res2);
+    const res = err.getResponse();
+    return c.newResponse(res.body, res);
   }
   console.error(err);
   return c.text("Internal Server Error", 500);
@@ -40126,9 +32341,9 @@ var Hono = class _Hono {
       };
     })();
     const handler = /* @__PURE__ */ __name(async (c, next) => {
-      const res2 = await applicationHandler(replaceRequest(c.req.raw), ...getOptions(c));
-      if (res2) {
-        return res2;
+      const res = await applicationHandler(replaceRequest(c.req.raw), ...getOptions(c));
+      if (res) {
+        return res;
       }
       await next();
     }, "handler");
@@ -40167,17 +32382,17 @@ var Hono = class _Hono {
       notFoundHandler: this.#notFoundHandler
     });
     if (matchResult[0].length === 1) {
-      let res2;
+      let res;
       try {
-        res2 = matchResult[0][0][0][0](c, async () => {
+        res = matchResult[0][0][0][0](c, async () => {
           c.res = await this.#notFoundHandler(c);
         });
       } catch (err) {
         return this.#handleError(err, c);
       }
-      return res2 instanceof Promise ? res2.then(
+      return res instanceof Promise ? res.then(
         (resolved) => resolved || (c.finalized ? c.res : this.#notFoundHandler(c))
-      ).catch((err) => this.#handleError(err, c)) : res2 ?? this.#notFoundHandler(c);
+      ).catch((err) => this.#handleError(err, c)) : res ?? this.#notFoundHandler(c);
     }
     const composed = compose(matchResult[0], this.errorHandler, this.#notFoundHandler);
     return (async () => {
@@ -40702,14 +32917,14 @@ var SmartRouter = class {
     const routes = this.#routes;
     const len = routers.length;
     let i = 0;
-    let res2;
+    let res;
     for (; i < len; i++) {
       const router5 = routers[i];
       try {
         for (let i2 = 0, len2 = routes.length; i2 < len2; i2++) {
           router5.add(...routes[i2]);
         }
-        res2 = router5.match(method, path);
+        res = router5.match(method, path);
       } catch (e) {
         if (e instanceof UnsupportedPathError) {
           continue;
@@ -40725,7 +32940,7 @@ var SmartRouter = class {
       throw new Error("Fatal error");
     }
     this.name = `SmartRouter + ${this.activeRouter.name}`;
-    return res2;
+    return res;
   }
   get activeRouter() {
     if (this.#routes || this.#routers.length !== 1) {
@@ -41252,7 +33467,6 @@ init_modules_watch_stub();
 init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_process();
 init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_console();
 init_performance2();
-init_matchingEngine();
 
 // src/services/index.ts
 init_modules_watch_stub();
@@ -41346,6 +33560,7 @@ var sessionService = {
     const sessionToken = v4_default();
     const session = await sessionRepository.create({
       sessionToken,
+      authUserId: data.authUserId,
       country: data.country,
       browser: data.browser,
       device: data.device,
@@ -41485,7 +33700,7 @@ var VALID_REPORT_REASONS = ["spam", "nudity", "abuse", "harassment", "other"];
 var healthController = {
   getHealth: asyncHandler(async (c) => {
     const startupProgress = startupManager.getProgressInfo();
-    res.json({
+    return c.json({
       success: true,
       ready: startupProgress.state === "READY" || startupProgress.state === "DEGRADED",
       status: startupProgress.state,
@@ -41499,20 +33714,34 @@ var healthController = {
 };
 var statsController = {
   getStats: asyncHandler(async (c) => {
-    const stats = await statsService.getStats(matchmakerMetrics.totalSearchingUsers);
+    const { getSupabase: getSupabase2 } = await Promise.resolve().then(() => (init_client(), client_exports));
+    const { count: count3 } = await getSupabase2().from("waiting_queue").select("*", { count: "exact", head: true }).eq("status", "waiting");
+    const stats = await statsService.getStats(count3 || 0);
     return c.json({ success: true, data: stats });
   })
 };
 var sessionController = {
   startSession: asyncHandler(async (c) => {
     const { country, browser, device, platform: platform2 } = await c.req.json() ?? {};
+    let authUserId;
+    const authHeader = c.req.header("Authorization");
+    if (authHeader && authHeader.startsWith("Bearer ")) {
+      const token = authHeader.substring(7);
+      const { getSupabase: getSupabase2 } = await Promise.resolve().then(() => (init_client(), client_exports));
+      const supabase2 = getSupabase2();
+      const { data: { user }, error: error3 } = await supabase2.auth.getUser(token);
+      if (!error3 && user) {
+        authUserId = user.id;
+      }
+    }
     const session = await sessionService.startSession({
+      authUserId,
       country,
       browser,
       device,
       platform: platform2
     });
-    res.status(201).json({
+    return c.json({
       success: true,
       data: {
         sessionId: session.id,
@@ -41520,7 +33749,7 @@ var sessionController = {
         createdAt: session.created_at,
         status: session.status
       }
-    });
+    }, 201);
   }),
   endSession: asyncHandler(async (c) => {
     const { sessionId, sessionToken } = await c.req.json() ?? {};
@@ -41545,7 +33774,7 @@ var sessionController = {
       throw new AppError(401, "Invalid or expired session");
     }
     const { session, match: match2 } = result;
-    res.json({
+    return c.json({
       success: true,
       data: {
         sessionId: session.id,
@@ -41674,14 +33903,14 @@ router.post("/join", queueLimiter, async (c) => {
     }
   } catch (e) {
   }
-  const req2 = {
+  const req = {
     body,
     query: c.req.query(),
     params: c.req.param(),
     headers: c.req.header(),
     path: c.req.path
   };
-  const res2 = {
+  const res = {
     json: /* @__PURE__ */ __name((d) => c.json(d), "json"),
     status: /* @__PURE__ */ __name((s) => ({ json: /* @__PURE__ */ __name((d) => c.json(d, s), "json") }), "status"),
     sendStatus: /* @__PURE__ */ __name((s) => c.body(null, s), "sendStatus"),
@@ -41691,14 +33920,14 @@ router.post("/join", queueLimiter, async (c) => {
     if (err) throw err;
   }, "next");
   try {
-    const { sessionId, sessionToken } = req2.body;
+    const { sessionId, sessionToken } = req.body;
     if (!sessionId || !sessionToken) {
-      return res2.status(400).json({ error: "sessionId and sessionToken are required" });
+      return res.status(400).json({ error: "sessionId and sessionToken are required" });
     }
     const result = await joinQueue(sessionId, sessionToken);
-    res2.json({ success: true, data: result });
+    return res.json({ success: true, data: result });
   } catch (err) {
-    next(err);
+    return c.json({ error: err.message || "Internal error" }, 500);
   }
 });
 router.get("/status", queueLimiter, async (c) => {
@@ -41712,14 +33941,14 @@ router.get("/status", queueLimiter, async (c) => {
     }
   } catch (e) {
   }
-  const req2 = {
+  const req = {
     body,
     query: c.req.query(),
     params: c.req.param(),
     headers: c.req.header(),
     path: c.req.path
   };
-  const res2 = {
+  const res = {
     json: /* @__PURE__ */ __name((d) => c.json(d), "json"),
     status: /* @__PURE__ */ __name((s) => ({ json: /* @__PURE__ */ __name((d) => c.json(d, s), "json") }), "status"),
     sendStatus: /* @__PURE__ */ __name((s) => c.body(null, s), "sendStatus"),
@@ -41729,15 +33958,15 @@ router.get("/status", queueLimiter, async (c) => {
     if (err) throw err;
   }, "next");
   try {
-    const sessionId = req2.headers["x-session-id"];
-    const sessionToken = req2.headers["x-session-token"];
+    const sessionId = req.headers["x-session-id"];
+    const sessionToken = req.headers["x-session-token"];
     if (!sessionId || !sessionToken) {
-      return res2.status(400).json({ error: "x-session-id and x-session-token headers are required" });
+      return res.status(400).json({ error: "x-session-id and x-session-token headers are required" });
     }
     const result = await getMatchStatus(sessionId, sessionToken);
-    res2.json({ success: true, data: result });
+    return res.json({ success: true, data: result });
   } catch (err) {
-    next(err);
+    return c.json({ error: err.message || "Internal error" }, 500);
   }
 });
 router.post("/leave", queueLimiter, async (c) => {
@@ -41751,14 +33980,14 @@ router.post("/leave", queueLimiter, async (c) => {
     }
   } catch (e) {
   }
-  const req2 = {
+  const req = {
     body,
     query: c.req.query(),
     params: c.req.param(),
     headers: c.req.header(),
     path: c.req.path
   };
-  const res2 = {
+  const res = {
     json: /* @__PURE__ */ __name((d) => c.json(d), "json"),
     status: /* @__PURE__ */ __name((s) => ({ json: /* @__PURE__ */ __name((d) => c.json(d, s), "json") }), "status"),
     sendStatus: /* @__PURE__ */ __name((s) => c.body(null, s), "sendStatus"),
@@ -41768,17 +33997,17 @@ router.post("/leave", queueLimiter, async (c) => {
     if (err) throw err;
   }, "next");
   try {
-    const { sessionId, sessionToken, matchId } = req2.body;
+    const { sessionId, sessionToken, matchId } = req.body;
     if (!sessionId || !sessionToken) {
-      return res2.status(400).json({ error: "sessionId and sessionToken are required" });
+      return res.status(400).json({ error: "sessionId and sessionToken are required" });
     }
     await leaveQueue(sessionId, sessionToken, matchId);
-    res2.json({ success: true });
+    return res.json({ success: true });
   } catch (err) {
     if (err.message && err.message.includes("Illegal state transition")) {
-      return res2.status(409).json({ success: false, error: err.message });
+      return res.status(409).json({ success: false, error: err.message });
     }
-    next(err);
+    return c.json({ error: err.message || "Internal error" }, 500);
   }
 });
 router.post("/next", queueLimiter, async (c) => {
@@ -41792,14 +34021,14 @@ router.post("/next", queueLimiter, async (c) => {
     }
   } catch (e) {
   }
-  const req2 = {
+  const req = {
     body,
     query: c.req.query(),
     params: c.req.param(),
     headers: c.req.header(),
     path: c.req.path
   };
-  const res2 = {
+  const res = {
     json: /* @__PURE__ */ __name((d) => c.json(d), "json"),
     status: /* @__PURE__ */ __name((s) => ({ json: /* @__PURE__ */ __name((d) => c.json(d, s), "json") }), "status"),
     sendStatus: /* @__PURE__ */ __name((s) => c.body(null, s), "sendStatus"),
@@ -41809,17 +34038,17 @@ router.post("/next", queueLimiter, async (c) => {
     if (err) throw err;
   }, "next");
   try {
-    const { sessionId, sessionToken, matchId, reason } = req2.body;
+    const { sessionId, sessionToken, matchId, reason } = req.body;
     if (!sessionId || !sessionToken) {
-      return res2.status(400).json({ error: "sessionId and sessionToken are required" });
+      return res.status(400).json({ error: "sessionId and sessionToken are required" });
     }
     const result = await nextPartner(sessionId, sessionToken, matchId, reason || "next");
-    res2.json({ success: true, data: result });
+    return res.json({ success: true, data: result });
   } catch (err) {
     if (err.message && err.message.includes("Illegal state transition")) {
-      return res2.status(409).json({ success: false, error: err.message });
+      return res.status(409).json({ success: false, error: err.message });
     }
-    next(err);
+    return c.json({ error: err.message || "Internal error" }, 500);
   }
 });
 router.post("/disconnect", queueLimiter, async (c) => {
@@ -41833,14 +34062,14 @@ router.post("/disconnect", queueLimiter, async (c) => {
     }
   } catch (e) {
   }
-  const req2 = {
+  const req = {
     body,
     query: c.req.query(),
     params: c.req.param(),
     headers: c.req.header(),
     path: c.req.path
   };
-  const res2 = {
+  const res = {
     json: /* @__PURE__ */ __name((d) => c.json(d), "json"),
     status: /* @__PURE__ */ __name((s) => ({ json: /* @__PURE__ */ __name((d) => c.json(d, s), "json") }), "status"),
     sendStatus: /* @__PURE__ */ __name((s) => c.body(null, s), "sendStatus"),
@@ -41850,14 +34079,14 @@ router.post("/disconnect", queueLimiter, async (c) => {
     if (err) throw err;
   }, "next");
   try {
-    const { sessionId, sessionToken, reason, matchId } = req2.body;
+    const { sessionId, sessionToken, reason, matchId } = req.body;
     if (!sessionId || !sessionToken) {
-      return res2.status(400).json({ error: "sessionId and sessionToken are required" });
+      return res.status(400).json({ error: "sessionId and sessionToken are required" });
     }
     await notifyPartnerLeft(sessionId, sessionToken, reason ?? "disconnect", matchId);
-    res2.json({ success: true });
+    return res.json({ success: true });
   } catch (err) {
-    next(err);
+    return c.json({ error: err.message || "Internal error" }, 500);
   }
 });
 router.post("/ready", queueLimiter, async (c) => {
@@ -41871,14 +34100,14 @@ router.post("/ready", queueLimiter, async (c) => {
     }
   } catch (e) {
   }
-  const req2 = {
+  const req = {
     body,
     query: c.req.query(),
     params: c.req.param(),
     headers: c.req.header(),
     path: c.req.path
   };
-  const res2 = {
+  const res = {
     json: /* @__PURE__ */ __name((d) => c.json(d), "json"),
     status: /* @__PURE__ */ __name((s) => ({ json: /* @__PURE__ */ __name((d) => c.json(d, s), "json") }), "status"),
     sendStatus: /* @__PURE__ */ __name((s) => c.body(null, s), "sendStatus"),
@@ -41888,15 +34117,15 @@ router.post("/ready", queueLimiter, async (c) => {
     if (err) throw err;
   }, "next");
   try {
-    const { sessionId, sessionToken, matchId } = req2.body;
+    const { sessionId, sessionToken, matchId } = req.body;
     if (!sessionId || !sessionToken || !matchId) {
-      return res2.status(400).json({ success: false, error: "sessionId, sessionToken, and matchId are required" });
+      return res.status(400).json({ success: false, error: "sessionId, sessionToken, and matchId are required" });
     }
     const result = await markMatchReady(sessionId, sessionToken, matchId);
-    res2.json({ success: true, data: result });
+    return res.json({ success: true, data: result });
   } catch (err) {
     console.error("[API /ready endpoint error]", err);
-    res2.status(422).json({
+    return res.status(422).json({
       success: false,
       error: err instanceof Error ? err.message : "Failed to mark match ready"
     });
@@ -41913,14 +34142,14 @@ router.post("/connected", queueLimiter, async (c) => {
     }
   } catch (e) {
   }
-  const req2 = {
+  const req = {
     body,
     query: c.req.query(),
     params: c.req.param(),
     headers: c.req.header(),
     path: c.req.path
   };
-  const res2 = {
+  const res = {
     json: /* @__PURE__ */ __name((d) => c.json(d), "json"),
     status: /* @__PURE__ */ __name((s) => ({ json: /* @__PURE__ */ __name((d) => c.json(d, s), "json") }), "status"),
     sendStatus: /* @__PURE__ */ __name((s) => c.body(null, s), "sendStatus"),
@@ -41930,16 +34159,16 @@ router.post("/connected", queueLimiter, async (c) => {
     if (err) throw err;
   }, "next");
   try {
-    const { sessionId, sessionToken, matchId } = req2.body;
+    const { sessionId, sessionToken, matchId } = req.body;
     if (!sessionId || !sessionToken || !matchId) {
-      return res2.status(400).json({ success: false, error: "sessionId, sessionToken, and matchId are required" });
+      return res.status(400).json({ success: false, error: "sessionId, sessionToken, and matchId are required" });
     }
-    const { markMediaConnected: markMediaConnected3 } = await Promise.resolve().then(() => (init_matchService(), matchService_exports));
-    const result = await markMediaConnected3(sessionId, sessionToken, matchId);
-    res2.json({ success: true, data: result });
+    const { markMediaConnected: markMediaConnected2 } = await Promise.resolve().then(() => (init_matchService(), matchService_exports));
+    const result = await markMediaConnected2(sessionId, sessionToken, matchId);
+    return res.json({ success: true, data: result });
   } catch (err) {
     console.error("[API /connected endpoint error]", err);
-    res2.status(422).json({
+    return res.status(422).json({
       success: false,
       error: err instanceof Error ? err.message : "Failed to mark media connected"
     });
@@ -41956,14 +34185,14 @@ router.post("/ping", async (c) => {
     }
   } catch (e) {
   }
-  const req2 = {
+  const req = {
     body,
     query: c.req.query(),
     params: c.req.param(),
     headers: c.req.header(),
     path: c.req.path
   };
-  const res2 = {
+  const res = {
     json: /* @__PURE__ */ __name((d) => c.json(d), "json"),
     status: /* @__PURE__ */ __name((s) => ({ json: /* @__PURE__ */ __name((d) => c.json(d, s), "json") }), "status"),
     sendStatus: /* @__PURE__ */ __name((s) => c.body(null, s), "sendStatus"),
@@ -41973,9 +34202,9 @@ router.post("/ping", async (c) => {
     if (err) throw err;
   }, "next");
   try {
-    const { sessionId } = req2.body;
+    const { sessionId } = req.body;
     if (!sessionId) {
-      return res2.status(400).json({ error: "sessionId required" });
+      return res.status(400).json({ error: "sessionId required" });
     }
     console.log(`[Ping] Pinging User sessionId: ${sessionId}`);
     const { broadcastToSession: broadcastToSession2 } = await Promise.resolve().then(() => (init_broadcast(), broadcast_exports));
@@ -41986,9 +34215,9 @@ router.post("/ping", async (c) => {
       isInitiator: true,
       iceServers: []
     });
-    res2.json({ success: true, message: `Ping + Matched sent to ${sessionId}` });
+    return res.json({ success: true, message: `Ping + Matched sent to ${sessionId}` });
   } catch (err) {
-    return res2.status(500).json({ error: "Failed to ping", details: err instanceof Error ? err.message : String(err) });
+    return res.status(500).json({ error: "Failed to ping", details: err instanceof Error ? err.message : String(err) });
   }
 });
 var match_default = router;
@@ -42011,14 +34240,14 @@ router2.post("/subscribe", async (c) => {
     }
   } catch (e) {
   }
-  const req2 = {
+  const req = {
     body,
     query: c.req.query(),
     params: c.req.param(),
     headers: c.req.header(),
     path: c.req.path
   };
-  const res2 = {
+  const res = {
     json: /* @__PURE__ */ __name((d) => c.json(d), "json"),
     status: /* @__PURE__ */ __name((s) => ({ json: /* @__PURE__ */ __name((d) => c.json(d, s), "json") }), "status"),
     sendStatus: /* @__PURE__ */ __name((s) => c.body(null, s), "sendStatus"),
@@ -42028,19 +34257,20 @@ router2.post("/subscribe", async (c) => {
     if (err) throw err;
   }, "next");
   try {
-    const { subscription, sessionId, browser, os, deviceType } = req2.body;
+    const { subscription, sessionId, browser, os, deviceType } = req.body;
     if (!subscription || !subscription.endpoint) {
-      return res2.status(400).json({ error: "Invalid subscription object" });
+      return res.status(400).json({ error: "Invalid subscription object" });
     }
     const supabase2 = getSupabase();
     const { data: subData, error: subErr } = await supabase2.from("push_subscriptions").upsert({
       session_id: sessionId || null,
+      endpoint: subscription.endpoint,
       subscription_json: subscription,
       browser,
       os,
       device_type: deviceType,
       last_seen: (/* @__PURE__ */ new Date()).toISOString()
-    }, { onConflict: "subscription_json" }).select("id").single();
+    }, { onConflict: "endpoint" }).select("id").single();
     if (subErr) throw subErr;
     if (sessionId && subData) {
       const { data: sessionData } = await supabase2.from("visitor_sessions").select("display_name, gender, looking_for, college, city, state, country, languages, interest_tags, match_mode").eq("id", sessionId).single();
@@ -42060,16 +34290,14 @@ router2.post("/subscribe", async (c) => {
         }, { onConflict: "subscription_id" });
       }
     }
-    res2.json({ success: true, subscriptionId: subData.id });
+    return res.json({ success: true, subscriptionId: subData.id });
   } catch (err) {
-    next(err);
+    return c.json({ error: err.message || "Internal error" }, 500);
   }
 });
 var notifications_default = router2;
 
 // src/routes/index.ts
-init_repositories();
-init_matchingEngine();
 init_broadcast();
 init_matchService();
 init_errorHandler();
@@ -42125,19 +34353,17 @@ init_modules_watch_stub();
 init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_process();
 init_virtual_unenv_global_polyfill_cloudflare_unenv_preset_node_console();
 init_performance2();
-var MVP_ADMIN_TOKEN = process.env.ADMIN_TOKEN;
-var requireAdminToken = /* @__PURE__ */ __name((c, next) => {
-  const authHeader = c.req.header().authorization;
+var requireAdminToken = /* @__PURE__ */ __name(async (c, next) => {
+  const MVP_ADMIN_TOKEN = process.env.ADMIN_TOKEN;
+  const authHeader = c.req.header("authorization");
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
-    res.status(401).json({ error: "Unauthorized: Missing or invalid token" });
-    return;
+    return c.json({ error: "Unauthorized: Missing or invalid token" }, 401);
   }
   const token = authHeader.split(" ")[1];
   if (!MVP_ADMIN_TOKEN || token !== MVP_ADMIN_TOKEN) {
-    res.status(403).json({ error: "Forbidden: Invalid admin token" });
-    return;
+    return c.json({ error: "Forbidden: Invalid admin token" }, 403);
   }
-  next();
+  await next();
 }, "requireAdminToken");
 
 // src/notifications/CampaignManager.ts
@@ -42246,7 +34472,7 @@ var CampaignManager = class {
       } catch (err) {
         failedCount++;
         if (err.statusCode === 410 || err.statusCode === 404) {
-          await supabase2.from("push_subscriptions").update({ enabled: false }).eq("subscription_json->>endpoint", subJSON.endpoint);
+          await supabase2.from("push_subscriptions").update({ enabled: false }).eq("endpoint", subJSON.endpoint);
         }
       }
     });
@@ -42319,14 +34545,14 @@ router3.get("/stats", async (c) => {
     }
   } catch (e) {
   }
-  const req2 = {
+  const req = {
     body,
     query: c.req.query(),
     params: c.req.param(),
     headers: c.req.header(),
     path: c.req.path
   };
-  const res2 = {
+  const res = {
     json: /* @__PURE__ */ __name((d) => c.json(d), "json"),
     status: /* @__PURE__ */ __name((s) => ({ json: /* @__PURE__ */ __name((d) => c.json(d, s), "json") }), "status"),
     sendStatus: /* @__PURE__ */ __name((s) => c.body(null, s), "sendStatus"),
@@ -42348,21 +34574,18 @@ router3.get("/stats", async (c) => {
     const sent = sentRes.count || 0;
     const clicked = clickedRes.count || 0;
     const avgCtr = sent > 0 ? clicked / sent * 100 : 0;
-    res2.json({
+    return res.json({
       activeSubs,
       inactiveSubs,
       sent,
       clicked,
       avgCtr,
       permissionDenied: 0,
-      // Missing DB tracking
       revoked: 0,
-      // Missing DB tracking
       dismissed: 0
-      // Missing DB tracking
     });
   } catch (err) {
-    next(err);
+    return c.json({ error: err.message || "Internal error" }, 500);
   }
 });
 router3.get("/history", async (c) => {
@@ -42376,14 +34599,14 @@ router3.get("/history", async (c) => {
     }
   } catch (e) {
   }
-  const req2 = {
+  const req = {
     body,
     query: c.req.query(),
     params: c.req.param(),
     headers: c.req.header(),
     path: c.req.path
   };
-  const res2 = {
+  const res = {
     json: /* @__PURE__ */ __name((d) => c.json(d), "json"),
     status: /* @__PURE__ */ __name((s) => ({ json: /* @__PURE__ */ __name((d) => c.json(d, s), "json") }), "status"),
     sendStatus: /* @__PURE__ */ __name((s) => c.body(null, s), "sendStatus"),
@@ -42406,9 +34629,9 @@ router3.get("/history", async (c) => {
         historyMap.get(campaignId).delivered++;
       }
     }
-    res2.json(Array.from(historyMap.values()));
+    return res.json(Array.from(historyMap.values()));
   } catch (err) {
-    next(err);
+    return c.json({ error: err.message || "Internal error" }, 500);
   }
 });
 router3.post("/broadcast", async (c) => {
@@ -42422,14 +34645,14 @@ router3.post("/broadcast", async (c) => {
     }
   } catch (e) {
   }
-  const req2 = {
+  const req = {
     body,
     query: c.req.query(),
     params: c.req.param(),
     headers: c.req.header(),
     path: c.req.path
   };
-  const res2 = {
+  const res = {
     json: /* @__PURE__ */ __name((d) => c.json(d), "json"),
     status: /* @__PURE__ */ __name((s) => ({ json: /* @__PURE__ */ __name((d) => c.json(d, s), "json") }), "status"),
     sendStatus: /* @__PURE__ */ __name((s) => c.body(null, s), "sendStatus"),
@@ -42439,7 +34662,7 @@ router3.post("/broadcast", async (c) => {
     if (err) throw err;
   }, "next");
   try {
-    const { campaignId, templateType, context: context2, deepLink, audienceSegments } = req2.body;
+    const { campaignId, templateType, context: context2, deepLink, audienceSegments } = req.body;
     const title2 = "Kaboom";
     const body2 = TemplateEngine.generateContent(templateType, context2);
     const result = await CampaignManager.executeBroadcast(
@@ -42449,9 +34672,9 @@ router3.post("/broadcast", async (c) => {
       deepLink,
       audienceSegments
     );
-    res2.json({ success: true, ...result });
+    return res.json({ success: true, ...result });
   } catch (err) {
-    next(err);
+    return c.json({ error: err.message || "Internal error" }, 500);
   }
 });
 router3.post("/test", async (c) => {
@@ -42465,14 +34688,14 @@ router3.post("/test", async (c) => {
     }
   } catch (e) {
   }
-  const req2 = {
+  const req = {
     body,
     query: c.req.query(),
     params: c.req.param(),
     headers: c.req.header(),
     path: c.req.path
   };
-  const res2 = {
+  const res = {
     json: /* @__PURE__ */ __name((d) => c.json(d), "json"),
     status: /* @__PURE__ */ __name((s) => ({ json: /* @__PURE__ */ __name((d) => c.json(d, s), "json") }), "status"),
     sendStatus: /* @__PURE__ */ __name((s) => c.body(null, s), "sendStatus"),
@@ -42482,7 +34705,7 @@ router3.post("/test", async (c) => {
     if (err) throw err;
   }, "next");
   try {
-    const { subscriptionJson, templateType, context: context2, deepLink } = req2.body;
+    const { subscriptionJson, templateType, context: context2, deepLink } = req.body;
     const title2 = "Kaboom (Test)";
     const body2 = TemplateEngine.generateContent(templateType, context2);
     const result = await CampaignManager.sendTestNotification(
@@ -42491,9 +34714,9 @@ router3.post("/test", async (c) => {
       body2,
       deepLink
     );
-    res2.json(result);
+    return res.json(result);
   } catch (err) {
-    next(err);
+    return c.json({ error: err.message || "Internal error" }, 500);
   }
 });
 var admin_notifications_default = router3;
@@ -42519,14 +34742,14 @@ router4.post("/session/cleanup", async (c) => {
     }
   } catch (e) {
   }
-  const req2 = {
+  const req = {
     body,
     query: c.req.query(),
     params: c.req.param(),
     headers: c.req.header(),
     path: c.req.path
   };
-  const res2 = {
+  const res = {
     json: /* @__PURE__ */ __name((d) => c.json(d), "json"),
     status: /* @__PURE__ */ __name((s) => ({ json: /* @__PURE__ */ __name((d) => c.json(d, s), "json") }), "status"),
     sendStatus: /* @__PURE__ */ __name((s) => c.body(null, s), "sendStatus"),
@@ -42536,12 +34759,12 @@ router4.post("/session/cleanup", async (c) => {
     if (err) throw err;
   }, "next");
   try {
-    let body2 = req2.body;
+    let body2 = req.body;
     if (typeof body2 === "string") {
       try {
         body2 = JSON.parse(body2);
       } catch {
-        return res2.sendStatus(400);
+        return res.sendStatus(400);
       }
     }
     if (Buffer.isBuffer(body2)) {
@@ -42550,15 +34773,15 @@ router4.post("/session/cleanup", async (c) => {
       } catch {
       }
     } else if (!body2 || Object.keys(body2).length === 0) {
-      return res2.sendStatus(400);
+      return res.sendStatus(400);
     }
     const { sessionId, reason } = body2;
-    if (!sessionId) return res2.sendStatus(400);
+    if (!sessionId) return res.sendStatus(400);
     await runFullSessionCleanup(sessionId, reason);
-    res2.sendStatus(204);
+    res.sendStatus(204);
   } catch (err) {
     console.error("[Session Cleanup Endpoint Error]:", err);
-    res2.sendStatus(500);
+    res.sendStatus(500);
   }
 });
 router4.post("/session/heartbeat", async (c) => {
@@ -42572,14 +34795,14 @@ router4.post("/session/heartbeat", async (c) => {
     }
   } catch (e) {
   }
-  const req2 = {
+  const req = {
     body,
     query: c.req.query(),
     params: c.req.param(),
     headers: c.req.header(),
     path: c.req.path
   };
-  const res2 = {
+  const res = {
     json: /* @__PURE__ */ __name((d) => c.json(d), "json"),
     status: /* @__PURE__ */ __name((s) => ({ json: /* @__PURE__ */ __name((d) => c.json(d, s), "json") }), "status"),
     sendStatus: /* @__PURE__ */ __name((s) => c.body(null, s), "sendStatus"),
@@ -42589,9 +34812,9 @@ router4.post("/session/heartbeat", async (c) => {
     if (err) throw err;
   }, "next");
   try {
-    const { sessionId, sessionToken, clientState } = req2.body;
+    const { sessionId, sessionToken, clientState } = req.body;
     if (!sessionId || !sessionToken) {
-      return res2.status(400).json({ error: "sessionId and sessionToken are required" });
+      return res.status(400).json({ error: "sessionId and sessionToken are required" });
     }
     const supabase2 = getSupabase();
     const { data: session, error: fetchErr } = await supabase2.from("visitor_sessions").select("status, match_id").eq("id", sessionId).eq("session_token", sessionToken).single();
@@ -42610,9 +34833,9 @@ router4.post("/session/heartbeat", async (c) => {
     }
     const { error: error3 } = await supabase2.from("visitor_sessions").update({ last_activity: (/* @__PURE__ */ new Date()).toISOString() }).eq("id", sessionId);
     if (error3) throw error3;
-    res2.json({ success: true });
+    return res.json({ success: true });
   } catch (err) {
-    next(err);
+    return c.json({ error: err.message || "Internal error" }, 500);
   }
 });
 router4.post("/report", reportController.submitReport);
@@ -42688,14 +34911,14 @@ router4.post("/preferences", async (c) => {
     }
   } catch (e) {
   }
-  const req2 = {
+  const req = {
     body,
     query: c.req.query(),
     params: c.req.param(),
     headers: c.req.header(),
     path: c.req.path
   };
-  const res2 = {
+  const res = {
     json: /* @__PURE__ */ __name((d) => c.json(d), "json"),
     status: /* @__PURE__ */ __name((s) => ({ json: /* @__PURE__ */ __name((d) => c.json(d, s), "json") }), "status"),
     sendStatus: /* @__PURE__ */ __name((s) => c.body(null, s), "sendStatus"),
@@ -42705,9 +34928,9 @@ router4.post("/preferences", async (c) => {
     if (err) throw err;
   }, "next");
   try {
-    const { sessionId, sessionToken, preferences } = req2.body;
+    const { sessionId, sessionToken, preferences } = req.body;
     const session = await validateSession(sessionId, sessionToken);
-    if (!session) return res2.status(401).json({ error: "Invalid or expired session" });
+    if (!session) return res.status(401).json({ error: "Invalid or expired session" });
     const normalizeString = /* @__PURE__ */ __name((str) => typeof str === "string" ? str.toLowerCase().trim() : str, "normalizeString");
     const normalizeArray = /* @__PURE__ */ __name((arr) => Array.isArray(arr) ? arr.map((s) => typeof s === "string" ? s.toLowerCase().trim() : s) : arr, "normalizeArray");
     const normalizeObjectValues = /* @__PURE__ */ __name((obj) => {
@@ -42769,9 +34992,9 @@ router4.post("/preferences", async (c) => {
         }, { onConflict: "subscription_id" });
       }
     }
-    res2.json({ success: true });
+    return res.json({ success: true });
   } catch (err) {
-    next(err);
+    return c.json({ error: err.message || "Internal error" }, 500);
   }
 });
 router4.get("/universities", async (c) => {
@@ -42785,14 +35008,14 @@ router4.get("/universities", async (c) => {
     }
   } catch (e) {
   }
-  const req2 = {
+  const req = {
     body,
     query: c.req.query(),
     params: c.req.param(),
     headers: c.req.header(),
     path: c.req.path
   };
-  const res2 = {
+  const res = {
     json: /* @__PURE__ */ __name((d) => c.json(d), "json"),
     status: /* @__PURE__ */ __name((s) => ({ json: /* @__PURE__ */ __name((d) => c.json(d, s), "json") }), "status"),
     sendStatus: /* @__PURE__ */ __name((s) => c.body(null, s), "sendStatus"),
@@ -42802,16 +35025,16 @@ router4.get("/universities", async (c) => {
     if (err) throw err;
   }, "next");
   try {
-    const query = (req2.query.q || "").trim();
+    const query = (req.query.q || "").trim();
     if (!query || query.length < 2) {
-      return res2.json({ success: true, data: [] });
+      return res.json({ success: true, data: [] });
     }
     const cleanQ = query.toLowerCase();
     const localFiltered = SEEDED_UNIVERSITIES.filter(
       (u) => u.name.toLowerCase().includes(cleanQ)
     );
     if (universityCache.has(cleanQ)) {
-      return res2.json({ success: true, data: universityCache.get(cleanQ) });
+      return res.json({ success: true, data: universityCache.get(cleanQ) });
     }
     let apiResults = [];
     const controller = new AbortController();
@@ -42847,9 +35070,9 @@ router4.get("/universities", async (c) => {
       if (firstKey) universityCache.delete(firstKey);
     }
     universityCache.set(cleanQ, finalResults);
-    res2.json({ success: true, data: finalResults });
+    return res.json({ success: true, data: finalResults });
   } catch (err) {
-    next(err);
+    return c.json({ error: err.message || "Internal error" }, 500);
   }
 });
 router4.get("/locations", async (c) => {
@@ -42863,14 +35086,14 @@ router4.get("/locations", async (c) => {
     }
   } catch (e) {
   }
-  const req2 = {
+  const req = {
     body,
     query: c.req.query(),
     params: c.req.param(),
     headers: c.req.header(),
     path: c.req.path
   };
-  const res2 = {
+  const res = {
     json: /* @__PURE__ */ __name((d) => c.json(d), "json"),
     status: /* @__PURE__ */ __name((s) => ({ json: /* @__PURE__ */ __name((d) => c.json(d, s), "json") }), "status"),
     sendStatus: /* @__PURE__ */ __name((s) => c.body(null, s), "sendStatus"),
@@ -42880,12 +35103,12 @@ router4.get("/locations", async (c) => {
     if (err) throw err;
   }, "next");
   try {
-    const query = req2.query.q;
-    if (!query) return res2.json({ success: true, data: [] });
+    const query = req.query.q;
+    if (!query) return res.json({ success: true, data: [] });
     const { data } = await getSupabase().from("locations").select("*").ilike("name", `%${query}%`).limit(10);
-    res2.json({ success: true, data: data || [] });
+    return res.json({ success: true, data: data || [] });
   } catch (err) {
-    next(err);
+    return c.json({ error: err.message || "Internal error" }, 500);
   }
 });
 router4.get("/interests", async (c) => {
@@ -42899,14 +35122,14 @@ router4.get("/interests", async (c) => {
     }
   } catch (e) {
   }
-  const req2 = {
+  const req = {
     body,
     query: c.req.query(),
     params: c.req.param(),
     headers: c.req.header(),
     path: c.req.path
   };
-  const res2 = {
+  const res = {
     json: /* @__PURE__ */ __name((d) => c.json(d), "json"),
     status: /* @__PURE__ */ __name((s) => ({ json: /* @__PURE__ */ __name((d) => c.json(d, s), "json") }), "status"),
     sendStatus: /* @__PURE__ */ __name((s) => c.body(null, s), "sendStatus"),
@@ -42916,12 +35139,12 @@ router4.get("/interests", async (c) => {
     if (err) throw err;
   }, "next");
   try {
-    const query = req2.query.q;
-    if (!query) return res2.json({ success: true, data: [] });
+    const query = req.query.q;
+    if (!query) return res.json({ success: true, data: [] });
     const { data } = await getSupabase().from("interests").select("*").ilike("name", `%${query}%`).limit(10);
-    res2.json({ success: true, data: data || [] });
+    return res.json({ success: true, data: data || [] });
   } catch (err) {
-    next(err);
+    return c.json({ error: err.message || "Internal error" }, 500);
   }
 });
 router4.post("/like", async (c) => {
@@ -42935,14 +35158,14 @@ router4.post("/like", async (c) => {
     }
   } catch (e) {
   }
-  const req2 = {
+  const req = {
     body,
     query: c.req.query(),
     params: c.req.param(),
     headers: c.req.header(),
     path: c.req.path
   };
-  const res2 = {
+  const res = {
     json: /* @__PURE__ */ __name((d) => c.json(d), "json"),
     status: /* @__PURE__ */ __name((s) => ({ json: /* @__PURE__ */ __name((d) => c.json(d, s), "json") }), "status"),
     sendStatus: /* @__PURE__ */ __name((s) => c.body(null, s), "sendStatus"),
@@ -42952,14 +35175,14 @@ router4.post("/like", async (c) => {
     if (err) throw err;
   }, "next");
   try {
-    const { sessionId, sessionToken, matchId } = req2.body;
+    const { sessionId, sessionToken, matchId } = req.body;
     const session = await validateSession(sessionId, sessionToken);
-    if (!session) return res2.status(401).json({ error: "Invalid or expired session" });
+    if (!session) return res.status(401).json({ error: "Invalid or expired session" });
     const supabase2 = getSupabase();
     const { data: match2 } = await supabase2.from("matches").select("*").eq("id", matchId).single();
-    if (!match2) return res2.status(404).json({ error: "Match not found" });
+    if (!match2) return res.status(404).json({ error: "Match not found" });
     if (match2.user_a !== sessionId && match2.user_b !== sessionId) {
-      return res2.status(403).json({ error: "Unauthorized match participant" });
+      return res.status(403).json({ error: "Unauthorized match participant" });
     }
     await supabase2.from("likes").insert({ match_id: matchId, session_id: sessionId });
     const updateData = {};
@@ -42975,15 +35198,16 @@ router4.post("/like", async (c) => {
       broadcastToSession(sessionId, "mutual_like", { matchId, partnerSessionId: partnerId }).catch((e) => console.warn("[Like] Broadcast err A:", e.message));
       broadcastToSession(partnerId, "mutual_like", { matchId, partnerSessionId: sessionId }).catch((e) => console.warn("[Like] Broadcast err B:", e.message));
     }
-    res2.json({
+    return res.json({
       success: true,
       data: {
-        success: true,
-        mutual: isMutual
+        liked: true,
+        mutual: isMutual,
+        matchId
       }
     });
   } catch (err) {
-    next(err);
+    return c.json({ error: err.message || "Internal error" }, 500);
   }
 });
 router4.post("/chat", async (c) => {
@@ -42997,14 +35221,14 @@ router4.post("/chat", async (c) => {
     }
   } catch (e) {
   }
-  const req2 = {
+  const req = {
     body,
     query: c.req.query(),
     params: c.req.param(),
     headers: c.req.header(),
     path: c.req.path
   };
-  const res2 = {
+  const res = {
     json: /* @__PURE__ */ __name((d) => c.json(d), "json"),
     status: /* @__PURE__ */ __name((s) => ({ json: /* @__PURE__ */ __name((d) => c.json(d, s), "json") }), "status"),
     sendStatus: /* @__PURE__ */ __name((s) => c.body(null, s), "sendStatus"),
@@ -43014,14 +35238,14 @@ router4.post("/chat", async (c) => {
     if (err) throw err;
   }, "next");
   try {
-    const { sessionId, sessionToken, matchId, message } = req2.body;
+    const { sessionId, sessionToken, matchId, message } = req.body;
     const session = await validateSession(sessionId, sessionToken);
-    if (!session) return res2.status(401).json({ error: "Invalid or expired session" });
+    if (!session) return res.status(401).json({ error: "Invalid or expired session" });
     const supabase2 = getSupabase();
     const { data: match2 } = await supabase2.from("matches").select("user_a, user_b").eq("id", matchId).single();
-    if (!match2) return res2.status(404).json({ error: "Match not found" });
+    if (!match2) return res.status(404).json({ error: "Match not found" });
     if (match2.user_a !== sessionId && match2.user_b !== sessionId) {
-      return res2.status(403).json({ error: "Unauthorized match participant" });
+      return res.status(403).json({ error: "Unauthorized match participant" });
     }
     const expiresAt2 = new Date(Date.now() + 60 * 60 * 1e3).toISOString();
     const { data } = await supabase2.from("temporary_messages").insert({
@@ -43041,9 +35265,9 @@ router4.post("/chat", async (c) => {
         console.warn(`[Chat Broadcast] Failed to send new_message to ${partnerId}:`, err.message);
       });
     }
-    res2.status(201).json({ success: true, data });
+    return res.status(201).json({ success: true, data });
   } catch (err) {
-    next(err);
+    return c.json({ error: err.message || "Internal error" }, 500);
   }
 });
 router4.get("/chat/:matchId", async (c) => {
@@ -43057,14 +35281,14 @@ router4.get("/chat/:matchId", async (c) => {
     }
   } catch (e) {
   }
-  const req2 = {
+  const req = {
     body,
     query: c.req.query(),
     params: c.req.param(),
     headers: c.req.header(),
     path: c.req.path
   };
-  const res2 = {
+  const res = {
     json: /* @__PURE__ */ __name((d) => c.json(d), "json"),
     status: /* @__PURE__ */ __name((s) => ({ json: /* @__PURE__ */ __name((d) => c.json(d, s), "json") }), "status"),
     sendStatus: /* @__PURE__ */ __name((s) => c.body(null, s), "sendStatus"),
@@ -43074,24 +35298,24 @@ router4.get("/chat/:matchId", async (c) => {
     if (err) throw err;
   }, "next");
   try {
-    const { matchId } = req2.params;
-    const sessionId = req2.headers["x-session-id"];
-    const sessionToken = req2.headers["x-session-token"];
+    const { matchId } = req.params;
+    const sessionId = req.headers["x-session-id"];
+    const sessionToken = req.headers["x-session-token"];
     if (!sessionId || !sessionToken) {
-      return res2.status(401).json({ error: "Missing session authentication headers" });
+      return res.status(401).json({ error: "Missing session authentication headers" });
     }
     const session = await validateSession(sessionId, sessionToken);
-    if (!session) return res2.status(401).json({ error: "Invalid or expired session" });
+    if (!session) return res.status(401).json({ error: "Invalid or expired session" });
     const supabase2 = getSupabase();
     const { data: match2 } = await supabase2.from("matches").select("user_a, user_b").eq("id", matchId).single();
-    if (!match2) return res2.status(404).json({ error: "Match not found" });
+    if (!match2) return res.status(404).json({ error: "Match not found" });
     if (match2.user_a !== sessionId && match2.user_b !== sessionId) {
-      return res2.status(403).json({ error: "Unauthorized match participant" });
+      return res.status(403).json({ error: "Unauthorized match participant" });
     }
     const { data } = await supabase2.from("temporary_messages").select("*").eq("match_id", matchId).order("created_at", { ascending: true });
-    res2.json({ success: true, data });
+    return res.json({ success: true, data });
   } catch (err) {
-    next(err);
+    return c.json({ error: err.message || "Internal error" }, 500);
   }
 });
 router4.get("/analytics", async (c) => {
@@ -43105,14 +35329,14 @@ router4.get("/analytics", async (c) => {
     }
   } catch (e) {
   }
-  const req2 = {
+  const req = {
     body,
     query: c.req.query(),
     params: c.req.param(),
     headers: c.req.header(),
     path: c.req.path
   };
-  const res2 = {
+  const res = {
     json: /* @__PURE__ */ __name((d) => c.json(d), "json"),
     status: /* @__PURE__ */ __name((s) => ({ json: /* @__PURE__ */ __name((d) => c.json(d, s), "json") }), "status"),
     sendStatus: /* @__PURE__ */ __name((s) => c.body(null, s), "sendStatus"),
@@ -43122,10 +35346,10 @@ router4.get("/analytics", async (c) => {
     if (err) throw err;
   }, "next");
   try {
-    const authHeader = req2.headers.authorization;
+    const authHeader = req.headers.authorization;
     const expectedToken = process.env.ADMIN_TOKEN;
     if (!authHeader || !expectedToken || authHeader !== `Bearer ${expectedToken}`) {
-      return res2.status(401).json({ error: "Unauthorized" });
+      return res.status(401).json({ error: "Unauthorized" });
     }
     const supabase2 = getSupabase();
     const [waitingCount, matchesCount, likesCount, reportsCount, sessionsQuery] = await Promise.all([
@@ -43151,8 +35375,9 @@ router4.get("/analytics", async (c) => {
         locationsFreq[s.country] = (locationsFreq[s.country] || 0) + 1;
       }
     });
-    const matchmakerDB = await metricsRepository.getGlobalMatchmakerMetrics();
-    res2.json({
+    const { metricsRepository: metricsRepository2 } = await Promise.resolve().then(() => (init_repositories(), repositories_exports));
+    const matchmakerDB = await metricsRepository2.getGlobalMatchmakerMetrics();
+    return res.json({
       success: true,
       data: {
         onlineNow: waitingCount.count ?? 0,
@@ -43163,52 +35388,70 @@ router4.get("/analytics", async (c) => {
         topLocations: Object.entries(locationsFreq).sort((a, b) => b[1] - a[1]).slice(0, 5),
         topLanguages: Object.entries(languagesFreq).sort((a, b) => b[1] - a[1]).slice(0, 5),
         matchmaker: {
-          totalSearchingUsers: matchmakerDB.total_searching_users || matchmakerMetrics.totalSearchingUsers,
-          averageWaitTime: Number(matchmakerDB.average_wait_time) || matchmakerMetrics.averageWaitTime,
-          maximumWaitTime: Number(matchmakerDB.maximum_wait_time) || matchmakerMetrics.maximumWaitTime,
-          successfulMatches: Number(matchmakerDB.successful_matches) || matchmakerMetrics.successfulMatches,
-          failedMatches: Number(matchmakerDB.failed_matches) || matchmakerMetrics.failedMatches,
-          rematches: Number(matchmakerDB.rematches) || matchmakerMetrics.rematches,
-          abandonedSearches: Number(matchmakerDB.abandoned_searches) || matchmakerMetrics.abandonedSearches
+          totalSearchingUsers: matchmakerDB.total_searching_users || 0,
+          averageWaitTime: Number(matchmakerDB.average_wait_time) || 0,
+          maximumWaitTime: Number(matchmakerDB.maximum_wait_time) || 0,
+          successfulMatches: Number(matchmakerDB.successful_matches) || 0,
+          failedMatches: Number(matchmakerDB.failed_matches) || 0,
+          rematches: Number(matchmakerDB.rematches) || 0,
+          abandonedSearches: Number(matchmakerDB.abandoned_searches) || 0
         }
       }
     });
   } catch (err) {
-    next(err);
+    return c.json({ error: err.message || "Internal error" }, 500);
   }
 });
 var routes_default = router4;
 
 // src/index.ts
+init_context();
 var app = new Hono2();
 app.use("*", cors({
   origin: /* @__PURE__ */ __name((origin) => {
-    return origin;
+    const allowedOrigins = [
+      "https://kaboom-tv.com",
+      "https://www.kaboom-tv.com",
+      "http://localhost:5173",
+      "http://localhost:3000"
+    ];
+    if (!origin || allowedOrigins.includes(origin)) {
+      return origin;
+    }
+    if (origin.endsWith(".pages.dev")) {
+      return origin;
+    }
+    return "https://kaboom-tv.com";
   }, "origin"),
   credentials: true
 }));
 app.use("*", secureHeaders());
 app.use("*", async (c, next) => {
-  globalThis.process = globalThis.process || { env: {} };
-  globalThis.process.env = { ...globalThis.process.env, ...c.env };
-  await next();
+  globalThis.__env = c.env;
+  return envStorage.run(c.env, () => next());
 });
 app.use("*", async (c, next) => {
   console.log("[Request] " + c.req.method + " " + c.req.url);
   await next();
 });
-app.route("/api", routes_default);
-var src_default = {
-  fetch: app.fetch,
-  async scheduled(event, env2, ctx) {
-    globalThis.process = globalThis.process || { env: {} };
-    globalThis.process.env = { ...globalThis.process.env, ...env2 };
-    const { runGlobalMatchCycle: runGlobalMatchCycle2, runGlobalHealCycle: runGlobalHealCycle2 } = await Promise.resolve().then(() => (init_matchingEngine(), matchingEngine_exports));
+app.get("/api/debug-env", async (c) => {
+  const keys = c.env ? Object.keys(c.env) : [];
+  try {
     const { getSupabase: getSupabase2 } = await Promise.resolve().then(() => (init_client(), client_exports));
     const supabase2 = getSupabase2();
-    ctx.waitUntil(runGlobalHealCycle2(supabase2).catch(console.error));
-    await runGlobalMatchCycle2(supabase2).catch(console.error);
+    const { data, error: error3, status, statusText } = await supabase2.from("waiting_queue").select("id").limit(1);
+    return c.json({ keys, dbData: data, dbError: error3, status, statusText });
+  } catch (err) {
+    return c.json({ keys, catchError: err.message, stack: err.stack });
   }
+});
+app.onError((err, c) => {
+  console.error("[Global Error]", err);
+  return c.json({ error: err.message, stack: err.stack, name: err.name }, 500);
+});
+app.route("/api", routes_default);
+var src_default = {
+  fetch: app.fetch
 };
 
 // ../node_modules/wrangler/templates/middleware/middleware-ensure-req-body-drained.ts
@@ -43260,7 +35503,7 @@ var jsonError = /* @__PURE__ */ __name(async (request3, env2, _ctx, middlewareCt
 }, "jsonError");
 var middleware_miniflare3_json_error_default = jsonError;
 
-// .wrangler/tmp/bundle-bLJVju/middleware-insertion-facade.js
+// .wrangler/tmp/bundle-pG0vZw/middleware-insertion-facade.js
 var __INTERNAL_WRANGLER_MIDDLEWARE__ = [
   middleware_ensure_req_body_drained_default,
   middleware_miniflare3_json_error_default
@@ -43296,7 +35539,7 @@ function __facade_invoke__(request3, env2, ctx, dispatch, finalMiddleware) {
 }
 __name(__facade_invoke__, "__facade_invoke__");
 
-// .wrangler/tmp/bundle-bLJVju/middleware-loader.entry.ts
+// .wrangler/tmp/bundle-pG0vZw/middleware-loader.entry.ts
 var __Facade_ScheduledController__ = class ___Facade_ScheduledController__ {
   constructor(scheduledTime, cron, noRetry) {
     this.scheduledTime = scheduledTime;

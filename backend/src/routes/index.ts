@@ -11,8 +11,6 @@ import { rateLimiter } from '../middleware/rateLimiter.js';
 import { getSupabase } from '../database/client.js';
 import matchRoutes from './match.js';
 import notificationRoutes from './notifications.js';
-import { metricsRepository } from '../database/repositories/index.js';
-import { matchmakerMetrics } from '../matchmaking/matchingEngine.js';
 import { broadcastToSession } from '../services/broadcast.js';
 import { validateSession } from '../services/matchService.js';
 import { requireBackendReady } from '../middleware/readiness.js';
@@ -170,9 +168,9 @@ router.post('/session/heartbeat', async (c: any) => {
       .eq('id', sessionId);
       
     if (error) throw error;
-    res.json({ success: true });
-  } catch (err) {
-    next(err);
+    return res.json({ success: true });
+  } catch (err: any) {
+    return c.json({ error: err.message || 'Internal error' }, 500);
   }
 });
 router.post('/report', reportController.submitReport);
@@ -349,9 +347,9 @@ router.post('/preferences', async (c: any) => {
       }
     }
 
-    res.json({ success: true });
-  } catch (err) {
-    next(err);
+    return res.json({ success: true });
+  } catch (err: any) {
+    return c.json({ error: err.message || 'Internal error' }, 500);
   }
 });
 
@@ -446,9 +444,9 @@ router.get('/universities', async (c: any) => {
     }
     universityCache.set(cleanQ, finalResults);
 
-    res.json({ success: true, data: finalResults });
-  } catch (err) {
-    next(err);
+    return res.json({ success: true, data: finalResults });
+  } catch (err: any) {
+    return c.json({ error: err.message || 'Internal error' }, 500);
   }
 });
 
@@ -487,9 +485,9 @@ router.get('/locations', async (c: any) => {
       .select('*')
       .ilike('name', `%${query}%`)
       .limit(10);
-    res.json({ success: true, data: data || [] });
-  } catch (err) {
-    next(err);
+    return res.json({ success: true, data: data || [] });
+  } catch (err: any) {
+    return c.json({ error: err.message || 'Internal error' }, 500);
   }
 });
 
@@ -528,9 +526,9 @@ router.get('/interests', async (c: any) => {
       .select('*')
       .ilike('name', `%${query}%`)
       .limit(10);
-    res.json({ success: true, data: data || [] });
-  } catch (err) {
-    next(err);
+    return res.json({ success: true, data: data || [] });
+  } catch (err: any) {
+    return c.json({ error: err.message || 'Internal error' }, 500);
   }
 });
 
@@ -600,15 +598,16 @@ router.post('/like', async (c: any) => {
       broadcastToSession(partnerId, 'mutual_like', { matchId, partnerSessionId: sessionId }).catch(e => console.warn('[Like] Broadcast err B:', e.message));
     }
       
-    res.json({
+    return res.json({
       success: true,
       data: {
-        success: true,
-        mutual: isMutual
+        liked: true,
+        mutual: isMutual,
+        matchId,
       }
     });
-  } catch (err) {
-    next(err);
+  } catch (err: any) {
+    return c.json({ error: err.message || 'Internal error' }, 500);
   }
 });
 
@@ -682,9 +681,9 @@ router.post('/chat', async (c: any) => {
       });
     }
 
-    res.status(201).json({ success: true, data });
-  } catch (err) {
-    next(err);
+    return res.status(201).json({ success: true, data });
+  } catch (err: any) {
+    return c.json({ error: err.message || 'Internal error' }, 500);
   }
 });
 
@@ -745,9 +744,9 @@ router.get('/chat/:matchId', async (c: any) => {
       .select('*')
       .eq('match_id', matchId)
       .order('created_at', { ascending: true });
-    res.json({ success: true, data });
-  } catch (err) {
-    next(err);
+    return res.json({ success: true, data });
+  } catch (err: any) {
+    return c.json({ error: err.message || 'Internal error' }, 500);
   }
 });
 
@@ -808,9 +807,10 @@ router.get('/analytics', async (c: any) => {
       }
     });
 
+        const { metricsRepository } = await import('../database/repositories/index.js');
         const matchmakerDB = await metricsRepository.getGlobalMatchmakerMetrics();
 
-        res.json({
+        return res.json({
           success: true,
           data: {
             onlineNow: waitingCount.count ?? 0,
@@ -821,18 +821,18 @@ router.get('/analytics', async (c: any) => {
             topLocations: Object.entries(locationsFreq).sort((a, b) => b[1] - a[1]).slice(0, 5),
             topLanguages: Object.entries(languagesFreq).sort((a, b) => b[1] - a[1]).slice(0, 5),
             matchmaker: {
-              totalSearchingUsers: matchmakerDB.total_searching_users || matchmakerMetrics.totalSearchingUsers,
-              averageWaitTime: Number(matchmakerDB.average_wait_time) || matchmakerMetrics.averageWaitTime,
-              maximumWaitTime: Number(matchmakerDB.maximum_wait_time) || matchmakerMetrics.maximumWaitTime,
-              successfulMatches: Number(matchmakerDB.successful_matches) || matchmakerMetrics.successfulMatches,
-              failedMatches: Number(matchmakerDB.failed_matches) || matchmakerMetrics.failedMatches,
-              rematches: Number(matchmakerDB.rematches) || matchmakerMetrics.rematches,
-              abandonedSearches: Number(matchmakerDB.abandoned_searches) || matchmakerMetrics.abandonedSearches,
+              totalSearchingUsers: matchmakerDB.total_searching_users || 0,
+              averageWaitTime: Number(matchmakerDB.average_wait_time) || 0,
+              maximumWaitTime: Number(matchmakerDB.maximum_wait_time) || 0,
+              successfulMatches: Number(matchmakerDB.successful_matches) || 0,
+              failedMatches: Number(matchmakerDB.failed_matches) || 0,
+              rematches: Number(matchmakerDB.rematches) || 0,
+              abandonedSearches: Number(matchmakerDB.abandoned_searches) || 0,
             }
       }
     });
-  } catch (err) {
-    next(err);
+  } catch (err: any) {
+    return c.json({ error: err.message || 'Internal error' }, 500);
   }
 });
 

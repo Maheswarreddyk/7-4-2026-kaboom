@@ -83,9 +83,9 @@ router.post('/subscribe', async (c: any) => {
       }
     }
 
-    res.json({ success: true, subscriptionId: subData.id });
-  } catch (err) {
-    next(err);
+    return res.json({ success: true, subscriptionId: subData.id });
+  } catch (err: any) {
+    return c.json({ error: err.message || 'Internal error' }, 500);
   }
 });
 

@@ -35,12 +35,27 @@ export interface IceServer {
 export function getIceServers(): IceServer[] {
   return [
     {
-      urls: "stun:stun.relay.metered.ca:80"
+      urls: "stun:stun.relay.metered.ca:80",
+    },
+    {
+      urls: "turn:global.relay.metered.ca:80",
+      username: "75ce0488e2b6dd463873fe19",
+      credential: "86h9uzIutQ27P3Mq",
+    },
+    {
+      urls: "turn:global.relay.metered.ca:80?transport=tcp",
+      username: "75ce0488e2b6dd463873fe19",
+      credential: "86h9uzIutQ27P3Mq",
+    },
+    {
+      urls: "turn:global.relay.metered.ca:443",
+      username: "75ce0488e2b6dd463873fe19",
+      credential: "86h9uzIutQ27P3Mq",
     },
     {
       urls: "turns:global.relay.metered.ca:443?transport=tcp",
       username: "75ce0488e2b6dd463873fe19",
-      credential: "86h9uzIutQ27P3Mq"
-    }
+      credential: "86h9uzIutQ27P3Mq",
+    },
   ];
 }

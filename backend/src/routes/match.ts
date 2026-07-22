@@ -39,14 +39,14 @@ router.post('/join', queueLimiter, async (c: any) => {
     };
     const next = (err?: any) => { if(err) throw err; };
   try {
-    const { sessionId, sessionToken } = req.body;
+    const { sessionId, sessionToken, matchMode, tags, genderPreference } = req.body;
     if (!sessionId || !sessionToken) {
       return res.status(400).json({ error: 'sessionId and sessionToken are required' });
     }
-    const result = await joinQueue(sessionId, sessionToken);
-    res.json({ success: true, data: result });
-  } catch (err) {
-    next(err);
+    const result = await joinQueue(sessionId, sessionToken, matchMode, tags, genderPreference);
+    return res.json({ success: true, data: result });
+  } catch (err: any) {
+    return c.json({ error: err.message || 'Internal error' }, 500);
   }
 });
 
@@ -85,9 +85,9 @@ router.get('/status', queueLimiter, async (c: any) => {
       return res.status(400).json({ error: 'x-session-id and x-session-token headers are required' });
     }
     const result = await getMatchStatus(sessionId, sessionToken);
-    res.json({ success: true, data: result });
-  } catch (err) {
-    next(err);
+    return res.json({ success: true, data: result });
+  } catch (err: any) {
+    return c.json({ error: err.message || 'Internal error' }, 500);
   }
 });
 
@@ -124,12 +124,12 @@ router.post('/leave', queueLimiter, async (c: any) => {
       return res.status(400).json({ error: 'sessionId and sessionToken are required' });
     }
     await leaveQueue(sessionId, sessionToken, matchId);
-    res.json({ success: true });
+    return res.json({ success: true });
   } catch (err: any) {
     if (err.message && err.message.includes('Illegal state transition')) {
       return res.status(409).json({ success: false, error: err.message });
     }
-    next(err);
+    return c.json({ error: err.message || 'Internal error' }, 500);
   }
 });
 
@@ -166,12 +166,12 @@ router.post('/next', queueLimiter, async (c: any) => {
       return res.status(400).json({ error: 'sessionId and sessionToken are required' });
     }
     const result = await nextPartner(sessionId, sessionToken, matchId, reason || 'next');
-    res.json({ success: true, data: result });
+    return res.json({ success: true, data: result });
   } catch (err: any) {
     if (err.message && err.message.includes('Illegal state transition')) {
       return res.status(409).json({ success: false, error: err.message });
     }
-    next(err);
+    return c.json({ error: err.message || 'Internal error' }, 500);
   }
 });
 
@@ -208,9 +208,9 @@ router.post('/disconnect', queueLimiter, async (c: any) => {
       return res.status(400).json({ error: 'sessionId and sessionToken are required' });
     }
     await notifyPartnerLeft(sessionId, sessionToken, reason ?? 'disconnect', matchId);
-    res.json({ success: true });
-  } catch (err) {
-    next(err);
+    return res.json({ success: true });
+  } catch (err: any) {
+    return c.json({ error: err.message || 'Internal error' }, 500);
   }
 });
 
@@ -247,10 +247,10 @@ router.post('/ready', queueLimiter, async (c: any) => {
       return res.status(400).json({ success: false, error: 'sessionId, sessionToken, and matchId are required' });
     }
     const result = await markMatchReady(sessionId, sessionToken, matchId);
-    res.json({ success: true, data: result });
+    return res.json({ success: true, data: result });
   } catch (err) {
     console.error('[API /ready endpoint error]', err);
-    res.status(422).json({
+    return res.status(422).json({
       success: false,
       error: err instanceof Error ? err.message : 'Failed to mark match ready',
     });
@@ -291,10 +291,10 @@ router.post('/connected', queueLimiter, async (c: any) => {
     }
     const { markMediaConnected } = await import('../services/matchService.js');
     const result = await markMediaConnected(sessionId, sessionToken, matchId);
-    res.json({ success: true, data: result });
+    return res.json({ success: true, data: result });
   } catch (err) {
     console.error('[API /connected endpoint error]', err);
-    res.status(422).json({
+    return res.status(422).json({
       success: false,
       error: err instanceof Error ? err.message : 'Failed to mark media connected',
     });
@@ -349,7 +349,7 @@ router.post('/ping', async (c: any) => {
       iceServers: [],
     });
 
-    res.json({ success: true, message: `Ping + Matched sent to ${sessionId}` });
+    return res.json({ success: true, message: `Ping + Matched sent to ${sessionId}` });
   } catch (err) {
     return res.status(500).json({ error: 'Failed to ping', details: err instanceof Error ? err.message : String(err) });
   }

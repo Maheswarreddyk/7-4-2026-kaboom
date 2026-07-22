@@ -16,21 +16,27 @@ import type {
 export const sessionRepository = {
   async create(data: {
     sessionToken: string;
+    authUserId?: string;
     country?: string;
     browser?: string;
     device?: string;
     platform?: string;
   }): Promise<VisitorSession> {
+    const insertData: any = {
+      session_token: data.sessionToken,
+      country: data.country ?? null,
+      browser: data.browser ?? null,
+      device: data.device ?? null,
+      platform: data.platform ?? null,
+      status: 'READY',
+    };
+    if (data.authUserId) {
+      insertData.id = data.authUserId;
+    }
+
     const { data: session, error } = await getSupabase()
       .from('visitor_sessions')
-      .insert({
-        session_token: data.sessionToken,
-        country: data.country ?? null,
-        browser: data.browser ?? null,
-        device: data.device ?? null,
-        platform: data.platform ?? null,
-        status: 'READY',
-      })
+      .insert(insertData)
       .select()
       .single();
 

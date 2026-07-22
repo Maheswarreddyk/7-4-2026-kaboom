@@ -116,32 +116,50 @@ export function QueueCard({
         )}
       >
         {/* Row 1: Header (Always visible) */}
-        <div className="queue-card-header flex items-center justify-between border-b border-white/5 pb-3">
-          <div className="flex items-center gap-2 overflow-hidden">
-            <span className="w-2 h-2 rounded-full bg-amber-500 motion-safe:animate-pulse shrink-0" />
-            <h4 className="fluid-username font-extrabold text-white truncate max-w-[140px] m-0">
-              {displayName}
-            </h4>
-            <span className="text-stone-600 shrink-0">·</span>
-            <span className="px-2 py-0.5 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-300 font-extrabold text-[9px] tracking-wide shrink-0">
-              {matchMode === 'STRICT' ? 'Exact' : matchMode === 'PREFER' ? 'Smart' : 'Random'}
-            </span>
-            {isQueuePaused && (
-              <span className="text-[9px] text-amber-500 font-black tracking-wider shrink-0 motion-safe:animate-pulse">PAUSED</span>
-            )}
+        <div className="queue-card-header flex flex-col gap-3 border-b border-white/5 pb-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 overflow-hidden">
+              <span className="w-2 h-2 rounded-full bg-amber-500 motion-safe:animate-pulse shrink-0" />
+              <h4 className="fluid-username font-extrabold text-white truncate max-w-[140px] m-0">
+                {displayName}
+              </h4>
+              <span className="text-stone-600 shrink-0">·</span>
+              <span className="px-2 py-0.5 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-300 font-extrabold text-[9px] tracking-wide shrink-0">
+                {matchMode === 'STRICT' ? 'Exact' : matchMode === 'PREFER' ? 'Smart' : 'Random'}
+              </span>
+              {isQueuePaused && (
+                <span className="text-[9px] text-amber-500 font-black tracking-wider shrink-0 motion-safe:animate-pulse">PAUSED</span>
+              )}
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <span className="text-amber-400 font-black font-mono fluid-timer shrink-0">
+                ⏱️ {formatTimer(elapsed)}
+              </span>
+              <button
+                onClick={handleToggleExpand}
+                className="text-[10px] text-amber-500 hover:text-amber-400 font-black cursor-pointer p-1 transition-colors"
+                aria-label="Expand detailed statistics sheet"
+              >
+                ▲
+              </button>
+            </div>
           </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <span className="text-amber-400 font-black font-mono fluid-timer shrink-0">
-              ⏱️ {formatTimer(elapsed)}
-            </span>
-            <button
-              onClick={handleToggleExpand}
-              className="text-[10px] text-amber-500 hover:text-amber-400 font-black cursor-pointer p-1 transition-colors"
-              aria-label="Expand detailed statistics sheet"
-            >
-              ▲
-            </button>
-          </div>
+          
+          {/* Dynamic Search Intelligence Message */}
+          {!isQueuePaused && (
+            <div className="flex items-start gap-2 bg-black/20 p-2 rounded-lg border border-white/5">
+              <span className="text-xs shrink-0">🧠</span>
+              <span className="text-[10px] text-stone-300 font-medium italic">
+                {elapsed < 5 
+                  ? "Analyzing queue for perfect mutual matches..." 
+                  : elapsed < 15
+                    ? "Expanding search radius based on shared tags..."
+                    : matchMode === 'STRICT'
+                      ? "Waiting for an exact match to come online..."
+                      : "Connecting to active users for a faster match..."}
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Row 2: Bio (Priority 2, hidden on small container sizes via query) */}

@@ -52,18 +52,18 @@ router.get('/stats', async (c: any) => {
     const clicked = clickedRes.count || 0;
     const avgCtr = sent > 0 ? (clicked / sent) * 100 : 0;
 
-    res.json({
+    return res.json({
       activeSubs,
       inactiveSubs,
       sent,
       clicked,
       avgCtr,
-      permissionDenied: 0, // Missing DB tracking
-      revoked: 0, // Missing DB tracking
-      dismissed: 0, // Missing DB tracking
+      permissionDenied: 0,
+      revoked: 0,
+      dismissed: 0,
     });
-  } catch (err) {
-    next(err);
+  } catch (err: any) {
+    return c.json({ error: err.message || 'Internal error' }, 500);
   }
 });
 
@@ -117,9 +117,9 @@ router.get('/history', async (c: any) => {
       }
     }
 
-    res.json(Array.from(historyMap.values()));
-  } catch (err) {
-    next(err);
+    return res.json(Array.from(historyMap.values()));
+  } catch (err: any) {
+    return c.json({ error: err.message || 'Internal error' }, 500);
   }
 });
 
@@ -164,9 +164,9 @@ router.post('/broadcast', async (c: any) => {
       audienceSegments
     );
 
-    res.json({ success: true, ...result });
-  } catch (err) {
-    next(err);
+    return res.json({ success: true, ...result });
+  } catch (err: any) {
+    return c.json({ error: err.message || 'Internal error' }, 500);
   }
 });
 
@@ -210,9 +210,9 @@ router.post('/test', async (c: any) => {
       deepLink
     );
 
-    res.json(result);
-  } catch (err) {
-    next(err);
+    return res.json(result);
+  } catch (err: any) {
+    return c.json({ error: err.message || 'Internal error' }, 500);
   }
 });
 

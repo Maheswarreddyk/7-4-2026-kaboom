@@ -1,6 +1,5 @@
 
 import { checkDatabaseConnection } from '../database/client.js';
-import { matchmakerMetrics } from '../matchmaking/matchingEngine.js';
 import {
   feedbackService,
   reportService,
@@ -32,7 +31,9 @@ export const healthController = {
 
 export const statsController = {
   getStats: asyncHandler(async (c: any) => {
-    const stats = await statsService.getStats(matchmakerMetrics.totalSearchingUsers);
+    const { getSupabase } = await import('../database/client.js');
+    const { count } = await getSupabase().from('waiting_queue').select('*', { count: 'exact', head: true }).eq('status', 'waiting');
+    const stats = await statsService.getStats(count || 0);
     return c.json({ success: true, data: stats });
   }),
 };
@@ -41,7 +42,20 @@ export const sessionController = {
   startSession: asyncHandler(async (c: any) => {
     const { country, browser, device, platform } = (await c.req.json()) ?? {};
 
+    let authUserId: string | undefined;
+    const authHeader = c.req.header('Authorization');
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.substring(7);
+      const { getSupabase } = await import('../database/client.js');
+      const supabase = getSupabase();
+      const { data: { user }, error } = await supabase.auth.getUser(token);
+      if (!error && user) {
+        authUserId = user.id;
+      }
+    }
+
     const session = await sessionService.startSession({
+      authUserId,
       country,
       browser,
       device,

@@ -60,11 +60,25 @@ export const apiService = {
   async startSession(): Promise<SessionData> {
     const { browser, device, platform } = getBrowserInfo();
 
+    const { getSupabaseClient } = await import('./supabase.js');
+    const supabase = getSupabaseClient();
+    const { data: authData, error: authError } = await supabase.auth.signInAnonymously();
+    if (authError) {
+      console.warn('[Supabase] Anonymous Auth failed:', authError.message);
+    }
+    
+    let token: string | undefined;
+    if (authData?.session) {
+      token = authData.session.access_token;
+    }
+
     const { data } = await retry(async () => {
       const response = await api.post('/start-session', {
         browser,
         device,
         platform,
+      }, {
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
       });
       return response;
     });

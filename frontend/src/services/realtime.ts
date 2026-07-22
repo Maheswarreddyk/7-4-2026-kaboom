@@ -119,7 +119,7 @@ export class RealtimeManager {
       const SUBSCRIBE_TIMEOUT_MS = 5_000;
 
       this.matchChannel = supabase
-        .channel(`match:${matchId}`, { config: { broadcast: { self: false } } })
+        .channel(`match:${matchId}`, { config: { broadcast: { self: false }, private: true } })
         .on('broadcast', { event: 'offer' }, ({ payload }) => {
           callbacks.onOffer?.({ ...(payload as any), matchId });
         })
@@ -244,7 +244,7 @@ export class RealtimeManager {
       }, 5000);
 
       this.sessionChannel = supabase
-        .channel(`session:${sessionId}`, { config: { broadcast: { self: false, ack: true } } })
+        .channel(`session:${sessionId}`, { config: { broadcast: { self: false, ack: true }, private: true } })
         
       setInterval(() => {
         if (this.sessionChannel) {
@@ -365,13 +365,14 @@ export class RealtimeManager {
 
   private isJoiningQueue = false;
 
-  async joinQueue(sessionId: string, sessionToken: string, callbacks: RealtimeCallbacks) {
+  async joinQueue(sessionId: string, sessionToken: string, callbacks: RealtimeCallbacks, settings?: { matchMode?: string, tags?: string[], genderPreference?: string[] }) {
     if (this.isJoiningQueue) return;
     this.isJoiningQueue = true;
     try {
       const result = await apiPost<{ success: boolean; data: Record<string, unknown> }>('/match/join', {
         sessionId,
         sessionToken,
+        ...(settings || {}),
       });
     const data = result.data;
 
@@ -423,7 +424,7 @@ export class RealtimeManager {
     }
   }
 
-  async nextPartner(sessionId: string, sessionToken: string, callbacks: RealtimeCallbacks, targetMatchId?: string, reason: string = 'next') {
+  async nextPartner(sessionId: string, sessionToken: string, callbacks: RealtimeCallbacks, targetMatchId?: string, reason: string = 'next', settings?: { matchMode?: string, tags?: string[], genderPreference?: string[] }) {
     this.leaveMatchChannel();
 
     const result = await apiPost<{ success: boolean; data: Record<string, unknown> }>('/match/next', {
@@ -431,6 +432,7 @@ export class RealtimeManager {
       sessionToken,
       matchId: targetMatchId,
       reason,
+      ...(settings || {}),
     });
 
     const data = result.data;

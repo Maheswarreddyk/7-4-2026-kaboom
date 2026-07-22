@@ -1,32 +1,9 @@
 import { getSupabase, handleSupabaseError } from '../database/client.js';
 import { getIceServers } from '../config/index.js';
 import { broadcastToSession } from './broadcast.js';
-import { leaveQueueEntry, joinQueueEntry, markUserReady, runMatchCycle, runGlobalMatchCycle, invalidateMatchmakerCache, transitionSessionStatus } from '../matchmaking/matchingEngine.js';
 import { AnalyticsLogger } from '../analytics/logger.js';
 import { AppError } from '../middleware/errorHandler.js';
 export type MatchEndReason = 'next' | 'leave' | 'disconnect' | 'report' | 'client_aborted_match';
-
-import { acquireGlobalLock, releaseGlobalLock } from './lockService.js';
-
-// ============================================================
-// Global Cycle Distributed Mutex
-// Prevents concurrent runGlobalMatchCycle() execution across
-// multiple instances by using a Postgres-backed REST lock.
-// ============================================================
-
-export async function safeRunGlobalMatchCycle(): Promise<void> {
-  const locked = await acquireGlobalLock();
-  if (!locked) {
-    console.log('[MatchService] Global cycle already running — skipping concurrent trigger');
-    return;
-  }
-  
-  try {
-    await runGlobalMatchCycle(getSupabase());
-  } finally {
-    await releaseGlobalLock();
-  }
-}
 
 export async function validateSession(sessionId: string, sessionToken: string) {
   if (!sessionId || !sessionToken) return null;
@@ -62,7 +39,6 @@ export async function endActiveMatch(sessionId: string, reason: MatchEndReason, 
   const match = await findActiveMatch(sessionId);
   if (!match) return null;
 
-  // KS-007: Prevent Friendly Fire
   if (targetMatchId && match.id !== targetMatchId) {
     console.warn(`[MatchService] endActiveMatch blocked friendly fire: target ${targetMatchId} != active ${match.id}`);
     return null;
@@ -99,12 +75,83 @@ export async function endActiveMatch(sessionId: string, reason: MatchEndReason, 
   return { match, partnerId };
 }
 
-export async function joinQueue(sessionId: string, sessionToken: string) {
-  invalidateMatchmakerCache();
-  const result = await runMatchCycle(getSupabase(), sessionId, sessionToken);
-  // Trigger one immediate match cycle on join (V4.1 Requirement 8)
-  void safeRunGlobalMatchCycle();
-  return result;
+export async function joinQueue(sessionId: string, sessionToken: string, matchMode?: string, tags?: string[], genderPreference?: string[]) {
+  const supabase = getSupabase();
+  const now = new Date().toISOString();
+
+  const sessionUpdate: any = { 
+    status: 'SEARCHING', 
+    queue_entered_at: now,
+    last_activity: now
+  };
+  if (matchMode) sessionUpdate.match_mode = matchMode;
+  if (tags) sessionUpdate.interest_tags = tags;
+  if (genderPreference) sessionUpdate.looking_for = genderPreference;
+
+  await supabase.from('visitor_sessions').update(sessionUpdate).eq('id', sessionId);
+  
+  await supabase.from('waiting_queue').upsert({
+    session_id: sessionId,
+    status: 'waiting',
+    joined_at: now,
+    last_seen: now
+  });
+
+  // Call the new highly-concurrent PL/pgSQL RPC
+  const { data: matchId, error: rpcErr } = await supabase.rpc('execute_matchmaking', { p_session_id: sessionId });
+  
+  if (matchId) {
+    const { data: match } = await supabase.from('matches').select('*').eq('id', matchId).single();
+    if (match) {
+      const partnerId = match.user_a === sessionId ? match.user_b : match.user_a;
+      
+      const iceServers = getIceServers();
+      const { data: profiles } = await supabase.from('visitor_sessions').select('*').in('id', [sessionId, partnerId]);
+      const pSelf = profiles?.find(p => p.id === sessionId);
+      const pPartner = profiles?.find(p => p.id === partnerId);
+      
+      const formatProfile = (p: any) => ({
+        displayName: p?.display_name || 'Guest',
+        bio: p?.bio || '',
+        matchMode: p?.match_mode || 'RANDOM',
+        city: p?.city || null,
+        state: p?.state || null,
+        country: p?.country || null,
+        gender: p?.gender || null,
+        lookingFor: p?.looking_for || [],
+        languages: p?.languages || [],
+        interestTags: p?.interest_tags || [],
+      });
+
+      await Promise.all([
+        broadcastToSession(sessionId, 'matched', {
+          matchId,
+          partnerSessionId: partnerId,
+          isInitiator: true,
+          iceServers,
+          partnerProfile: formatProfile(pPartner)
+        }).catch(()=>{}),
+        broadcastToSession(partnerId, 'matched', {
+          matchId,
+          partnerSessionId: sessionId,
+          isInitiator: false,
+          iceServers,
+          partnerProfile: formatProfile(pSelf)
+        }).catch(()=>{})
+      ]);
+
+      return {
+        status: 'matched',
+        matchId,
+        partnerSessionId: partnerId,
+        isInitiator: true,
+        iceServers,
+        partnerProfile: formatProfile(pPartner)
+      };
+    }
+  }
+
+  return { status: 'waiting' as const };
 }
 
 export async function getMatchStatus(sessionId: string, sessionToken: string) {
@@ -113,7 +160,6 @@ export async function getMatchStatus(sessionId: string, sessionToken: string) {
 
   const match = await findActiveMatch(sessionId);
   if (match) {
-    // Re-construct the matched response payload identical to runMatchCycle
     const partnerId = match.user_a === sessionId ? match.user_b : match.user_a;
     const { data: partnerSession } = await getSupabase()
       .from('visitor_sessions')
@@ -129,13 +175,10 @@ export async function getMatchStatus(sessionId: string, sessionToken: string) {
       iceServers: getIceServers(),
       queuePosition: 0,
       waitingSeconds: 0,
-      matchReasonMetadata: match.match_reason_metadata,
       partnerProfile: partnerSession ? {
         displayName: partnerSession.display_name || 'Guest',
         bio: partnerSession.bio || '',
         matchMode: partnerSession.match_mode || 'RANDOM',
-        matchConstraints: partnerSession.match_constraints || {},
-        matchAttributes: partnerSession.match_attributes || {},
         city: partnerSession.city || null,
         state: partnerSession.state || null,
         country: partnerSession.country || null,
@@ -147,7 +190,6 @@ export async function getMatchStatus(sessionId: string, sessionToken: string) {
     };
   }
 
-  // If no match, check if they are in queue
   const { data: queueEntry } = await getSupabase()
     .from('waiting_queue')
     .select('*')
@@ -163,102 +205,85 @@ export async function getMatchStatus(sessionId: string, sessionToken: string) {
 }
 
 export async function markMatchReady(sessionId: string, sessionToken: string, matchId: string) {
-  return markUserReady(getSupabase(), sessionId, sessionToken, matchId);
+  const supabase = getSupabase();
+  const { data: match, error: fetchErr } = await supabase
+    .from('matches')
+    .select('*')
+    .eq('id', matchId)
+    .single();
+
+  if (fetchErr || !match) throw new AppError(404, 'Match not found');
+
+  const isUserA = match.user_a === sessionId;
+  if (!isUserA && match.user_b !== sessionId) {
+    throw new AppError(403, 'Unauthorized match participant');
+  }
+
+  const updatePayload = isUserA ? { user_a_ready: true } : { user_b_ready: true };
+
+  const { data: updatedMatch, error: updateErr } = await supabase
+    .from('matches')
+    .update(updatePayload)
+    .eq('id', matchId)
+    .select()
+    .single();
+
+  if (updateErr) throw new AppError(500, updateErr.message);
+
+  if (updatedMatch.user_a_ready && updatedMatch.user_b_ready && !updatedMatch.negotiation_started) {
+    await supabase.from('matches').update({ negotiation_started: true }).eq('id', matchId);
+    broadcastToSession(match.user_a, 'start_negotiation', { matchId, isInitiator: true });
+    broadcastToSession(match.user_b, 'start_negotiation', { matchId, isInitiator: false });
+  }
+
+  return { ready: true };
 }
 
 export async function leaveQueue(sessionId: string, sessionToken: string, targetMatchId?: string) {
   const session = await validateSession(sessionId, sessionToken);
-  // Idempotent: if session is already gone/ended, treat as success (the user has already left)
   if (!session) return;
-  await leaveQueueEntry(getSupabase(), sessionId);
-  invalidateMatchmakerCache();
-  const success = await transitionSessionStatus(getSupabase(), sessionId, 'READY', 'User manually left queue');
-  
-  // KS-005: The "Leave" Ghost Match protection
-  if (!success) {
-    console.warn(`[MatchService] leaveQueue transition to READY failed for ${sessionId}. They may have been caught by the matchmaker.`);
-    // Attempt to end the ghost match just in case
-    await endActiveMatch(sessionId, 'leave', targetMatchId);
-    await transitionSessionStatus(getSupabase(), sessionId, 'READY', 'Aborted ghost match');
-  }
+  const supabase = getSupabase();
+  await supabase.from('waiting_queue').delete().eq('session_id', sessionId);
+  await supabase.from('visitor_sessions').update({ status: 'READY' }).eq('id', sessionId);
 }
 
-/**
- * Re-queue a partner after their previous partner left.
- */
 async function requeuePartner(partnerId: string): Promise<void> {
-  const { data: partner } = await getSupabase().from('visitor_sessions').select('*').eq('id', partnerId).maybeSingle();
-  if (!partner || partner.status === 'ended') {
-    console.log(`[MatchService] requeuePartner: session ${partnerId} not found or ended`);
+  const supabase = getSupabase();
+  const { data: partner } = await supabase.from('visitor_sessions').select('*').eq('id', partnerId).maybeSingle();
+  if (!partner || partner.status === 'ended' || partner.status === 'SEARCHING' || partner.status === 'READY') {
     return;
   }
-
-  // KS-006: Concurrent Skip Protection
-  // If partner is already searching or ready, do not re-queue them.
-  if (partner.status === 'SEARCHING' || partner.status === 'READY') {
-    console.log(`[MatchService] requeuePartner: ${partnerId} is already ${partner.status}, skipping redundant requeue.`);
-    return;
-  }
-
-  // Notify partner they are searching
-  await broadcastToSession(partnerId, 'searching', {
-    message: 'Finding someone new...',
-  }).catch(() => {/* best-effort */});
-
-  try {
-    invalidateMatchmakerCache();
-    await transitionSessionStatus(getSupabase(), partnerId, 'REQUEUEING', 'Requeueing partner');
-    await joinQueueEntry(getSupabase(), partnerId);
-    console.log(`[MatchService] requeuePartner: ${partnerId} re-entered queue`);
-    // Trigger immediate match cycle to pair them instantly
-    void safeRunGlobalMatchCycle();
-  } catch (err) {
-    console.warn(`[MatchService] requeuePartner: failed to re-queue ${partnerId}:`, err instanceof Error ? err.message : err);
+  
+  await broadcastToSession(partnerId, 'searching', { message: 'Finding someone new...' }).catch(() => {});
+  
+  const now = new Date().toISOString();
+  await supabase.from('visitor_sessions').update({ status: 'SEARCHING', queue_entered_at: now }).eq('id', partnerId);
+  await supabase.from('waiting_queue').upsert({ session_id: partnerId, status: 'waiting', joined_at: now, last_seen: now });
+  
+  const { data: matchId } = await supabase.rpc('execute_matchmaking', { p_session_id: partnerId });
+  if (matchId) {
+    const { data: match } = await supabase.from('matches').select('*').eq('id', matchId).single();
+    if (match) {
+      const pId = match.user_a === partnerId ? match.user_b : match.user_a;
+      await Promise.all([
+        broadcastToSession(partnerId, 'matched', { matchId, partnerSessionId: pId, isInitiator: true, iceServers: getIceServers() }),
+        broadcastToSession(pId, 'matched', { matchId, partnerSessionId: partnerId, isInitiator: false, iceServers: getIceServers() })
+      ]);
+    }
   }
 }
 
 export async function nextPartner(sessionId: string, sessionToken: string, targetMatchId?: string, reason: MatchEndReason = 'next') {
   const session = await validateSession(sessionId, sessionToken);
   if (!session) throw new Error('Invalid session');
-
-  console.log(`[Next] Next clicked for session ${sessionId} (target match: ${targetMatchId})`);
-  invalidateMatchmakerCache();
-
-  // KS-006: If we are already requeuing or searching, throw error to trigger 409 Conflict
-  if (session.status === 'REQUEUEING' || session.status === 'SEARCHING') {
-    console.warn(`[MatchService] nextPartner redundant skip blocked for ${sessionId} (status=${session.status})`);
-    throw new Error('Illegal state transition: User is already searching or requeuing');
-  }
-
-  // Transition clicker state to REQUEUEING (V4.1 Requirement 8)
-  const success = await transitionSessionStatus(getSupabase(), sessionId, 'REQUEUEING', 'User clicked Next');
-  if (!success) {
-    console.warn(`[MatchService] nextPartner failed transition to REQUEUEING for ${sessionId}`);
-    return { status: 'waiting' as const };
-  }
-
-  // KS-007: Only end the specific match we intended to skip
+  
   const ended = await endActiveMatch(sessionId, reason, targetMatchId);
-
-  // Perform cleanups in order (V4.1 Requirement 8)
-  if (ended?.match?.id) {
-    // Delete temporary messages
-    await getSupabase().from('temporary_messages').delete().eq('match_id', ended.match.id);
-    // Delete reservation
-    await getSupabase().from('reservations').delete().eq('match_id', ended.match.id);
-  }
-
   if (ended?.partnerId) {
-    // Notify partner they are being requeued
-    await transitionSessionStatus(getSupabase(), ended.partnerId, 'REQUEUEING', 'Partner skipped');
     await broadcastToSession(ended.partnerId, 'partner_left', { reason });
     await requeuePartner(ended.partnerId);
   }
 
-  await getSupabase()
-    .from('connection_logs')
-    .insert({ session_id: sessionId, event: 'next', details: {} });
-
+  await getSupabase().from('connection_logs').insert({ session_id: sessionId, event: 'next', details: {} });
   return joinQueue(sessionId, sessionToken);
 }
 
@@ -266,32 +291,25 @@ export async function notifyPartnerLeft(sessionId: string, sessionToken: string,
   const session = await validateSession(sessionId, sessionToken);
   if (!session) throw new Error('Invalid session');
 
-  console.log(`[Disconnect/Leave] Session ${sessionId} left, reason=${reason}, match=${targetMatchId}`);
-  invalidateMatchmakerCache();
-
-  // Transition leaving session status to READY or ENDED (V4.1 Requirement 8)
+  const supabase = getSupabase();
   const nextStatus = (reason === 'leave' || reason === 'client_aborted_match') ? 'READY' : 'ENDED';
-  await transitionSessionStatus(getSupabase(), sessionId, nextStatus, 'User disconnected/left call');
+  await supabase.from('visitor_sessions').update({ status: nextStatus }).eq('id', sessionId);
 
   const ended = await endActiveMatch(sessionId, reason, targetMatchId);
-
-  if (ended?.match?.id) {
-    // Delete temporary messages
-    await getSupabase().from('temporary_messages').delete().eq('match_id', ended.match.id);
-    // Delete reservation
-    await getSupabase().from('reservations').delete().eq('match_id', ended.match.id);
-  }
-
   if (ended?.partnerId) {
-    // Transition partner state to REQUEUEING
-    await transitionSessionStatus(getSupabase(), ended.partnerId, 'REQUEUEING', 'Partner left call');
     await broadcastToSession(ended.partnerId, 'partner_left', { reason });
     await requeuePartner(ended.partnerId);
   }
 }
 
 export async function markMediaConnected(sessionId: string, sessionToken: string, matchId: string) {
-  const { markMediaConnected: markMediaConnectedEngine } = await import('../matchmaking/matchingEngine.js');
-  return markMediaConnectedEngine(getSupabase(), sessionId, sessionToken, matchId);
-}
+  const supabase = getSupabase();
+  const { data: match } = await supabase.from('matches').select('*').eq('id', matchId).single();
+  if (!match) throw new AppError(404, 'Match not found');
 
+  const isUserA = match.user_a === sessionId;
+  const updatePayload = isUserA ? { user_a_media_ready: true } : { user_b_media_ready: true };
+
+  await supabase.from('matches').update(updatePayload).eq('id', matchId);
+  return { success: true };
+}

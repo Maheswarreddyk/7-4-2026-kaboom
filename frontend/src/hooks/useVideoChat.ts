@@ -33,6 +33,15 @@ export function useVideoChat(
   const { showToast } = useToast();
   const { updateSessionLifecycleState } = useSession();
   const { playQueueJoin, playConnected } = useAudioUX();
+
+  const getMatchSettings = useCallback(() => {
+    return {
+      matchMode: safeLocalStorage.getItem('kaboom_match_mode') || 'RANDOM',
+      tags: safeLocalStorage.getJSON('kaboom_interest_tags', []),
+      genderPreference: safeLocalStorage.getJSON('kaboom_looking', ['Anyone'])
+    };
+  }, []);
+
   const [chatState, setChatState] = useState<ChatState>(initialChatState);
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
@@ -793,7 +802,7 @@ export function useVideoChat(
     });
 
     try {
-      await realtimeManager.joinQueue(sessionIdRef.current, sessionTokenRef.current, callbacksRef.current);
+      await realtimeManager.joinQueue(sessionIdRef.current, sessionTokenRef.current, callbacksRef.current, getMatchSettings());
       if (!isMountedRef.current) return;
       if (LifecycleManager.getInstance().getState() === ('QUEUEING')) {
         setSignalingState('SEARCHING');
@@ -1210,7 +1219,7 @@ export function useVideoChat(
       }
       // ----------------------------
 
-      await realtimeManager.joinQueue(sessionId, sessionToken, callbacks);
+      await realtimeManager.joinQueue(sessionId, sessionToken, callbacks, getMatchSettings());
       if (LifecycleManager.getInstance().getState() === ('QUEUEING')) {
         setSignalingState('SEARCHING');
         console.log('[Lifecycle] Queue Joined');
@@ -1290,7 +1299,7 @@ export function useVideoChat(
     });
 
     try {
-      await realtimeManager.nextPartner(sessionIdRef.current, sessionTokenRef.current, callbacksRef.current, currentMatchId ?? undefined, reason);
+      await realtimeManager.nextPartner(sessionIdRef.current, sessionTokenRef.current, callbacksRef.current, currentMatchId ?? undefined, reason, getMatchSettings());
       if (!isMountedRef.current) return;
       
       if (LifecycleManager.getInstance().getState() === ('QUEUEING')) {
@@ -1452,7 +1461,7 @@ export function useVideoChat(
     const interval = setInterval(async () => {
       if (skipInProgressRef.current || webrtcManager.getConnectionState() === 'connected') return;
       try {
-        await realtimeManager.joinQueue(sessionId, sessionToken, callbacksRef.current!);
+        await realtimeManager.joinQueue(sessionId, sessionToken, callbacksRef.current!, getMatchSettings());
       } catch (error) {
         console.error('Error polling matchmaking queue:', error);
       }
@@ -1595,14 +1604,14 @@ export function useVideoChat(
       // Self-healing queue: If status is SEARCHING, send a heartbeat joinQueue immediately
       if (LifecycleManager.getInstance().getState() === ('QUEUEING') && !isQueuePausedRef.current && sessionIdRef.current && sessionTokenRef.current && callbacksRef.current) {
         console.log('[Lifecycle] Queue active — forcing immediate heartbeat registration');
-        void realtimeManager.joinQueue(sessionIdRef.current, sessionTokenRef.current, callbacksRef.current);
+        void realtimeManager.joinQueue(sessionIdRef.current, sessionTokenRef.current, callbacksRef.current, getMatchSettings());
       }
     };
 
     const handleOnline = () => {
       console.log('[Lifecycle] Internet connection restored');
       if (LifecycleManager.getInstance().getState() === ('QUEUEING') && !isQueuePausedRef.current && sessionIdRef.current && sessionTokenRef.current && callbacksRef.current) {
-        void realtimeManager.joinQueue(sessionIdRef.current, sessionTokenRef.current, callbacksRef.current);
+        void realtimeManager.joinQueue(sessionIdRef.current, sessionTokenRef.current, callbacksRef.current, getMatchSettings());
       }
     };
 
@@ -1816,7 +1825,7 @@ export function useVideoChat(
     if (!sessionId || !sessionToken || !callbacksRef.current) return;
     try {
       setQueuePaused(false);
-      await realtimeManager.joinQueue(sessionId, sessionToken, callbacksRef.current);
+      await realtimeManager.joinQueue(sessionId, sessionToken, callbacksRef.current, getMatchSettings());
     } catch (err) {
       console.error('Failed to resume queue:', err);
     }

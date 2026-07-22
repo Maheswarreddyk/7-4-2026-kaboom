@@ -21,6 +21,7 @@ export const sessionService = {
     const sessionToken = uuidv4();
     const session = await sessionRepository.create({
       sessionToken,
+      authUserId: data.authUserId,
       country: data.country,
       browser: data.browser,
       device: data.device,
@@ -134,88 +135,11 @@ export const cleanupService = {
 
     try {
       const supabase = (await import('../database/client.js')).getSupabase();
-      const { invalidateMatchmakerCache, transitionSessionStatus } = await import('../matchmaking/matchingEngine.js');
-      const { expireStaleReservations } = await import('../matchmaking/queueEngine.js');
-
-      // 1. Expire stale heartbeat queue entries (V4.1 Requirement 12)
-      const { data: staleSessionIds } = await supabase
-        .from('visitor_sessions')
-        .select('id')
-        .in('status', ['SEARCHING', 'RESERVED', 'waiting', 'matched'])
-        .lt('last_activity', heartbeatCutoff);
-
-      if (staleSessionIds && staleSessionIds.length > 0) {
-        const ids = staleSessionIds.map((s: { id: string }) => s.id);
-        console.log(`[Cleanup] Expiring ${ids.length} stale heartbeat queue entries`);
-
-        await supabase
-          .from('waiting_queue')
-          .update({ status: 'expired' })
-          .in('session_id', ids)
-          .eq('status', 'waiting');
-
-        for (const id of ids) {
-          await transitionSessionStatus(supabase, id, 'READY', 'Heartbeat cleanup');
-        }
-        invalidateMatchmakerCache();
+      // Execute the unified database cleanup logic
+      const { error } = await supabase.rpc('matchmaker_heal_cycle');
+      if (error) {
+        console.error('[Cleanup] Heal cycle RPC failed:', error.message);
       }
-
-      // 2. Clean up expired reservations (V4.1 Requirement 3 & 12)
-      // BE-006: Use centralized expireStaleReservations
-      const expiredCount = await expireStaleReservations(supabase);
-      if (expiredCount > 0) {
-        invalidateMatchmakerCache();
-      }
-
-      // 3. Clean up expired temporary messages (V4.1 Requirement 12)
-      const { error: msgErr } = await supabase
-        .from('temporary_messages')
-        .delete()
-        .lt('expires_at', now);
-
-      if (msgErr) {
-        console.error('[Cleanup] Failed to clean up temporary messages:', msgErr.message);
-      }
-
-      // 4. Clean up orphaned matches (ended_at is null but users are not connected or are stale)
-      const { data: activeMatches } = await supabase
-        .from('matches')
-        .select('id, user_a, user_b, started_at')
-        .is('ended_at', null);
-
-      if (activeMatches && activeMatches.length > 0) {
-        for (const m of activeMatches) {
-          const [resA, resB] = await Promise.all([
-            supabase.from('visitor_sessions').select('status, last_activity').eq('id', m.user_a).maybeSingle(),
-            supabase.from('visitor_sessions').select('status, last_activity').eq('id', m.user_b).maybeSingle(),
-          ]);
-
-          const staleA = !resA.data || !resA.data.last_activity || resA.data.last_activity < heartbeatCutoff;
-          const staleB = !resB.data || !resB.data.last_activity || resB.data.last_activity < heartbeatCutoff;
-
-          if (staleA || staleB) {
-            console.log(`[Cleanup] Cleaning up orphaned match ${m.id}`);
-            const duration = Math.floor((Date.now() - new Date(m.started_at).getTime()) / 1000);
-            await supabase
-              .from('matches')
-              .update({
-                ended_at: now,
-                duration_seconds: duration,
-                ended_reason: 'disconnect',
-              })
-              .eq('id', m.id);
-
-            if (!staleA && m.user_a) {
-              await transitionSessionStatus(supabase, m.user_a, 'SEARCHING', 'Cleanup partner disconnected');
-            }
-            if (!staleB && m.user_b) {
-              await transitionSessionStatus(supabase, m.user_b, 'SEARCHING', 'Cleanup partner disconnected');
-            }
-            invalidateMatchmakerCache();
-          }
-        }
-      }
-
     } catch (err) {
       console.error('[Cleanup] Advanced database cleanup failed:', err instanceof Error ? err.message : err);
     }

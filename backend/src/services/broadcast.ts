@@ -1,8 +1,8 @@
-import { getSupabase } from '../database/client.js';
+import { getEnv } from '../context.js';
 
 /**
- * Broadcast an event to a specific session via Supabase Realtime.
- * Uses fire-and-forget channel.send() because the server only sends, it does not need to subscribe.
+ * Broadcast an event to a specific session via Supabase Realtime REST API.
+ * Uses HTTP POST to avoid WebSocket churn and silent failures in Cloudflare Workers.
  */
 export async function broadcastToSession(
   sessionId: string,
@@ -10,33 +10,38 @@ export async function broadcastToSession(
   payload: Record<string, unknown>
 ): Promise<void> {
   const start = Date.now();
-  const supabase = getSupabase();
-  const channelName = `session:${sessionId}`;
+  const env = getEnv();
+  const url = (env.SUPABASE_URL as string) || '';
+  const key = (env.SUPABASE_SERVICE_ROLE_KEY as string) || '';
   
-  // Create channel instance
-  const channel = supabase.channel(channelName);
+  const channelName = `session:${sessionId}`;
 
   try {
-    // Send without subscribing (server doesn't need to receive)
-    const resp = await channel.send({
-      type: 'broadcast',
-      event,
-      payload,
+    const response = await fetch(`${url}/realtime/v1/api/broadcast`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': key,
+        'Authorization': `Bearer ${key}`
+      },
+      body: JSON.stringify({
+        messages: [{
+          topic: channelName,
+          event: event,
+          payload: payload
+        }]
+      })
     });
     
     const latencyMs = Date.now() - start;
-    if (resp !== 'ok') {
-      console.error(`[Broadcast] Failed to send '${event}' to ${channelName}: ${resp}`);
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`[Broadcast] Failed to send '${event}' to ${channelName}: ${response.status} ${errorText}`);
     } else {
       console.log(`[Broadcast] event=${event} sessionId=${sessionId.slice(0, 8)} latencyMs=${latencyMs}`);
     }
   } catch (err) {
     const latencyMs = Date.now() - start;
     console.error(`[Broadcast] Error sending event=${event} sessionId=${sessionId.slice(0, 8)} latencyMs=${latencyMs} error=${err instanceof Error ? err.message : err}`);
-  } finally {
-    // Always clean up the channel reference to prevent memory leaks
-    try {
-      supabase.removeChannel(channel);
-    } catch {}
   }
 }
